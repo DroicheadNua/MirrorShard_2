@@ -1,0 +1,52 @@
+<!doctype html>
+<html lang="ja">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="stylesheet" href="/src/styles.css" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>MirrorShard v2</title>
+  </head>
+  <body>
+    <div data-tauri-drag-region id="app-container">
+      <!-- 1. 最上部のカスタムタイトルバー (ドラッグ領域) -->
+      <div data-tauri-drag-region class="titlebar">
+        <div data-tauri-drag-region class="titlebar-buttons">
+          <button id="btn-save" title="保存 (Ctrl+S)"></button>
+          <button id="btn-save-as" title="名前を付けて保存"></button>
+          <button id="btn-open" title="開く"></button>
+          <button id="btn-new" title="新規作成"></button>
+          <button id="btn-undo" title="元に戻す"></button>
+          <button id="btn-redo" title="やり直す"></button>
+          <button id="btn-bgm-toggle" title="BGM再生/停止"></button>
+          <button id="btn-toggle-theme" title="Dark Mode (Ctrl+T)"></button>
+          <button id="btn-fullscreen" title="フルスクリーン"></button>
+          <button id="btn-close" title="閉じる"></button>
+        </div>
+      </div>
+
+      <!-- 2. メインのコンテンツエリア -->
+      <div id="content-wrapper">
+        <!-- 2A. サイドバー -->
+        <nav id="sidebar-pane">
+          <div class="sidebar-content">
+          <div id="file-list-container">
+            <!-- ファイル一覧がここに描画される -->
+          </div>
+          <div id="outline-panel">
+            <div class="outline-controls">            
+              <button id="collapse-all-btn" title="すべて折りたたむ">↑</button>
+              <button id="expand-all-btn" title="すべて展開">↓</button>
+            </div>
+            <div id="outline-container">
+              <!-- アウトラインがここに描画される -->
+            </div>
+          </div>
+          </div>
+        </nav>
+        <!-- 2B. エディタ -->
+        <main id="editor-container"></main>
+      </div>
+    </div>
+    <script type="module" src="/src/main.ts" defer></script>
+  </body>
+</html>

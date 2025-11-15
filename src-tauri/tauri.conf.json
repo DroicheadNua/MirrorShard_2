@@ -1,0 +1,77 @@
+{
+  "$schema": "https://schema.tauri.app/config/2",
+  "productName": "mirrorshard-ver02",
+  "version": "0.1.0",
+  "identifier": "com.mirrorshard-ver02.app",
+  "build": {
+    "beforeDevCommand": "pnpm dev",
+    "devUrl": "http://localhost:1420",
+    "beforeBuildCommand": "pnpm build",
+    "frontendDist": "../dist"
+  },
+  "app": {
+    "withGlobalTauri": true,
+    "windows": [
+      {
+        "title": "mirrorshard-ver02",
+        "visible": false,
+        "width": 800,
+        "height": 600,
+        "minWidth": 640,
+        "minHeight": 480,        
+        "resizable": true,
+        "fullscreen": false,
+        "decorations": false, 
+        "transparent": true ,
+        "closable": true,
+        "maximizable": true,
+        "minimizable": true        
+      }
+    ],
+    "security": {
+      "csp": null
+    }
+  },
+  "bundle": {
+    "fileAssociations": [
+    {
+      "ext": ["md", "txt"],
+      "name": "Text Document", 
+      "role": "Editor"
+    }
+  ],
+    "active": true,
+    "targets": "all",
+    "icon": [
+      "icons/32x32.png",
+      "icons/128x128.png",
+      "icons/128x128@2x.png",
+      "icons/icon.icns",
+      "icons/icon.ico"
+    ],
+    "resources": [
+      "../README.md"
+    ],
+    "windows": {
+      "wix": {
+        "language": "ja-JP"
+      }
+    },
+  "macOS": {
+    "dmg": {
+      "windowSize": {
+        "width": 800,
+        "height": 600
+      }
+    }
+  },
+  "linux": {
+    "deb": {
+      "files": {} 
+    },
+    "appimage": {
+      "bundleMediaFramework": false
+    }
+  }
+  }
+}
