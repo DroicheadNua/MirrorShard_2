@@ -13,14 +13,14 @@
         <div data-tauri-drag-region class="titlebar-buttons">
           <button id="btn-save" title="保存 (Ctrl+S)"></button>
           <button id="btn-save-as" title="名前を付けて保存"></button>
-          <button id="btn-open" title="開く"></button>
-          <button id="btn-new" title="新規作成"></button>
-          <button id="btn-undo" title="元に戻す"></button>
-          <button id="btn-redo" title="やり直す"></button>
-          <button id="btn-bgm-toggle" title="BGM再生/停止"></button>
+          <button id="btn-open" title="開く (Ctrl+O)"></button>
+          <button id="btn-new" title="新規作成 (Ctrl+N)"></button>
+          <button id="btn-undo" title="元に戻す (Ctrl+Y)"></button>
+          <button id="btn-redo" title="やり直す (Ctrl+Z)"></button>
+          <button id="btn-bgm-toggle" title="BGM再生/停止 (Ctrl+Shift+P)"></button>
           <button id="btn-toggle-theme" title="Dark Mode (Ctrl+T)"></button>
-          <button id="btn-fullscreen" title="フルスクリーン"></button>
-          <button id="btn-close" title="閉じる"></button>
+          <button id="btn-fullscreen" title="フルスクリーン (F11)"></button>
+          <button id="btn-close" title="閉じる (Ctrl+Q)"></button>
         </div>
       </div>
 
@@ -44,8 +44,20 @@
           </div>
         </nav>
         <!-- 2B. エディタ -->
-        <main id="editor-container"></main>
-      </div>
+          <main id="editor-container"></main>
+      </div>  
+                <div id="status-bar">
+            <div class="status-left">
+              <span id="status-breadcrumbs"></span>
+            </div>
+            <div class="status-right">
+              <span id="status-line-col"></span>
+              <span id="status-char-count"></span>
+              <span id="status-encoding"></span>
+              <span id="status-line-ending"></span>
+              <span id="status-time"></span>
+            </div>
+          </div> 
     </div>
     <script type="module" src="/src/main.ts" defer></script>
   </body>

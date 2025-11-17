@@ -124,6 +124,8 @@ body.dark-mode {
   display: flex;
   flex-grow: 1;
   overflow: hidden; 
+  height: 100%;
+  padding-bottom: 25px; 
 }
 
 /* 左側のサイドバー */
@@ -156,9 +158,9 @@ height: 100%;
 
 /* メインのエディタコンテナ */
 #editor-container {
-  padding: 2%;
-  flex-grow: 1;
+  flex-grow: 1; /* ★残りの高さをすべて使う */
   height: 100%;
+  overflow-y: hidden;
 }
 
 /* CodeMirror自体がコンテナいっぱいに広がるように */
@@ -350,6 +352,55 @@ height: 100%;
 }
 .dark-mode .sidebar-content::-webkit-scrollbar-thumb:hover {
   background: #ddd;
+}
+
+#status-bar {
+  position: fixed;
+  bottom: 0px; 
+  right: 0; 
+  width: 100%; 
+  height: 25px;
+  flex-shrink: 0;
+  display: flex; /* Flexboxで中身を右寄せ */
+  justify-content: flex-end;
+  align-items: center;
+  padding: 0 10px; /* 左右の余白 */
+  box-sizing: border-box;
+  font-family:  monospace;
+  font-size: 12px;
+  opacity: 70%;
+  color: var(--outline-text-color);
+  background-color: transparent; 
+  pointer-events: none;
+  
+  /* ★ フォーカスモードでは非表示に */
+  body.focus-mode & {
+    display: none;
+  };
+  body.zen-mode & {
+    display: none;
+  }  
+}
+
+#status-bar span {
+  margin-left: 1em;
+}
+#status-bar {
+  display: flex;
+  justify-content: space-between; /* 両端揃え */
+  align-items: center;
+  /* ... */
+}
+#status-breadcrumbs {
+  /* ... (左寄せ用のスタイル) */
+  font-size: 0.9em;
+  opacity: 0.8;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.status-right {
+  display: flex;
 }
 
 /* 各ボタンにSVGアイコンを割り当て */

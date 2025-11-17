@@ -2,19 +2,25 @@ import './styles.css';
 import { invoke } from '@tauri-apps/api/core';
 import { Store } from '@tauri-apps/plugin-store';
 import { EditorState, Compartment } from '@codemirror/state';
-import { EditorView, keymap, ViewUpdate } from '@codemirror/view';
-import { history, historyKeymap, undo, redo } from '@codemirror/commands';
+import { EditorView, keymap, ViewUpdate, scrollPastEnd } from '@codemirror/view';
+import { history, historyKeymap, undo, redo, insertTab } from '@codemirror/commands';
 import { markdown, markdownLanguage } from '@codemirror/lang-markdown';
-import { syntaxTree } from '@codemirror/language';
-import { TreeCursor } from '@lezer/common';
 import { getCurrentWindow } from '@tauri-apps/api/window';
 import { open, ask } from '@tauri-apps/plugin-dialog';
 import { backgroundMusic } from './assets/audio'; 
 import { backgroundImage } from './assets/images';
+import { listen } from '@tauri-apps/api/event';
 
 // --- 型定義 ---
 interface Heading { level: number; text: string; pos: number; isCollapsed: boolean; }
-interface OpenTab { path: string; state: EditorState; isDirty: boolean; }
+interface OpenTab { 
+  path: string; 
+  state: EditorState; 
+  isDirty: boolean; 
+  encoding: string;
+  lineEnding: 'LF' | 'CRLF' | '';  
+  headings: Heading[];
+}
 interface AppSettings {
    isDarkMode: boolean; 
    currentFontIndex: number; 
@@ -49,84 +55,129 @@ class App {
   private outlineControls = document.querySelector<HTMLElement>('.outline-controls');
   private outlineContainer = document.querySelector<HTMLElement>('#outline-container');
   private editorContainer = document.querySelector<HTMLElement>('#editor-container');
+  private statusBar = document.querySelector<HTMLElement>('#status-bar');
 
   // --- 静的ファクトリメソッド ---
-  public static create() {
+  public static async create() {
     const app = new App();
-    app.initialize();
+    // ★ initializeを直接awaitで呼び出す
+    await app.initialize();
     return app;
   }
 
-  // --- 初期化 ---
-  private initialize() {
-    if (!this.editorContainer || !this.fileListContainer || !this.outlineControls || !this.outlineContainer) {
-      console.error("Fatal Error: A required UI container was not found."); return;
+
+private createEditorExtensions(): any[] {
+
+  const typeWriterTheme = EditorView.theme({
+    '.cm-scroller': { paddingBottom: '50vh' },
+  });
+
+  // カーソル位置を補正するフィルタ 
+  const preventCursorBeyondDocEndFilter = EditorState.transactionFilter.of(tr => {
+    if (!tr.selection) return tr;
+    const docEnd = tr.newDoc.length;
+    const newPos = tr.selection.main.head;
+    if (newPos > docEnd) {
+      // カーソルが末尾を越えていたら、末尾に強制的に戻す
+      return { ...tr, selection: { anchor: docEnd } };
     }
-    this.defineThemesAndFonts();
+    return tr;
+  });
 
-    this.editorExtensions = [
-      history(), 
-      keymap.of(historyKeymap), 
-      markdown({ base: markdownLanguage }), 
-      EditorView.lineWrapping,
-      this.themeCompartment.of(this.lightTheme),
-      this.fontFamilyCompartment.of(this.fontThemes[this.currentFontIndex]),
-      this.fontSizeCompartment.of(this.createFontSizeTheme(this.currentFontSize)),
-      EditorView.updateListener.of((update: ViewUpdate) => this.onEditorUpdate(update)),
-    ];
+  // --- 拡張機能の配列を定義 ---
+  return [
+    history(),
+    keymap.of([ ...historyKeymap, { key: 'Tab', run: insertTab } ]),
+    markdown({ base: markdownLanguage }),
+    EditorView.lineWrapping,
+    this.themeCompartment.of(this.isDarkMode ? this.darkTheme : this.lightTheme),
+    this.fontFamilyCompartment.of(this.fontThemes[this.currentFontIndex]),
+    this.fontSizeCompartment.of(this.createFontSizeTheme(this.currentFontSize)),
+    EditorView.updateListener.of((update: ViewUpdate) => this.onEditorUpdate(update)),
+    scrollPastEnd(),
+    typeWriterTheme,
+    preventCursorBeyondDocEndFilter,
+  ];
+}
+  // --- 初期化 ---
 
-    this.editorView = new EditorView({
-      state: EditorState.create({ extensions: this.editorExtensions }),
-      parent: this.editorContainer,
-    });
-
-    this.setupEventListeners();
-
-    // ★★★ 非同期処理を、setTimeoutでメインスレッドから切り離す ★★★
-    setTimeout(() => this.asyncPostInitialize(), 0);    
+private async initialize() {
+  // 1. UI要素のチェック
+  if (!this.editorContainer || !this.fileListContainer || !this.outlineControls || !this.outlineContainer) {
+    console.error("Fatal Error: A required UI container was not found."); return;
   }
 
-  /**
-   * すべての非同期初期化をここで行う
-   */
-  private async asyncPostInitialize() {
-    // 1. Storeをロード
-    this.store = await Store.load('.settings.dat');
+  // 2. イベントリスナーを先に設定
+  this.setupEventListeners();
+  
+  // 3. 同期的なセットアップ（テーマ定義など）
+  this.defineThemesAndFonts();
 
-    // 2. 設定を読み込み、状態変数を更新
-    const settings = await this.store.get<AppSettings>('settings');
-    if (settings) {
-      this.isDarkMode = settings.isDarkMode ?? this.isDarkMode;
-      this.currentFontIndex = settings.currentFontIndex ?? this.currentFontIndex;
-      this.currentFontSize = settings.currentFontSize ?? this.currentFontSize;
-    }
+  // 4. CodeMirrorインスタンスを「空のデフォルト状態」で即座に生成
+  this.editorView = new EditorView({
+    state: EditorState.create({ extensions: this.createEditorExtensions() }),
+    parent: this.editorContainer,
+  });
 
-    // 3. 読み込んだ設定をUIに反映 (dispatchとクラスのトグル)
-    this.editorView.dispatch({
-      effects: [
-        this.themeCompartment.reconfigure(this.isDarkMode ? this.darkTheme : this.lightTheme),
-        this.fontFamilyCompartment.reconfigure(this.fontThemes[this.currentFontIndex]),
-        this.fontSizeCompartment.reconfigure(this.createFontSizeTheme(this.currentFontSize)),
-      ]
-    });
-    document.body.classList.toggle('dark-mode', this.isDarkMode);
-    document.body.classList.remove(...this.fontClassNames);
-    document.body.classList.add(this.fontClassNames[this.currentFontIndex]);
-    this.updateBackground();
-    await this.initializeBGM();
+  // --- ここから非同期処理 ---
+  
+  // 5. Storeのロードと設定の読み込み
+  this.store = await Store.load('.settings.dat');
+  const settings = await this.store.get<AppSettings>('settings');
+  if (settings) {
+    this.isDarkMode = settings.isDarkMode ?? this.isDarkMode;
+    this.currentFontIndex = settings.currentFontIndex ?? this.currentFontIndex;
+    this.currentFontSize = settings.currentFontSize ?? this.currentFontSize;
+  }
+  
+  // 6. 読み込んだ設定をUIに反映
+  this.editorView.dispatch({
+    effects: [
+      this.themeCompartment.reconfigure(this.isDarkMode ? this.darkTheme : this.lightTheme),
+      this.fontFamilyCompartment.reconfigure(this.fontThemes[this.currentFontIndex]),
+      this.fontSizeCompartment.reconfigure(this.createFontSizeTheme(this.currentFontSize)),
+    ]
+  });
+  document.body.classList.toggle('dark-mode', this.isDarkMode);
+  document.body.classList.remove(...this.fontClassNames);
+  document.body.classList.add(this.fontClassNames[this.currentFontIndex]);
+  this.updateBackground(); // Base64方式に戻した場合
+  
+  // 7. BGMの初期化
+  await this.initializeBGM();
 
-      // 4. 最後に開いていたファイルを復元
+  // ★最初に一度、空のステータスバーを描画する
+  this.updateStatusBar(this.editorView);
+  
+  // ★時計を更新するタイマーをここに移動
+  setInterval(() => {
+    this.updateStatusBarTimeOnly();
+  }, 1000); // 1秒ごとに時刻だけ更新
+
+  // 8. 最後に開いていたファイルを復元
   if (settings && settings.sessionFilePaths) {
     const sessionFilePaths = settings.sessionFilePaths;
-    console.log('[asyncPostInitialize] Restoring session files:', sessionFilePaths);
-    
-    // 保存されていたファイルを順番に(アクティブにしながら)開いていく
     for (const filePath of sessionFilePaths) {
       await this.openOrSwitchTab(filePath);
     }
+    // 最後のタブをアクティブにする
+    if (sessionFilePaths.length > 0) {
+      await this.openOrSwitchTab(sessionFilePaths[sessionFilePaths.length - 1]);
+    }
   }
-    await getCurrentWindow().show();
-  }
+
+  // ★ Rustからの問い合わせをリッスン
+  await listen('tauri://check-before-close', async () => {
+    const hasDirtyTabs = this.openTabs.some(tab => tab.isDirty);
+    // ★ RustにisDirtyの状態を伝えて、判断を委ねる
+    await invoke('check_before_close', { hasDirtyTabs });
+  });
+
+  // 9. 最後にウィンドウを表示
+  await getCurrentWindow().show();
+}
+
+
 
 
   private defineThemesAndFonts() {
@@ -255,51 +306,118 @@ class App {
     document.querySelector('#btn-fullscreen')?.addEventListener('click', async () => {
       this.toggleFullscreen();
     });
-    document.querySelector('#btn-close')?.addEventListener('click', () => getCurrentWindow().close());
+    document.querySelector('#btn-close')?.addEventListener('click', () => {
+        this.handleCloseRequest();
+    });
+    listen('tauri://on-close-requested', () => {
+        this.handleCloseRequest();
+    });    
     document.querySelector('#btn-bgm-toggle')?.addEventListener('click', () => this.toggleBGM());
+
   }
   
   // --- イベントハンドラ ---
-  private handleSidebarClick(e: MouseEvent) {
-    const target = e.target as HTMLElement;
-    const path = target.dataset.path;
-    const posStr = target.dataset.pos;
-    if (target.classList.contains('file-entry') && path) this.openOrSwitchTab(path);
-    else if (target.classList.contains('outline-text') && posStr) {
-      const pos = parseInt(posStr, 10);
-      this.editorView.dispatch({ selection: { anchor: pos }, effects: EditorView.scrollIntoView(pos, { y: 'start' }) });
-      this.editorView.focus();
-    } else if (target.classList.contains('toggle-collapse') && posStr) {
-      const heading = this.activeFileHeadings.find(h => h.pos === parseInt(posStr, 10));
-      if (heading) { heading.isCollapsed = !heading.isCollapsed; this.renderSidebar(); }
-    } else if (target.id === 'collapse-all-btn') {
-      this.activeFileHeadings.forEach(h => h.isCollapsed = true); this.renderSidebar();
-    } else if (target.id === 'expand-all-btn') {
-      this.activeFileHeadings.forEach(h => h.isCollapsed = false); this.renderSidebar();
+// in App class
+
+private handleSidebarClick(e: MouseEvent) {
+  const target = e.target as HTMLElement;
+
+  // --- 1. ファイル名 (file-entry) がクリックされたか ---
+  const fileEntryTarget = target.closest('.file-entry');
+  if (fileEntryTarget) {
+    // .file-entry要素からdata-pathを取得
+    const path = (fileEntryTarget as HTMLElement).dataset.path;
+    if (path) {
+      this.openOrSwitchTab(path);
+      // ファイル名をクリックした場合は、他の処理は不要なのでここで終了
+      return; 
     }
   }
 
+  // --- 2. アウトラインのテキスト (outline-text) がクリックされたか ---
+  const outlineTextTarget = target.closest('.outline-text');
+  if (outlineTextTarget) {
+    const posStr = (outlineTextTarget as HTMLElement).dataset.pos;
+    if (posStr) {
+      const pos = parseInt(posStr, 10);
+      this.editorView.dispatch({
+        selection: { anchor: pos },
+        effects: EditorView.scrollIntoView(pos, { y: 'start' })
+      });
+      this.editorView.focus();
+      return;
+    }
+  }
+  
+  // --- 3. アウトラインの開閉ボタン (toggle-collapse) がクリックされたか ---
+  const toggleCollapseTarget = target.closest('.toggle-collapse');
+  if (toggleCollapseTarget) {
+    const posStr = (toggleCollapseTarget as HTMLElement).dataset.pos;
+    if (posStr) {
+      const heading = this.activeFileHeadings.find(h => h.pos === parseInt(posStr, 10));
+      if (heading) {
+        heading.isCollapsed = !heading.isCollapsed;
+        this.renderSidebar();
+      }
+      return;
+    }
+  }
+
+  // --- 4. 全開/全閉ボタン (IDで判断) ---
+  if (target.id === 'collapse-all-btn') {
+    this.activeFileHeadings.forEach(h => h.isCollapsed = true);
+    this.renderSidebar();
+    return;
+  }
+  
+  if (target.id === 'expand-all-btn') {
+    this.activeFileHeadings.forEach(h => h.isCollapsed = false);
+    this.renderSidebar();
+    return;
+  }
+}
+
   private handleKeyDown(e: KeyboardEvent) {
-    const isCtrlOrCmd = e.ctrlKey || e.metaKey;
+    const isMac = navigator.userAgent.includes('Mac');
+    const isCtrl = e.ctrlKey;
+    const isCmd = e.metaKey;
     const isShift = e.shiftKey;
-    if (isCtrlOrCmd && e.key.toLocaleLowerCase() === 's') { e.preventDefault(); this.saveActiveFile(); }
-    if (isCtrlOrCmd && e.key.toLocaleLowerCase() === 't') { e.preventDefault(); this.toggleDarkMode(); }
-    if (isCtrlOrCmd && isShift && e.key.toLowerCase() === 'f') { e.preventDefault(); this.cycleEditorFont(); }
+    const key = e.key.toLowerCase();
+    const isCtrlOrCmd = e.ctrlKey || e.metaKey;
+
+    if (isCtrlOrCmd && key === 's')  { e.preventDefault(); this.saveActiveFile(); }
+    if (isCtrlOrCmd && key === 't') { e.preventDefault(); this.toggleDarkMode(); }
+    if (isCtrlOrCmd && isShift && key === 'f') {
+      e.preventDefault();
+      this.cycleEditorFont();
+      return; // ★処理が重複しないように、ここで関数を抜ける
+    }
     if (isCtrlOrCmd && (e.code === 'Equal' || e.code === 'NumpadAdd')) { e.preventDefault(); this.changeFontSize(this.currentFontSize + 1); }
     if (isCtrlOrCmd && (e.code === 'Minus' || e.code === 'NumpadSubtract')) { e.preventDefault(); this.changeFontSize(this.currentFontSize - 1); }
     if (isCtrlOrCmd && (e.code === 'Digit0' || e.code === 'Numpad0')) { e.preventDefault(); this.changeFontSize(15); }
-    if (isCtrlOrCmd && e.key.toLocaleLowerCase() === 'q') { e.preventDefault(); getCurrentWindow().close(); }
-    if (isCtrlOrCmd && e.key.toLocaleLowerCase() === 'o') { e.preventDefault(); this.openNewFile(); }
-    if (isCtrlOrCmd && e.key.toLocaleLowerCase() === 'n') { e.preventDefault(); this.createNewTab(); }
-    if (isCtrlOrCmd && e.key.toLocaleLowerCase() === 'z' && !isShift) { e.preventDefault(); undo(this.editorView); }
-    if (isCtrlOrCmd && (e.key.toLocaleLowerCase() === 'y' || (isShift && e.key.toLocaleLowerCase() === 'z'))) { e.preventDefault(); redo(this.editorView); }
-    if (e.key === 'F11' || (isCtrlOrCmd && e.metaKey && e.key.toLocaleLowerCase() === 'f')) { // MacのCtrl+Cmd+F
+    if (isCtrlOrCmd && key === 'q') {
+        e.preventDefault();
+        this.handleCloseRequest();
+    }
+    if (isCtrlOrCmd && key === 'o') { e.preventDefault(); this.openNewFile(); }
+    if (isCtrlOrCmd && key === 'n') { e.preventDefault(); this.createNewTab(); }
+    if (isCtrlOrCmd && key === 'z' && !isShift) { e.preventDefault(); undo(this.editorView); }
+    if (isCtrlOrCmd && (key === 'y' || (isShift && key === 'z'))) { e.preventDefault(); redo(this.editorView); }
+    // --- Mac専用フルスクリーン (Ctrl + Cmd + F) ---
+    if (isMac && isCtrl && isCmd && key === 'f') {
       e.preventDefault();
       this.toggleFullscreen();
+      return;
     }
-    if (isCtrlOrCmd && e.key.toLocaleLowerCase() === 'p' && isShift) { e.preventDefault(); this.toggleBGM(); }
-    if (isCtrlOrCmd && e.key.toLocaleLowerCase() === 'r') { e.preventDefault(); } // リロードを無効化
-    if (isCtrlOrCmd && e.key.toLocaleLowerCase() === 'r' && isShift) { e.preventDefault(); } 
+    // --- Windows/Linux用フルスクリーン (F11) ---
+    if (!isMac && e.key === 'F11') { // F11はtoLowerCaseしない
+      e.preventDefault();
+      this.toggleFullscreen();
+      return;
+    }
+    if (isCtrlOrCmd && key === 'p' && isShift) { e.preventDefault(); this.toggleBGM(); }
+    if (isCtrlOrCmd && key === 'r') { e.preventDefault(); } // リロードを無効化
+    if (isCtrlOrCmd && key === 'r' && isShift) { e.preventDefault(); } 
   }
 
   private onEditorUpdate(update: ViewUpdate) {
@@ -309,6 +427,9 @@ class App {
         activeTab.isDirty = true;
         this.renderSidebar(); // isDirty表示の更新のためだけ
       }
+    }
+    if (update.docChanged || update.selectionSet) {
+      this.updateStatusBar(update.view);
     }
   }
 
@@ -367,6 +488,57 @@ private async updateBackground() {
   }
 }
   
+/**
+ * ステータスバー全体を更新する
+ */
+private updateStatusBar(view: EditorView) {
+  // ★ this.statusBarのnullチェックは関数の冒頭で行う
+  if (!this.statusBar) return;
+
+  const tab = this.openTabs.find(t => t.path === this.activeTabPath);
+  
+  // デフォルト値を設定
+  let lineEnding = '';
+  let encoding = '';
+  let lineColText = '';
+  let charCountText = '';
+
+  if (tab) {
+    lineEnding = tab.lineEnding;
+    encoding = tab.encoding;
+    
+    const state = view.state;
+    const cursor = state.selection.main.head;
+    const line = state.doc.lineAt(cursor);
+    
+    lineColText = `${line.number}/${state.doc.lines}L`;
+    charCountText = `${state.doc.length}C`;
+  }
+  
+  // ★ nullチェックをしながら個別にtextContentを更新
+  const lineColEl = document.querySelector<HTMLElement>('#status-line-col');
+  if(lineColEl) lineColEl.textContent = lineColText;
+  
+  const charCountEl = document.querySelector<HTMLElement>('#status-char-count');
+  if(charCountEl) charCountEl.textContent = charCountText;
+
+  const encodingEl = document.querySelector<HTMLElement>('#status-encoding');
+  if(encodingEl) encodingEl.textContent = encoding;
+
+  const lineEndingEl = document.querySelector<HTMLElement>('#status-line-ending');
+  if(lineEndingEl) lineEndingEl.textContent = lineEnding;
+}
+
+/**
+ * ステータスバーの時刻だけを更新する
+ */
+private updateStatusBarTimeOnly() {
+  const timeEl = document.querySelector<HTMLElement>('#status-time');
+  if (timeEl) {
+    timeEl.textContent = new Date().toLocaleTimeString('ja-JP', { hour: '2-digit', minute: '2-digit' });
+  }
+}
+
   // --- 機能メソッド ---
 private async saveSettings() {
   await this.store.set('settings', {
@@ -415,6 +587,24 @@ private async saveSettings() {
       window.setFullscreen(!isFullscreen);
   }
 
+private async handleCloseRequest() {
+    const dirtyTabs = this.openTabs.filter(tab => tab.isDirty);
+    let shouldClose = true;
+
+    if (dirtyTabs.length > 0) {
+        shouldClose = await ask(
+            `未保存のファイルが ${dirtyTabs.length} 件あります。本当に終了しますか？`,
+            { title: 'アプリケーションを終了', kind: 'warning' }
+        );
+    }
+
+    if (shouldClose) {
+        await this.saveSettings();
+        // ★ Rustに「強制終了して」と命令する
+        await invoke('force_close_app');
+    }
+}
+
   private async saveActiveFile() {
       if (!this.activeTabPath) return;
       const activeTab = this.openTabs.find(t => t.path === this.activeTabPath);
@@ -422,7 +612,11 @@ private async saveSettings() {
   
       try {
         const content = this.editorView.state.doc.toString();
-        await invoke('write_file', { path: activeTab.path, content });
+        await invoke('write_file', { 
+          path: activeTab.path, 
+          content, 
+          encoding: activeTab.encoding 
+        });
         this.parseHeadingsFromEditor(this.editorView);
         activeTab.isDirty = false;
         this.renderSidebar(); // isDirty表示(*)を消すために再描画
@@ -450,12 +644,22 @@ private async saveSettings() {
       }
     }
   private createNewTab() {
-      const newFilePath = `Untitled-${Date.now()}.md`;
-      const state = EditorState.create({ extensions: this.editorExtensions });
-      const tab = { path: newFilePath, state, isDirty: true }; // 最初から Dirty 状態
-      this.openTabs.push(tab);
-      this.openOrSwitchTab(newFilePath);
-    }
+    const newFilePath = `Untitled-${Date.now()}.md`;
+    const state = EditorState.create({ extensions: this.createEditorExtensions() });
+
+    // ★ encodingとlineEndingのデフォルト値を追加
+    const tab: OpenTab = { 
+      path: newFilePath, 
+      state, 
+      isDirty: true,
+      encoding: 'UTF-8',      // 新規ファイルはUTF-8
+      lineEnding: 'LF',       // デフォルトはLF (環境に応じて変えても良い)
+      headings: []
+    };
+    
+    this.openTabs.push(tab);
+    this.openOrSwitchTab(newFilePath);
+  }
 
   private async closeTab(filePathToClose: string) {
     const tabToClose = this.openTabs.find(t => t.path === filePathToClose);
@@ -495,41 +699,92 @@ private async saveSettings() {
     }
   }
 
-  private parseHeadingsFromEditor(view: EditorView) {
+/**
+ * エディタから見出しを解析する 
+ */
+private parseHeadingsFromEditor(view: EditorView): Promise<void> {
+  return new Promise((resolve) => {
+    setTimeout(() => {
+      console.time('Outline Parsing (Line by Line)');
       const newHeadings: Heading[] = [];
-      syntaxTree(view.state).iterate({
-        enter: (node: TreeCursor) => {
-          if (node.name.startsWith('ATXHeading')) {
-            const level = parseInt(node.name.replace('ATXHeading', ''), 10);
-            const headerMark = node.node.getChild('HeaderMark');
-            const text = view.state.doc.sliceString(headerMark ? headerMark.to : node.from, node.to).trim();
-            if (text) {
-              const existing = this.activeFileHeadings.find(h => h.pos === node.from && h.text === text);
-              newHeadings.push({ level, text, pos: node.from, isCollapsed: existing ? existing.isCollapsed : false });
-            }
+      const doc = view.state.doc;
+
+      // ★ doc.linesを使って、ドキュメントの全行をループ処理
+      for (let i = 1; i <= doc.lines; i++) {
+        const line = doc.line(i);
+        // ★ オリジナルと同じ正規表現
+        const match = line.text.match(/^(#+)\s(.*)/);
+        
+        if (match) {
+          const level = match[1].length;
+          const text = match[2].trim();
+          
+          if (text) {
+            newHeadings.push({
+              level,
+              text,
+              pos: line.from, // 行の開始位置
+              isCollapsed: false, // とりあえずデフォルトはfalse
+            });
           }
-        },
+        }
+      }
+
+      // 既存の折りたたみ状態を引き継ぐ (パフォーマンスのため)
+      this.activeFileHeadings.forEach(oldHeading => {
+        if (oldHeading.isCollapsed) {
+          const newHeading = newHeadings.find(h => h.pos === oldHeading.pos && h.text === oldHeading.text);
+          if (newHeading) {
+            newHeading.isCollapsed = true;
+          }
+        }
       });
+      
       this.activeFileHeadings = newHeadings;
-    }
+      console.timeEnd('Outline Parsing (Line by Line)');
+      resolve();
+    }, 50);
+  });
+}
 
 private async openOrSwitchTab(filePath: string) {
-  console.log(`[openOrSwitchTab] Opening: ${filePath}`);
+  // 切り替える「前」に、現在のアウトラインの状態を保存
+  const previousTab = this.openTabs.find(t => t.path === this.activeTabPath);
+  if (previousTab) {
+    previousTab.headings = this.activeFileHeadings;
+  }  
+  // すでにアクティブなら何もしない
+  if (this.activeTabPath === filePath) {
+    this.editorView.focus();
+    return;
+  }
 
-  // 1. 既に開いているタブを探す
+  // 1. 既存のタブを探す
   let tab = this.openTabs.find(t => t.path === filePath);
 
   if (!tab) {
-    // 2. タブがなければ、ファイルを読み込んで新しいタブを作る
     try {
-      const content = await invoke('read_file', { path: filePath }) as string;
+      // ★ 新しいread_fileを呼び出し、返り値の型が変わる
+      const fileData = await invoke('read_file', { path: filePath }) as {
+        content: string;
+        encoding: string;
+        lineEnding: 'LF' | 'CRLF';
+      };
+      
       const state = EditorState.create({ 
-        doc: content, 
-        extensions: this.editorExtensions 
+        doc: fileData.content, 
+        extensions: this.createEditorExtensions() 
       });
-      tab = { path: filePath, state, isDirty: false };
+
+      tab = { 
+        path: filePath, 
+        state, 
+        isDirty: false, 
+        encoding: fileData.encoding, // ★エンコーディングを保存
+        lineEnding: fileData.lineEnding, // ★改行コードを保存
+        headings: []
+      };
       this.openTabs.push(tab);
-      console.log(`[openOrSwitchTab] New tab created for: ${filePath}`);
     } catch (error) {
       console.error(`[openOrSwitchTab] Failed to open file: ${filePath}`, error);
       return;
@@ -539,22 +794,20 @@ private async openOrSwitchTab(filePath: string) {
   // 3. 状態を更新
   this.activeTabPath = filePath;
   
-  // 4. ★★★ 最も重要 ★★★
-  //    見つけた、あるいは新しく作った`tab`の`state`を、エディタに確実にセットする
+  // 4. 見つけた、あるいは新しく作った`tab`の`state`を、エディタに確実にセットする
   this.editorView.setState(tab.state);
-  
-  // 5. 現在のUI設定を再適用
-  this.editorView.dispatch({
-    effects: [
-      this.themeCompartment.reconfigure(this.isDarkMode ? this.darkTheme : this.lightTheme),
-      this.fontFamilyCompartment.reconfigure(this.fontThemes[this.currentFontIndex]),
-      this.fontSizeCompartment.reconfigure(this.createFontSizeTheme(this.currentFontSize)),
-    ]
-  });
+  // 新しくアクティブになったタブのheadingsを復元
+  this.activeFileHeadings = tab.headings;
+  this.renderSidebar(); // 先にファイル名だけ表示
+  if (this.outlineContainer) {
+    this.outlineContainer.innerHTML = '<ul><li>解析中...</li></ul>';
+  }
 
-  // 6. UIを更新
-  this.parseHeadingsFromEditor(this.editorView);
+  // 6. アウトラインの解析とUIの更新
+  await this.parseHeadingsFromEditor(this.editorView);
   this.renderSidebar();
+  
+  // 7. 設定を保存し、フォーカスを当てる
   await this.saveSettings();
   this.editorView.focus();
 }
