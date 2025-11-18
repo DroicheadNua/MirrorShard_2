@@ -109,23 +109,27 @@ async fn write_file(path: String, content: String, encoding: String) -> Result<(
 
 #[tauri::command]
 async fn save_file_as(app: tauri::AppHandle, content: String) {
-    app.dialog().file().save_file(move |file_path| {
-        if let Some(path) = file_path {
-            if let Err(e) = std::fs::write(path.to_string(), &content) {
-                eprintln!("Failed to save file: {}", e.to_string());
-                app.dialog()
-                    .message(format!("Failed to save file: {}", e.to_string()))
-                    .title("Error")
-                    .show(|_| {});
+    app.dialog()
+        .file()
+        .add_filter("Text Document", &["txt", "md"])
+        .set_file_name("Untitled.txt")
+        .save_file(move |file_path| {
+            if let Some(path) = file_path {
+                if let Err(e) = std::fs::write(path.to_string(), &content) {
+                    eprintln!("Failed to save file: {}", e.to_string());
+                    app.dialog()
+                        .message(format!("Failed to save file: {}", e.to_string()))
+                        .title("Error")
+                        .show(|_| {});
+                }
             }
-        }
-    });
+        });
 }
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
-        .plugin(tauri_plugin_updater::Builder::new().build())
+        .plugin(tauri_plugin_clipboard_manager::init())
         .on_window_event(|window, event| match event {
             WindowEvent::CloseRequested { api, .. } => {
                 api.prevent_close();

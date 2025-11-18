@@ -3,7 +3,7 @@ import { invoke } from '@tauri-apps/api/core';
 import { Store } from '@tauri-apps/plugin-store';
 import { EditorState, Compartment } from '@codemirror/state';
 import { EditorView, keymap, ViewUpdate, scrollPastEnd } from '@codemirror/view';
-import { history, historyKeymap, undo, redo, insertTab } from '@codemirror/commands';
+import { history, historyKeymap, undo, redo, insertTab, cursorDocEnd, cursorDocStart } from '@codemirror/commands';
 import { markdown, markdownLanguage } from '@codemirror/lang-markdown';
 import { search, searchKeymap } from '@codemirror/search';
 import type { SelectionRange, StateEffect } from '@codemirror/state';
@@ -14,6 +14,7 @@ import { open, ask } from '@tauri-apps/plugin-dialog';
 import { backgroundMusic } from './assets/audio'; 
 import { backgroundImage } from './assets/images';
 import { listen } from '@tauri-apps/api/event';
+import { Menu, MenuItem, PredefinedMenuItem } from '@tauri-apps/api/menu';
 
 // --- 型定義 ---
 interface Heading { level: number; text: string; pos: number; isCollapsed: boolean; }
@@ -96,6 +97,8 @@ private createEditorExtensions(): any[] {
       ...historyKeymap,      
       ...searchKeymap, 
       { key: 'Tab', run: insertTab },
+      { key: 'Mod-ArrowUp', run: (v) => { cursorDocStart(v); v.dispatch({ effects: EditorView.scrollIntoView(0, { y: "start" }) }); return true; } },
+      { key: 'Mod-ArrowDown', run: (v) => { cursorDocEnd(v); v.dispatch({ effects: EditorView.scrollIntoView(v.state.selection.main.head, { y: "center" }) }); return true; } },
     ]),
     EditorView.lineWrapping,
     markdown({ base: markdownLanguage }),
@@ -333,6 +336,9 @@ private async initialize() {
     document.querySelector('#btn-fullscreen')?.addEventListener('click', async () => {
       this.toggleFullscreen();
     });
+    document.querySelector('#btn-minimize')?.addEventListener('click', async () => {
+      this.setMinimize();
+    });    
     document.querySelector('#btn-close')?.addEventListener('click', () => {
         this.handleCloseRequest();
     });
@@ -341,6 +347,33 @@ private async initialize() {
     });    
     document.querySelector('#btn-bgm-toggle')?.addEventListener('click', () => this.toggleBGM());
 
+    this.editorContainer?.addEventListener('contextmenu', async (e) => {
+      e.preventDefault();
+      
+      const menu = await Menu.new({ items: [
+        // --- アプリケーション固有のコマンド ---
+        await MenuItem.new({ text: '開く...', action: () => this.openNewFile() }),
+        await MenuItem.new({ text: '保存', action: () => this.saveActiveFile() }),
+        await MenuItem.new({ text: '名前を付けて保存...', action: () => this.saveActiveFileAs() }),
+        await PredefinedMenuItem.new({ item: 'Separator' }),
+
+        // --- CodeMirrorのコマンドを呼び出す ---
+        // ★ enabled は使わず、常に有効にしておく (CodeMirrorが内部で判断する)
+        await MenuItem.new({ text: '元に戻す', action: () => undo(this.editorView) }),
+        await MenuItem.new({ text: 'やり直す', action: () => redo(this.editorView) }),
+        await PredefinedMenuItem.new({ item: 'Separator' }),
+
+        // ★★★ PredefinedMenuItem を使う ★★★
+        await PredefinedMenuItem.new({ item: 'Cut' }),
+        await PredefinedMenuItem.new({ item: 'Copy' }),
+        await PredefinedMenuItem.new({ item: 'Paste' }),
+        await PredefinedMenuItem.new({ item: 'Separator' }),
+        await PredefinedMenuItem.new({ item: 'SelectAll' }),
+      ]});
+
+      await menu.popup();
+    });
+  
   }
   
   // --- イベントハンドラ ---
@@ -437,11 +470,16 @@ private handleSidebarClick(e: MouseEvent) {
       return;
     }
     // --- Windows/Linux用フルスクリーン (F11) ---
-    if (!isMac && e.key === 'F11') { // F11はtoLowerCaseしない
+    if (!isMac && e.key === 'F11') { 
       e.preventDefault();
       this.toggleFullscreen();
       return;
     }
+    if (isCtrlOrCmd && key === 'h') { 
+      e.preventDefault();
+      this.setMinimize();
+      return;
+    }    
     if (isCtrlOrCmd && key === 'p' && isShift) { e.preventDefault(); this.toggleBGM(); }
     if (isCtrlOrCmd && key === 'r') { e.preventDefault(); } // リロードを無効化
     if (isCtrlOrCmd && key === 'r' && isShift) { e.preventDefault(); } 
@@ -484,9 +522,11 @@ private renderSidebar() {
   fileListHtml += '</ul>';
   this.fileListContainer.innerHTML = fileListHtml;
 
+  this.outlineControls.style.display = 'flex';
+
   // --- 2. アウトライン部分のHTMLを生成 ---
   if (this.activeTabPath && this.activeFileHeadings.length > 0) {
-    this.outlineControls.style.display = 'flex';
+    
     let outlineHtml = '<ul>';
     let hiddenLevels: number[] = [];
     for (let i = 0; i < this.activeFileHeadings.length; i++) {
@@ -501,8 +541,7 @@ private renderSidebar() {
     outlineHtml += '</ul>';
     this.outlineContainer.innerHTML = outlineHtml;
   } else {
-    this.outlineControls.style.display = 'none';
-    this.outlineContainer.innerHTML = '';
+    this.outlineContainer.innerHTML = '<ul></ul>';
   }
 }
 
@@ -622,6 +661,10 @@ private async saveSettings() {
       const isFullscreen = await window.isFullscreen();
       window.setFullscreen(!isFullscreen);
   }
+  private async setMinimize(){
+      const window = getCurrentWindow();
+      window.minimize();           
+  }  
 
 private async handleCloseRequest() {
     const dirtyTabs = this.openTabs.filter(tab => tab.isDirty);
@@ -653,7 +696,7 @@ private async handleCloseRequest() {
           content, 
           encoding: activeTab.encoding 
         });
-        this.parseHeadingsFromEditor(this.editorView);
+        await this.parseHeadingsFromEditor(this.editorView);
         activeTab.isDirty = false;
         this.renderSidebar(); // isDirty表示(*)を消すために再描画
         console.log(`File saved: ${activeTab.path}`);

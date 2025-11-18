@@ -77,8 +77,10 @@ body.dark-mode {
   flex-shrink: 0;
   user-select: none;
   border:none;
+  justify-content: space-between;
+  display: flex;
 }
-.titlebar-buttons button {
+.titlebar-buttons button, .window-controls button {
   background-color: transparent;
   border: none;
   color: var(--text-color);
@@ -99,19 +101,19 @@ body.dark-mode {
   font-size: 0; 
   opacity: 0.7; /* 少し透明にして目に優しく */
 }
-.titlebar-buttons button:hover {
+.titlebar-buttons button:hover, .window-controls button:hover {
   background-color: var(--sidebar-hover-bg);
   opacity: 1;
 }
 
 /* ダークモード時のボタン */
-.dark-mode .titlebar-buttons button {
+.dark-mode .titlebar-buttons button, .dark-mode .window-controls button {
   filter: invert(1);
 }
 .dark-mode .outline-controls button {
   filter: invert(1);
 }
-.dark-mode .titlebar-buttons button:hover,
+.dark-mode .titlebar-buttons button:hover, .dark-mode .window-controls button:hover,
 .dark-mode .outline-controls button:hover { 
   background-color: var(--button-hover-bg);
 }
@@ -339,19 +341,20 @@ height: 100%;
 
 /* スクロールバーのサム（つまみ） */
 .sidebar-content::-webkit-scrollbar-thumb {
-  background: #888;
+  background: rgba(0, 0, 0, 0.15);
   border-radius: 4px;
+  min-height: '40px';  
 }
 .sidebar-content::-webkit-scrollbar-thumb:hover {
-  background: #555;
+  background: rgba(0, 0, 0, 0.25);
 }
 
 /* ダークモード時のつまみの色 */
 .dark-mode .sidebar-content::-webkit-scrollbar-thumb {
-  background: #aaa;
+  background: rgba(255, 255, 255, 0.15);
 }
 .dark-mode .sidebar-content::-webkit-scrollbar-thumb:hover {
-  background: #ddd;
+  background: rgba(255, 255, 255, 0.4);
 }
 
 #status-bar {
@@ -421,3 +424,4 @@ height: 100%;
 }
 #collapse-all-btn { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='18 15 12 9 6 15'%3E%3C/polyline%3E%3C/svg%3E"); }
 #expand-all-btn { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E"); }
+#btn-minimize { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cline x1='5' y1='12' x2='19' y2='12'%3E%3C/line%3E%3C/svg%3E"); }

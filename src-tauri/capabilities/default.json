@@ -23,12 +23,18 @@
     "dialog:allow-ask",
     "core:path:default",
     "core:path:allow-resolve",
-    "updater:default",
 
     "fs:allow-read-file",
 
     "store:default", 
     "store:allow-load", 
-    "store:allow-save" 
+    "store:allow-save",
+    "core:menu:default",
+    "core:menu:allow-new",
+    "core:menu:allow-popup",
+
+    "clipboard-manager:default",
+    "clipboard-manager:allow-write-text",
+    "clipboard-manager:allow-read-text"
   ]
 }
