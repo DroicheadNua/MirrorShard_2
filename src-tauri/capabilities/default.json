@@ -23,6 +23,7 @@
     "dialog:allow-ask",
     "core:path:default",
     "core:path:allow-resolve",
+    "updater:default",
 
     "fs:allow-read-file",
 

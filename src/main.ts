@@ -5,6 +5,10 @@ import { EditorState, Compartment } from '@codemirror/state';
 import { EditorView, keymap, ViewUpdate, scrollPastEnd } from '@codemirror/view';
 import { history, historyKeymap, undo, redo, insertTab } from '@codemirror/commands';
 import { markdown, markdownLanguage } from '@codemirror/lang-markdown';
+import { search, searchKeymap } from '@codemirror/search';
+import type { SelectionRange, StateEffect } from '@codemirror/state';
+import { HighlightStyle, syntaxHighlighting } from '@codemirror/language';
+import { tags } from '@lezer/highlight';
 import { getCurrentWindow } from '@tauri-apps/api/window';
 import { open, ask } from '@tauri-apps/plugin-dialog';
 import { backgroundMusic } from './assets/audio'; 
@@ -45,6 +49,7 @@ class App {
   private themeCompartment = new Compartment();
   private fontFamilyCompartment = new Compartment();
   private fontSizeCompartment = new Compartment();
+  private highlightingCompartment = new Compartment();
   private lightTheme!: any;
   private darkTheme!: any;
   private fontThemes: any[] = []; // ★初期化子を追加
@@ -87,9 +92,22 @@ private createEditorExtensions(): any[] {
   // --- 拡張機能の配列を定義 ---
   return [
     history(),
-    keymap.of([ ...historyKeymap, { key: 'Tab', run: insertTab } ]),
-    markdown({ base: markdownLanguage }),
+    keymap.of([
+      ...historyKeymap,      
+      ...searchKeymap, 
+      { key: 'Tab', run: insertTab },
+    ]),
     EditorView.lineWrapping,
+    markdown({ base: markdownLanguage }),
+    search({
+      top: true, // 検索パネルを上部に
+      
+      // ★ 公式ドキュメントにある、スクロール挙動をカスタマイズするオプション
+      scrollToMatch: (range: SelectionRange, _view: EditorView): StateEffect<unknown> => {
+        // EditorView.scrollIntoViewを使って、中央揃えのスクロールエフェクトを生成して返す
+        return EditorView.scrollIntoView(range.from, { y: 'center' });
+      }
+    }),      
     this.themeCompartment.of(this.isDarkMode ? this.darkTheme : this.lightTheme),
     this.fontFamilyCompartment.of(this.fontThemes[this.currentFontIndex]),
     this.fontSizeCompartment.of(this.createFontSizeTheme(this.currentFontSize)),
@@ -97,6 +115,7 @@ private createEditorExtensions(): any[] {
     scrollPastEnd(),
     typeWriterTheme,
     preventCursorBeyondDocEndFilter,
+    this.highlightingCompartment.of(syntaxHighlighting(this.isDarkMode ? this.darkHighlightStyle : this.lightHighlightStyle)),
   ];
 }
   // --- 初期化 ---
@@ -136,6 +155,7 @@ private async initialize() {
       this.themeCompartment.reconfigure(this.isDarkMode ? this.darkTheme : this.lightTheme),
       this.fontFamilyCompartment.reconfigure(this.fontThemes[this.currentFontIndex]),
       this.fontSizeCompartment.reconfigure(this.createFontSizeTheme(this.currentFontSize)),
+          this.highlightingCompartment.reconfigure(syntaxHighlighting(this.isDarkMode ? this.darkHighlightStyle : this.lightHighlightStyle)),
     ]
   });
   document.body.classList.toggle('dark-mode', this.isDarkMode);
@@ -269,6 +289,13 @@ private async initialize() {
     const serif = "'Yu Mincho', 'Hiragino Mincho ProN', serif", sansSerif = "'Tsukushi A Round Gothic','Hiragino Sans', 'Yu Gothic', sans-serif", monospace = "'Meiryo',Consolas, 'Osaka-Mono', monospace";
     this.fontThemes = [createFontTheme(serif), createFontTheme(sansSerif), createFontTheme(monospace)];
   }
+
+    private lightHighlightStyle = HighlightStyle.define([
+      { tag: tags.heading, color: '#0550AE', fontWeight: 'bold' } // 例: GitHubの青
+    ]);
+    private darkHighlightStyle = HighlightStyle.define([
+      { tag: tags.heading, color: '#82AAFF', fontWeight: 'bold' } // 例: 明るい青
+    ]);      
 
   private createFontSizeTheme = (size: number) => EditorView.theme({ '&': { fontSize: `${size}pt` }, '.cm-gutters': { fontSize: `${size}pt` } });
 
@@ -553,7 +580,16 @@ private async saveSettings() {
 
   private toggleDarkMode() {
     this.isDarkMode = !this.isDarkMode;
-    this.editorView.dispatch({ effects: this.themeCompartment.reconfigure(this.isDarkMode ? this.darkTheme : this.lightTheme) });
+    this.editorView.dispatch(
+      { 
+        effects: 
+        this.themeCompartment.reconfigure(this.isDarkMode ? this.darkTheme : this.lightTheme)
+       },
+      { 
+        effects: 
+        this.highlightingCompartment.reconfigure(syntaxHighlighting(this.isDarkMode ? this.darkHighlightStyle : this.lightHighlightStyle))
+       }       
+      );
     document.body.classList.toggle('dark-mode', this.isDarkMode);
     this.updateBackground();
     this.saveSettings();
@@ -751,6 +787,7 @@ private async openOrSwitchTab(filePath: string) {
   // 切り替える「前」に、現在のアウトラインの状態を保存
   const previousTab = this.openTabs.find(t => t.path === this.activeTabPath);
   if (previousTab) {
+    previousTab.state = this.editorView.state;
     previousTab.headings = this.activeFileHeadings;
   }  
   // すでにアクティブなら何もしない
@@ -799,9 +836,6 @@ private async openOrSwitchTab(filePath: string) {
   // 新しくアクティブになったタブのheadingsを復元
   this.activeFileHeadings = tab.headings;
   this.renderSidebar(); // 先にファイル名だけ表示
-  if (this.outlineContainer) {
-    this.outlineContainer.innerHTML = '<ul><li>解析中...</li></ul>';
-  }
 
   // 6. アウトラインの解析とUIの更新
   await this.parseHeadingsFromEditor(this.editorView);

@@ -1,12 +1,12 @@
 // src-lib.rs
 
 // --- use文 (ファイルの先頭に追加) ---
+use encoding_rs::{SHIFT_JIS, UTF_8};
 use std::fs;
 use std::path::PathBuf;
-use tauri::{AppHandle,Emitter, WindowEvent}; 
+use tauri::{AppHandle, Emitter, WindowEvent};
 use tauri_plugin_dialog::DialogExt;
-use encoding_rs::{UTF_8, SHIFT_JIS}; 
-use tauri_plugin_window_state::{Builder, StateFlags}; 
+use tauri_plugin_window_state::{Builder, StateFlags};
 
 // --- FileEntry構造体の定義 ---
 #[derive(serde::Serialize, Clone)] // Cloneを追加すると後で便利
@@ -64,16 +64,32 @@ async fn read_file(path: String) -> Result<FileData, String> {
     let (cow, _encoding_used, had_errors) = UTF_8.decode(&bytes);
     if !had_errors {
         let content = cow.into_owned();
-        let line_ending = if content.contains("\r\n") { "CRLF" } else { "LF" };
-        return Ok(FileData { content, encoding: "UTF-8".to_string(), line_ending: line_ending.to_string() });
+        let line_ending = if content.contains("\r\n") {
+            "CRLF"
+        } else {
+            "LF"
+        };
+        return Ok(FileData {
+            content,
+            encoding: "UTF-8".to_string(),
+            line_ending: line_ending.to_string(),
+        });
     }
 
     // 2. UTF-8で失敗したら、Shift_JISとしてデコードを試みる
     let (cow, _encoding_used, had_errors) = SHIFT_JIS.decode(&bytes);
     if !had_errors {
         let content = cow.into_owned();
-        let line_ending = if content.contains("\r\n") { "CRLF" } else { "LF" };
-        return Ok(FileData { content, encoding: "Shift_JIS".to_string(), line_ending: line_ending.to_string() });
+        let line_ending = if content.contains("\r\n") {
+            "CRLF"
+        } else {
+            "LF"
+        };
+        return Ok(FileData {
+            content,
+            encoding: "Shift_JIS".to_string(),
+            line_ending: line_ending.to_string(),
+        });
     }
 
     // どちらも失敗した場合
@@ -109,6 +125,7 @@ async fn save_file_as(app: tauri::AppHandle, content: String) {
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
+        .plugin(tauri_plugin_updater::Builder::new().build())
         .on_window_event(|window, event| match event {
             WindowEvent::CloseRequested { api, .. } => {
                 api.prevent_close();
@@ -117,15 +134,17 @@ pub fn run() {
             }
             _ => {}
         })
-        .plugin(Builder::new()
-            .with_state_flags(
-                StateFlags::POSITION | // 位置は保存
+        .plugin(
+            Builder::new()
+                .with_state_flags(
+                    StateFlags::POSITION | // 位置は保存
                 StateFlags::SIZE |     // サイズは保存
                 StateFlags::MAXIMIZED |// 最大化状態は保存
-                StateFlags::FULLSCREEN // フルスクリーン状態は保存
-                // VISIBLE を除外することで、表示状態は保存・復元されなくなる
-            )
-            .build())
+                StateFlags::FULLSCREEN, // フルスクリーン状態は保存
+                                                            // VISIBLE を除外することで、表示状態は保存・復元されなくなる
+                )
+                .build(),
+        )
         .plugin(tauri_plugin_store::Builder::new().build())
         .plugin(tauri_plugin_dialog::init())
         .invoke_handler(tauri::generate_handler![

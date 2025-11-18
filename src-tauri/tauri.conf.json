@@ -73,5 +73,14 @@
       "bundleMediaFramework": false
     }
   }
-  }
+  },
+  "updater": {
+    "active": true,
+    "endpoints": [
+
+      "https://api.github.com/repos/DroicheadNua/MirrorShard_V2/releases/latest"
+    ],
+    "dialog": true, 
+    "pubkey": "YOUR_UPDATER_SIGNING_PUBLIC_KEY" 
+  }  
 }
