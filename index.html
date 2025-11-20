@@ -37,9 +37,18 @@
             <!-- ファイル一覧がここに描画される -->
           </div>
           <div id="outline-panel">
-            <div class="outline-controls">            
-              <button id="collapse-all-btn" title="すべて折りたたむ"></button>
-              <button id="expand-all-btn" title="すべて展開"></button>
+            <div class="outline-controls">
+              <!-- 左寄せのフォントコントロール -->
+              <div class="font-controls">
+                <button id="btn-font-dec" title="文字を小さく"></button>
+                <button id="btn-font-reset" title="リセット"></button>
+                <button id="btn-font-inc" title="文字を大きく"></button>
+              </div>
+              <!-- 右寄せの開閉コントロール -->
+              <div class="collapse-controls">            
+                <button id="collapse-all-btn" title="すべて折りたたむ"></button>
+                <button id="expand-all-btn" title="すべて展開"></button>
+              </div>
             </div>
             <div id="outline-container">
               <!-- アウトラインがここに描画される -->

@@ -1,8 +1,8 @@
 {
   "$schema": "https://schema.tauri.app/config/2",
-  "productName": "mirrorshard-ver02",
+  "productName": "MirrorShard 2",
   "version": "0.1.0",
-  "identifier": "com.mirrorshard-ver02.app",
+  "identifier": "com.DroicheadNua.mirrorshard2",
   "build": {
     "beforeDevCommand": "pnpm dev",
     "devUrl": "http://localhost:1420",
@@ -18,10 +18,10 @@
         "width": 800,
         "height": 600,
         "minWidth": 640,
-        "minHeight": 480,        
+        "minHeight": 480,
         "resizable": true,
         "fullscreen": false,
-        "decorations": false, 
+        "decorations": false,
         "transparent": true,
         "closable": true,
         "maximizable": true,
@@ -32,14 +32,31 @@
       "csp": null
     }
   },
+  "plugins": {
+    "cli": {
+      "description": "MirrorShard CLI",
+      "args": [
+        {
+          "name": "filePath",
+          "index": 1,
+          "description": "Path to the file to open.",
+          "takesValue": true,
+          "required": false
+        }
+      ]
+    }
+  },
   "bundle": {
     "fileAssociations": [
-    {
-      "ext": ["md", "txt"],
-      "name": "Text Document", 
-      "role": "Editor"
-    }
-  ],
+      {
+        "ext": [
+          "md",
+          "txt"
+        ],
+        "name": "Text Document",
+        "role": "Editor"
+      }
+    ],
     "active": true,
     "targets": "all",
     "icon": [
@@ -50,28 +67,28 @@
       "icons/icon.ico"
     ],
     "resources": [
-      "../README.md"
+      "docs/*"
     ],
     "windows": {
       "wix": {
         "language": "ja-JP"
       }
     },
-  "macOS": {
-    "dmg": {
-      "windowSize": {
-        "width": 800,
-        "height": 600
+    "macOS": {
+      "dmg": {
+        "windowSize": {
+          "width": 800,
+          "height": 600
+        }
+      }
+    },
+    "linux": {
+      "deb": {
+        "files": {}
+      },
+      "appimage": {
+        "bundleMediaFramework": false
       }
     }
-  },
-  "linux": {
-    "deb": {
-      "files": {} 
-    },
-    "appimage": {
-      "bundleMediaFramework": false
-    }
-  }
   }
 }
