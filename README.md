@@ -1,43 +1,45 @@
-MirrorShard 2 ver. 0.1.0 Beta  
+# MirrorShard 2 ver. 0.1.0 Beta  
 
 創作支援用テキストエディタ「MirrorShard」のソフトウェアフレームワークをTauriに変更、高速化と軽量化を図ったものです。  
-ベータ版のため機能は限定的ですが、エディタのコア機能の移植は概ね完了していますので、創作用エディタとして、また巨大テキストファイルを扱える軽量アウトラインプロセッサとして、特に問題なく運用できるかと思います。  
+ベータ版のため機能は限定的ですが、エディタのコア機能の移植は概ね完了していますので、創作用エディタとして、また巨大テキストファイルを扱えるアウトラインプロセッサとして、特に問題なく運用できるかと思います。  
 
 ![MirrorShard_2 Key Visual](screenshots/ScreenShot01.png)
 
-■ ダウンロード  
+## ダウンロード  
 
 [![Windows](https://img.shields.io/badge/Download-Windows-blue)]  
 (https://github.com/DroicheadNua/MirrorShard_2/releases/download/v0.1.0/MirrorShard.Setup.0.1.0.exe)  
 [![Mac (Apple Silicon)](https://img.shields.io/badge/Download-Mac_(Apple_Silicon)-green)]  
 (https://github.com/DroicheadNua/MirrorShard_2/releases/download/v0.1.0/MirrorShard-0.1.0-arm64.dmg)  
-[![Linux](https://img.shields.io/badge/Download-Linux-lightgrey)]  
+[![Linux(x64)](https://img.shields.io/badge/Download-Linux-lightgrey)]  
 (https://github.com/DroicheadNua/MirrorShard_2/releases/download/v0.1.0/MirrorShard-0.1.0-x86_64.AppImage)  
+[![Linux(ARM64 / Raspberry Pi, experimental)](https://img.shields.io/badge/Download-Linux-lightgrey)]  
+(https://github.com/DroicheadNua/MirrorShard_2/releases/download/v0.1.0/MirrorShard 2_0.1.0_arm64.deb)  
 
 または、[最新のリリース一覧ページ](https://github.com/DroicheadNua/MirrorShard_2/releases/latest)からダウンロードできます。  
 
-■注意事項  
+## 注意事項  
 　インストールやご使用などにつきまして、何か疑問の点等ございましたら「FAQ.md」を御覧ください。  
 　それでも解決しない問題がございましたら、MirrorShard開発アカウント
 mirrorshard.dev@gmail.com
 までご一報いただければ幸いです。  
 
-■主な特徴  
+## 主な特徴  
 ・ソフトウェアフレームワークにTauriを採用、起動の高速化と省メモリ化に成功  
 ・没入感を妨げないミニマルなデザインとフレームレスウィンドウ  
 ・数十万行に及ぶ巨大サイズのテキストにも対応  
 ・マークダウン記法によるアウトライン機能を搭載。アウトラインプロセッサとしても運用可能  
 ・OS標準機能による印刷とPDF出力  
 
-■前作（Electron版）からの変更点  
-・フレームワークの変更により大幅な軽量化と高速化に成功。メモリ消費は前作の10分の1程度に  
+## 前作（Electron版）からの変更点  
+・フレームワークの変更により大幅な軽量化と高速化に成功。メモリ消費は前作の6割程度に  
 ・ファイルサイズも10分の1程度に大幅削減  
 ・アイコンをSVG画像に変更、よりミニマルなデザインに  
 ・ファイル一覧とアウトラインペインを分離  
 ・軽量化のため添付音源と画像を各1種ずつに  
 ・機能の移植が未完了のため、アイデアプロセッサやAI機能などには未対応。最終的には既存の全機能を移植する予定  
 
-■ショートカット一覧  
+## ショートカット一覧  
 本ソフトウェアは、操作のほぼすべてをキーボードショートカットで行うことができます。  
 
 ◯ファイル操作  
@@ -70,7 +72,7 @@ BGM再生/停止	Ctrl + Shift + P（Cmd + Shift + P）　BGMを再生／停止�
 文書頭にジャンプ	Ctrl + ↑（Cmd + ↑）  
 文書末にジャンプ	Ctrl + ↓（Cmd + ↓）  
 
-■右クリックメニュー  
+## 右クリックメニュー  
 ・ファイルを開く  
 ・ファイルを保存  
 ・名前を付けて保存  
@@ -81,7 +83,7 @@ BGM再生/停止	Ctrl + Shift + P（Cmd + Shift + P）　BGMを再生／停止�
 ・貼り付け  
 ・すべて選択  
 
-■検索ウィンドウの使い方  
+## 検索ウィンドウの使い方  
 Ctrl + F（MacはCmd + F）を押すことによって、検索ウィンドウを開くことができます。  
 パネルの各機能は以下の通りです。  
 
@@ -98,7 +100,7 @@ regexp (チェックボックス): チェックを入れると、正規表現に
 by word (チェックボックス): チェックを入れると、単語単位で完全に一致するものだけを検索します。（例: catを検索したときに、categoryの中のcatにはマッチしなくなります）  
 閉じる: 検索パネルは、ESCキーを押すか、パネル右上の×ボタンを押すことで閉じることができます。  
 
-■エンコードについて  
+## エンコードについて  
 　原則として、UTF-8 (BOMなし) での利用を強く推奨します。  
 
 　本ソフトウェアが対応しているエンコードは、UTF-8とShift-JISのみとなっております。テキストファイルのエンコードを自動判別して読み込む仕様になっておりますが、特殊なエンコードの場合、判別に失敗することがあります。  
@@ -107,27 +109,32 @@ by word (チェックボックス): チェックを入れると、単語単位�
 
 　特殊なエンコードのファイルを本ソフトウェアで使用する場合、OS標準のメモアプリや他のエディタなどでUTF-8 (BOMなし) 形式に変換してからご利用ください。  
 
-■ステータスバー  
+## ステータスバー  
 　画面下部のステータスバーには、選択中のファイルのエンコードと改行コード、現在時刻が表示されます。  
 
-■テキストの印刷・PDF出力  
+## テキストの印刷・PDF出力  
 　Ctrl+Pを押すことにより、OS標準の印刷機能によりテキストを印刷、あるいはPDF出力することが出来ます。機能の詳細はお使いのOSに依存します。  
 
-■使用素材  
+## Linux (ARM64 / Raspberry Pi) 版(experimental)について  
+本ソフトウェアのARM64版 (.deb) は、Raspberry Pi 5 上の MX Linux にて動作検証を行っています。  
+Raspberry Pi OS (Bookworm) 等、Wayland を標準採用している環境では、描画の乱れやマウス入力の座標ズレが発生することが確認されています。  
+MX Linuxでは概ね正常に動作しますが、IME変換中の表示がやや不自然になります。あらかじめご了承ください。  
+
+## 使用素材  
 ・背景画像およびアイコン  
 　Imagen 4 による生成  
 
 ・BGM  
-　Pixabay https://pixabay.com より
+　Pixabay https://pixabay.com より  
 　・ambient piano "Candrika" -Moonlight-（leela_takaki様）  
 
-■ご利用にあたっての注意（免責事項）  
+## ご利用にあたっての注意（免責事項）  
 このソフトウェアはフリーウェアであり、無保証（AS IS）で提供されます。  
 作者は、このソフトウェアの使用によって生じたいかなる損害（データの損失、逸失利益などを含むがこれに限らない）についても、一切の責任を負いません。  
 開発には細心の注意を払っていますが、予期せぬ不具合が含まれている可能性があります。重要なデータを扱う際には、定期的にバックアップを取るようにしてください。  
 このソフトウェアを利用した時点で、上記の免責事項に同意したものとみなします。  
 
-■ライセンス  
+## ライセンス  
 　本ソフトウェアはMITライセンスのもとで公開されています。  
 
 　本ソフトウェアはTauriで開発されました。エディタエンジンとしてCodeMirror 6 を採用しており、またオープンソースの小説用テキストエディタLeft

@@ -11,5 +11,5 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Initial Beta release.  
 - フレームワークをElectronからTauriに変更、バックエンドの実装を一新  
-- 起動速度の高速化、及びメモリ消費量・ファイルサイズの大幅な削減（旧バージョン比 約1/10）
+- 起動速度の高速化、及びメモリ消費量・ファイルサイズの大幅な削減  
 - UIデザインの刷新  
