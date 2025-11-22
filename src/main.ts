@@ -493,8 +493,7 @@ class App {
     }
     if (isCtrlOrCmd && key === 'o') { e.preventDefault(); this.openNewFile(); }
     if (isCtrlOrCmd && key === 'n') { e.preventDefault(); this.createNewTab(); }
-    if (isCtrlOrCmd && key === 'z' && !isShift) { e.preventDefault(); undo(this.editorView); }
-    if (isCtrlOrCmd && (key === 'y' || (isShift && key === 'z'))) { e.preventDefault(); redo(this.editorView); }
+
     // --- Mac専用フルスクリーン (Ctrl + Cmd + F) ---
     if (isMac && isCtrl && isCmd && key === 'f') {
       e.preventDefault();
