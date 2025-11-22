@@ -8,11 +8,13 @@
 ## ダウンロード  
 
 [![Windows](https://img.shields.io/badge/Download-Windows-blue)]  
-(https://github.com/DroicheadNua/MirrorShard_2/releases/download/v0.1.0/MirrorShard.Setup.0.1.0.exe)  
+(https://github.com/DroicheadNua/MirrorShard_2/releases/download/v0.1.0/MirrorShard 2_0.1.0_x64_ja-JP.msi)  
 [![Mac (Apple Silicon)](https://img.shields.io/badge/Download-Mac_(Apple_Silicon)-green)]  
-(https://github.com/DroicheadNua/MirrorShard_2/releases/download/v0.1.0/MirrorShard-0.1.0-arm64.dmg)  
-[![Linux(x64)](https://img.shields.io/badge/Download-Linux-lightgrey)]  
-(https://github.com/DroicheadNua/MirrorShard_2/releases/download/v0.1.0/MirrorShard-0.1.0-x86_64.AppImage)  
+(https://github.com/DroicheadNua/MirrorShard_2/releases/download/v0.1.0/MirrorShard 2_0.1.0_aarch64.dmg)  
+[![Linux(x64: deb)](https://img.shields.io/badge/Download-Linux-lightgrey)]  
+(https://github.com/DroicheadNua/MirrorShard_2/releases/download/v0.1.0/MirrorShard 2_0.1.0_amd64.deb  
+[![Linux(x64: rpm)](https://img.shields.io/badge/Download-Linux-lightgrey)]  
+(https://github.com/DroicheadNua/MirrorShard_2/releases/download/v0.1.0/MirrorShard 2-0.1.0-1.x86_64.rpm  
 [![Linux(ARM64 / Raspberry Pi, experimental)](https://img.shields.io/badge/Download-Linux-lightgrey)]  
 (https://github.com/DroicheadNua/MirrorShard_2/releases/download/v0.1.0/MirrorShard 2_0.1.0_arm64.deb)  
 
@@ -29,7 +31,7 @@ mirrorshard.dev@gmail.com
 ・没入感を妨げないミニマルなデザインとフレームレスウィンドウ  
 ・数十万行に及ぶ巨大サイズのテキストにも対応  
 ・マークダウン記法によるアウトライン機能を搭載。アウトラインプロセッサとしても運用可能  
-・OS標準機能による印刷とPDF出力  
+・OS標準機能による印刷とPDF出力（※Windows版のみ）  
 
 ## 前作（Electron版）からの変更点  
 ・フレームワークの変更により大幅な軽量化と高速化に成功。メモリ消費は前作の6割程度に  
@@ -115,10 +117,14 @@ by word (チェックボックス): チェックを入れると、単語単位�
 ## テキストの印刷・PDF出力  
 　Ctrl+Pを押すことにより、OS標準の印刷機能によりテキストを印刷、あるいはPDF出力することが出来ます。機能の詳細はお使いのOSに依存します。  
 
+## Linux(x64)版について  
+　ビルド上の不具合によりAppImageの配布を見送り、debとrpm(experimental)での提供となります。  
+　deb版は動作確認済ですが、rpm版は開発環境の都合により実機検証ができておりません。あらかじめご了承ください。  
+
 ## Linux (ARM64 / Raspberry Pi) 版(experimental)について  
-本ソフトウェアのARM64版 (.deb) は、Raspberry Pi 5 上の MX Linux にて動作検証を行っています。  
-Raspberry Pi OS (Bookworm) 等、Wayland を標準採用している環境では、描画の乱れやマウス入力の座標ズレが発生することが確認されています。  
-MX Linuxでは概ね正常に動作しますが、IME変換中の表示がやや不自然になります。あらかじめご了承ください。  
+　本ソフトウェアのARM64版 (.deb) は、Raspberry Pi 5 上の MX Linux にて動作検証を行っています。  
+　Raspberry Pi OS (Bookworm) 等、Wayland を標準採用している環境では、描画の乱れやマウス入力の座標ズレが発生することが確認されています。  
+　MX Linuxでは概ね正常に動作しますが、IME変換中の表示がやや不自然になります。あらかじめご了承ください。  
 
 ## 使用素材  
 ・背景画像およびアイコン  
@@ -146,3 +152,4 @@ MX Linuxでは概ね正常に動作しますが、IME変換中の表示がやや
 　Copyright (c) 2025 [DroicheadNua]  
 　mirrorshard.dev@gmail.com  
 　https://github.com/DroicheadNua/MirrorShard_2  
+
