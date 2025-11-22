@@ -12,13 +12,14 @@
 [![Mac (Apple Silicon)](https://img.shields.io/badge/Download-Mac_(Apple_Silicon)-green)]  
 (https://github.com/DroicheadNua/MirrorShard_2/releases/download/v0.1.0/MirrorShard.2_0.1.0_aarch64.dmg)  
 [![Linux(x64: deb)](https://img.shields.io/badge/Download-Linux-lightgrey)]  
-(https://github.com/DroicheadNua/MirrorShard_2/releases/download/v0.1.0/MirrorShard.2_0.1.0_amd64.deb  
+(https://github.com/DroicheadNua/MirrorShard_2/releases/download/v0.1.0/MirrorShard.2_0.1.0_amd64.deb)  
 [![Linux(x64: rpm)](https://img.shields.io/badge/Download-Linux-lightgrey)]  
-(https://github.com/DroicheadNua/MirrorShard_2/releases/download/v0.1.0/MirrorShard.2-0.1.0-1.x86_64.rpm  
+(https://github.com/DroicheadNua/MirrorShard_2/releases/download/v0.1.0/MirrorShard.2-0.1.0-1.x86_64.rpm)  
 [![Linux(ARM64 / Raspberry Pi, experimental)](https://img.shields.io/badge/Download-Linux-lightgrey)]  
 (https://github.com/DroicheadNua/MirrorShard_2/releases/download/v0.1.0/MirrorShard.2_0.1.0_arm64.deb)  
 
 または、[最新のリリース一覧ページ](https://github.com/DroicheadNua/MirrorShard_2/releases/latest)からダウンロードできます。  
+最下段の「Assets」の項目が折りたたまれている場合は、▶マークを押して展開してください。  
 
 ## 注意事項  
 　インストールやご使用などにつきまして、何か疑問の点等ございましたら「FAQ.md」を御覧ください。  
