@@ -1,38 +1,43 @@
 <!doctype html>
 <html lang="ja">
-  <head>
-    <meta charset="UTF-8" />
-    <link rel="stylesheet" href="/src/styles.css" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>MirrorShard v2</title>
-  </head>
-  <body>
-    <div data-tauri-drag-region id="app-container">
-      <!-- 1. 最上部のカスタムタイトルバー (ドラッグ領域) -->
-      <div data-tauri-drag-region class="titlebar">
-        <div data-tauri-drag-region class="titlebar-buttons">
-          <button id="btn-save" title="保存 (Ctrl+S)"></button>
-          <button id="btn-save-as" title="名前を付けて保存"></button>
-          <button id="btn-open" title="開く (Ctrl+O)"></button>
-          <button id="btn-new" title="新規作成 (Ctrl+N)"></button>
-          <button id="btn-undo" title="元に戻す (Ctrl+Y)"></button>
-          <button id="btn-redo" title="やり直す (Ctrl+Z)"></button>
-          <button id="btn-bgm-toggle" title="BGM再生/停止 (Ctrl+Shift+P)"></button>
-          <button id="btn-toggle-theme" title="Dark Mode (Ctrl+T)"></button>
-        </div>
-        <div data-tauri-drag-region class="window-controls">
-          <button id="btn-minimize" title="最小化 (Ctrl+H)"></button>
-          <button id="btn-fullscreen" title="フルスクリーン (F11)"></button>
-          <button id="btn-close" title="閉じる (Ctrl+Q)"></button>
-        </div>
+
+<head>
+  <meta charset="UTF-8" />
+  <link rel="stylesheet" href="/src/styles.css" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>MirrorShard v2</title>
+</head>
+
+<body>
+  <div data-tauri-drag-region id="app-container">
+    <!-- 1. 最上部のカスタムタイトルバー (ドラッグ領域) -->
+    <div data-tauri-drag-region class="titlebar">
+      <div data-tauri-drag-region class="titlebar-buttons">
+        <button id="btn-save" title="保存 (Ctrl+S)"></button>
+        <button id="btn-save-as" title="名前を付けて保存"></button>
+        <button id="btn-open" title="開く (Ctrl+O)"></button>
+        <button id="btn-new" title="新規作成 (Ctrl+N)"></button>
+        <button id="btn-undo" title="元に戻す (Ctrl+Y)"></button>
+        <button id="btn-redo" title="やり直す (Ctrl+Z)"></button>
+        <button id="btn-bgm-toggle" title="BGM再生/停止 (Ctrl+Shift+P)"></button>
+        <button id="btn-typesound" title="タイプ音 (Ctrl+Shift+T)"></button>
+        <button id="btn-spotlight" title="スポットライトモード (Ctrl+L)"></button>
+        <button id="btn-toggle-theme" title="Dark Mode (Ctrl+T)"></button>
       </div>
+      <div data-tauri-drag-region class="window-controls">
+        <button id="btn-settings" title="設定 (F2)"></button>
+        <button id="btn-minimize" title="最小化 (Ctrl+H)"></button>
+        <button id="btn-fullscreen" title="フルスクリーン (F11)"></button>
+        <button id="btn-close" title="閉じる (Ctrl+Q)"></button>
+      </div>
+    </div>
 
 
-      <!-- 2. メインのコンテンツエリア -->
-      <div id="content-wrapper">
-        <!-- 2A. サイドバー -->
-        <nav id="sidebar-pane">
-          <div class="sidebar-content">
+    <!-- 2. メインのコンテンツエリア -->
+    <div id="content-wrapper">
+      <!-- 2A. サイドバー -->
+      <nav id="sidebar-pane">
+        <div class="sidebar-content">
           <div id="file-list-container">
             <!-- ファイル一覧がここに描画される -->
           </div>
@@ -45,7 +50,7 @@
                 <button id="btn-font-inc" title="文字を大きく"></button>
               </div>
               <!-- 右寄せの開閉コントロール -->
-              <div class="collapse-controls">            
+              <div class="collapse-controls">
                 <button id="collapse-all-btn" title="すべて折りたたむ"></button>
                 <button id="expand-all-btn" title="すべて展開"></button>
               </div>
@@ -54,24 +59,25 @@
               <!-- アウトラインがここに描画される -->
             </div>
           </div>
-          </div>
-        </nav>
-        <!-- 2B. エディタ -->
-          <main id="editor-container"></main>
-      </div>  
-                <div id="status-bar">
-            <div class="status-left">
-              <span id="status-breadcrumbs"></span>
-            </div>
-            <div class="status-right">
-              <span id="status-line-col"></span>
-              <span id="status-char-count"></span>
-              <span id="status-encoding"></span>
-              <span id="status-line-ending"></span>
-              <span id="status-time"></span>
-            </div>
-          </div> 
+        </div>
+      </nav>
+      <!-- 2B. エディタ -->
+      <main id="editor-container"></main>
     </div>
-    <script type="module" src="/src/main.ts" defer></script>
-  </body>
+    <div id="status-bar">
+      <div class="status-left">
+        <span id="status-breadcrumbs"></span>
+      </div>
+      <div class="status-right">
+        <span id="status-line-col"></span>
+        <span id="status-char-count"></span>
+        <span id="status-encoding"></span>
+        <span id="status-line-ending"></span>
+        <span id="status-time"></span>
+      </div>
+    </div>
+  </div>
+  <script type="module" src="/src/main.ts" defer></script>
+</body>
+
 </html>

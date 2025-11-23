@@ -3,12 +3,12 @@
 // --- use文 (ファイルの先頭に追加) ---
 use encoding_rs::{SHIFT_JIS, UTF_8};
 use std::fs;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 use std::sync::Mutex;
-use tauri::{AppHandle, Emitter, Manager, WindowEvent, State};
+use tauri::{AppHandle, Emitter, Manager, State, TitleBarStyle, WebviewWindowBuilder, WindowEvent};
+use tauri_plugin_cli::CliExt;
 use tauri_plugin_dialog::DialogExt;
 use tauri_plugin_window_state::{Builder, StateFlags};
-use tauri_plugin_cli::CliExt;
 
 // --- FileEntry構造体の定義 ---
 #[derive(serde::Serialize, Clone)] // Cloneを追加すると後で便利
@@ -29,6 +29,46 @@ struct InitialFile(Mutex<Option<String>>);
 struct SecondInstanceFile(Mutex<Option<String>>);
 
 // --- Tauriコマンドの定義 ---
+
+#[tauri::command]
+async fn open_settings_window(app: AppHandle) {
+    // 既に開いているかチェック
+    if app.get_webview_window("settings").is_some() {
+        app.get_webview_window("settings").unwrap().close().unwrap();
+        return;
+    }
+
+    // 新しいウィンドウをビルド
+    let builder = WebviewWindowBuilder::new(
+        &app,
+        "settings", // taiconf.jsonで定義したラベルと同じ名前
+        tauri::WebviewUrl::App("settings.html".into()), // taiconf.jsonで定義したURLと同じ
+    )
+    .title("設定")
+    .inner_size(600.0, 400.0)
+    .resizable(false)
+    .transparent(true)
+    .decorations(false)
+    .title_bar_style(TitleBarStyle::Transparent)
+    .effects(tauri::utils::config::WindowEffectsConfig {
+        effects: vec![
+            // For macOS
+            tauri::window::Effect::HudWindow,
+            // For Windows
+            tauri::window::Effect::Acrylic,
+        ],
+        state: None,
+        radius: Some(24.0),
+        color: None,
+    });
+    #[cfg(debug_assertions)]
+    let window = builder.devtools(true).build().unwrap();
+    #[cfg(not(debug_assertions))]
+    let window = builder.build().unwrap();
+
+    // ★ show()を呼ぶ
+    window.show().unwrap();
+}
 
 // --- フロントエンドからの問い合わせに応えるコマンド ---
 #[tauri::command]
@@ -81,25 +121,51 @@ async fn read_file(path: String) -> Result<FileData, String> {
 
     // 1. BOM付きUTF-8のチェック
     if bytes.starts_with(&[0xEF, 0xBB, 0xBF]) {
-        let content = std::str::from_utf8(&bytes[3..]).map_err(|e| e.to_string())?.to_string();
-        let line_ending = if content.contains("\r\n") { "CRLF" } else { "LF" };
-        return Ok(FileData { content, encoding: "UTF-8".to_string(), line_ending: line_ending.to_string() });
+        let content = std::str::from_utf8(&bytes[3..])
+            .map_err(|e| e.to_string())?
+            .to_string();
+        let line_ending = if content.contains("\r\n") {
+            "CRLF"
+        } else {
+            "LF"
+        };
+        return Ok(FileData {
+            content,
+            encoding: "UTF-8".to_string(),
+            line_ending: line_ending.to_string(),
+        });
     }
 
     // 2. BOMなしUTF-8のチェック (encoding_rsを使用)
     let (cow, _encoding_used, had_errors) = UTF_8.decode(&bytes);
     if !had_errors {
         let content = cow.into_owned();
-        let line_ending = if content.contains("\r\n") { "CRLF" } else { "LF" };
-        return Ok(FileData { content, encoding: "UTF-8".to_string(), line_ending: line_ending.to_string() });
+        let line_ending = if content.contains("\r\n") {
+            "CRLF"
+        } else {
+            "LF"
+        };
+        return Ok(FileData {
+            content,
+            encoding: "UTF-8".to_string(),
+            line_ending: line_ending.to_string(),
+        });
     }
 
     // 3. Shift_JISのチェック
     let (cow, _encoding_used, had_errors) = SHIFT_JIS.decode(&bytes);
     if !had_errors {
         let content = cow.into_owned();
-        let line_ending = if content.contains("\r\n") { "CRLF" } else { "LF" };
-        return Ok(FileData { content, encoding: "Shift_JIS".to_string(), line_ending: line_ending.to_string() });
+        let line_ending = if content.contains("\r\n") {
+            "CRLF"
+        } else {
+            "LF"
+        };
+        return Ok(FileData {
+            content,
+            encoding: "Shift_JIS".to_string(),
+            line_ending: line_ending.to_string(),
+        });
     }
 
     // 4. ★★★ それ以外はエラーとして弾く ★★★
@@ -109,13 +175,29 @@ async fn read_file(path: String) -> Result<FileData, String> {
 
 #[tauri::command]
 async fn write_file(path: String, content: String, encoding: String) -> Result<(), String> {
+    let path = Path::new(&path);
+    // 一時ファイル用のパスを生成 (例: file.md -> file.tmp)
+    let temp_path = path.with_extension("tmp");
+
+    // 1. ファイルの内容をバイトデータに変換
     let bytes = if encoding == "Shift_JIS" {
-        let (cow, _encoding_used, _had_errors) = SHIFT_JIS.encode(&content);
+        let (cow, ..) = encoding_rs::SHIFT_JIS.encode(&content);
         cow.into_owned()
     } else {
-        content.into_bytes() // UTF-8として扱う
+        content.into_bytes()
     };
-    std::fs::write(path, bytes).map_err(|e| e.to_string())
+
+    // 2. 一時ファイルに書き込む
+    fs::write(&temp_path, &bytes).map_err(|e| e.to_string())?;
+
+    // 3. 一時ファイルをリネームして、元のファイルをアトミックに上書きする
+    fs::rename(&temp_path, path).map_err(|e| {
+        // もしリネームに失敗したら、後始末として一時ファイルを削除しようと試みる
+        let _ = fs::remove_file(&temp_path);
+        e.to_string()
+    })?;
+
+    Ok(())
 }
 
 #[tauri::command]
@@ -170,13 +252,14 @@ pub fn run() {
             }
         }))
         .plugin(tauri_plugin_clipboard_manager::init())
-        .on_window_event(|window, event| match event {
-            WindowEvent::CloseRequested { api, .. } => {
-                api.prevent_close();
-                // フロントエンドに「終了しようとしてるよ」と通知するだけ
-                window.emit("tauri://on-close-requested", ()).unwrap();
+        .on_window_event(|window, event| {
+            if let WindowEvent::CloseRequested { api, .. } = event {
+                // メインウィンドウが閉じられようとした時だけ、フロントに問い合わせる
+                if window.label() == "main" {
+                    api.prevent_close();
+                    window.emit("tauri://ask-before-close", ()).unwrap();
+                }
             }
-            _ => {}
         })
         .plugin(
             Builder::new()
@@ -199,7 +282,8 @@ pub fn run() {
             save_file_as,
             force_close_app,
             get_initial_file,
-            get_second_instance_file
+            get_second_instance_file,
+            open_settings_window,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

@@ -3,7 +3,8 @@
   "identifier": "default",
   "description": "Capability for the main window",
   "windows": [
-    "main"
+    "main",
+    "settings"
   ],
   "permissions": [
     "core:default",
@@ -25,11 +26,9 @@
     "core:path:default",
     "core:path:allow-resolve",
     "core:window:allow-set-focus",
-
     "fs:allow-read-file",
-
-    "store:default", 
-    "store:allow-load", 
+    "store:default",
+    "store:allow-load",
     "store:allow-save",
     "core:menu:default",
     "core:menu:allow-new",
@@ -37,6 +36,9 @@
     "clipboard-manager:default",
     "clipboard-manager:allow-write-text",
     "clipboard-manager:allow-read-text",
-    "core:window:allow-is-focused"
+    "core:window:allow-is-focused",
+    "core:window:allow-create",
+    "core:event:allow-emit",
+    "core:event:allow-listen"
   ]
 }

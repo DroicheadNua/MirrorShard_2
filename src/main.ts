@@ -1,8 +1,8 @@
 import './styles.css';
 import { invoke } from '@tauri-apps/api/core';
 import { Store } from '@tauri-apps/plugin-store';
-import { EditorState, Compartment } from '@codemirror/state';
-import { EditorView, keymap, ViewUpdate, scrollPastEnd } from '@codemirror/view';
+import { EditorState, Compartment, RangeSetBuilder } from '@codemirror/state';
+import { EditorView, keymap, ViewUpdate, scrollPastEnd, Decoration, DecorationSet, ViewPlugin } from '@codemirror/view';
 import { history, historyKeymap, undo, redo, insertTab, cursorDocEnd, cursorDocStart } from '@codemirror/commands';
 import { markdown, markdownLanguage } from '@codemirror/lang-markdown';
 import { search, searchKeymap } from '@codemirror/search';
@@ -14,7 +14,8 @@ import { open, ask, message } from '@tauri-apps/plugin-dialog';
 import { backgroundMusic } from './assets/audio';
 import { backgroundImage } from './assets/images';
 import { listen } from '@tauri-apps/api/event';
-import { Menu, MenuItem, PredefinedMenuItem } from '@tauri-apps/api/menu';
+import { Menu, MenuItem, PredefinedMenuItem, Submenu } from '@tauri-apps/api/menu';
+import { TYPE_SOUND_BASE64 } from './assets/type-sound';
 
 // --- 型定義 ---
 interface Heading { level: number; text: string; pos: number; isCollapsed: boolean; }
@@ -31,6 +32,12 @@ interface AppSettings {
   currentFontIndex: number;
   currentFontSize: number;
   sessionFilePaths?: string[];
+  isTypeSoundEnabled?: boolean;
+  isSpotlightMode?: boolean;
+  recentFiles?: string[];
+  editorMaxWidth?: string;
+  editorLineHeight?: number;
+  editorLineBreak?: string;
 }
 
 /**
@@ -62,12 +69,21 @@ class App {
   private outlineContainer = document.querySelector<HTMLElement>('#outline-container');
   private editorContainer = document.querySelector<HTMLElement>('#editor-container');
   private statusBar = document.querySelector<HTMLElement>('#status-bar');
+  private isSpotlightMode = false;
+  private spotlightCompartment = new Compartment();
+  private isTypeSoundEnabled = false;
+  private audioContext: AudioContext | null = null;
+  private typeSoundBuffer: AudioBuffer | null = null;
+  private settingsLoaded = false;
+  private recentFiles: string[] = [];
+  private editorMaxWidth = '80ch';
+  private editorLineHeight = 1.6;
+  private editorLineBreak = 'strict';
 
   // --- 静的ファクトリメソッド ---
-  public static async create() {
+  public static create() {
     const app = new App();
-    // ★ initializeを直接awaitで呼び出す
-    await app.initialize();
+    app.initialize(); // initializeを呼び出す
     return app;
   }
 
@@ -119,11 +135,10 @@ class App {
       typeWriterTheme,
       preventCursorBeyondDocEndFilter,
       this.highlightingCompartment.of(syntaxHighlighting(this.isDarkMode ? this.darkHighlightStyle : this.lightHighlightStyle)),
+      this.spotlightCompartment.of(this.createSpotlightPlugin(this.isSpotlightMode)),
     ];
   }
   // --- 初期化 ---
-
-  // in App class
 
   private async initialize() {
     // 1. UI要素のチェック
@@ -131,81 +146,77 @@ class App {
       console.error("Fatal Error: A required UI container was not found."); return;
     }
 
-    // 2. イベントリスナーを先に設定 (終了時チェックなど)
-    this.setupEventListeners();
-
-    // 3. 同期的なセットアップ（テーマ定義など）
+    // 2. テーマとフォントの定義
     this.defineThemesAndFonts();
     this.createEditorExtensions();
 
-    // 4. CodeMirrorインスタンスを「空のデフォルト状態」で即座に生成
+    // 3. CodeMirrorインスタンスを「デフォルト設定」で生成
     this.editorView = new EditorView({
       state: EditorState.create({ extensions: this.editorExtensions }),
       parent: this.editorContainer,
     });
 
-    // --- ★★★ ここからが新しい非同期初期化フロー ★★★ ---
+    // 4. イベントリスナーを設定
+    this.setupEventListeners();
 
-    // 5. Storeのロード
+    // 5. ステータスバーの初期描画と時計の開始
+    this.updateStatusBar(this.editorView);
+    setInterval(() => { this.updateStatusBarTimeOnly(); }, 1000);
+
+    // 2. 起動時ファイル指定をチェック
+    const initialFile = await invoke<string | null>('get_initial_file');
+    if (initialFile) {
+      this.skipSessionRestore = true;
+    }
+    // 1. Storeをロード
     this.store = await Store.load('.settings.dat');
 
-    await getCurrentWindow().onFocusChanged(async ({ payload: isFocused }) => {
-      if (isFocused) {
-        // フォーカスが戻ってきたら、バックエンドに問い合わせる
-        const filePath = await invoke<string | null>('get_second_instance_file');
-        if (filePath) {
-          // 新しいファイルパスがあれば、タブを開く
-          await this.openOrSwitchTab(filePath);
-        }
-      }
-    });
 
-    // 6. バックエンドに、起動時にファイルが指定されたか問い合わせる
-    const initialFile = await invoke<string | null>('get_initial_file');
 
-    if (initialFile) {
-      // 6A. ファイル指定で起動した場合
-      this.skipSessionRestore = true;
+    // 3. 設定を読み込む (セッション復元もこの中で行われる)
+    await this.loadSettings();
 
-      // UI設定だけは読み込む
-      await this.loadSettings();
-
-      // 指定されたファイルを最初のタブとして開く
-      await this.openOrSwitchTab(initialFile);
-
-    } else {
-      // 6B. 通常起動した場合 (ファイル指定なし)
-      this.skipSessionRestore = false;
-
-      // UI設定と、前回のセッションファイルの両方を読み込む
-      await this.loadSettings();
-    }
-
-    // 7. 読み込んだ設定をUIに反映
-    //    (loadSettingsで状態変数が更新された後、UIに適用する)
+    // 4. 読み込んだ設定をUIに完全に反映
     this.editorView.dispatch({
       effects: [
         this.themeCompartment.reconfigure(this.isDarkMode ? this.darkTheme : this.lightTheme),
         this.fontFamilyCompartment.reconfigure(this.fontThemes[this.currentFontIndex]),
         this.fontSizeCompartment.reconfigure(this.createFontSizeTheme(this.currentFontSize)),
         this.highlightingCompartment.reconfigure(syntaxHighlighting(this.isDarkMode ? this.darkHighlightStyle : this.lightHighlightStyle)),
+        // ★ スポットライトの初期状態も反映
+        this.spotlightCompartment.reconfigure(this.createSpotlightPlugin(this.isSpotlightMode))
       ]
     });
     document.body.classList.toggle('dark-mode', this.isDarkMode);
     document.body.classList.remove(...this.fontClassNames);
     document.body.classList.add(this.fontClassNames[this.currentFontIndex]);
+
+    const btnTypesound = document.querySelector('#btn-typesound') as HTMLElement;
+    if (btnTypesound) btnTypesound.style.opacity = this.isTypeSoundEnabled ? '1' : '0.4';
+    const btnSpotlight = document.querySelector('#btn-spotlight') as HTMLElement;
+    if (btnSpotlight) btnSpotlight.style.opacity = this.isSpotlightMode ? '1' : '0.4';
+
+    // 9. 背景画像、BGM、タイプ音の初期化
     await this.updateBackground();
-
-    // 8. BGMの初期化
     await this.initializeBGM();
+    await this.initializeTypeSound();
 
-    // 9. ステータスバーと時計の初期化
-    this.updateStatusBar(this.editorView);
-    setInterval(() => {
-      this.updateStatusBarTimeOnly();
-    }, 1000);
+    await listen('settings-changed', (event: any) => {
+      const settings = event.payload;
+      if (settings.editorMaxWidth) this.updateEditorWidth(settings.editorMaxWidth);
+      if (settings.editorLineHeight) this.updateEditorLineHeight(settings.editorLineHeight);
+      if (settings.editorLineBreak) this.updateEditorLineBreak(settings.editorLineBreak);
+    });
 
-    // 10. 最後にウィンドウを表示
+    // 11. ファイル指定で起動した場合、そのファイルを開く
+    if (initialFile) {
+      await this.openOrSwitchTab(initialFile);
+    }
+
+    // ★ すべての初期ロードが完了したことを示すフラグを立てる
+    this.settingsLoaded = true;
+
+    // 12. 最後にウィンドウを表示
     await getCurrentWindow().show();
   }
 
@@ -215,6 +226,15 @@ class App {
       this.isDarkMode = settings.isDarkMode ?? this.isDarkMode;
       this.currentFontIndex = settings.currentFontIndex ?? this.currentFontIndex;
       this.currentFontSize = settings.currentFontSize ?? this.currentFontSize;
+      this.isTypeSoundEnabled = settings.isTypeSoundEnabled ?? false;
+      this.isSpotlightMode = settings.isSpotlightMode ?? false;
+      this.recentFiles = settings.recentFiles ?? [];
+      this.editorMaxWidth = settings.editorMaxWidth ?? '80ch';
+      document.documentElement.style.setProperty('--editor-max-width', this.editorMaxWidth);
+      this.editorLineHeight = settings.editorLineHeight ?? 1.6;
+      document.documentElement.style.setProperty('--editor-line-height', this.editorLineHeight.toString());
+      this.editorLineBreak = settings.editorLineBreak ?? 'strict';
+      document.documentElement.style.setProperty('--editor-line-break', this.editorLineBreak);
 
       // ★ skipSessionRestoreがfalseの場合のみ、セッションを復元する
       if (!this.skipSessionRestore && settings.sessionFilePaths) {
@@ -227,8 +247,87 @@ class App {
         }
       }
     }
+    this.settingsLoaded = true;
   }
 
+  /** エディタの幅を更新するメソッド */
+  private updateEditorWidth(newWidth: string) {
+    // ★ CSS変数を設定する「だけ」。これだけで即時反映される。
+    document.documentElement.style.setProperty('--editor-max-width', newWidth);
+    // Appクラスのプロパティを更新
+    this.editorMaxWidth = newWidth;
+    // storeにも保存
+    this.saveSettings();
+  }
+  private updateEditorLineHeight(newHeight: number) {
+    document.documentElement.style.setProperty('--editor-line-height', newHeight.toString());
+    this.editorLineHeight = newHeight;
+    this.saveSettings();
+  }
+  private updateEditorLineBreak(newLineBreak: string) {
+    document.documentElement.style.setProperty('--editor-line-break', newLineBreak);
+    this.editorLineBreak = newLineBreak;
+    this.saveSettings();
+  }
+
+  // スポットライト用のプラグイン定義
+  private createSpotlightPlugin(isActive: boolean) {
+    return ViewPlugin.fromClass(class {
+      decorations: DecorationSet;
+      constructor(view: EditorView) { this.decorations = this.getDecorations(view); }
+      update(update: ViewUpdate) {
+        if (update.docChanged || update.selectionSet || update.viewportChanged) {
+          this.decorations = this.getDecorations(update.view);
+        }
+      }
+      getDecorations(view: EditorView) {
+        if (!isActive || view.state.doc.length === 0) { // ★空のドキュメントなら何もしない
+          return Decoration.none;
+        }
+
+        const builder = new RangeSetBuilder<Decoration>();
+        const { from } = view.state.selection.main;
+        const doc = view.state.doc;
+
+        let startPos = 0;
+        let endPos = doc.length;
+        let currentLevel = 0;
+
+        // カーソル位置から上に向かって最初の見出しを探す
+        for (let line = doc.lineAt(from); line.number >= 1; line = doc.line(line.number - 1)) {
+          const match = line.text.match(/^(#+)\s/);
+          if (match) {
+            startPos = line.from;
+            currentLevel = match[1].length;
+            break;
+          }
+        }
+
+        // 見つけた見出しから下に向かって、次の同レベル以上の見出しを探す
+        for (let i = doc.lineAt(startPos).number + 1; i <= doc.lines; i++) {
+          const line = doc.line(i);
+          const match = line.text.match(/^(#+)\s/);
+          if (match && match[1].length <= currentLevel) {
+            endPos = line.from - 1; // その行の手前まで
+            break;
+          }
+        }
+
+        // ★★★ renderer.ts と同じロジック ★★★
+        // 計算した範囲の「外側」をぼかす Decoration を作成
+        if (startPos > 0) {
+          builder.add(0, startPos - 1, Decoration.mark({ class: "cm-unfocused" }));
+        }
+        if (endPos < doc.length) {
+          builder.add(endPos + 1, doc.length, Decoration.mark({ class: "cm-unfocused" }));
+        }
+
+        return builder.finish();
+      }
+    }, {
+      decorations: v => v.decorations
+    });
+  }
 
   private defineThemesAndFonts() {
     const ivory = 'transparent', dark = '#333333', stone = '#555555', lightText = '#DDDDDD', darkText = '#1e1e1e';
@@ -238,6 +337,8 @@ class App {
         backgroundColor: ivory
       },
       '.cm-content': {
+        lineHeight: 'var(--editor-line-height, 1.6)',
+        lineBreak: 'var(--editor-line-break, strict)',
         caretColor: darkText
       },
       '.cm-cursor, .cm-dropCursor': {
@@ -281,6 +382,8 @@ class App {
         backgroundColor: dark
       },
       '.cm-content': {
+        lineHeight: 'var(--editor-line-height, 1.6)',
+        lineBreak: 'var(--editor-line-break, strict)',
         caretColor: lightText
       },
       '.cm-cursor, .cm-dropCursor': {
@@ -351,14 +454,31 @@ class App {
     });
     this.outlineControls?.addEventListener('click', (e) => this.handleSidebarClick(e));
     this.outlineContainer?.addEventListener('click', (e) => this.handleSidebarClick(e));
+    // キーダウン (タイプ音再生用)
+    document.addEventListener('keydown', (e) => {
+      // 修飾キーなしの入力時のみ音を鳴らす
+      if (!e.ctrlKey && !e.metaKey && !e.altKey && e.key.length === 1) {
+        this.playTypeSound();
+        console.log('タイプ音鳴らしました');
+      }
+      if ((e.key === 'Enter' || e.key === 'Backspace') && !e.ctrlKey && !e.metaKey) {
+        this.playTypeSound();
+      }
+    });
     document.addEventListener('keydown', (e) => this.handleKeyDown(e));
     // ボタンのイベントリスナー
     document.querySelector('#btn-save')?.addEventListener('click', () => this.saveActiveFile());
     document.querySelector('#btn-save-as')?.addEventListener('click', () => this.saveActiveFileAs());
     document.querySelector('#btn-open')?.addEventListener('click', () => this.openNewFile());
     document.querySelector('#btn-new')?.addEventListener('click', () => this.createNewTab());
-    document.querySelector('#btn-undo')?.addEventListener('click', () => undo(this.editorView));
-    document.querySelector('#btn-redo')?.addEventListener('click', () => redo(this.editorView));
+    document.querySelector('#btn-undo')?.addEventListener('click', () => {
+      undo(this.editorView);
+      this.editorView.focus();
+    });
+    document.querySelector('#btn-redo')?.addEventListener('click', () => {
+      redo(this.editorView);
+      this.editorView.focus();
+    });
     document.querySelector('#btn-toggle-theme')?.addEventListener('click', () => this.toggleDarkMode());
     document.querySelector('#btn-fullscreen')?.addEventListener('click', async () => {
       this.toggleFullscreen();
@@ -376,12 +496,53 @@ class App {
     document.querySelector('#btn-font-dec')?.addEventListener('click', () => this.changeFontSize(this.currentFontSize - 1));
     document.querySelector('#btn-font-reset')?.addEventListener('click', () => this.changeFontSize(15));
     document.querySelector('#btn-font-inc')?.addEventListener('click', () => this.changeFontSize(this.currentFontSize + 1));
+    document.querySelector('#btn-typesound')?.addEventListener('click', () => this.toggleTypeSound());
+    document.querySelector('#btn-spotlight')?.addEventListener('click', () => this.toggleSpotlightMode());
+    document.querySelector('#btn-settings')?.addEventListener('click', () => this.openSettingsWindow());
+
+    window.addEventListener('mouseup', (e) => {
+      if (e.button === 3) { // 戻るボタン
+        e.preventDefault();
+        this.cycleTab('prev');
+      } else if (e.button === 4) { // 進むボタン
+        e.preventDefault();
+        this.cycleTab('next');
+      }
+    });
+
+    getCurrentWindow().onFocusChanged(async ({ payload: isFocused }) => {
+      if (isFocused && this.settingsLoaded) { // ★初期化完了後にのみ動作
+        const filePath = await invoke<string | null>('get_second_instance_file');
+        if (filePath) {
+          await this.openOrSwitchTab(filePath);
+        }
+      }
+    });
 
     this.editorContainer?.addEventListener('contextmenu', async (e) => {
       e.preventDefault();
 
+      // ★ 履歴からMenuItemの配列を動的に生成
+      const recentFileItems = await Promise.all(this.recentFiles.map(async (filePath) => {
+        // パスの最後の部分（ファイル名）をラベルにする
+        const fileName = filePath.split(/[/\\]/).pop() || filePath;
+        return await MenuItem.new({
+          text: fileName,
+          // クリックされたら、そのファイルを開く
+          action: () => this.openOrSwitchTab(filePath)
+        });
+      }));
+
       const menu = await Menu.new({
         items: [
+          await Submenu.new({
+            text: '最近使ったファイルを開く',
+            // 履歴が空の場合は無効化
+            enabled: recentFileItems.length > 0,
+            // 生成したメニュー項目をサブメニューに設定
+            items: recentFileItems
+          }),
+          await PredefinedMenuItem.new({ item: 'Separator' }),
           // --- アプリケーション固有のコマンド ---
           await MenuItem.new({ text: '開く...', action: () => this.openNewFile() }),
           await MenuItem.new({ text: '保存', action: () => this.saveActiveFile() }),
@@ -409,7 +570,6 @@ class App {
   }
 
   // --- イベントハンドラ ---
-  // in App class
 
   private handleSidebarClick(e: MouseEvent) {
     const target = e.target as HTMLElement;
@@ -478,7 +638,7 @@ class App {
     const isCtrlOrCmd = e.ctrlKey || e.metaKey;
 
     if (isCtrlOrCmd && key === 's') { e.preventDefault(); this.saveActiveFile(); }
-    if (isCtrlOrCmd && key === 't') { e.preventDefault(); this.toggleDarkMode(); }
+    if (isCtrlOrCmd && key === 't' && !isShift) { e.preventDefault(); this.toggleDarkMode(); }
     if (isCtrlOrCmd && isShift && key === 'f') {
       e.preventDefault();
       this.cycleEditorFont();
@@ -493,6 +653,7 @@ class App {
     }
     if (isCtrlOrCmd && key === 'o') { e.preventDefault(); this.openNewFile(); }
     if (isCtrlOrCmd && key === 'n') { e.preventDefault(); this.createNewTab(); }
+    if (isCtrlOrCmd && e.key === 'Tab') { e.preventDefault(); this.cycleTab(e.shiftKey ? 'prev' : 'next'); }
 
     // --- Mac専用フルスクリーン (Ctrl + Cmd + F) ---
     if (isMac && isCtrl && isCmd && key === 'f') {
@@ -514,6 +675,21 @@ class App {
     if (isCtrlOrCmd && key === 'p' && isShift) { e.preventDefault(); this.toggleBGM(); }
     if (isCtrlOrCmd && key === 'r') { e.preventDefault(); } // リロードを無効化
     if (isCtrlOrCmd && key === 'r' && isShift) { e.preventDefault(); }
+    // タイプ音トグル (Ctrl + Shift + T)
+    if (isCtrlOrCmd && isShift && key === 't') {
+      e.preventDefault();
+      this.toggleTypeSound();
+    }
+    // スポットライトモード (Ctrl + L)
+    if (isCtrlOrCmd && key === 'l') {
+      e.preventDefault();
+      this.toggleSpotlightMode();
+    }
+    if (e.key === 'F2') {
+      e.preventDefault();
+      e.stopPropagation();
+      this.openSettingsWindow();
+    }
   }
 
   private onEditorUpdate(update: ViewUpdate) {
@@ -644,9 +820,26 @@ class App {
       currentFontIndex: this.currentFontIndex,
       currentFontSize: this.currentFontSize,
       sessionFilePaths: this.openTabs.map(t => t.path),
+      isTypeSoundEnabled: this.isTypeSoundEnabled,
+      isSpotlightMode: this.isSpotlightMode,
+      recentFiles: this.recentFiles,
+      editorMaxWidth: this.editorMaxWidth,
     });
     await this.store.save();
     console.log('Settings saved!'); // デバッグ用ログ
+  }
+
+  private addToHistory(filePath: string) {
+    // 1. 既存の履歴から同じパスを削除
+    this.recentFiles = this.recentFiles.filter(p => p !== filePath);
+    // 2. 配列の先頭に新しいパスを追加
+    this.recentFiles.unshift(filePath);
+    // 3. 履歴を10件に制限
+    if (this.recentFiles.length > 10) {
+      this.recentFiles.pop();
+    }
+    // 4. 変更を保存
+    this.saveSettings();
   }
 
   private toggleDarkMode() {
@@ -663,6 +856,19 @@ class App {
     );
     document.body.classList.toggle('dark-mode', this.isDarkMode);
     this.updateBackground();
+    this.saveSettings();
+  }
+
+  // トグル関数
+  private toggleSpotlightMode() {
+    this.isSpotlightMode = !this.isSpotlightMode;
+    // ボタンの見た目を変える処理 (id="btn-spotlight"と仮定)
+    const btn = document.querySelector('#btn-spotlight') as HTMLElement;
+    if (btn) btn.style.opacity = this.isSpotlightMode ? '1' : '0.4';
+
+    this.editorView.dispatch({
+      effects: this.spotlightCompartment.reconfigure(this.createSpotlightPlugin(this.isSpotlightMode))
+    });
     this.saveSettings();
   }
 
@@ -686,6 +892,63 @@ class App {
     if (this.bgm.paused) this.bgm.play().catch(e => console.error("BGM play failed:", e));
     else this.bgm.pause();
     document.querySelector('#btn-bgm-toggle')?.classList.toggle('playing', !this.bgm.paused);
+  }
+
+  private async initializeTypeSound() {
+    try {
+      // Web Audio APIのコンテキスト作成
+      this.audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
+
+      // ★ Electron版と同様に、メタデータを付与してからBase64部分を取得する
+      const fullBase64String = `data:audio/wav;base64,${TYPE_SOUND_BASE64}`;
+      const base64Data = fullBase64String.split(',')[1];
+      const binaryString = window.atob(base64Data);
+      const len = binaryString.length;
+      const bytes = new Uint8Array(len);
+      for (let i = 0; i < len; i++) {
+        bytes[i] = binaryString.charCodeAt(i);
+      }
+
+      // 音声データをデコード
+      this.typeSoundBuffer = await this.audioContext.decodeAudioData(bytes.buffer);
+    } catch (e) {
+      console.error("Failed to load type sound", e);
+    }
+  }
+
+  // 音を鳴らす関数
+  private playTypeSound() {
+    if (!this.isTypeSoundEnabled || !this.audioContext || !this.typeSoundBuffer) return;
+
+    // ★重要：コンテキストがサスペンド状態なら、再開させる
+    if (this.audioContext.state === 'suspended') {
+      this.audioContext.resume();
+    }
+
+    const source = this.audioContext.createBufferSource();
+    source.buffer = this.typeSoundBuffer;
+
+    // ★ボリューム調整用のノードを作成
+    const gainNode = this.audioContext.createGain();
+    gainNode.gain.value = 0.1;
+
+    // ソース -> ゲイン -> 出力 という経路で繋ぐ
+    source.connect(gainNode);
+    gainNode.connect(this.audioContext.destination);
+
+    source.start(0);
+  }
+
+  private toggleTypeSound() {
+    this.isTypeSoundEnabled = !this.isTypeSoundEnabled;
+    // UIへの反映
+    const btn = document.querySelector('#btn-typesound') as HTMLElement;
+    if (btn) btn.style.opacity = this.isTypeSoundEnabled ? '1' : '0.4';
+    // 初回有効化時にAudioContextを初期化または再開
+    if (this.isTypeSoundEnabled && this.audioContext?.state === 'suspended') {
+      this.audioContext.resume();
+    }
+    this.saveSettings();
   }
 
   private async toggleFullscreen() {
@@ -736,6 +999,7 @@ class App {
       console.error(`Failed to save file: ${activeTab.path}`, error);
     }
   }
+
   private async saveActiveFileAs() {
     if (!this.activeTabPath) return;
     const content = this.editorView.state.doc.toString();
@@ -808,6 +1072,27 @@ class App {
       this.renderSidebar();
       await this.saveSettings();
     }
+  }
+
+  /** タブを循環させる */
+  private cycleTab(direction: 'next' | 'prev') {
+    if (this.openTabs.length <= 1) return;
+
+    const currentIndex = this.openTabs.findIndex(t => t.path === this.activeTabPath);
+    if (currentIndex === -1) return;
+
+    let nextIndex;
+    if (direction === 'next') {
+      nextIndex = (currentIndex + 1) % this.openTabs.length;
+    } else {
+      nextIndex = (currentIndex - 1 + this.openTabs.length) % this.openTabs.length;
+    }
+
+    this.openOrSwitchTab(this.openTabs[nextIndex].path);
+  }
+
+  private async openSettingsWindow() {
+    await invoke('open_settings_window');
   }
 
   /**
@@ -897,6 +1182,7 @@ class App {
           headings: [],
         };
         this.openTabs.push(tab);
+        this.addToHistory(filePath);
       } catch (error) {
         console.error(`[openOrSwitchTab] Failed to open file: ${filePath}`, error);
         await message(
@@ -915,10 +1201,19 @@ class App {
 
     const view = this.editorView;
 
-    // 描画更新を待ってからスクロールを実行
+    // 5. 描画更新を待ってから、スクロールとUI設定の再適用を「同時」に行う
     requestAnimationFrame(() => {
       view.dispatch({
-        effects: EditorView.scrollIntoView(view.state.selection.main.head, { y: "center" })
+        effects: [ // ★ effectsを配列にする
+          // カーソル位置を中央にスクロール
+          EditorView.scrollIntoView(view.state.selection.main.head, { y: "center" }),
+
+          // ★★★ ここでグローバルなUI設定をすべて再適用 ★★★
+          this.themeCompartment.reconfigure(this.isDarkMode ? this.darkTheme : this.lightTheme),
+          this.fontFamilyCompartment.reconfigure(this.fontThemes[this.currentFontIndex]),
+          this.fontSizeCompartment.reconfigure(this.createFontSizeTheme(this.currentFontSize)),
+          this.spotlightCompartment.reconfigure(this.createSpotlightPlugin(this.isSpotlightMode))
+        ]
       });
       view.focus();
     });

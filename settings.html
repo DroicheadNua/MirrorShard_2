@@ -1,0 +1,42 @@
+<!-- settings.html -->
+<!DOCTYPE html>
+<html>
+
+<head>
+    <meta charset="UTF-8" />
+    <title>設定</title>
+    <link rel="stylesheet" href="/src/settings.css">
+</head>
+
+<body>
+    <div data-tauri-drag-region class="settings-titlebar">
+        <div data-tauri-drag-region class="settings-window-controls">
+            <button id="settings-btn-close" title="閉じる (F2)"></button>
+        </div>
+    </div>
+    <div data-tauri-drag-region id="settings-container">
+
+        <h1>設定</h1>
+        <div class="setting-item">
+            <label for="editor-width-input">エディタの最大幅 (半角文字数):</label>
+            <!-- ★ type="number" に変更 -->
+            <input type="number" id="editor-width-input" min="20" max="200" step="1">
+            <button id="save-settings-btn">適用</button>
+            <p class="setting-note">　※0を入力するとウィンドウ幅に追従します。
+            </p>
+            <label for="line-height-input">行の高さ:</label>
+            <input type="number" id="line-height-input" min="1.0" max="3.0" step="0.1">
+        </div>
+        <div class="setting-item">
+            <label for="line-break-select">禁則処理:</label>
+            <select id="line-break-select">
+                <option value="normal">標準</option>
+                <option value="strict">厳格</option>
+            </select>
+        </div>
+
+        <script type="module" src="/src/settings.ts"></script>
+    </div>
+</body>
+
+</html>
