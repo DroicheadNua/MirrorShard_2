@@ -88,9 +88,7 @@
       "deb": {
         "files": {}
       },
-      "appimage": {
-        "bundleMediaFramework": false
-      }
+      "appimage": {}
     }
   }
 }

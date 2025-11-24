@@ -3,7 +3,12 @@ body {
     height: 100%;
     overflow: hidden;
     word-wrap: break-word;
-    background-color: gradient(to bottom, #1e1e1e, #333333);
+    background-color: transparent;
+    border-radius: 8px;
+}
+
+html[data-platform="linux"] body {
+    background-color: #77997755;
 }
 
 #settings-container {

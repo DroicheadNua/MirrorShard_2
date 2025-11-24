@@ -48,25 +48,25 @@ async fn open_settings_window(app: AppHandle) {
     .inner_size(600.0, 400.0)
     .resizable(false)
     .transparent(true)
-    .decorations(false)
-    .title_bar_style(TitleBarStyle::Transparent)
-    .effects(tauri::utils::config::WindowEffectsConfig {
-        effects: vec![
-            // For macOS
-            tauri::window::Effect::HudWindow,
-            // For Windows
-            tauri::window::Effect::Acrylic,
-        ],
-        state: None,
-        radius: Some(24.0),
-        color: None,
-    });
+    .decorations(false);
+    #[cfg(any(windows, target_os = "macos"))]
+    let builder = builder.title_bar_style(TitleBarStyle::Transparent).effects(
+        tauri::utils::config::WindowEffectsConfig {
+            effects: vec![
+                tauri::window::Effect::HudWindow, // For macOS
+                tauri::window::Effect::Acrylic,   // For Windows
+            ],
+            state: None,
+            radius: Some(24.0),
+            color: None,
+        },
+    );
+
     #[cfg(debug_assertions)]
     let window = builder.devtools(true).build().unwrap();
     #[cfg(not(debug_assertions))]
     let window = builder.build().unwrap();
 
-    // ★ show()を呼ぶ
     window.show().unwrap();
 }
 
