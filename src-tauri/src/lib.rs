@@ -47,11 +47,11 @@ async fn open_settings_window(app: AppHandle) {
     .title("設定")
     .inner_size(600.0, 400.0)
     .resizable(false)
+    .transparent(true)
     .decorations(false);
     #[cfg(any(windows, target_os = "macos"))]
     let builder = builder
         .title_bar_style(tauri::TitleBarStyle::Transparent)
-        .transparent(true)
         .effects(tauri::utils::config::WindowEffectsConfig {
             effects: vec![
                 tauri::window::Effect::HudWindow, // For macOS
