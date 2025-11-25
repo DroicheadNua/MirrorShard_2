@@ -195,11 +195,13 @@ body.dark-mode {
   /* ★残りの高さをすべて使う */
   height: 100%;
   overflow-y: hidden;
+  width: 100%;
 }
 
 /* CodeMirror自体がコンテナいっぱいに広がるように */
 .cm-editor {
   height: 100%;
+  width: 100%;
 }
 
 .cm-cursor {
@@ -503,7 +505,7 @@ body.dark-mode {
   /* デフォルト値として、読みやすい幅 (例: 80ch = 半角80文字分) を指定 */
   max-width: var(--editor-max-width, 80ch);
   margin: 0 auto;
-  /* 中央揃え */
+  width: 100%;
 }
 
 /* 各ボタンにSVGアイコンを割り当て */

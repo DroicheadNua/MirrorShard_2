@@ -45,22 +45,23 @@ async fn open_settings_window(app: AppHandle) {
         tauri::WebviewUrl::App("settings.html".into()), // taiconf.jsonで定義したURLと同じ
     )
     .title("設定")
+    .transparent(true)
     .inner_size(600.0, 400.0)
     .resizable(false)
-    .transparent(true)
-    .decorations(false);
+    .decorations(false)
+    .visible(false);
+    #[cfg(target_os = "macos")]
+    let builder = builder.title_bar_style(tauri::TitleBarStyle::Transparent);
     #[cfg(any(windows, target_os = "macos"))]
-    let builder = builder
-        .title_bar_style(tauri::TitleBarStyle::Transparent)
-        .effects(tauri::utils::config::WindowEffectsConfig {
-            effects: vec![
-                tauri::window::Effect::HudWindow, // For macOS
-                tauri::window::Effect::Acrylic,   // For Windows
-            ],
-            state: None,
-            radius: Some(24.0),
-            color: None,
-        });
+    let builder = builder.effects(tauri::utils::config::WindowEffectsConfig {
+        effects: vec![
+            tauri::window::Effect::HudWindow, // For macOS
+            tauri::window::Effect::Acrylic,   // For Windows
+        ],
+        state: None,
+        radius: Some(24.0),
+        color: None,
+    });
 
     #[cfg(debug_assertions)]
     let window = builder.devtools(true).build().unwrap();
@@ -68,6 +69,7 @@ async fn open_settings_window(app: AppHandle) {
     let window = builder.build().unwrap();
 
     window.show().unwrap();
+    window.set_focus().unwrap();
 }
 
 // --- フロントエンドからの問い合わせに応えるコマンド ---
@@ -266,10 +268,10 @@ pub fn run() {
             Builder::new()
                 .with_state_flags(
                     StateFlags::POSITION | // 位置は保存
-                StateFlags::SIZE |     // サイズは保存
-                StateFlags::MAXIMIZED |// 最大化状態は保存
-                StateFlags::FULLSCREEN, // フルスクリーン状態は保存
-                                                            // VISIBLE を除外することで、表示状態は保存・復元されなくなる
+                    StateFlags::SIZE |     // サイズは保存
+                    StateFlags::MAXIMIZED |// 最大化状態は保存
+                    StateFlags::FULLSCREEN, // フルスクリーン状態は保存
+                                            // VISIBLE を除外することで、表示状態は保存・復元されなくなる
                 )
                 .build(),
         )

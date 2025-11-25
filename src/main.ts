@@ -63,7 +63,6 @@ class App {
   private fontThemes: any[] = []; // ★初期化子を追加
   private fontClassNames = ['font-serif', 'font-sans-serif', 'font-monospace'];
   private bgm: HTMLAudioElement | null = null;
-  private skipSessionRestore = false;
   private fileListContainer = document.querySelector<HTMLElement>('#file-list-container');
   private outlineControls = document.querySelector<HTMLElement>('.outline-controls');
   private outlineContainer = document.querySelector<HTMLElement>('#outline-container');
@@ -141,49 +140,46 @@ class App {
   // --- 初期化 ---
 
   private async initialize() {
-    // 1. UI要素のチェック
+    // UI要素のチェック
     if (!this.editorContainer || !this.fileListContainer || !this.outlineControls || !this.outlineContainer) {
       console.error("Fatal Error: A required UI container was not found."); return;
     }
 
-    // 2. テーマとフォントの定義
+    // テーマとフォントの定義
     this.defineThemesAndFonts();
     this.createEditorExtensions();
 
-    // 3. CodeMirrorインスタンスを「デフォルト設定」で生成
+    // CodeMirrorインスタンスを「デフォルト設定」で生成
     this.editorView = new EditorView({
       state: EditorState.create({ extensions: this.editorExtensions }),
       parent: this.editorContainer,
     });
 
-    // 4. イベントリスナーを設定
+    // イベントリスナーを設定
     this.setupEventListeners();
 
-    // 5. ステータスバーの初期描画と時計の開始
+    // ステータスバーの初期描画と時計の開始
     this.updateStatusBar(this.editorView);
     setInterval(() => { this.updateStatusBarTimeOnly(); }, 1000);
 
-    // 2. 起動時ファイル指定をチェック
-    const initialFile = await invoke<string | null>('get_initial_file');
-    if (initialFile) {
-      this.skipSessionRestore = true;
-    }
-    // 1. Storeをロード
-    this.store = await Store.load('.settings.dat');
+    // Storeをロード
+    const storePromise = Store.load('.settings.dat');
+    const initialFilePromise = invoke<string | null>('get_initial_file');
 
+    this.store = await storePromise;
+    const initialFile = await initialFilePromise;
 
-
-    // 3. 設定を読み込む (セッション復元もこの中で行われる)
+    //  設定を読み込む 
     await this.loadSettings();
 
-    // 4. 読み込んだ設定をUIに完全に反映
+    //  読み込んだ設定をUIに完全に反映
     this.editorView.dispatch({
       effects: [
         this.themeCompartment.reconfigure(this.isDarkMode ? this.darkTheme : this.lightTheme),
         this.fontFamilyCompartment.reconfigure(this.fontThemes[this.currentFontIndex]),
         this.fontSizeCompartment.reconfigure(this.createFontSizeTheme(this.currentFontSize)),
         this.highlightingCompartment.reconfigure(syntaxHighlighting(this.isDarkMode ? this.darkHighlightStyle : this.lightHighlightStyle)),
-        // ★ スポットライトの初期状態も反映
+        //  スポットライトの初期状態も反映
         this.spotlightCompartment.reconfigure(this.createSpotlightPlugin(this.isSpotlightMode))
       ]
     });
@@ -196,7 +192,7 @@ class App {
     const btnSpotlight = document.querySelector('#btn-spotlight') as HTMLElement;
     if (btnSpotlight) btnSpotlight.style.opacity = this.isSpotlightMode ? '1' : '0.4';
 
-    // 9. 背景画像、BGM、タイプ音の初期化
+    //  背景画像、BGM、タイプ音の初期化
     await this.updateBackground();
     await this.initializeBGM();
     await this.initializeTypeSound();
@@ -208,15 +204,33 @@ class App {
       if (settings.editorLineBreak) this.updateEditorLineBreak(settings.editorLineBreak);
     });
 
-    // 11. ファイル指定で起動した場合、そのファイルを開く
+    let filesOpened = false;
+
     if (initialFile) {
+      // ファイル指定で起動
       await this.openOrSwitchTab(initialFile);
+      filesOpened = true;
+    } else {
+      // 通常起動
+      const settings = await this.store.get<AppSettings>('settings');
+      if (settings && settings.sessionFilePaths && settings.sessionFilePaths.length > 0) {
+        // セッション復元
+        for (const filePath of settings.sessionFilePaths) {
+          await this.openOrSwitchTab(filePath);
+        }
+        if (settings.sessionFilePaths.length > 0) {
+          await this.openOrSwitchTab(settings.sessionFilePaths[settings.sessionFilePaths.length - 1]);
+        }
+        filesOpened = true;
+      }
     }
 
-    // ★ すべての初期ロードが完了したことを示すフラグを立てる
-    this.settingsLoaded = true;
+    // ★ 4. どのファイルも開かれなかった場合、新規タブを作成
+    if (!filesOpened) {
+      this.createNewTab();
+    }
 
-    // 12. 最後にウィンドウを表示
+    this.settingsLoaded = true;
     await getCurrentWindow().show();
   }
 
@@ -235,17 +249,6 @@ class App {
       document.documentElement.style.setProperty('--editor-line-height', this.editorLineHeight.toString());
       this.editorLineBreak = settings.editorLineBreak ?? 'strict';
       document.documentElement.style.setProperty('--editor-line-break', this.editorLineBreak);
-
-      // ★ skipSessionRestoreがfalseの場合のみ、セッションを復元する
-      if (!this.skipSessionRestore && settings.sessionFilePaths) {
-        const sessionFilePaths = settings.sessionFilePaths;
-        for (const filePath of sessionFilePaths) {
-          await this.openOrSwitchTab(filePath);
-        }
-        if (sessionFilePaths.length > 0) {
-          await this.openOrSwitchTab(sessionFilePaths[sessionFilePaths.length - 1]);
-        }
-      }
     }
     this.settingsLoaded = true;
   }
@@ -815,11 +818,15 @@ class App {
 
   // --- 機能メソッド ---
   private async saveSettings() {
+    // ★ "Untitled" のタブはセッション保存対象から除外する
+    const sessionPaths = this.openTabs
+      .map(t => t.path)
+      .filter(path => path !== "Untitled");
     await this.store.set('settings', {
       isDarkMode: this.isDarkMode,
       currentFontIndex: this.currentFontIndex,
       currentFontSize: this.currentFontSize,
-      sessionFilePaths: this.openTabs.map(t => t.path),
+      sessionFilePaths: sessionPaths,
       isTypeSoundEnabled: this.isTypeSoundEnabled,
       isSpotlightMode: this.isSpotlightMode,
       recentFiles: this.recentFiles,
@@ -830,6 +837,7 @@ class App {
   }
 
   private addToHistory(filePath: string) {
+    if (filePath === "Untitled") return;
     // 1. 既存の履歴から同じパスを削除
     this.recentFiles = this.recentFiles.filter(p => p !== filePath);
     // 2. 配列の先頭に新しいパスを追加
@@ -981,6 +989,12 @@ class App {
 
   private async saveActiveFile() {
     if (!this.activeTabPath) return;
+
+    if (this.activeTabPath === "Untitled") {
+      await this.saveActiveFileAs();
+      return;
+    }
+
     const activeTab = this.openTabs.find(t => t.path === this.activeTabPath);
     if (!activeTab) return;
 
@@ -1019,14 +1033,14 @@ class App {
     }
   }
   private createNewTab() {
-    const newFilePath = `Untitled-${Date.now()}.md`;
+    const newFilePath = "Untitled";
     const state = EditorState.create({ extensions: this.createEditorExtensions() });
 
     // ★ encodingとlineEndingのデフォルト値を追加
     const tab: OpenTab = {
       path: newFilePath,
       state,
-      isDirty: true,
+      isDirty: false,
       encoding: 'UTF-8',      // 新規ファイルはUTF-8
       lineEnding: 'LF',       // デフォルトはLF (環境に応じて変えても良い)
       headings: [],
