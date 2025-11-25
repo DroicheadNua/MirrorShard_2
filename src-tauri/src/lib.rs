@@ -5,7 +5,7 @@ use encoding_rs::{SHIFT_JIS, UTF_8};
 use std::fs;
 use std::path::{Path, PathBuf};
 use std::sync::Mutex;
-use tauri::{AppHandle, Emitter, Manager, State, TitleBarStyle, WebviewWindowBuilder, WindowEvent};
+use tauri::{AppHandle, Emitter, Manager, State, WindowEvent};
 use tauri_plugin_cli::CliExt;
 use tauri_plugin_dialog::DialogExt;
 use tauri_plugin_window_state::{Builder, StateFlags};
@@ -39,7 +39,7 @@ async fn open_settings_window(app: AppHandle) {
     }
 
     // 新しいウィンドウをビルド
-    let builder = WebviewWindowBuilder::new(
+    let builder = tauri::WebviewWindowBuilder::new(
         &app,
         "settings", // taiconf.jsonで定義したラベルと同じ名前
         tauri::WebviewUrl::App("settings.html".into()), // taiconf.jsonで定義したURLと同じ
@@ -47,11 +47,12 @@ async fn open_settings_window(app: AppHandle) {
     .title("設定")
     .inner_size(600.0, 400.0)
     .resizable(false)
-    .transparent(true)
     .decorations(false);
     #[cfg(any(windows, target_os = "macos"))]
-    let builder = builder.title_bar_style(TitleBarStyle::Transparent).effects(
-        tauri::utils::config::WindowEffectsConfig {
+    let builder = builder
+        .title_bar_style(tauri::TitleBarStyle::Transparent)
+        .transparent(true)
+        .effects(tauri::utils::config::WindowEffectsConfig {
             effects: vec![
                 tauri::window::Effect::HudWindow, // For macOS
                 tauri::window::Effect::Acrylic,   // For Windows
@@ -59,8 +60,7 @@ async fn open_settings_window(app: AppHandle) {
             state: None,
             radius: Some(24.0),
             color: None,
-        },
-    );
+        });
 
     #[cfg(debug_assertions)]
     let window = builder.devtools(true).build().unwrap();
@@ -222,6 +222,7 @@ async fn save_file_as(app: tauri::AppHandle, content: String) {
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
+        .plugin(tauri_plugin_os::init())
         .plugin(tauri_plugin_cli::init())
         .manage(InitialFile(Mutex::new(None))) // 最初の起動用
         .manage(SecondInstanceFile(Mutex::new(None))) // 2回目以降の起動用

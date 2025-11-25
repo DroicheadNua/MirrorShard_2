@@ -2,6 +2,7 @@ import './settings.css';
 import { Store } from '@tauri-apps/plugin-store';
 import { emit } from '@tauri-apps/api/event';
 import { getCurrentWindow } from '@tauri-apps/api/window';
+import { type } from '@tauri-apps/plugin-os';
 
 async function setupSettings() {
     // --- UI要素の取得 ---
@@ -66,6 +67,12 @@ async function setupSettings() {
             getCurrentWindow().close();
         }
     });
+
+    const osType = await type();
+    if (osType === 'linux') {
+        document.body.style.backgroundImage = 'radial-gradient(circle, #22d3ee, #8b5cf6eb)';
+    }
+
 }
 
 // ページが読み込まれたらセットアップを実行

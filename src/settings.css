@@ -5,10 +5,7 @@ body {
     word-wrap: break-word;
     background-color: transparent;
     border-radius: 8px;
-}
-
-html[data-platform="linux"] body {
-    background-color: #77997755;
+    font-family: serif;
 }
 
 #settings-container {
