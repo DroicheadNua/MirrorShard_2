@@ -1,4 +1,6 @@
+html,
 body {
+    margin: 0;
     width: 100%;
     height: 100%;
     overflow-y: hidden;
@@ -11,6 +13,14 @@ body {
     background-position: center;
     background-repeat: no-repeat;
     transition: background-color 0.5s ease, background-image 0.5s ease-in-out;
+}
+
+#settings-wrapper {
+    border-radius: 12px;
+    box-sizing: border-box;
+    width: 100%;
+    height: 100%;
+    overflow: hidden;
 }
 
 #settings-container {

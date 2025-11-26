@@ -10,9 +10,10 @@ import './settings.css';
 async function setupSettings() {
     try {
         // --- 1. OSごとの見た目調整 ---
+        const wrapper = document.querySelector('#settings-wrapper') as HTMLElement;
         const osType = await type();
         if (osType === 'linux') {
-            document.body.style.backgroundImage = 'radial-gradient(circle, #22d3ee, #8b5cf6eb)';
+            wrapper.style.backgroundImage = 'radial-gradient(circle, #22d3ee, #8b5cf6eb)';
         }
 
         // --- 2. Storeのロード ---
