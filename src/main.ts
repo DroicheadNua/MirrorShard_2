@@ -17,6 +17,8 @@ import { listen } from '@tauri-apps/api/event';
 import { Menu, MenuItem, PredefinedMenuItem, Submenu } from '@tauri-apps/api/menu';
 import { TYPE_SOUND_BASE64 } from './assets/type-sound';
 import { convertFileSrc } from '@tauri-apps/api/core';
+import { readFile } from '@tauri-apps/plugin-fs';
+import { type } from '@tauri-apps/plugin-os';
 
 // --- 型定義 ---
 interface Heading { level: number; text: string; pos: number; isCollapsed: boolean; }
@@ -51,7 +53,6 @@ class App {
   private darkTheme!: any;
   private fontThemes: any[] = []; // ★初期化子を追加
   private fontClassNames = ['font-serif', 'font-sans-serif', 'font-monospace'];
-  private bgm: HTMLAudioElement | null = null;
   private fileListContainer = document.querySelector<HTMLElement>('#file-list-container');
   private outlineControls = document.querySelector<HTMLElement>('.outline-controls');
   private outlineContainer = document.querySelector<HTMLElement>('#outline-container');
@@ -69,6 +70,12 @@ class App {
   private editorLineBreak = 'strict';
   private userBackgroundImagePath = '';
   private userBgmPath = '';
+  private bgmElement: HTMLAudioElement | null = null; // Win/Mac用
+  private bgmContext: AudioContext | null = null;     // Linux用
+  private bgmBuffer: AudioBuffer | null = null;       // Linux用
+  private bgmSource: AudioBufferSourceNode | null = null; // Linux用
+  private isBgmPlaying = false;
+  private currentOs: string | null = null;
 
   // --- 静的ファクトリメソッド ---
   public static create() {
@@ -131,6 +138,7 @@ class App {
   // --- 初期化 ---
 
   private async initialize() {
+    this.currentOs = await type();
     // UI要素のチェック
     if (!this.editorContainer || !this.fileListContainer || !this.outlineControls || !this.outlineContainer) {
       console.error("Fatal Error: A required UI container was not found."); return;
@@ -200,17 +208,27 @@ class App {
 
       // ★画像・BGMの更新
       // ペイロードに含まれていれば更新する
+      // undefinedチェックに加え、null(リセット指示)も通す
       if (s.userBackgroundImagePath !== undefined) {
-        this.userBackgroundImagePath = s.userBackgroundImagePath;
-        this.updateBackground();
+        // パスが同じなら再描画しない（ちらつき防止）
+        // ただし null (デフォルトに戻す) の場合は常に更新
+        if (this.userBackgroundImagePath !== s.userBackgroundImagePath || s.userBackgroundImagePath === null) {
+          this.userBackgroundImagePath = s.userBackgroundImagePath || undefined; // nullならundefinedに戻す
+          await this.updateBackground();
+        }
       }
+
+      // ★ BGMのスマート更新
       if (s.userBgmPath !== undefined) {
-        // ★ パスが実際に変更された場合だけ再初期化する
-        if (this.userBgmPath !== s.userBgmPath) {
-          this.userBgmPath = s.userBgmPath;
-          // ★ trueを渡して「即時再生」を指示
+        const newPath = s.userBgmPath || undefined; // nullならundefined
+
+        // パスが変更された場合のみ再初期化
+        if (this.userBgmPath !== newPath) {
+          this.userBgmPath = newPath;
+          // ★変更されたので、trueを渡して「即時再生」させる
           await this.initializeBGM(true);
         }
+        // パスが同じなら何もしない -> 曲は止まらない！
       }
     });
 
@@ -456,45 +474,56 @@ class App {
   private createFontSizeTheme = (size: number) => EditorView.theme({ '&': { fontSize: `${size}pt` }, '.cm-gutters': { fontSize: `${size}pt` } });
 
   private async initializeBGM(autoPlay: boolean = false) {
-    // 既存のBGMがあれば停止・破棄
-    if (this.bgm) {
-      this.bgm.pause();
-      this.bgm = null;
-    }
-
-    let audioUrl = '';
-
-    // userBgmPath が "存在し" かつ "空文字でない" 場合のみファイル読み込み
-    if (this.userBgmPath && this.userBgmPath.trim() !== '') {
-      // ユーザー指定パス (convertFileSrc)
-      // tauri.conf.json の設定が効いていれば、ここで正しいURLになる
-      audioUrl = convertFileSrc(this.userBgmPath);
-    } else {
-      // ★ デフォルトBGM (Base64) に戻す
-      // import { backgroundMusic } from './assets/audio'; がされていること
-      audioUrl = backgroundMusic;
-    }
+    // --- 共通: 既存の再生を停止 ---
+    this.stopBGM();
 
     try {
-      this.bgm = new Audio(audioUrl);
-      this.bgm.loop = true;
+      if (this.currentOs === 'linux') {
+        // ★★★ Linux用: Web Audio API (メモリ展開方式) ★★★
+        if (!this.bgmContext) {
+          this.bgmContext = new (window.AudioContext || (window as any).webkitAudioContext)();
+        }
 
-      // ★ autoPlay が true なら即座に再生
-      if (autoPlay) {
-        // ユーザーインタラクションがないと再生できない場合があるのでcatchする
-        this.bgm.play()
-          .then(() => {
-            document.querySelector('#btn-bgm-toggle')?.classList.add('playing');
-          })
-          .catch(e => console.error("Auto-play blocked:", e));
+        let buffer: ArrayBuffer;
+        if (this.userBgmPath && this.userBgmPath.trim() !== '') {
+          // ファイル読み込み
+          const uint8Array = await readFile(this.userBgmPath);
+          buffer = uint8Array.buffer;
+        } else {
+          // デフォルトBase64
+          const base64Data = backgroundMusic.split(',')[1] || backgroundMusic;
+          const binaryString = window.atob(base64Data);
+          const len = binaryString.length;
+          const bytes = new Uint8Array(len);
+          for (let i = 0; i < len; i++) bytes[i] = binaryString.charCodeAt(i);
+          buffer = bytes.buffer;
+        }
+        // デコード (重い処理)
+        this.bgmBuffer = await this.bgmContext.decodeAudioData(buffer);
+
       } else {
-        // 停止状態ならUIリセット
-        document.querySelector('#btn-bgm-toggle')?.classList.remove('playing');
+        // ★★★ Win/Mac用: HTML5 Audio (ストリーミング方式) ★★★
+        let audioUrl = '';
+        if (this.userBgmPath && this.userBgmPath.trim() !== '') {
+          audioUrl = convertFileSrc(this.userBgmPath);
+        } else {
+          audioUrl = backgroundMusic;
+        }
+        this.bgmElement = new Audio(audioUrl);
+        this.bgmElement.loop = true;
+      }
+
+      // UIリセット
+      const bgmButton = document.querySelector('#btn-bgm-toggle');
+      if (bgmButton) bgmButton.classList.remove('playing');
+      this.isBgmPlaying = false;
+
+      if (autoPlay) {
+        this.toggleBGM();
       }
 
     } catch (e) {
       console.error("Failed to init BGM", e);
-      // エラーが出た場合も、次回のために this.bgm は null のままにしておく
     }
   }
 
@@ -976,10 +1005,60 @@ class App {
   }
 
   private toggleBGM() {
-    if (!this.bgm) return;
-    if (this.bgm.paused) this.bgm.play().catch(e => console.error("BGM play failed:", e));
-    else this.bgm.pause();
-    document.querySelector('#btn-bgm-toggle')?.classList.toggle('playing', !this.bgm.paused);
+    const bgmButton = document.querySelector('#btn-bgm-toggle');
+
+    if (this.isBgmPlaying) {
+      this.stopBGM(); // 停止処理を共通化
+      this.isBgmPlaying = false;
+      if (bgmButton) bgmButton.classList.remove('playing');
+    } else {
+      // 再生開始
+      this.playBGM();
+      this.isBgmPlaying = true;
+      if (bgmButton) bgmButton.classList.add('playing');
+    }
+  }
+
+  // 実際の再生処理
+  private playBGM() {
+    if (this.currentOs === 'linux') {
+      // Linux (Web Audio API)
+      if (this.bgmContext && this.bgmBuffer) {
+        if (this.bgmContext.state === 'suspended') this.bgmContext.resume();
+        this.bgmSource = this.bgmContext.createBufferSource();
+        this.bgmSource.buffer = this.bgmBuffer;
+        this.bgmSource.loop = true;
+        // 音量調整
+        const gainNode = this.bgmContext.createGain();
+        gainNode.gain.value = 0.5;
+        this.bgmSource.connect(gainNode);
+        gainNode.connect(this.bgmContext.destination);
+        this.bgmSource.start(0);
+      }
+    } else {
+      // Win/Mac (HTML5 Audio)
+      if (this.bgmElement) {
+        this.bgmElement.volume = 0.5;
+        this.bgmElement.play().catch(e => console.error("BGM play failed:", e));
+      }
+    }
+  }
+
+  // 実際の停止処理
+  private stopBGM() {
+    if (this.currentOs === 'linux') {
+      if (this.bgmSource) {
+        try { this.bgmSource.stop(); } catch (e) { }
+        this.bgmSource = null;
+      }
+    } else {
+      if (this.bgmElement) {
+        this.bgmElement.pause();
+        // ストリーミングの場合は位置を0に戻すのが一般的（停止挙動）
+        // 一時停止のままにしたいなら currentTime = 0 は削除
+        // this.bgmElement.currentTime = 0; 
+      }
+    }
   }
 
   private async initializeTypeSound() {

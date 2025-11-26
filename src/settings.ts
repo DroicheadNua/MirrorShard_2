@@ -58,15 +58,30 @@ async function setupSettings() {
                 title: '背景画像を選択',
                 filters: [{ name: 'Images', extensions: ['png', 'jpg', 'jpeg', 'gif', 'webp'] }]
             });
+
             if (path && typeof path === 'string') {
+                // 即座に保存
                 pendingBgPath = path;
+                await store.set('userBackgroundImagePath', path);
+                await store.save();
+
+                // 表示更新
                 bgPathDisplay.textContent = path.split(/[/\\]/).pop() || path;
+
+                // 即座に通知
+                await emit('settings-changed', { userBackgroundImagePath: path });
             }
         });
 
-        document.querySelector('#btn-clear-bg-image')?.addEventListener('click', () => {
+        document.querySelector('#btn-clear-bg-image')?.addEventListener('click', async () => {
             pendingBgPath = null;
+            await store.delete('userBackgroundImagePath'); // 削除して保存
+            await store.save();
+
             bgPathDisplay.textContent = '(デフォルト)';
+
+            // nullを通知してデフォルトに戻させる
+            await emit('settings-changed', { userBackgroundImagePath: null });
         });
 
         document.querySelector('#btn-select-bgm')?.addEventListener('click', async () => {
@@ -74,15 +89,29 @@ async function setupSettings() {
                 title: 'BGMを選択',
                 filters: [{ name: 'Audio', extensions: ['mp3', 'wav', 'ogg'] }]
             });
+
             if (path && typeof path === 'string') {
+                // 即座に保存
                 pendingBgmPath = path;
+                await store.set('userBgmPath', path);
+                await store.save();
+
                 bgmPathDisplay.textContent = path.split(/[/\\]/).pop() || path;
+
+                // 即座に通知
+                await emit('settings-changed', { userBgmPath: path });
             }
         });
 
-        document.querySelector('#btn-clear-bgm')?.addEventListener('click', () => {
+        document.querySelector('#btn-clear-bgm')?.addEventListener('click', async () => {
             pendingBgmPath = null;
+            await store.delete('userBgmPath');
+            await store.save();
+
             bgmPathDisplay.textContent = '(デフォルト)';
+
+            // nullを通知
+            await emit('settings-changed', { userBgmPath: null });
         });
 
 
