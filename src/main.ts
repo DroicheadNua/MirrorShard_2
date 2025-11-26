@@ -11,11 +11,8 @@ import { HighlightStyle, syntaxHighlighting } from '@codemirror/language';
 import { tags } from '@lezer/highlight';
 import { getCurrentWindow } from '@tauri-apps/api/window';
 import { open, ask, message, save } from '@tauri-apps/plugin-dialog';
-import { backgroundMusic } from './assets/audio';
-import { backgroundImage } from './assets/images';
 import { listen } from '@tauri-apps/api/event';
 import { Menu, MenuItem, PredefinedMenuItem, Submenu } from '@tauri-apps/api/menu';
-import { TYPE_SOUND_BASE64 } from './assets/type-sound';
 import { convertFileSrc } from '@tauri-apps/api/core';
 import { type } from '@tauri-apps/plugin-os';
 
@@ -494,6 +491,7 @@ class App {
           buffer = uint8Array.buffer;
         } else {
           // デフォルトBase64
+          const { backgroundMusic } = await import('./assets/audio');
           const base64Data = backgroundMusic.split(',')[1] || backgroundMusic;
           const binaryString = window.atob(base64Data);
           const len = binaryString.length;
@@ -510,6 +508,7 @@ class App {
         if (this.userBgmPath && this.userBgmPath.trim() !== '') {
           audioUrl = convertFileSrc(this.userBgmPath);
         } else {
+          const { backgroundMusic } = await import('./assets/audio');
           audioUrl = backgroundMusic;
         }
         this.bgmElement = new Audio(audioUrl);
@@ -856,6 +855,7 @@ class App {
       imageUrl = convertFileSrc(this.userBackgroundImagePath);
       console.log('User background image path:', this.userBackgroundImagePath);
     } else {
+      const { backgroundImage } = await import('./assets/images');
       // ★なければデフォルトのBase64文字列を使用
       imageUrl = backgroundImage;
       console.log('Default background image path:', backgroundImage);
@@ -1068,6 +1068,7 @@ class App {
     try {
       // Web Audio APIのコンテキスト作成
       this.audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
+      const { TYPE_SOUND_BASE64 } = await import('./assets/type-sound');
 
       // ★ Electron版と同様に、メタデータを付与してからBase64部分を取得する
       const fullBase64String = `data:audio/wav;base64,${TYPE_SOUND_BASE64}`;
