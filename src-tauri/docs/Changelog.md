@@ -24,6 +24,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed (修正点)  
 - UIボタンでアンドゥ・リドゥを行った際にカーソルが行頭にジャンプしてしまう不具合を修正  
+- 「名前を付けて保存」の挙動を修正  
 
 ## [0.1.0] - 2025-11-22  
 

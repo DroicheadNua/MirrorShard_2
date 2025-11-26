@@ -7,7 +7,6 @@ use std::path::{Path, PathBuf};
 use std::sync::Mutex;
 use tauri::{AppHandle, Emitter, Manager, State, WindowEvent};
 use tauri_plugin_cli::CliExt;
-use tauri_plugin_dialog::DialogExt;
 use tauri_plugin_window_state::{Builder, StateFlags};
 
 // --- FileEntry構造体の定義 ---
@@ -207,25 +206,6 @@ async fn write_file(path: String, content: String, encoding: String) -> Result<(
     Ok(())
 }
 
-#[tauri::command]
-async fn save_file_as(app: tauri::AppHandle, content: String) {
-    app.dialog()
-        .file()
-        .add_filter("Text Document", &["txt", "md"])
-        .set_file_name("Untitled.txt")
-        .save_file(move |file_path| {
-            if let Some(path) = file_path {
-                if let Err(e) = std::fs::write(path.to_string(), &content) {
-                    eprintln!("Failed to save file: {}", e.to_string());
-                    app.dialog()
-                        .message(format!("Failed to save file: {}", e.to_string()))
-                        .title("Error")
-                        .show(|_| {});
-                }
-            }
-        });
-}
-
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
@@ -289,7 +269,6 @@ pub fn run() {
             list_files,
             read_file,
             write_file,
-            save_file_as,
             force_close_app,
             get_initial_file,
             get_second_instance_file,

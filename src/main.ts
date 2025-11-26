@@ -10,7 +10,7 @@ import type { SelectionRange, StateEffect } from '@codemirror/state';
 import { HighlightStyle, syntaxHighlighting } from '@codemirror/language';
 import { tags } from '@lezer/highlight';
 import { getCurrentWindow } from '@tauri-apps/api/window';
-import { open, ask, message } from '@tauri-apps/plugin-dialog';
+import { open, ask, message, save } from '@tauri-apps/plugin-dialog';
 import { backgroundMusic } from './assets/audio';
 import { backgroundImage } from './assets/images';
 import { listen } from '@tauri-apps/api/event';
@@ -1178,10 +1178,62 @@ class App {
 
   private async saveActiveFileAs() {
     if (!this.activeTabPath) return;
+
+    const activeTab = this.openTabs.find(t => t.path === this.activeTabPath);
+    if (!activeTab) return;
+
     const content = this.editorView.state.doc.toString();
-    await invoke('save_file_as', { content });
-    // TODO: 保存後、ファイル一覧をリロードし、新しいタブとして開く
+
+    try {
+      // 1. フロントエンドで「保存ダイアログ」を開く
+      // デフォルトのファイル名を現在のファイル名（またはUntitled.txt）にする
+      const defaultName = this.activeTabPath.split(/[/\\]/).pop() || 'Untitled.txt';
+
+      const newPath = await save({
+        title: '名前を付けて保存',
+        defaultPath: defaultName,
+        filters: [{ name: 'Text Document', extensions: ['txt', 'md'] }]
+      });
+
+      // キャンセルされた場合は何もしない
+      if (!newPath) return;
+
+      // 2. 既存の write_file コマンドを使って、新しいパスに保存
+      // エンコーディングは元のタブの設定を引き継ぐ
+      await invoke('write_file', {
+        path: newPath,
+        content,
+        encoding: activeTab.encoding
+      });
+
+      // 3. タブの状態を更新
+
+      // 元が "Untitled" だった場合などは履歴から消すなどの処理もここで行えるが、
+      // 単純に現在のタブのパスを書き換えるのが最も直感的
+
+      // パスを更新
+      activeTab.path = newPath;
+      this.activeTabPath = newPath;
+
+      // 保存済み状態にする
+      activeTab.isDirty = false;
+
+      // 履歴に追加（新しいパスとして）
+      this.addToHistory(newPath);
+
+      // 4. UI更新
+      await this.parseHeadingsFromEditor(this.editorView); // アウトライン更新
+      this.renderSidebar(); // ファイル名変更を反映
+      await this.saveSettings(); // 状態保存
+
+      console.log(`File saved as: ${newPath}`);
+
+    } catch (error) {
+      console.error(`Failed to save file as:`, error);
+      await message(`保存に失敗しました。\n${error}`, { kind: 'error' });
+    }
   }
+
   private async openNewFile() {
     const filePath = await open({
       multiple: false,
