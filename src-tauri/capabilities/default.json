@@ -7,6 +7,12 @@
     },
     {
       "path": "**"
+    },
+    {
+      "path": "$HOME/**"
+    },
+    {
+      "path": "/**"
     }
   ],
   "description": "Capability for the main window",
