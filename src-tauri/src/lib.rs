@@ -46,7 +46,7 @@ async fn open_settings_window(app: AppHandle) {
     )
     .title("設定")
     .transparent(true)
-    .inner_size(600.0, 800.0)
+    .inner_size(600.0, 400.0)
     .resizable(false)
     .decorations(false)
     .visible(false);
@@ -273,6 +273,7 @@ pub fn run() {
                     StateFlags::FULLSCREEN, // フルスクリーン状態は保存
                                             // VISIBLE を除外することで、表示状態は保存・復元されなくなる
                 )
+                .with_denylist(&["settings"])
                 .build(),
         )
         .plugin(tauri_plugin_store::Builder::new().build())
