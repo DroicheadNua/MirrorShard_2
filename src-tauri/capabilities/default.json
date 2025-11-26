@@ -7,12 +7,6 @@
     },
     {
       "path": "**"
-    },
-    {
-      "path": "$HOME/**"
-    },
-    {
-      "path": "/**"
     }
   ],
   "description": "Capability for the main window",
@@ -40,7 +34,6 @@
     "core:path:default",
     "core:path:allow-resolve",
     "core:window:allow-set-focus",
-    "fs:default",
     "fs:allow-read-file",
     "store:default",
     "store:allow-load",

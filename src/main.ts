@@ -17,7 +17,6 @@ import { listen } from '@tauri-apps/api/event';
 import { Menu, MenuItem, PredefinedMenuItem, Submenu } from '@tauri-apps/api/menu';
 import { TYPE_SOUND_BASE64 } from './assets/type-sound';
 import { convertFileSrc } from '@tauri-apps/api/core';
-import { readFile } from '@tauri-apps/plugin-fs';
 import { type } from '@tauri-apps/plugin-os';
 
 // --- 型定義 ---
@@ -479,15 +478,19 @@ class App {
 
     try {
       if (this.currentOs === 'linux') {
-        // ★★★ Linux用: Web Audio API (メモリ展開方式) ★★★
+        // ★★★ Linux用: Rustコマンド経由で読み込む ★★★
         if (!this.bgmContext) {
           this.bgmContext = new (window.AudioContext || (window as any).webkitAudioContext)();
         }
 
         let buffer: ArrayBuffer;
         if (this.userBgmPath && this.userBgmPath.trim() !== '') {
-          // ファイル読み込み
-          const uint8Array = await readFile(this.userBgmPath);
+          // ★ fs.readFile ではなく、invoke を使う
+          // Rustから返ってくる Vec<u8> は、JS側では number[] (または Uint8Array) になる
+          const data = await invoke<number[]>('read_binary_file', { path: this.userBgmPath });
+
+          // Uint8Arrayに変換
+          const uint8Array = new Uint8Array(data);
           buffer = uint8Array.buffer;
         } else {
           // デフォルトBase64

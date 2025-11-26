@@ -31,6 +31,11 @@ struct SecondInstanceFile(Mutex<Option<String>>);
 // --- Tauriコマンドの定義 ---
 
 #[tauri::command]
+async fn read_binary_file(path: String) -> Result<Vec<u8>, String> {
+    std::fs::read(path).map_err(|e| e.to_string())
+}
+
+#[tauri::command]
 async fn open_settings_window(app: AppHandle) {
     // 既に開いているかチェック
     if app.get_webview_window("settings").is_some() {
@@ -289,6 +294,7 @@ pub fn run() {
             get_initial_file,
             get_second_instance_file,
             open_settings_window,
+            read_binary_file,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

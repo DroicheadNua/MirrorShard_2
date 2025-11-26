@@ -47,17 +47,8 @@ body {
   width: 100%;
   height: 100%;
   overflow: hidden;
-
-  /* ★背景画像はCSS変数を参照するようにする */
-  background-image: var(--app-bg-image, none);
-
-  /* ★背景色は別の変数にする */
-  background-color: var(--app-bg-color);
-
-  background-size: cover;
-  background-position: center;
-  background-repeat: no-repeat;
-  transition: background-color 0.5s ease, background-image 0.5s ease-in-out;
+  background-color: transparent;
+  /*常に透明に。背景画像はapp-containerで設定する。*/
 }
 
 body.dark-mode {
@@ -73,11 +64,14 @@ body.dark-mode {
   width: 100vw;
   background-color: var(--bg-color);
   border-radius: 8px;
-  /* 角丸 */
   overflow: hidden;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
-  /* 影 */
-
+  background-image: var(--app-bg-image, none);
+  /*背景画像はCSS変数を参照。
+  app-containerで背景画像を設定することによりMac・Linuxでも角丸めが可能になる*/
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+  transition: background-color 0.5s ease, background-image 0.5s ease-in-out;
 }
 
 .settings-header {
