@@ -1,6 +1,14 @@
 {
   "$schema": "../gen/schemas/desktop-schema.json",
-  "identifier": "default",
+  "identifier": "fs:scope",
+  "allow": [
+    {
+      "path": "$RESOURCE/**"
+    },
+    {
+      "path": "**"
+    }
+  ],
   "description": "Capability for the main window",
   "windows": [
     "main",

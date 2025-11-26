@@ -15,13 +15,15 @@
         </div>
     </div>
     <div data-tauri-drag-region id="settings-container">
-
-        <h1>設定</h1>
+        <div class="settings-header">
+            <h1>設定</h1>
+            <button id="save-settings-btn">適用</button>
+        </div>
         <div class="setting-item">
             <label for="editor-width-input">エディタの最大幅 (半角文字数):</label>
             <!-- ★ type="number" に変更 -->
             <input type="number" id="editor-width-input" min="20" max="200" step="1">
-            <button id="save-settings-btn">適用</button>
+
             <p class="setting-note">　※0を入力するとウィンドウ幅に追従します。
             </p>
             <label for="line-height-input">行の高さ:</label>
@@ -33,6 +35,18 @@
                 <option value="normal">標準</option>
                 <option value="strict">厳格</option>
             </select>
+        </div>
+        <div class="setting-item">
+            <label>背景画像:</label>
+            <button id="btn-select-bg-image">Select</button>
+            <button id="btn-clear-bg-image">Default</button>
+            <span id="current-bg-image-path"></span>
+        </div>
+        <div class="setting-item">
+            <label>BGM:</label>
+            <button id="btn-select-bgm">Select</button>
+            <button id="btn-clear-bgm">Default</button>
+            <span id="current-bgm-path"></span>
         </div>
 
         <script type="module" src="/src/settings.ts"></script>

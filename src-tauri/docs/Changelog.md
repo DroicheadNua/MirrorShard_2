@@ -18,6 +18,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
  - （※ただしElectron版と違い、ファイルサイズ減少時の警告は出ない）  
 - 設定ウィンドウを実装（F2で開閉）  
  - エディタの最大幅、行間、行頭禁則を設定可能に  
+ - 背景画像、BGMを設定可能に  
 
 ### Changed (変更点)  
 

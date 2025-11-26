@@ -1,79 +1,145 @@
-import './settings.css';
+// src/settings.ts
 import { Store } from '@tauri-apps/plugin-store';
 import { emit } from '@tauri-apps/api/event';
 import { getCurrentWindow } from '@tauri-apps/api/window';
+import { open } from '@tauri-apps/plugin-dialog';
 import { type } from '@tauri-apps/plugin-os';
+// CSSのインポート (Viteが処理します)
+import './settings.css';
 
 async function setupSettings() {
-    // --- UI要素の取得 ---
-    const widthInput = document.querySelector<HTMLInputElement>('#editor-width-input');
-    const heightInput = document.querySelector<HTMLInputElement>('#line-height-input');
-    const lineBreakSelect = document.querySelector<HTMLSelectElement>('#line-break-select');
-    const saveBtn = document.querySelector<HTMLButtonElement>('#save-settings-btn');
-    const closeBtn = document.querySelector<HTMLButtonElement>('#settings-btn-close');
-
-    if (!widthInput || !heightInput || !lineBreakSelect || !saveBtn || !closeBtn) {
-        console.error("A required UI element in settings.html was not found.");
-        return;
-    }
-
-    // --- Storeのロード ---
-    const store = await Store.load('.settings.dat');
-
-    // --- 初期値の読み込みとUIへの反映 ---
-    const initialWidth = await store.get<string>('editorMaxWidth');
-    widthInput.value = parseInt(initialWidth ?? '80', 10).toString();
-
-    const initialHeight = await store.get<number>('editorLineHeight');
-    heightInput.value = (initialHeight ?? 1.6).toString();
-
-    const initialLineBreak = await store.get<string>('editorLineBreak');
-    lineBreakSelect.value = initialLineBreak ?? 'strict';
-
-    // --- イベントリスナー ---
-
-    // 「適用」ボタンが押されたら、すべての設定を保存し、メインウィンドウに通知
-    saveBtn.addEventListener('click', async () => {
-        // 1. UIから値を取得
-        const numValue = parseInt(widthInput.value, 10);
-        const newWidth = numValue === 0 ? '100%' : `${numValue}ch`;
-        const newHeight = parseFloat(heightInput.value);
-        const newLineBreak = lineBreakSelect.value;
-
-        // 2. Storeに保存
-        await store.set('editorMaxWidth', newWidth);
-        await store.set('editorLineHeight', newHeight);
-        await store.set('editorLineBreak', newLineBreak);
-        await store.save();
-
-        // 3. メインウィンドウに、変更された設定を一括で通知
-        await emit('settings-changed', {
-            editorMaxWidth: newWidth,
-            editorLineHeight: newHeight,
-            editorLineBreak: newLineBreak,
-        });
-    });
-
-    // 閉じるボタンの処理
-    closeBtn.addEventListener('click', () => {
-        getCurrentWindow().close();
-    });
-
-    // F2キーでのトグル
-    document.addEventListener('keydown', (e) => {
-        if (e.key === 'F2') {
-            e.preventDefault();
-            e.stopPropagation();
-            getCurrentWindow().close();
+    try {
+        // --- 1. OSごとの見た目調整 ---
+        const osType = await type();
+        if (osType === 'linux') {
+            document.body.style.backgroundImage = 'radial-gradient(circle, #22d3ee, #8b5cf6eb)';
         }
-    });
 
-    const osType = await type();
-    if (osType === 'linux') {
-        document.body.style.backgroundImage = 'radial-gradient(circle, #22d3ee, #8b5cf6eb)';
+        // --- 2. Storeのロード ---
+        const store = await Store.load('.settings.dat');
+
+        // --- 3. UI要素の取得 ---
+        const widthInput = document.querySelector('#editor-width-input') as HTMLInputElement;
+        const heightInput = document.querySelector('#line-height-input') as HTMLInputElement;
+        const lineBreakSelect = document.querySelector('#line-break-select') as HTMLSelectElement;
+
+        const bgPathDisplay = document.querySelector('#current-bg-image-path') as HTMLElement;
+        const bgmPathDisplay = document.querySelector('#current-bgm-path') as HTMLElement;
+
+        const applyBtn = document.querySelector('#save-settings-btn') as HTMLButtonElement;
+        const closeBtn = document.querySelector('#settings-btn-close') as HTMLButtonElement;
+
+        if (!applyBtn || !closeBtn) {
+            console.error("Critical UI elements not found");
+            return;
+        }
+
+        // --- 4. 一時保存用変数 & 初期値の読み込み ---
+        let pendingBgPath = await store.get<string>('userBackgroundImagePath') || null;
+        let pendingBgmPath = await store.get<string>('userBgmPath') || null;
+
+        const initWidth = await store.get<string>('editorMaxWidth');
+        if (widthInput) widthInput.value = parseInt(initWidth ?? '80', 10).toString();
+
+        const initHeight = await store.get<number>('editorLineHeight');
+        if (heightInput) heightInput.value = (initHeight ?? 1.6).toString();
+
+        const initLineBreak = await store.get<string>('editorLineBreak');
+        if (lineBreakSelect) lineBreakSelect.value = initLineBreak ?? 'strict';
+
+        if (pendingBgPath) bgPathDisplay.textContent = pendingBgPath.split(/[/\\]/).pop() || '';
+        if (pendingBgmPath) bgmPathDisplay.textContent = pendingBgmPath.split(/[/\\]/).pop() || '';
+
+
+        // --- 5. イベントリスナー (ファイル選択) ---
+
+        document.querySelector('#btn-select-bg-image')?.addEventListener('click', async () => {
+            const path = await open({
+                title: '背景画像を選択',
+                filters: [{ name: 'Images', extensions: ['png', 'jpg', 'jpeg', 'gif', 'webp'] }]
+            });
+            if (path && typeof path === 'string') {
+                pendingBgPath = path;
+                bgPathDisplay.textContent = path.split(/[/\\]/).pop() || path;
+            }
+        });
+
+        document.querySelector('#btn-clear-bg-image')?.addEventListener('click', () => {
+            pendingBgPath = null;
+            bgPathDisplay.textContent = '(デフォルト)';
+        });
+
+        document.querySelector('#btn-select-bgm')?.addEventListener('click', async () => {
+            const path = await open({
+                title: 'BGMを選択',
+                filters: [{ name: 'Audio', extensions: ['mp3', 'wav', 'ogg'] }]
+            });
+            if (path && typeof path === 'string') {
+                pendingBgmPath = path;
+                bgmPathDisplay.textContent = path.split(/[/\\]/).pop() || path;
+            }
+        });
+
+        document.querySelector('#btn-clear-bgm')?.addEventListener('click', () => {
+            pendingBgmPath = null;
+            bgmPathDisplay.textContent = '(デフォルト)';
+        });
+
+
+        // --- 6. 適用ボタン (保存・通知・閉じる) ---
+        applyBtn.addEventListener('click', async () => {
+            try {
+                const numValue = parseInt(widthInput.value, 10);
+                const newWidth = numValue === 0 ? '100%' : `${numValue}ch`;
+                const newHeight = parseFloat(heightInput.value);
+                const newLineBreak = lineBreakSelect.value;
+
+                // Storeに保存
+                await store.set('editorMaxWidth', newWidth);
+                await store.set('editorLineHeight', newHeight);
+                await store.set('editorLineBreak', newLineBreak);
+
+                if (pendingBgPath) await store.set('userBackgroundImagePath', pendingBgPath);
+                else await store.delete('userBackgroundImagePath');
+
+                if (pendingBgmPath) await store.set('userBgmPath', pendingBgmPath);
+                else await store.delete('userBgmPath');
+
+                await store.save();
+
+                // メインウィンドウに通知
+                await emit('settings-changed', {
+                    editorMaxWidth: newWidth,
+                    editorLineHeight: newHeight,
+                    editorLineBreak: newLineBreak,
+                    userBackgroundImagePath: pendingBgPath,
+                    userBgmPath: pendingBgmPath
+                });
+
+            } catch (err) {
+                alert(`設定の保存に失敗しました: ${err}`);
+            }
+        });
+
+        // --- 7. 閉じるボタン & ショートカット ---
+        const hideWindow = async () => {
+            await getCurrentWindow().close();
+        };
+
+        closeBtn.addEventListener('click', hideWindow);
+
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'F2') {
+                e.preventDefault();
+                hideWindow();
+            }
+        });
+
+    } catch (error) {
+        // スクリプト全体のエラーをキャッチ
+        alert(`設定画面のエラー: ${error}`);
+        console.error(error);
     }
-
 }
 
-// ページが読み込まれたらセットアップを実行
 window.addEventListener('DOMContentLoaded', setupSettings);

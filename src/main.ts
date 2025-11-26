@@ -16,6 +16,7 @@ import { backgroundImage } from './assets/images';
 import { listen } from '@tauri-apps/api/event';
 import { Menu, MenuItem, PredefinedMenuItem, Submenu } from '@tauri-apps/api/menu';
 import { TYPE_SOUND_BASE64 } from './assets/type-sound';
+import { convertFileSrc } from '@tauri-apps/api/core';
 
 // --- 型定義 ---
 interface Heading { level: number; text: string; pos: number; isCollapsed: boolean; }
@@ -26,18 +27,6 @@ interface OpenTab {
   encoding: string;
   lineEnding: 'LF' | 'CRLF' | '';
   headings: Heading[];
-}
-interface AppSettings {
-  isDarkMode: boolean;
-  currentFontIndex: number;
-  currentFontSize: number;
-  sessionFilePaths?: string[];
-  isTypeSoundEnabled?: boolean;
-  isSpotlightMode?: boolean;
-  recentFiles?: string[];
-  editorMaxWidth?: string;
-  editorLineHeight?: number;
-  editorLineBreak?: string;
 }
 
 /**
@@ -78,6 +67,8 @@ class App {
   private editorMaxWidth = '80ch';
   private editorLineHeight = 1.6;
   private editorLineBreak = 'strict';
+  private userBackgroundImagePath = '';
+  private userBgmPath = '';
 
   // --- 静的ファクトリメソッド ---
   public static create() {
@@ -164,13 +155,15 @@ class App {
 
     // Storeをロード
     const storePromise = Store.load('.settings.dat');
-    const initialFilePromise = invoke<string | null>('get_initial_file');
 
     this.store = await storePromise;
-    const initialFile = await initialFilePromise;
+    // 5. 起動時にファイルが指定されたか確認
+    const initialFile = await invoke<string | null>('get_initial_file');
+    // (skipSessionRestoreフラグは廃止したので、ここは単純にローカル変数で判断してもOK)
+    const hasInitialFile = !!initialFile;
 
-    //  設定を読み込む 
-    await this.loadSettings();
+    // 6. 設定を読み込む (戻り値としてセッションパスを受け取る)
+    const sessionFilePaths = await this.loadSettings();
 
     //  読み込んだ設定をUIに完全に反映
     this.editorView.dispatch({
@@ -197,60 +190,87 @@ class App {
     await this.initializeBGM();
     await this.initializeTypeSound();
 
-    await listen('settings-changed', (event: any) => {
-      const settings = event.payload;
-      if (settings.editorMaxWidth) this.updateEditorWidth(settings.editorMaxWidth);
-      if (settings.editorLineHeight) this.updateEditorLineHeight(settings.editorLineHeight);
-      if (settings.editorLineBreak) this.updateEditorLineBreak(settings.editorLineBreak);
+    await listen('settings-changed', async (event: any) => {
+      const s = event.payload;
+
+      // エディタ設定の更新
+      if (s.editorMaxWidth) this.updateEditorWidth(s.editorMaxWidth);
+      if (s.editorLineHeight) this.updateEditorLineHeight(s.editorLineHeight);
+      if (s.editorLineBreak) this.updateEditorLineBreak(s.editorLineBreak);
+
+      // ★画像・BGMの更新
+      // ペイロードに含まれていれば更新する
+      if (s.userBackgroundImagePath !== undefined) {
+        this.userBackgroundImagePath = s.userBackgroundImagePath;
+        this.updateBackground();
+      }
+      if (s.userBgmPath !== undefined) {
+        // ★ パスが実際に変更された場合だけ再初期化する
+        if (this.userBgmPath !== s.userBgmPath) {
+          this.userBgmPath = s.userBgmPath;
+          // ★ trueを渡して「即時再生」を指示
+          await this.initializeBGM(true);
+        }
+      }
     });
 
-    let filesOpened = false;
-
-    if (initialFile) {
-      // ファイル指定で起動
+    if (hasInitialFile && initialFile) {
+      // 指定起動ならそのファイルを開く
       await this.openOrSwitchTab(initialFile);
-      filesOpened = true;
     } else {
-      // 通常起動
-      const settings = await this.store.get<AppSettings>('settings');
-      if (settings && settings.sessionFilePaths && settings.sessionFilePaths.length > 0) {
-        // セッション復元
-        for (const filePath of settings.sessionFilePaths) {
+      // 通常起動なら、loadSettingsから受け取ったパスを使って復元
+      if (sessionFilePaths.length > 0) {
+        for (const filePath of sessionFilePaths) {
           await this.openOrSwitchTab(filePath);
         }
-        if (settings.sessionFilePaths.length > 0) {
-          await this.openOrSwitchTab(settings.sessionFilePaths[settings.sessionFilePaths.length - 1]);
-        }
-        filesOpened = true;
+        // 最後のタブをアクティブに
+        await this.openOrSwitchTab(sessionFilePaths[sessionFilePaths.length - 1]);
+      } else {
+        // 履歴もなければ新規タブ
+        this.createNewTab();
       }
-    }
-
-    // ★ 4. どのファイルも開かれなかった場合、新規タブを作成
-    if (!filesOpened) {
-      this.createNewTab();
     }
 
     this.settingsLoaded = true;
     await getCurrentWindow().show();
   }
 
-  private async loadSettings() {
-    const settings = await this.store.get<AppSettings>('settings');
-    if (settings) {
-      this.isDarkMode = settings.isDarkMode ?? this.isDarkMode;
-      this.currentFontIndex = settings.currentFontIndex ?? this.currentFontIndex;
-      this.currentFontSize = settings.currentFontSize ?? this.currentFontSize;
-      this.isTypeSoundEnabled = settings.isTypeSoundEnabled ?? false;
-      this.isSpotlightMode = settings.isSpotlightMode ?? false;
-      this.recentFiles = settings.recentFiles ?? [];
-      this.editorMaxWidth = settings.editorMaxWidth ?? '80ch';
-      document.documentElement.style.setProperty('--editor-max-width', this.editorMaxWidth);
-      this.editorLineHeight = settings.editorLineHeight ?? 1.6;
-      document.documentElement.style.setProperty('--editor-line-height', this.editorLineHeight.toString());
-      this.editorLineBreak = settings.editorLineBreak ?? 'strict';
-      document.documentElement.style.setProperty('--editor-line-break', this.editorLineBreak);
-    }
-    this.settingsLoaded = true;
+  // 戻り値の型を Promise<string[]> にする
+  private async loadSettings(): Promise<string[]> {
+    // --- 基本設定の読み込み ---
+    const savedIsDarkMode = await this.store.get<boolean>('isDarkMode');
+    this.isDarkMode = savedIsDarkMode ?? this.isDarkMode;
+
+    const savedFontIndex = await this.store.get<number>('currentFontIndex');
+    this.currentFontIndex = savedFontIndex ?? this.currentFontIndex;
+
+    const savedFontSize = await this.store.get<number>('currentFontSize');
+    this.currentFontSize = savedFontSize ?? this.currentFontSize;
+
+    const savedTypeSound = await this.store.get<boolean>('isTypeSoundEnabled');
+    this.isTypeSoundEnabled = savedTypeSound ?? false;
+
+    const savedSpotlight = await this.store.get<boolean>('isSpotlightMode');
+    this.isSpotlightMode = savedSpotlight ?? false;
+
+    // --- 共有設定の読み込み ---
+    this.editorMaxWidth = await this.store.get<string>('editorMaxWidth') ?? '80ch';
+    this.editorLineHeight = await this.store.get<number>('editorLineHeight') ?? 1.6;
+    this.editorLineBreak = await this.store.get<string>('editorLineBreak') ?? 'strict';
+
+    // 初期反映 (CSS変数)
+    document.documentElement.style.setProperty('--editor-max-width', this.editorMaxWidth);
+    document.documentElement.style.setProperty('--editor-line-height', this.editorLineHeight.toString());
+    document.documentElement.style.setProperty('--editor-line-break', this.editorLineBreak);
+
+    // --- ★ 型エラーの修正 (undefined なら空文字を入れる) ---
+    this.userBackgroundImagePath = await this.store.get<string>('userBackgroundImagePath') ?? '';
+    this.userBgmPath = await this.store.get<string>('userBgmPath') ?? '';
+
+    // --- ★ セッションパスを取得して返す ---
+    const savedSessionPaths = await this.store.get<string[]>('sessionFilePaths');
+    // 読み取った値を return する (これで「読み取られない」エラーは消える)
+    return savedSessionPaths ?? [];
   }
 
   /** エディタの幅を更新するメソッド */
@@ -435,11 +455,47 @@ class App {
 
   private createFontSizeTheme = (size: number) => EditorView.theme({ '&': { fontSize: `${size}pt` }, '.cm-gutters': { fontSize: `${size}pt` } });
 
-  private async initializeBGM() {
+  private async initializeBGM(autoPlay: boolean = false) {
+    // 既存のBGMがあれば停止・破棄
+    if (this.bgm) {
+      this.bgm.pause();
+      this.bgm = null;
+    }
+
+    let audioUrl = '';
+
+    // userBgmPath が "存在し" かつ "空文字でない" 場合のみファイル読み込み
+    if (this.userBgmPath && this.userBgmPath.trim() !== '') {
+      // ユーザー指定パス (convertFileSrc)
+      // tauri.conf.json の設定が効いていれば、ここで正しいURLになる
+      audioUrl = convertFileSrc(this.userBgmPath);
+    } else {
+      // ★ デフォルトBGM (Base64) に戻す
+      // import { backgroundMusic } from './assets/audio'; がされていること
+      audioUrl = backgroundMusic;
+    }
+
     try {
-      this.bgm = new Audio(backgroundMusic);
+      this.bgm = new Audio(audioUrl);
       this.bgm.loop = true;
-    } catch (e) { console.error("Failed to initialize BGM", e); }
+
+      // ★ autoPlay が true なら即座に再生
+      if (autoPlay) {
+        // ユーザーインタラクションがないと再生できない場合があるのでcatchする
+        this.bgm.play()
+          .then(() => {
+            document.querySelector('#btn-bgm-toggle')?.classList.add('playing');
+          })
+          .catch(e => console.error("Auto-play blocked:", e));
+      } else {
+        // 停止状態ならUIリセット
+        document.querySelector('#btn-bgm-toggle')?.classList.remove('playing');
+      }
+
+    } catch (e) {
+      console.error("Failed to init BGM", e);
+      // エラーが出た場合も、次回のために this.bgm は null のままにしておく
+    }
   }
 
   // --- イベントリスナー ---
@@ -759,9 +815,22 @@ class App {
     const rootStyle = document.documentElement.style;
     if (this.isDarkMode) {
       rootStyle.setProperty('--app-bg-image', 'none');
-    } else {
-      rootStyle.setProperty('--app-bg-image', `url('${backgroundImage}')`);
+      return;
     }
+
+    let imageUrl = '';
+    if (this.userBackgroundImagePath) {
+      // ★ユーザー指定パスがあるなら convertFileSrc でURL化
+      imageUrl = convertFileSrc(this.userBackgroundImagePath);
+      console.log('User background image path:', this.userBackgroundImagePath);
+    } else {
+      // ★なければデフォルトのBase64文字列を使用
+      imageUrl = backgroundImage;
+      console.log('Default background image path:', backgroundImage);
+    }
+
+    // CSS変数を更新
+    rootStyle.setProperty('--app-bg-image', `url('${imageUrl}')`);
   }
 
   /**
@@ -818,22 +887,33 @@ class App {
 
   // --- 機能メソッド ---
   private async saveSettings() {
-    // ★ "Untitled" のタブはセッション保存対象から除外する
+    // 1. 個別の設定値をルートに保存
+    await this.store.set('isDarkMode', this.isDarkMode);
+    await this.store.set('currentFontIndex', this.currentFontIndex);
+    await this.store.set('currentFontSize', this.currentFontSize);
+    await this.store.set('isTypeSoundEnabled', this.isTypeSoundEnabled);
+    await this.store.set('isSpotlightMode', this.isSpotlightMode);
+    await this.store.set('editorMaxWidth', this.editorMaxWidth);
+    await this.store.set('editorLineHeight', this.editorLineHeight);
+    await this.store.set('editorLineBreak', this.editorLineBreak);
+
+    // 画像と音楽のパス (存在する場合のみ保存、あるいは空文字で保存)
+    if (this.userBackgroundImagePath) {
+      await this.store.set('userBackgroundImagePath', this.userBackgroundImagePath);
+    }
+    if (this.userBgmPath) {
+      await this.store.set('userBgmPath', this.userBgmPath);
+    }
+
+    // ★ 2. セッションパスのフィルタリングと保存
     const sessionPaths = this.openTabs
       .map(t => t.path)
       .filter(path => path !== "Untitled");
-    await this.store.set('settings', {
-      isDarkMode: this.isDarkMode,
-      currentFontIndex: this.currentFontIndex,
-      currentFontSize: this.currentFontSize,
-      sessionFilePaths: sessionPaths,
-      isTypeSoundEnabled: this.isTypeSoundEnabled,
-      isSpotlightMode: this.isSpotlightMode,
-      recentFiles: this.recentFiles,
-      editorMaxWidth: this.editorMaxWidth,
-    });
+
+    await this.store.set('sessionFilePaths', sessionPaths);
+
+    // 3. 最後に保存実行
     await this.store.save();
-    console.log('Settings saved!'); // デバッグ用ログ
   }
 
   private addToHistory(filePath: string) {
