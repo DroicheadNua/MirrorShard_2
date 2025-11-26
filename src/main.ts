@@ -1425,8 +1425,28 @@ class App {
     // 3. 状態を更新
     this.activeTabPath = filePath;
 
-    // 4. 見つけた、あるいは新しく作った`tab`の`state`を、エディタに確実にセットする
-    this.editorView.setState(tab.state);
+    // 現在のStateを取得
+    let stateToSet = tab.state;
+
+    // Stateに対してトランザクションを作成し、設定系Compartmentをすべて現在の値で上書きする
+    const transaction = stateToSet.update({
+      effects: [
+        this.themeCompartment.reconfigure(this.isDarkMode ? this.darkTheme : this.lightTheme),
+        this.fontFamilyCompartment.reconfigure(this.fontThemes[this.currentFontIndex]),
+        this.fontSizeCompartment.reconfigure(this.createFontSizeTheme(this.currentFontSize)),
+        this.highlightingCompartment.reconfigure(
+          syntaxHighlighting(this.isDarkMode ? this.darkHighlightStyle : this.lightHighlightStyle)
+        ),
+        this.spotlightCompartment.reconfigure(this.createSpotlightPlugin(this.isSpotlightMode))
+      ]
+    });
+
+    // 更新されたStateをタブと変数にセット
+    stateToSet = transaction.state;
+    tab.state = stateToSet;
+
+    // 4. 最新設定が適用されたStateをビューにセット
+    this.editorView.setState(stateToSet);
 
     const view = this.editorView;
 
@@ -1436,12 +1456,6 @@ class App {
         effects: [ // ★ effectsを配列にする
           // カーソル位置を中央にスクロール
           EditorView.scrollIntoView(view.state.selection.main.head, { y: "center" }),
-
-          // ★★★ ここでグローバルなUI設定をすべて再適用 ★★★
-          this.themeCompartment.reconfigure(this.isDarkMode ? this.darkTheme : this.lightTheme),
-          this.fontFamilyCompartment.reconfigure(this.fontThemes[this.currentFontIndex]),
-          this.fontSizeCompartment.reconfigure(this.createFontSizeTheme(this.currentFontSize)),
-          this.spotlightCompartment.reconfigure(this.createSpotlightPlugin(this.isSpotlightMode))
         ]
       });
       view.focus();
