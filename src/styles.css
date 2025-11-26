@@ -47,13 +47,8 @@ body {
   width: 100%;
   height: 100%;
   overflow: hidden;
-  background-color: transparent;
+  background-color: var(--bg-color);
   /*常に透明に。背景画像はapp-containerで設定する。*/
-}
-
-body.dark-mode {
-  /* ダークモードでは、CSS変数を上書きして画像を消す */
-  --app-bg-image: none;
 }
 
 /* 全体を囲むコンテナをFlexboxに */
@@ -203,6 +198,7 @@ body.dark-mode {
 .cm-editor {
   height: 100%;
   width: 100%;
+  background-color: transparent;
 }
 
 .cm-cursor {
