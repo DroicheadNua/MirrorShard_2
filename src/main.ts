@@ -647,6 +647,31 @@ class App {
       await menu.popup();
     });
 
+    if (this.currentOs === 'linux') {
+
+      // 1. IME入力中の変化を検知 ('compositionupdate')
+      //    「あ」→「あｓ」→「あし」のように変化するたびに発火します
+      window.addEventListener('compositionupdate', () => {
+        this.playTypeSound();
+      });
+
+      // 2. 通常のキー入力を検知 ('keydown')
+      //    第3引数に `true` (useCapture) を指定することで、
+      //    CodeMirrorや他の要素に届く「前」に、根元でイベントを捕まえます
+      window.addEventListener('keydown', (e) => {
+        // IME入力中は keydown が "Process" になることが多いので、
+        // compositionupdate との重複を防ぐために弾く
+        if (e.isComposing || e.key === 'Process') {
+          return;
+        }
+
+        // 修飾キーなし、または Enter/Backspace などの制御キー
+        if ((!e.ctrlKey && !e.metaKey && !e.altKey) || e.key === 'Enter' || e.key === 'Backspace') {
+          this.playTypeSound();
+        }
+      }, true);
+    }
+
   }
 
   // --- イベントハンドラ ---
@@ -784,11 +809,11 @@ class App {
 
     // 2. ★★★ タイプ音の再生 (Electron版の移植) ★★★
     // トランザクションがあり、かつユーザー操作(userEvent)による変更である場合
-    if (this.isTypeSoundEnabled && update.transactions.some(tr => tr.annotation(Transaction.userEvent))) {
-      // ドキュメント変更(入力/削除) または 選択範囲変更(カーソル移動) で鳴る
-      // もし「文字入力/削除の時だけ」鳴らしたい場合は update.docChanged を条件に加える
-      if (update.docChanged) {
-        this.playTypeSound();
+    if (this.currentOs !== 'linux') {
+      if (this.isTypeSoundEnabled && update.transactions.some(tr => tr.annotation(Transaction.userEvent))) {
+        if (update.docChanged) {
+          this.playTypeSound();
+        }
       }
     }
 
