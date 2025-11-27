@@ -15,7 +15,6 @@ import { listen } from '@tauri-apps/api/event';
 import { Menu, MenuItem, PredefinedMenuItem, Submenu } from '@tauri-apps/api/menu';
 import { convertFileSrc } from '@tauri-apps/api/core';
 import { type } from '@tauri-apps/plugin-os';
-import { TYPE_SOUND_BASE64 } from './assets/type-sound';
 
 // --- 型定義 ---
 interface Heading { level: number; text: string; pos: number; isCollapsed: boolean; }
@@ -648,8 +647,28 @@ class App {
       await menu.popup();
     });
     if (this.currentOs === 'linux') {
-      const se = new Audio("data:audio/wav;base64," + TYPE_SOUND_BASE64);
-      window.onkeydown = function (_e) { se.currentTime = 0; se.play(); }
+
+      // 1. キーダウンイベント (直接代入)
+      window.onkeydown = (e: KeyboardEvent) => {
+        // IME入力中 (key="Process" または isComposing) は
+        // compositionupdate 側に任せるので、ここでは無視する
+        if (e.isComposing || e.key === 'Process') return;
+
+        // ショートカットキー (Ctrl/Alt/Meta) 以外の入力で鳴らす
+        if (!e.ctrlKey && !e.metaKey && !e.altKey) {
+          this.playTypeSound();
+        }
+        // Enter, Backspace は制御キーだが鳴らす
+        else if (e.key === 'Enter' || e.key === 'Backspace') {
+          this.playTypeSound();
+        }
+      };
+
+      // 2. IME変換中の更新イベント (直接代入)
+      // TypeScriptの型定義で怒られる場合があるのでキャストする
+      (window as any).oncompositionupdate = () => {
+        this.playTypeSound();
+      };
     }
   }
 
@@ -1078,6 +1097,7 @@ class App {
     try {
       // Web Audio APIのコンテキスト作成
       this.audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
+      const { TYPE_SOUND_BASE64 } = await import('./assets/type-sound');
 
       // ★ Electron版と同様に、メタデータを付与してからBase64部分を取得する
       const fullBase64String = `data:audio/wav;base64,${TYPE_SOUND_BASE64}`;
