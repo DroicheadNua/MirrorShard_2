@@ -1,7 +1,7 @@
 import './styles.css';
 import { invoke } from '@tauri-apps/api/core';
 import { Store } from '@tauri-apps/plugin-store';
-import { EditorState, Compartment, RangeSetBuilder } from '@codemirror/state';
+import { EditorState, Compartment, RangeSetBuilder, Transaction } from '@codemirror/state';
 import { EditorView, keymap, ViewUpdate, scrollPastEnd, Decoration, DecorationSet, ViewPlugin } from '@codemirror/view';
 import { history, historyKeymap, undo, redo, insertTab, cursorDocEnd, cursorDocStart } from '@codemirror/commands';
 import { markdown, markdownLanguage } from '@codemirror/lang-markdown';
@@ -544,17 +544,7 @@ class App {
     });
     this.outlineControls?.addEventListener('click', (e) => this.handleSidebarClick(e));
     this.outlineContainer?.addEventListener('click', (e) => this.handleSidebarClick(e));
-    // キーダウン (タイプ音再生用)
-    document.addEventListener('keydown', (e) => {
-      // 修飾キーなしの入力時のみ音を鳴らす
-      if (!e.ctrlKey && !e.metaKey && !e.altKey && e.key.length === 1) {
-        this.playTypeSound();
-        console.log('タイプ音鳴らしました');
-      }
-      if ((e.key === 'Enter' || e.key === 'Backspace') && !e.ctrlKey && !e.metaKey) {
-        this.playTypeSound();
-      }
-    });
+
     document.addEventListener('keydown', (e) => this.handleKeyDown(e));
     // ボタンのイベントリスナー
     document.querySelector('#btn-save')?.addEventListener('click', () => this.saveActiveFile());
@@ -783,15 +773,31 @@ class App {
   }
 
   private onEditorUpdate(update: ViewUpdate) {
+    // 1. isDirtyフラグの管理 (既存)
     if (update.docChanged) {
       const activeTab = this.openTabs.find(t => t.path === this.activeTabPath);
       if (activeTab && !activeTab.isDirty) {
         activeTab.isDirty = true;
-        this.renderSidebar(); // isDirty表示の更新のためだけ
+        this.renderSidebar();
       }
     }
+
+    // 2. ★★★ タイプ音の再生 (Electron版の移植) ★★★
+    // トランザクションがあり、かつユーザー操作(userEvent)による変更である場合
+    if (this.isTypeSoundEnabled && update.transactions.some(tr => tr.annotation(Transaction.userEvent))) {
+      // ドキュメント変更(入力/削除) または 選択範囲変更(カーソル移動) で鳴る
+      // もし「文字入力/削除の時だけ」鳴らしたい場合は update.docChanged を条件に加える
+      if (update.docChanged) {
+        this.playTypeSound();
+      }
+    }
+
+    // 3. ステータスバーとアウトラインの更新 (既存)
     if (update.docChanged || update.selectionSet) {
       this.updateStatusBar(update.view);
+      this.parseHeadingsFromEditor(update.view).then(() => {
+        this.renderSidebar();
+      });
     }
   }
 
@@ -1289,7 +1295,8 @@ class App {
         if (this.openTabs.length === 0) {
           // すべてのタブが閉じられた場合
           this.activeTabPath = null;
-          this.editorView.setState(EditorState.create({ extensions: this.editorExtensions }));
+          this.createNewTab();
+          return;
         } else {
           // 隣のタブ (左隣を優先) をアクティブにする
           const nextIndex = Math.max(0, index - 1);
