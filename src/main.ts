@@ -15,6 +15,7 @@ import { listen } from '@tauri-apps/api/event';
 import { Menu, MenuItem, PredefinedMenuItem, Submenu } from '@tauri-apps/api/menu';
 import { convertFileSrc } from '@tauri-apps/api/core';
 import { type } from '@tauri-apps/plugin-os';
+import { TYPE_SOUND_BASE64 } from './assets/type-sound';
 
 // --- 型定義 ---
 interface Heading { level: number; text: string; pos: number; isCollapsed: boolean; }
@@ -646,32 +647,10 @@ class App {
 
       await menu.popup();
     });
-
     if (this.currentOs === 'linux') {
-
-      // 1. IME入力中の変化を検知 ('compositionupdate')
-      //    「あ」→「あｓ」→「あし」のように変化するたびに発火します
-      window.addEventListener('compositionupdate', () => {
-        this.playTypeSound();
-      });
-
-      // 2. 通常のキー入力を検知 ('keydown')
-      //    第3引数に `true` (useCapture) を指定することで、
-      //    CodeMirrorや他の要素に届く「前」に、根元でイベントを捕まえます
-      window.addEventListener('keydown', (e) => {
-        // IME入力中は keydown が "Process" になることが多いので、
-        // compositionupdate との重複を防ぐために弾く
-        if (e.isComposing || e.key === 'Process') {
-          return;
-        }
-
-        // 修飾キーなし、または Enter/Backspace などの制御キー
-        if ((!e.ctrlKey && !e.metaKey && !e.altKey) || e.key === 'Enter' || e.key === 'Backspace') {
-          this.playTypeSound();
-        }
-      }, true);
+      const se = new Audio("data:audio/wav;base64," + TYPE_SOUND_BASE64);
+      window.onkeydown = function (_e) { se.currentTime = 0; se.play(); }
     }
-
   }
 
   // --- イベントハンドラ ---
@@ -1099,7 +1078,6 @@ class App {
     try {
       // Web Audio APIのコンテキスト作成
       this.audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
-      const { TYPE_SOUND_BASE64 } = await import('./assets/type-sound');
 
       // ★ Electron版と同様に、メタデータを付与してからBase64部分を取得する
       const fullBase64String = `data:audio/wav;base64,${TYPE_SOUND_BASE64}`;
