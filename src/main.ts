@@ -646,30 +646,7 @@ class App {
 
       await menu.popup();
     });
-    if (this.currentOs === 'linux') {
 
-      // 1. キーダウンイベント (直接代入)
-      window.onkeydown = (e: KeyboardEvent) => {
-        // IME入力中 (key="Process" または isComposing) は
-        // compositionupdate 側に任せるので、ここでは無視する
-        if (e.isComposing || e.key === 'Process') return;
-
-        // ショートカットキー (Ctrl/Alt/Meta) 以外の入力で鳴らす
-        if (!e.ctrlKey && !e.metaKey && !e.altKey) {
-          this.playTypeSound();
-        }
-        // Enter, Backspace は制御キーだが鳴らす
-        else if (e.key === 'Enter' || e.key === 'Backspace') {
-          this.playTypeSound();
-        }
-      };
-
-      // 2. IME変換中の更新イベント (直接代入)
-      // TypeScriptの型定義で怒られる場合があるのでキャストする
-      (window as any).oncompositionupdate = () => {
-        this.playTypeSound();
-      };
-    }
   }
 
   // --- イベントハンドラ ---
@@ -807,11 +784,11 @@ class App {
 
     // 2. ★★★ タイプ音の再生 (Electron版の移植) ★★★
     // トランザクションがあり、かつユーザー操作(userEvent)による変更である場合
-    if (this.currentOs !== 'linux') {
-      if (this.isTypeSoundEnabled && update.transactions.some(tr => tr.annotation(Transaction.userEvent))) {
-        if (update.docChanged) {
-          this.playTypeSound();
-        }
+    if (this.isTypeSoundEnabled && update.transactions.some(tr => tr.annotation(Transaction.userEvent))) {
+      // ドキュメント変更(入力/削除) または 選択範囲変更(カーソル移動) で鳴る
+      // もし「文字入力/削除の時だけ」鳴らしたい場合は update.docChanged を条件に加える
+      if (update.docChanged) {
+        this.playTypeSound();
       }
     }
 

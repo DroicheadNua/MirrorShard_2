@@ -1,0 +1,175 @@
+# MirrorShard 2 ver. 0.1.0 Beta  
+
+創作支援用テキストエディタ「MirrorShard」のソフトウェアフレームワークをTauriに変更、高速化と軽量化を図ったものです。  
+ベータ版のため機能は限定的ですが、エディタのコア機能の移植は概ね完了していますので、創作用エディタとして、また巨大テキストファイルを扱えるアウトラインプロセッサとして、特に問題なく運用できるかと思います。  
+
+![MirrorShard_2 Key Visual](screenshots/ScreenShot01.png)
+
+## ダウンロード  
+
+[![Windows](https://img.shields.io/badge/Download-Windows-blue)]  
+(https://github.com/DroicheadNua/MirrorShard_2/releases/download/v0.1.0/MirrorShard.2_0.1.0_x64_ja-JP.msi)  
+[![Mac (Apple Silicon)](https://img.shields.io/badge/Download-Mac_(Apple_Silicon)-green)]  
+(https://github.com/DroicheadNua/MirrorShard_2/releases/download/v0.1.0/MirrorShard.2_0.1.0_aarch64.dmg)  
+[![Linux(x64: deb)](https://img.shields.io/badge/Download-Linux-lightgrey)]  
+(https://github.com/DroicheadNua/MirrorShard_2/releases/download/v0.1.0/MirrorShard.2_0.1.0_amd64.deb)  
+[![Linux(x64: rpm)](https://img.shields.io/badge/Download-Linux-lightgrey)]  
+(https://github.com/DroicheadNua/MirrorShard_2/releases/download/v0.1.0/MirrorShard.2-0.1.0-1.x86_64.rpm)  
+[![Linux(ARM64 / Raspberry Pi, experimental)](https://img.shields.io/badge/Download-Linux-lightgrey)]  
+(https://github.com/DroicheadNua/MirrorShard_2/releases/download/v0.1.0/MirrorShard.2_0.1.0_arm64.deb)  
+
+または、[最新のリリース一覧ページ](https://github.com/DroicheadNua/MirrorShard_2/releases/latest)からダウンロードできます。  
+最下段の「Assets」の項目が折りたたまれている場合は、▶マークを押して展開してください。  
+
+## 注意事項  
+　インストールやご使用などにつきまして、何か疑問の点等ございましたら「FAQ.md」を御覧ください。  
+　それでも解決しない問題がございましたら、MirrorShard開発アカウント
+mirrorshard.dev@gmail.com
+までご一報いただければ幸いです。  
+
+## 既知の問題 (Known Issues)  
+
+現在、v0.2.0 Betaにおいて以下の問題が確認されています。  
+
+*   **macOS版:** アプリケーションが完全に終了している状態でファイルをダブルクリック（または右クリックから開く）しても、ファイルが自動的に開かれない場合があります。  
+    *   **回避策:** アプリケーションを起動した後、画面左上の「開く」ボタン、またはファイルメニューからファイルを選択してください。  
+*   **Linux版:** AppImage形式での配布はビルド上の問題により停止しています。.deb版をご利用ください。  
+
+## 主な特徴  
+・ソフトウェアフレームワークにTauriを採用、起動の高速化と省メモリ化に成功  
+・没入感を妨げないミニマルなデザインとフレームレスウィンドウ  
+・数十万行に及ぶ巨大サイズのテキストにも対応  
+・マークダウン記法によるアウトライン機能を搭載。アウトラインプロセッサとしても運用可能  
+・OS標準機能による印刷とPDF出力（※Windows版のみ）  
+
+## 前作（Electron版）からの変更点  
+・フレームワークの変更により軽量化と高速化に成功。メモリ消費量も減少  
+・ファイルサイズも大幅削減、前作のほぼ20分の1程度に  
+・アイコンをSVG画像に変更、よりミニマルなデザインに  
+・ファイル一覧とアウトラインペインを分離  
+・軽量化のため添付音源と画像を各1種ずつに  
+・機能の移植が未完了のため、アイデアプロセッサやAI機能などには未対応。最終的には既存の全機能を移植する予定  
+
+## ショートカット一覧  
+本ソフトウェアは、操作のほぼすべてをキーボードショートカットで行うことができます。  
+
+◯ファイル操作  
+新規ファイル	Ctrl + N（Cmd + N）　新しいタブを作成します。  
+ファイルを開く	Ctrl + O（Cmd + O）　ファイル選択ダイアログを開きます。  
+ファイルを保存	Ctrl + S（Cmd + S）　上書き保存します。  
+アプリを終了	Ctrl + Q（Cmd + Q）　アプリを終了します。  
+
+
+◯表示  
+ダークモード切替	Ctrl + T（Cmd + T）　通常モードとダークモードを切り替えます。  
+最小化	Ctrl + H（Cmd + H）　ウィンドウを最小化します。  
+フルスクリーン切替	F11（Cmd + Ctrl + F）　フルスクリーンにします。ZENモードと組み合わせると、執筆環境からノイズがほとんど消えます。  
+
+◯編集・設定  
+フォントサイズ拡大	Ctrl + +（Cmd + +）　フォントサイズを拡大します。メインウィンドウではテンキーの「＋」キーでは反応しないのでご注意ください。  
+フォントサイズ縮小	Ctrl + -（Cmd + -）　フォントサイズを縮小します。  
+フォントサイズリセット	Ctrl + 0（Cmd + 0）　フォントサイズを初期値（16ポイント）にリセットします。こちらもテンキーの0では反応しないのでご注意ください。  
+フォント切替	Ctrl + Shift + F（Cmd + Shift + F）　フォントを切り替えます。sans_serif（ゴシック体など）→monospace（等幅フォント）→serif（明朝体など）の順でサイクルしますが、使用されるフォントはお使いのPCに依存します。  
+BGM再生/停止	Ctrl + Shift + P（Cmd + Shift + P）　BGMを再生／停止します。  
+
+◯基本的な編集機能  
+元に戻す	Ctrl + Z（Cmd + Z）  
+やり直し	Ctrl + Y（Cmd + Shift + Z）  
+切り取り	Ctrl + X（Cmd + X）  
+コピー	Ctrl + C（Cmd + C）  
+貼り付け	Ctrl + V（Cmd + V）  
+すべて選択	Ctrl + A（Cmd + A）  
+検索・置換	Ctrl + F（Cmd + F）  
+文書頭にジャンプ	Ctrl + ↑（Cmd + ↑）  
+文書末にジャンプ	Ctrl + ↓（Cmd + ↓）  
+
+## 右クリックメニュー  
+・ファイルを開く  
+・ファイルを保存  
+・名前を付けて保存  
+・元に戻す  
+・やり直す  
+・切り取り  
+・コピー  
+・貼り付け  
+・すべて選択  
+
+## 検索ウィンドウの使い方  
+Ctrl + F（MacはCmd + F）を押すことによって、検索ウィンドウを開くことができます。  
+パネルの各機能は以下の通りです。  
+
+Find: 検索したいキーワードを入力します。  
+Replace: キーワードを置換したい場合、置換後のキーワードをここに入力します。  
+next / previous: 次/前のマッチ箇所へジャンプします。  
+all: すべてのマッチ箇所を選択します。  
+ショートカットにも対応しています。  
+　next: F3 (Mac: Cmd+G)  
+　previous: Shift+F3 (Mac: Cmd+Shift+G)  
+replace / replace all: 現在のマッチ箇所を置換 / すべてのマッチ箇所を置換します。  
+match case: チェックを入れると、大文字と小文字を区別して検索します。（例: Bookとbookを別の単語として扱います）  
+regexp (チェックボックス): チェックを入れると、正規表現による高度な検索が有効になります。（例: ^#で行頭の見出しを検索するなど）  
+by word (チェックボックス): チェックを入れると、単語単位で完全に一致するものだけを検索します。（例: catを検索したときに、categoryの中のcatにはマッチしなくなります）  
+閉じる: 検索パネルは、ESCキーを押すか、パネル右上の×ボタンを押すことで閉じることができます。  
+
+## エンコードについて  
+　原則として、UTF-8 (BOMなし) での利用を強く推奨します。  
+
+　本ソフトウェアが対応しているエンコードは、UTF-8とShift-JISのみとなっております。テキストファイルのエンコードを自動判別して読み込む仕様になっておりますが、特殊なエンコードの場合、判別に失敗することがあります。  
+　読み込んだファイルが文字化けしている場合、そのまま保存してしまうと誤ったエンコードで保存されてしまい、ファイルの内容が失われてしまう場合があります。保存せずにタブを閉じてください。  
+　エンコードの判別ができなかった場合は警告メッセージが表示されますが、稀ではあるものの、特殊な条件下では警告が出ないまま文字化けが発生することがございます。ご注意ください。  
+
+　特殊なエンコードのファイルを本ソフトウェアで使用する場合、OS標準のメモアプリや他のエディタなどでUTF-8 (BOMなし) 形式に変換してからご利用ください。  
+
+## ステータスバー  
+　画面下部のステータスバーには、選択中のファイルのエンコードと改行コード、現在時刻が表示されます。  
+
+## テキストの印刷・PDF出力  
+　Ctrl+Pを押すことにより、OS標準の印刷機能によりテキストを印刷、あるいはPDF出力することが出来ます。機能の詳細はお使いのOSに依存します。  
+
+## Linux(x64)版について  
+　ビルド上の不具合によりAppImageの配布を見送り、debとrpm(experimental)での提供となります。  
+　deb版は動作確認済ですが、rpm版は開発環境の都合により実機検証ができておりません。あらかじめご了承ください。  
+
+## Linux (ARM64 / Raspberry Pi) 版(experimental)について  
+　本ソフトウェアのARM64版 (.deb) は、Raspberry Pi 5 上の MX Linux にて動作検証を行っています。  
+　Raspberry Pi OS (Bookworm) 等、Wayland を標準採用している環境では、描画の乱れやマウス入力の座標ズレが発生することが確認されています。  
+　MX Linuxでは概ね正常に動作しますが、IME変換中の表示がやや不自然になります。あらかじめご了承ください。  
+
+## 🎵 BGM機能とパフォーマンスについて  
+
+本アプリケーションのBGM機能は、OSによって動作仕様とメモリ消費量が異なります。  
+
+*   **Windows / macOS:**  
+    *   設定画面から任意の音楽ファイル（mp3/wav/ogg）を指定して再生する場合、ストリーミング再生となるため**メモリ消費は最小限**に抑えられます。  
+    *   デフォルトのBGMはアプリ内に埋め込まれているため、読み込み時に若干のCPU負荷がかかります。  
+*   **Linux (Raspberry Pi含む):**  
+    *   OSの制限により、音楽データをすべてメモリ上に展開して再生します。そのため、**BGM使用時はメモリ消費量が増加します。**  
+    *   特にRaspberry Pi等の低スペック環境でメモリ不足を感じる場合は、BGMをオフにすることをお勧めします。  
+
+## 使用素材  
+・背景画像およびアイコン  
+　Imagen 4 による生成  
+
+・BGM  
+　Pixabay https://pixabay.com より  
+　・ambient piano "Candrika" -Moonlight-（leela_takaki様）  
+
+## ご利用にあたっての注意（免責事項）  
+このソフトウェアはフリーウェアであり、無保証（AS IS）で提供されます。  
+作者は、このソフトウェアの使用によって生じたいかなる損害（データの損失、逸失利益などを含むがこれに限らない）についても、一切の責任を負いません。  
+開発には細心の注意を払っていますが、予期せぬ不具合が含まれている可能性があります。重要なデータを扱う際には、定期的にバックアップを取るようにしてください。  
+このソフトウェアを利用した時点で、上記の免責事項に同意したものとみなします。  
+
+## ライセンス  
+　本ソフトウェアはMITライセンスのもとで公開されています。  
+
+　本ソフトウェアはTauriで開発されました。エディタエンジンとしてCodeMirror 6 を採用しており、またオープンソースの小説用テキストエディタLeft
+（https://github.com/hundredrabbits/Left）
+から多くの影響を受けています。特にアウトライン機能はLeftのソースコードを参考にしています。  
+
+　なお、本ソフトウェアのコードの大半はGemini 2.5 pro（およびGemini 3 pro Preview）君が書いてくれました。ありがとうGemini君。  
+
+　Copyright (c) 2025 [DroicheadNua]  
+　mirrorshard.dev@gmail.com  
+　https://github.com/DroicheadNua/MirrorShard_2  
+
