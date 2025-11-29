@@ -5,6 +5,8 @@ use encoding_rs::{SHIFT_JIS, UTF_8};
 use std::fs;
 use std::path::{Path, PathBuf};
 use std::sync::Mutex;
+#[cfg(target_os = "macos")]
+use tauri::RunEvent;
 use tauri::{AppHandle, Emitter, Manager, State, WindowEvent};
 use tauri_plugin_cli::CliExt;
 use tauri_plugin_window_state::{Builder, StateFlags};
@@ -26,8 +28,14 @@ struct FileData {
 struct InitialFile(Mutex<Option<String>>);
 // 2回目に開かれたファイルパスを保持するための状態
 struct SecondInstanceFile(Mutex<Option<String>>);
-
+// ★ Mac用のファイルパス保持場所
+struct MacFileBuffer(Mutex<Option<String>>);
 // --- Tauriコマンドの定義 ---
+
+#[tauri::command]
+fn get_mac_file_event(state: State<MacFileBuffer>) -> Option<String> {
+    state.0.lock().unwrap().take()
+}
 
 #[tauri::command]
 async fn read_binary_file(path: String) -> Result<Vec<u8>, String> {
@@ -211,6 +219,7 @@ pub fn run() {
     tauri::Builder::default()
         .plugin(tauri_plugin_os::init())
         .plugin(tauri_plugin_cli::init())
+        .manage(MacFileBuffer(Mutex::new(None)))
         .manage(InitialFile(Mutex::new(None))) // 最初の起動用
         .manage(SecondInstanceFile(Mutex::new(None))) // 2回目以降の起動用
         .setup(|app| {
@@ -232,6 +241,7 @@ pub fn run() {
                 // ★イベントを送るのではなく、状態にパスを書き込む
                 let state: State<SecondInstanceFile> = app.state();
                 *state.0.lock().unwrap() = Some(path.clone());
+                let _ = app.emit("open-file-from-os", path);
             }
             // 既存のウィンドウにフォーカスを当てる
             if let Some(window) = app.get_webview_window("main") {
@@ -274,7 +284,26 @@ pub fn run() {
             get_second_instance_file,
             open_settings_window,
             read_binary_file,
+            get_mac_file_event
         ])
-        .run(tauri::generate_context!())
-        .expect("error while running tauri application");
+        .build(tauri::generate_context!())
+        .expect("error while building tauri application")
+        .run(|app_handle, event| match event {
+            // ★ Macの関連付け起動イベント
+            #[cfg(target_os = "macos")]
+            RunEvent::Opened { urls } => {
+                if let Some(url) = urls.first() {
+                    if let Ok(path_buf) = url.to_file_path() {
+                        if let Some(path_str) = path_buf.to_str() {
+                            // 1. 起動済みならイベントで通知
+                            let _ = app_handle.emit("open-file-from-os", path_str);
+                            // 2. 未起動ならStateに保存 (後でフロントエンドが取りに来る)
+                            let state: State<MacFileBuffer> = app_handle.state();
+                            *state.0.lock().unwrap() = Some(path_str.to_string());
+                        }
+                    }
+                }
+            }
+            _ => {}
+        });
 }

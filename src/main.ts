@@ -162,9 +162,21 @@ class App {
 
     this.store = await storePromise;
     // 5. 起動時にファイルが指定されたか確認
-    const initialFile = await invoke<string | null>('get_initial_file');
-    // (skipSessionRestoreフラグは廃止したので、ここは単純にローカル変数で判断してもOK)
-    const hasInitialFile = !!initialFile;
+    // Windows/Linux: CLI引数を確認
+    let fileToOpen = await invoke<string | null>('get_initial_file');
+
+    // Mac: CLI引数がなければ、Mac用のStateを確認
+    if (!fileToOpen && this.currentOs === 'macos') {
+      try {
+        const macFile = await invoke<string | null>('get_mac_file_event');
+        if (macFile) {
+          fileToOpen = macFile;
+        }
+      } catch (e) { console.error(e); }
+    }
+
+    // ファイル指定があるかどうかのフラグ
+    const hasInitialFile = !!fileToOpen;
 
     // 6. 設定を読み込む (戻り値としてセッションパスを受け取る)
     const sessionFilePaths = await this.loadSettings();
@@ -228,19 +240,17 @@ class App {
       }
     });
 
-    if (hasInitialFile && initialFile) {
-      // 指定起動ならそのファイルを開く
-      await this.openOrSwitchTab(initialFile);
+    if (hasInitialFile && fileToOpen) {
+      // ★ 指定起動ならそのファイルを開く
+      await this.openOrSwitchTab(fileToOpen);
     } else {
-      // 通常起動なら、loadSettingsから受け取ったパスを使って復元
+      // 通常起動なら復元
       if (sessionFilePaths.length > 0) {
         for (const filePath of sessionFilePaths) {
           await this.openOrSwitchTab(filePath);
         }
-        // 最後のタブをアクティブに
         await this.openOrSwitchTab(sessionFilePaths[sessionFilePaths.length - 1]);
       } else {
-        // 履歴もなければ新規タブ
         this.createNewTab();
       }
     }
@@ -587,6 +597,14 @@ class App {
       } else if (e.button === 4) { // 進むボタン
         e.preventDefault();
         this.cycleTab('next');
+      }
+    });
+
+    // ★ OSからのファイルオープン要求（2回目以降の起動）をリッスン
+    listen<string>('open-file-from-os', (event) => {
+      const filePath = event.payload;
+      if (filePath) {
+        this.openOrSwitchTab(filePath);
       }
     });
 
