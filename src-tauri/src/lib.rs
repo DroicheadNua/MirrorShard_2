@@ -288,7 +288,7 @@ pub fn run() {
         ])
         .build(tauri::generate_context!())
         .expect("error while building tauri application")
-        .run(|app_handle, event| match event {
+        .run(|_app_handle, event| match event {
             // ★ Macの関連付け起動イベント
             #[cfg(target_os = "macos")]
             RunEvent::Opened { urls } => {
@@ -296,9 +296,9 @@ pub fn run() {
                     if let Ok(path_buf) = url.to_file_path() {
                         if let Some(path_str) = path_buf.to_str() {
                             // 1. 起動済みならイベントで通知
-                            let _ = app_handle.emit("open-file-from-os", path_str);
+                            let _ = _app_handle.emit("open-file-from-os", path_str);
                             // 2. 未起動ならStateに保存 (後でフロントエンドが取りに来る)
-                            let state: State<MacFileBuffer> = app_handle.state();
+                            let state: State<MacFileBuffer> = _app_handle.state();
                             *state.0.lock().unwrap() = Some(path_str.to_string());
                         }
                     }

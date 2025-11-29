@@ -59,7 +59,7 @@ class App {
   private isTypeSoundEnabled = false;
   private audioContext: AudioContext | null = null;
   private typeSoundBuffer: AudioBuffer | null = null;
-  private settingsLoaded = false;
+
   private recentFiles: string[] = [];
   private editorMaxWidth = '80ch';
   private editorLineHeight = 1.6;
@@ -255,7 +255,6 @@ class App {
       }
     }
 
-    this.settingsLoaded = true;
     await getCurrentWindow().show();
   }
 
@@ -605,15 +604,6 @@ class App {
       const filePath = event.payload;
       if (filePath) {
         this.openOrSwitchTab(filePath);
-      }
-    });
-
-    getCurrentWindow().onFocusChanged(async ({ payload: isFocused }) => {
-      if (isFocused && this.settingsLoaded) { // ★初期化完了後にのみ動作
-        const filePath = await invoke<string | null>('get_second_instance_file');
-        if (filePath) {
-          await this.openOrSwitchTab(filePath);
-        }
       }
     });
 
