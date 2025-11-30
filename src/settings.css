@@ -53,8 +53,16 @@ body {
 }
 
 .settings-header button {
-    padding-top: 0;
-    margin-bottom: 15px;
+    padding-bottom: 1px;
+    margin-bottom: 25px;
+    border-color: #000000;
+    border-width: 1px;
+    border-radius: 8px;
+    cursor: pointer;
+    background: linear-gradient(to bottom, #ffffff, #999999);
+    opacity: 0.9;
+    font-family: monospace;
+    font-size: 1.2em;
 }
 
 /* スクロールエリアの設定 */

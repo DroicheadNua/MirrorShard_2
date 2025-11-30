@@ -1,7 +1,7 @@
 import './styles.css';
 import { invoke } from '@tauri-apps/api/core';
 import { Store } from '@tauri-apps/plugin-store';
-import { EditorState, Compartment, RangeSetBuilder, Transaction } from '@codemirror/state';
+import { EditorState, Compartment, RangeSetBuilder, Transaction, EditorSelection } from '@codemirror/state';
 import { EditorView, keymap, ViewUpdate, scrollPastEnd, Decoration, DecorationSet, ViewPlugin } from '@codemirror/view';
 import { history, historyKeymap, undo, redo, insertTab, cursorDocEnd, cursorDocStart, insertNewline } from '@codemirror/commands';
 import { markdown, markdownLanguage } from '@codemirror/lang-markdown';
@@ -656,6 +656,129 @@ class App {
       await menu.popup();
     });
 
+
+
+    const isMac = navigator.userAgent.includes('Mac');
+
+    if (isMac && this.editorContainer) {
+      this.editorContainer.addEventListener('mousedown', (e) => {
+        // 左クリック以外は無視
+        if (e.button !== 0) return;
+        if (!this.editorView) return;
+
+        // 1. スクロールバー判定
+        const scroller = this.editorView.scrollDOM;
+        const rect = scroller.getBoundingClientRect();
+        const scrollbarWidth = 18;
+
+        const isOnVerticalScrollbar = e.clientX >= rect.right - scrollbarWidth;
+        const isOnHorizontalScrollbar = e.clientY >= rect.bottom - scrollbarWidth;
+
+        if (isOnVerticalScrollbar || isOnHorizontalScrollbar) {
+          e.stopPropagation();
+          return;
+        }
+
+        // 2. ネイティブ機能でクリック位置（DOMノードとオフセット）を特定
+        let range: Range | null = null;
+        if (document.caretRangeFromPoint) {
+          range = document.caretRangeFromPoint(e.clientX, e.clientY);
+        }
+
+        // 範囲が取得でき、かつエディタ内部であることを確認
+        if (range && this.editorView.contentDOM.contains(range.startContainer)) {
+          // コンテナ自体（余白など）をクリックしてしまった場合の除外処理
+          const container = range.startContainer;
+          const isGenericContainer = container === this.editorView.contentDOM ||
+            (container.nodeType === 1 && (container as HTMLElement).classList.contains('cm-content'));
+
+          if (!isGenericContainer) {
+
+            // ★★★ CodeMirrorの座標(数値)も計算しておく ★★★
+            const clickPos = this.editorView.posAtDOM(range.startContainer, range.startOffset);
+
+            const sel = window.getSelection();
+            if (sel && clickPos !== null) { // clickPosチェックを追加
+
+              // --- Shiftキーの処理 (範囲選択) ---
+              if (e.shiftKey && sel.rangeCount > 0) {
+                // 1. ネイティブ側で範囲を拡張
+                sel.extend(range.startContainer, range.startOffset);
+
+                // 2. ★★★ CodeMirror側にも即座に同期 (これで色がつく) ★★★
+                // 現在のアンカー（開始点）を取得
+                const currentAnchor = this.editorView.state.selection.main.anchor;
+                // EditorSelection.range は自動で前後関係を処理して範囲を作ってくれる
+                this.editorView.dispatch({
+                  selection: EditorSelection.range(currentAnchor, clickPos),
+                  scrollIntoView: false, // 勝手なスクロールはさせない
+                  userEvent: "select.pointer" // マウス操作であることを明示
+                });
+
+              } else {
+                // --- 通常クリック ---
+                // 1. ネイティブ側でカーソルを置く
+                sel.removeAllRanges();
+                sel.addRange(range);
+
+                // 2. ★★★ CodeMirror側にも同期 ★★★
+                this.editorView.dispatch({
+                  selection: { anchor: clickPos, head: clickPos },
+                  scrollIntoView: false,
+                  userEvent: "select.pointer"
+                });
+              }
+            }
+
+            // 標準ハンドラを止める
+            e.preventDefault();
+            e.stopPropagation();
+
+            this.editorView.contentDOM.focus();
+
+            // --- ドラッグ操作の監視 ---
+            const onMouseMove = (moveEvent: MouseEvent) => {
+              if (document.caretRangeFromPoint) {
+                const newRange = document.caretRangeFromPoint(moveEvent.clientX, moveEvent.clientY);
+
+                if (newRange && window.getSelection()) {
+                  // 1. ネイティブ側更新
+                  window.getSelection()?.extend(newRange.startContainer, newRange.startOffset);
+
+                  // 2. ★★★ CodeMirror側更新 (ドラッグ中も色をつける) ★★★
+                  // ドラッグ中の新しい位置を計算
+                  const dragPos = this.editorView.posAtDOM(newRange.startContainer, newRange.startOffset);
+                  // 現在のアンカー（開始時に固定されているはず）
+                  const currentAnchor = this.editorView.state.selection.main.anchor;
+
+                  if (dragPos !== null) {
+                    this.editorView.dispatch({
+                      selection: EditorSelection.range(currentAnchor, dragPos),
+                      scrollIntoView: true, // ドラッグ中は端に行ったらスクロールしてほしいので true
+                      userEvent: "select.pointer"
+                    });
+                  }
+                }
+              }
+            };
+
+            const onMouseUp = () => {
+              window.removeEventListener('mousemove', onMouseMove);
+              window.removeEventListener('mouseup', onMouseUp);
+            };
+
+            window.addEventListener('mousemove', onMouseMove);
+            window.addEventListener('mouseup', onMouseUp);
+
+            return;
+          }
+        }
+
+        // フォールバック：もしネイティブ取得に失敗した場合（余白クリックなど）は
+        // 諦めて標準動作に任せる（暴発するかもしれないが、操作不能よりはマシ）
+
+      }, true); // キャプチャフェーズ
+    }
   }
 
   // --- イベントハンドラ ---
