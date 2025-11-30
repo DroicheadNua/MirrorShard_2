@@ -3,7 +3,7 @@ import { invoke } from '@tauri-apps/api/core';
 import { Store } from '@tauri-apps/plugin-store';
 import { EditorState, Compartment, RangeSetBuilder, Transaction } from '@codemirror/state';
 import { EditorView, keymap, ViewUpdate, scrollPastEnd, Decoration, DecorationSet, ViewPlugin } from '@codemirror/view';
-import { history, historyKeymap, undo, redo, insertTab, cursorDocEnd, cursorDocStart } from '@codemirror/commands';
+import { history, historyKeymap, undo, redo, insertTab, cursorDocEnd, cursorDocStart, insertNewline } from '@codemirror/commands';
 import { markdown, markdownLanguage } from '@codemirror/lang-markdown';
 import { search, searchKeymap } from '@codemirror/search';
 import type { SelectionRange, StateEffect } from '@codemirror/state';
@@ -106,6 +106,7 @@ class App {
         ...historyKeymap,
         ...searchKeymap,
         { key: 'Tab', run: insertTab },
+        { key: 'Enter', run: insertNewline },
         { key: 'Mod-ArrowUp', run: (v) => { cursorDocStart(v); v.dispatch({ effects: EditorView.scrollIntoView(0, { y: "start" }) }); return true; } },
         { key: 'Mod-ArrowDown', run: (v) => { cursorDocEnd(v); v.dispatch({ effects: EditorView.scrollIntoView(v.state.selection.main.head, { y: "center" }) }); return true; } },
       ]),
