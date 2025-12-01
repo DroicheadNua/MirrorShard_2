@@ -204,8 +204,10 @@ class App {
 
     //  背景画像、BGM、タイプ音の初期化
     await this.updateBackground();
-    await this.initializeBGM();
-    await this.initializeTypeSound();
+    // await this.initializeBGM();
+    if (this.isTypeSoundEnabled) {
+      await this.initializeTypeSound();
+    }
 
     await listen('settings-changed', async (event: any) => {
       const s = event.payload;
@@ -235,7 +237,10 @@ class App {
         if (this.userBgmPath !== newPath) {
           this.userBgmPath = newPath;
           // ★変更されたので、trueを渡して「即時再生」させる
-          await this.initializeBGM(true);
+          await this.loadBGMData();
+          this.playBGM();
+          this.isBgmPlaying = true;
+          document.querySelector('#btn-bgm-toggle')?.classList.add('playing');
         }
         // パスが同じなら何もしない -> 曲は止まらない！
       }
@@ -479,28 +484,28 @@ class App {
 
   private createFontSizeTheme = (size: number) => EditorView.theme({ '&': { fontSize: `${size}pt` }, '.cm-gutters': { fontSize: `${size}pt` } });
 
-  private async initializeBGM(autoPlay: boolean = false) {
-    // --- 共通: 既存の再生を停止 ---
+  /**
+   * BGMデータを読み込む（再生はしない）
+   */
+  private async loadBGMData() {
+    // 念のため既存を停止・破棄
     this.stopBGM();
 
     try {
       if (this.currentOs === 'linux') {
-        // ★★★ Linux用: Rustコマンド経由で読み込む ★★★
+        // --- Linux (Web Audio API / メモリ展開) ---
         if (!this.bgmContext) {
           this.bgmContext = new (window.AudioContext || (window as any).webkitAudioContext)();
         }
 
         let buffer: ArrayBuffer;
         if (this.userBgmPath && this.userBgmPath.trim() !== '') {
-          // ★ fs.readFile ではなく、invoke を使う
-          // Rustから返ってくる Vec<u8> は、JS側では number[] (または Uint8Array) になる
+          // ユーザー指定ファイル
           const data = await invoke<number[]>('read_binary_file', { path: this.userBgmPath });
-
-          // Uint8Arrayに変換
           const uint8Array = new Uint8Array(data);
           buffer = uint8Array.buffer;
         } else {
-          // デフォルトBase64
+          // デフォルト (Dynamic Import)
           const { backgroundMusic } = await import('./assets/audio');
           const base64Data = backgroundMusic.split(',')[1] || backgroundMusic;
           const binaryString = window.atob(base64Data);
@@ -509,15 +514,16 @@ class App {
           for (let i = 0; i < len; i++) bytes[i] = binaryString.charCodeAt(i);
           buffer = bytes.buffer;
         }
-        // デコード (重い処理)
+        // デコード
         this.bgmBuffer = await this.bgmContext.decodeAudioData(buffer);
 
       } else {
-        // ★★★ Win/Mac用: HTML5 Audio (ストリーミング方式) ★★★
+        // --- Win/Mac (HTML5 Audio / ストリーミング) ---
         let audioUrl = '';
         if (this.userBgmPath && this.userBgmPath.trim() !== '') {
           audioUrl = convertFileSrc(this.userBgmPath);
         } else {
+          // デフォルト (Dynamic Import)
           const { backgroundMusic } = await import('./assets/audio');
           audioUrl = backgroundMusic;
         }
@@ -525,17 +531,10 @@ class App {
         this.bgmElement.loop = true;
       }
 
-      // UIリセット
-      const bgmButton = document.querySelector('#btn-bgm-toggle');
-      if (bgmButton) bgmButton.classList.remove('playing');
-      this.isBgmPlaying = false;
-
-      if (autoPlay) {
-        this.toggleBGM();
-      }
+      console.log("BGM Data loaded.");
 
     } catch (e) {
-      console.error("Failed to init BGM", e);
+      console.error("Failed to load BGM data", e);
     }
   }
 
@@ -1145,7 +1144,7 @@ class App {
     this.saveSettings();
   }
 
-  private toggleBGM() {
+  private async toggleBGM() {
     const bgmButton = document.querySelector('#btn-bgm-toggle');
 
     if (this.isBgmPlaying) {
@@ -1153,7 +1152,18 @@ class App {
       this.isBgmPlaying = false;
       if (bgmButton) bgmButton.classList.remove('playing');
     } else {
-      // 再生開始
+      // ★ まだデータがない場合のみ、ここで初めてロードする (遅延ロード)
+      // Linuxならbuffer, Win/Macならelementをチェック
+      const isLoaded = (this.currentOs === 'linux') ? !!this.bgmBuffer : !!this.bgmElement;
+
+      if (!isLoaded) {
+        // ロード中であることを示すカーソル
+        document.body.style.cursor = 'wait';
+        await this.loadBGMData();
+        document.body.style.cursor = 'default';
+      }
+
+      // ロード完了後に再生
       this.playBGM();
       this.isBgmPlaying = true;
       if (bgmButton) bgmButton.classList.add('playing');
@@ -1248,15 +1258,23 @@ class App {
     source.start(0);
   }
 
-  private toggleTypeSound() {
+  private async toggleTypeSound() {
     this.isTypeSoundEnabled = !this.isTypeSoundEnabled;
-    // UIへの反映
+
+    // ★ 有効化されたタイミングで、まだロードされていなければロードする
+    if (this.isTypeSoundEnabled && !this.typeSoundBuffer) {
+      await this.initializeTypeSound();
+    }
+
+    // UI反映 & 保存 (変更なし)
     const btn = document.querySelector('#btn-typesound') as HTMLElement;
     if (btn) btn.style.opacity = this.isTypeSoundEnabled ? '1' : '0.4';
-    // 初回有効化時にAudioContextを初期化または再開
+
+    // AudioContextの再開処理 (変更なし)
     if (this.isTypeSoundEnabled && this.audioContext?.state === 'suspended') {
       this.audioContext.resume();
     }
+
     this.saveSettings();
   }
 
