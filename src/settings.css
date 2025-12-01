@@ -50,19 +50,22 @@ body {
     padding: 0 0px;
     border-bottom: 1px solid #ccc;
     gap: 30px;
+    margin-top: 0;
 }
 
 .settings-header button {
     padding-bottom: 1px;
-    margin-bottom: 25px;
+    margin-bottom: 19px;
     border-color: #000000;
     border-width: 1px;
-    border-radius: 8px;
+    border-radius: 4px;
     cursor: pointer;
-    background: linear-gradient(to bottom, #ffffff, #999999);
-    opacity: 0.9;
-    font-family: monospace;
-    font-size: 1.2em;
+    opacity: 0.8;
+    font-size: 12px;
+    background-color: #eeeeee;
+    color: #1e1e1e;
+    width: 48px;
+    height: 28px;
 }
 
 /* スクロールエリアの設定 */
