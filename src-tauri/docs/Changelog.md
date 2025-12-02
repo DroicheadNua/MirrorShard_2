@@ -7,7 +7,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 
 
-## [0.2.0] - 2025-12-XX  
+## [0.2.0] - 2025-12-02  
 
 ### Added (新機能)  
 - タブを循環させる機能を追加(Ctrl + Tab, Ctrl + Shift + Tab、またはマウスのブラウザバック、ブラウザフォワードボタン)  

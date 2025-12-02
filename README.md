@@ -1,4 +1,4 @@
-# MirrorShard 2 ver. 0.1.0 Beta  
+# MirrorShard 2 ver. 0.2.0 Beta  
 
 創作支援用テキストエディタ「MirrorShard」のソフトウェアフレームワークをTauriに変更、高速化と軽量化を図ったものです。  
 ベータ版のため機能は限定的ですが、エディタのコア機能の移植は概ね完了していますので、創作用エディタとして、また巨大テキストファイルを扱えるアウトラインプロセッサとして、特に問題なく運用できるかと思います。  
@@ -8,18 +8,29 @@
 ## ダウンロード  
 
 [![Windows](https://img.shields.io/badge/Download-Windows-blue)]  
-(https://github.com/DroicheadNua/MirrorShard_2/releases/download/v0.1.0/MirrorShard.2_0.1.0_x64_ja-JP.msi)  
+(https://github.com/DroicheadNua/MirrorShard_2/releases/download/v0.2.0/MirrorShard.2_0.2.0_x64_ja-JP.msi)  
 [![Mac (Apple Silicon)](https://img.shields.io/badge/Download-Mac_(Apple_Silicon)-green)]  
-(https://github.com/DroicheadNua/MirrorShard_2/releases/download/v0.1.0/MirrorShard.2_0.1.0_aarch64.dmg)  
+(https://github.com/DroicheadNua/MirrorShard_2/releases/download/v0.2.0/MirrorShard.2_0.2.0_aarch64.dmg)  
 [![Linux(x64: deb)](https://img.shields.io/badge/Download-Linux-lightgrey)]  
-(https://github.com/DroicheadNua/MirrorShard_2/releases/download/v0.1.0/MirrorShard.2_0.1.0_amd64.deb)  
+(https://github.com/DroicheadNua/MirrorShard_2/releases/download/v0.2.0/MirrorShard.2_0.2.0_amd64.deb)  
 [![Linux(x64: rpm)](https://img.shields.io/badge/Download-Linux-lightgrey)]  
-(https://github.com/DroicheadNua/MirrorShard_2/releases/download/v0.1.0/MirrorShard.2-0.1.0-1.x86_64.rpm)  
+(https://github.com/DroicheadNua/MirrorShard_2/releases/download/v0.2.0/MirrorShard.2-0.2.0-1.x86_64.rpm)  
 [![Linux(ARM64 / Raspberry Pi, experimental)](https://img.shields.io/badge/Download-Linux-lightgrey)]  
-(https://github.com/DroicheadNua/MirrorShard_2/releases/download/v0.1.0/MirrorShard.2_0.1.0_arm64.deb)  
+(https://github.com/DroicheadNua/MirrorShard_2/releases/download/v0.2.0/MirrorShard.2_0.2.0_arm64.deb)  
 
 または、[最新のリリース一覧ページ](https://github.com/DroicheadNua/MirrorShard_2/releases/latest)からダウンロードできます。  
-最下段の「Assets」の項目が折りたたまれている場合は、▶マークを押して展開してください。  
+最下段の「Assets」の項目が折りたたまれている場合は、▶マークを押して展開してください。    
+
+## 既知の問題 (Known Issues)  
+
+現在、v0.2.0 Betaにおいて以下の問題が確認されています。  
+
+## Mac版  
+・広範囲を範囲選択したとき、選択範囲の表示が若干不自然になることがあります。  
+
+### Linux版（x64, ARM64）:  
+・Tauri 2.0を採用しているためインライン変換ができず、IMEの表示に不具合があります。  
+・上記と関連して、入力未確定状態の打鍵にはタイプ音が反映されません。   
 
 ## 注意事項  
 　インストールやご使用などにつきまして、何か疑問の点等ございましたら「FAQ.md」を御覧ください。  
@@ -27,20 +38,13 @@
 mirrorshard.dev@gmail.com
 までご一報いただければ幸いです。  
 
-## 既知の問題 (Known Issues)  
-
-現在、v0.2.0 Betaにおいて以下の問題が確認されています。  
-
-*   **macOS版:** アプリケーションが完全に終了している状態でファイルをダブルクリック（または右クリックから開く）しても、ファイルが自動的に開かれない場合があります。  
-    *   **回避策:** アプリケーションを起動した後、画面左上の「開く」ボタン、またはファイルメニューからファイルを選択してください。  
-*   **Linux版:** AppImage形式での配布はビルド上の問題により停止しています。.deb版をご利用ください。  
-
 ## 主な特徴  
 ・ソフトウェアフレームワークにTauriを採用、起動の高速化と省メモリ化に成功  
 ・没入感を妨げないミニマルなデザインとフレームレスウィンドウ  
 ・数十万行に及ぶ巨大サイズのテキストにも対応  
 ・マークダウン記法によるアウトライン機能を搭載。アウトラインプロセッサとしても運用可能  
-・OS標準機能による印刷とPDF出力（※Windows版のみ）  
+・安全なファイル保存機能（アトミックセーブ）を採用。停電やPCクラッシュなど、不測の事態にも強い設計  
+　※ただし仕様上、「ファイル作成日＝ファイル更新日」になります。詳しくはFAQを御覧ください。  
 
 ## 前作（Electron版）からの変更点  
 ・フレームワークの変更により軽量化と高速化に成功。メモリ消費量も減少  
@@ -62,8 +66,11 @@ mirrorshard.dev@gmail.com
 
 ◯表示  
 ダークモード切替	Ctrl + T（Cmd + T）　通常モードとダークモードを切り替えます。  
+スポットライトモード切替	Ctrl + L（Cmd + L）　編集中の項目以外をぼかして表示します。  
 最小化	Ctrl + H（Cmd + H）　ウィンドウを最小化します。  
-フルスクリーン切替	F11（Cmd + Ctrl + F）　フルスクリーンにします。ZENモードと組み合わせると、執筆環境からノイズがほとんど消えます。  
+フルスクリーン切替	F11（Cmd + Ctrl + F）　フルスクリーンにします。  
+文書切替　Ctrl+Tab  
+文書切替（逆順）　Ctrl+Shift+Tab　選択している文書を切り替えます。多ボタンマウスをお使いの場合は、戻る/進むボタンで切り替えることもできます。  
 
 ◯編集・設定  
 フォントサイズ拡大	Ctrl + +（Cmd + +）　フォントサイズを拡大します。メインウィンドウではテンキーの「＋」キーでは反応しないのでご注意ください。  
@@ -71,6 +78,10 @@ mirrorshard.dev@gmail.com
 フォントサイズリセット	Ctrl + 0（Cmd + 0）　フォントサイズを初期値（16ポイント）にリセットします。こちらもテンキーの0では反応しないのでご注意ください。  
 フォント切替	Ctrl + Shift + F（Cmd + Shift + F）　フォントを切り替えます。sans_serif（ゴシック体など）→monospace（等幅フォント）→serif（明朝体など）の順でサイクルしますが、使用されるフォントはお使いのPCに依存します。  
 BGM再生/停止	Ctrl + Shift + P（Cmd + Shift + P）　BGMを再生／停止します。  
+タイプ音　Ctrl + Shift + T（Cmd + Shift + T）　タイプ音の再生／停止を切り替えます。  
+高度な設定　F2　「高度な設定」ウィンドウを開きます（詳細は後述）。  
+
+
 
 ◯基本的な編集機能  
 元に戻す	Ctrl + Z（Cmd + Z）  
@@ -84,6 +95,7 @@ BGM再生/停止	Ctrl + Shift + P（Cmd + Shift + P）　BGMを再生／停止�
 文書末にジャンプ	Ctrl + ↓（Cmd + ↓）  
 
 ## 右クリックメニュー  
+・最近使ったファイルを開く  
 ・ファイルを開く  
 ・ファイルを保存  
 ・名前を付けて保存  
@@ -123,8 +135,14 @@ by word (チェックボックス): チェックを入れると、単語単位�
 ## ステータスバー  
 　画面下部のステータスバーには、選択中のファイルのエンコードと改行コード、現在時刻が表示されます。  
 
-## テキストの印刷・PDF出力  
-　Ctrl+Pを押すことにより、OS標準の印刷機能によりテキストを印刷、あるいはPDF出力することが出来ます。機能の詳細はお使いのOSに依存します。  
+## 設定  
+　F2キー、または画面上部の歯車アイコンを押すことにより、設定画面を開くことができます。  
+
+◯エディタの最大幅……エディタ（文字が書ける部分）の最大幅を設定します。  
+◯行の高さ……行間隔を調整します。  
+◯禁則処理……禁則処理の厳密さを設定します。  
+◯背景画像……任意の背景画像を読み込みます。背景画像はライトモードでのみ有効となります。  
+◯BGM……任意のBGMを読み込みます。  
 
 ## Linux(x64)版について  
 　ビルド上の不具合によりAppImageの配布を見送り、debとrpm(experimental)での提供となります。  
@@ -133,7 +151,7 @@ by word (チェックボックス): チェックを入れると、単語単位�
 ## Linux (ARM64 / Raspberry Pi) 版(experimental)について  
 　本ソフトウェアのARM64版 (.deb) は、Raspberry Pi 5 上の MX Linux にて動作検証を行っています。  
 　Raspberry Pi OS (Bookworm) 等、Wayland を標準採用している環境では、描画の乱れやマウス入力の座標ズレが発生することが確認されています。  
-　MX Linuxでは概ね正常に動作しますが、IME変換中の表示がやや不自然になります。あらかじめご了承ください。  
+　MX Linuxでは概ね正常に動作しますが、IME関連の不具合があります。詳細は「既知の問題」の項目をご覧ください。  
 
 ## 🎵 BGM機能とパフォーマンスについて  
 
@@ -172,4 +190,3 @@ by word (チェックボックス): チェックを入れると、単語単位�
 　Copyright (c) 2025 [DroicheadNua]  
 　mirrorshard.dev@gmail.com  
 　https://github.com/DroicheadNua/MirrorShard_2  
-
