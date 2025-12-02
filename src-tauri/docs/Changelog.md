@@ -7,7 +7,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 
 
-## [0.2.0] - 2025-11-XX  
+## [0.2.0] - 2025-12-XX  
 
 ### Added (新機能)  
 - タブを循環させる機能を追加(Ctrl + Tab, Ctrl + Shift + Tab、またはマウスのブラウザバック、ブラウザフォワードボタン)  
@@ -21,6 +21,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
  - 背景画像、BGMを設定可能に  
 
 ### Changed (変更点)  
+- **起動プロセスの最適化:** BGMの読み込みを遅延させることで、特に低スペック環境における起動速度を大幅に高速化
+ - 背景画像とタイプ音もオンデマンドで読み込む仕様のため、ダークモード・タイプ音なしで起動すると最も高速になる  
+- アプリケーションの初期化フローを見直し、起動時の安定性を向上  
 
 ### Fixed (修正点)  
 - UIボタンでアンドゥ・リドゥを行った際にカーソルが行頭にジャンプしてしまう不具合を修正  
