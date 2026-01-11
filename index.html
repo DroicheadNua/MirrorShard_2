@@ -65,9 +65,13 @@
       <main id="editor-container"></main>
     </div>
     <div id="status-bar">
+      <!-- 左側：パンくずリストとファイルパス -->
       <div class="status-left">
         <span id="status-breadcrumbs"></span>
+        <span class="status-separator">|</span>
+        <span id="status-filepath" title=""></span>
       </div>
+      <!-- 右側：統計情報、エンコーディング、時刻 -->
       <div class="status-right">
         <span id="status-line-col"></span>
         <span id="status-char-count"></span>

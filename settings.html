@@ -49,6 +49,13 @@
                 <button id="btn-clear-bgm">Default</button>
                 <span id="current-bgm-path"></span>
             </div>
+            <div class="setting-item">
+                <label for="word-break-select">折り返し設定:</label>
+                <select id="word-break-select">
+                    <option value="break-all">文字単位 (日本語向け)</option>
+                    <option value="normal">単語単位 (英語向け)</option>
+                </select>
+            </div>
         </div>
     </div>
     <script type="module" src="/src/settings.ts"></script>

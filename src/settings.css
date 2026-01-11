@@ -180,6 +180,10 @@ body {
     text-align: start;
 }
 
+#word-break-select {
+    width: 148px;
+}
+
 body::-webkit-scrollbar {
     width: 8px;
 }

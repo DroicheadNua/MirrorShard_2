@@ -64,6 +64,7 @@ class App {
   private editorMaxWidth = '80ch';
   private editorLineHeight = 1.6;
   private editorLineBreak = 'strict';
+  private editorWordBreak = 'break-all';
   private userBackgroundImagePath = '';
   private userBgmPath = '';
   private bgmElement: HTMLAudioElement | null = null; // Win/Mac用
@@ -216,6 +217,7 @@ class App {
       if (s.editorMaxWidth) this.updateEditorWidth(s.editorMaxWidth);
       if (s.editorLineHeight) this.updateEditorLineHeight(s.editorLineHeight);
       if (s.editorLineBreak) this.updateEditorLineBreak(s.editorLineBreak);
+      if (s.editorWordBreak) this.updateEditorWordBreak(s.editorWordBreak);
 
       // ★画像・BGMの更新
       // ペイロードに含まれていれば更新する
@@ -286,11 +288,13 @@ class App {
     this.editorMaxWidth = await this.store.get<string>('editorMaxWidth') ?? '80ch';
     this.editorLineHeight = await this.store.get<number>('editorLineHeight') ?? 1.6;
     this.editorLineBreak = await this.store.get<string>('editorLineBreak') ?? 'strict';
+    this.editorWordBreak = await this.store.get<string>('editorWordBreak') ?? 'break-all';
 
     // 初期反映 (CSS変数)
     document.documentElement.style.setProperty('--editor-max-width', this.editorMaxWidth);
     document.documentElement.style.setProperty('--editor-line-height', this.editorLineHeight.toString());
     document.documentElement.style.setProperty('--editor-line-break', this.editorLineBreak);
+    document.documentElement.style.setProperty('--editor-word-break', this.editorWordBreak);
 
     // --- ★ 型エラーの修正 (undefined なら空文字を入れる) ---
     this.userBackgroundImagePath = await this.store.get<string>('userBackgroundImagePath') ?? '';
@@ -320,6 +324,11 @@ class App {
     document.documentElement.style.setProperty('--editor-line-break', newLineBreak);
     this.editorLineBreak = newLineBreak;
     this.saveSettings();
+  }
+  private updateEditorWordBreak(value: string) {
+    document.documentElement.style.setProperty('--editor-word-break', value);
+    this.editorWordBreak = value;
+    this.saveSettings(); // 必要ならメイン側のプロパティも更新
   }
 
   // スポットライト用のプラグイン定義
@@ -391,6 +400,7 @@ class App {
       '.cm-content': {
         lineHeight: 'var(--editor-line-height, 1.6)',
         lineBreak: 'var(--editor-line-break, strict)',
+        wordBreak: 'var(--editor-word-break, break-all)',
         caretColor: darkText
       },
       '.cm-cursor, .cm-dropCursor': {
@@ -436,6 +446,7 @@ class App {
       '.cm-content': {
         lineHeight: 'var(--editor-line-height, 1.6)',
         lineBreak: 'var(--editor-line-break, strict)',
+        wordBreak: 'var(--editor-word-break, break-all)',
         caretColor: lightText
       },
       '.cm-cursor, .cm-dropCursor': {
@@ -1017,31 +1028,67 @@ class App {
     let encoding = '';
     let lineColText = '';
     let charCountText = '';
+    let filePathText = '';
+    let breadcrumbsText = '';
 
     if (tab) {
       lineEnding = tab.lineEnding;
       encoding = tab.encoding;
+      filePathText = tab.path;
 
       const state = view.state;
       const cursor = state.selection.main.head;
       const line = state.doc.lineAt(cursor);
 
-      lineColText = `${line.number}/${state.doc.lines}L`;
+      lineColText = `${line.number}L:${cursor - line.from}C / ${state.doc.lines}L`;
       charCountText = `${state.doc.length}C`;
+
+      // --- パンくずリストの生成ロジック ---
+      if (this.activeFileHeadings.length > 0) {
+        const currentLineNum = line.number;
+        // スタックを使って階層を構築
+        // 配列のインデックスをレベル(1-6)に見立てる
+        const hierarchy: string[] = [];
+
+        // アウトラインは上から順に並んでいるので、現在行より前にある見出しを走査
+        for (const h of this.activeFileHeadings) {
+          const headingLine = view.state.doc.lineAt(h.pos).number;
+
+          if (headingLine > currentLineNum) break; // カーソルより下の見出しに来たら終了
+
+          // 現在のレベルに上書き（同レベルの新しい見出しが来たら入れ替わる）
+          // かつ、それより深いレベルはクリアする（親が変わったため）
+          hierarchy[h.level] = h.text;
+          hierarchy.splice(h.level + 1); // h.levelより後ろを削除
+        }
+        // 空の要素（レベル飛び）を除去して結合
+        breadcrumbsText = hierarchy.filter(t => t).join(' > ');
+      }
     }
 
-    // ★ nullチェックをしながら個別にtextContentを更新
-    const lineColEl = document.querySelector<HTMLElement>('#status-line-col');
-    if (lineColEl) lineColEl.textContent = lineColText;
+    // --- DOM更新ヘルパー関数 ---
+    const setText = (selector: string, text: string, tooltip: string = '') => {
+      const el = document.querySelector<HTMLElement>(selector);
+      if (el) {
+        el.textContent = text;
+        // tooltip引数があれば title 属性にセットする
+        if (tooltip) {
+          el.title = tooltip;
+        } else {
+          el.removeAttribute('title'); // ない場合は属性を消しておく
+        }
+      }
+    };
 
-    const charCountEl = document.querySelector<HTMLElement>('#status-char-count');
-    if (charCountEl) charCountEl.textContent = charCountText;
+    // 各要素の更新
+    setText('#status-line-col', lineColText);
+    setText('#status-char-count', charCountText);
+    setText('#status-encoding', encoding);
+    setText('#status-line-ending', lineEnding);
 
-    const encodingEl = document.querySelector<HTMLElement>('#status-encoding');
-    if (encodingEl) encodingEl.textContent = encoding;
-
-    const lineEndingEl = document.querySelector<HTMLElement>('#status-line-ending');
-    if (lineEndingEl) lineEndingEl.textContent = lineEnding;
+    // ★ 第3引数にフルパス/フルテキストを渡すことで、ホバー時に表示されるようになる
+    setText('#status-filepath', filePathText, filePathText);
+    setText('#status-breadcrumbs', breadcrumbsText, breadcrumbsText);
   }
 
   /**
@@ -1050,7 +1097,13 @@ class App {
   private updateStatusBarTimeOnly() {
     const timeEl = document.querySelector<HTMLElement>('#status-time');
     if (timeEl) {
-      timeEl.textContent = new Date().toLocaleTimeString('ja-JP', { hour: '2-digit', minute: '2-digit' });
+      const now = new Date();
+      // 日付 (Dec 21)
+      const dateStr = now.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+      // 時刻 (14:30)
+      const timeStr = now.toLocaleTimeString('ja-JP', { hour: '2-digit', minute: '2-digit' });
+
+      timeEl.textContent = `${dateStr} ${timeStr}`;
     }
   }
 
@@ -1065,6 +1118,7 @@ class App {
     await this.store.set('editorMaxWidth', this.editorMaxWidth);
     await this.store.set('editorLineHeight', this.editorLineHeight);
     await this.store.set('editorLineBreak', this.editorLineBreak);
+    await this.store.set('editorWordBreak', this.editorWordBreak);
 
     // 画像と音楽のパス (存在する場合のみ保存、あるいは空文字で保存)
     if (this.userBackgroundImagePath) {

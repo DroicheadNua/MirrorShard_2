@@ -465,27 +465,75 @@ body {
 
 #status-bar span {
   margin-left: 1em;
+  pointer-events: auto;
+  cursor: default;
 }
 
 #status-bar {
+  flex-shrink: 0;
+  height: 24px;
+  background-color: var(--bg-color);
   display: flex;
   justify-content: space-between;
-  /* 両端揃え */
   align-items: center;
-  /* ... */
+  padding: 0 10px;
+  font-size: 0.8em;
+  white-space: nowrap;
+  /* 折り返し禁止 */
+  overflow: hidden;
+  user-select: none;
 }
 
+.status-left {
+  display: flex;
+  align-items: center;
+  overflow: hidden;
+  /* はみ出た分を隠すために必須 */
+  flex-grow: 1;
+  /* 余ったスペースを埋める */
+  margin-right: 10px;
+}
+
+/* パンくずリスト */
 #status-breadcrumbs {
-  /* ... (左寄せ用のスタイル) */
-  font-size: 0.9em;
+  color: var(--text-color);
   opacity: 0.8;
-  white-space: nowrap;
+  margin-right: 10px;
+  flex-shrink: 0;
+  /* パンくずはなるべく縮めない */
+  max-width: 40%;
+  /* 画面の4割くらいまで */
   overflow: hidden;
   text-overflow: ellipsis;
 }
 
 .status-right {
   display: flex;
+  align-items: center;
+  flex-shrink: 0;
+  /* 右側の情報は縮めない */
+}
+
+.status-right span {
+  margin-left: 5px;
+  padding-left: 5px;
+}
+
+/* 区切り線 */
+.status-separator {
+  color: transparent;
+}
+
+/* ファイルパス (省略表示用) */
+#status-filepath {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  /* 長い場合は ... にする */
+  white-space: nowrap;
+  color: var(--text-color);
+  opacity: 0.6;
+  flex-grow: 1;
+  /* 左側の余白を埋める */
 }
 
 /* スポットライトモード用 */

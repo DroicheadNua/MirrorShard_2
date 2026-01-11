@@ -30,6 +30,8 @@ async function setupSettings() {
         const applyBtn = document.querySelector('#save-settings-btn') as HTMLButtonElement;
         const closeBtn = document.querySelector('#settings-btn-close') as HTMLButtonElement;
 
+        const wordBreakSelect = document.querySelector('#word-break-select') as HTMLSelectElement;
+
         if (!applyBtn || !closeBtn) {
             console.error("Critical UI elements not found");
             return;
@@ -47,6 +49,9 @@ async function setupSettings() {
 
         const initLineBreak = await store.get<string>('editorLineBreak');
         if (lineBreakSelect) lineBreakSelect.value = initLineBreak ?? 'strict';
+
+        const initWordBreak = await store.get<string>('editorWordBreak');
+        if (wordBreakSelect) wordBreakSelect.value = initWordBreak ?? 'break-all';
 
         if (pendingBgPath) bgPathDisplay.textContent = pendingBgPath.split(/[/\\]/).pop() || '';
         if (pendingBgmPath) bgmPathDisplay.textContent = pendingBgmPath.split(/[/\\]/).pop() || '';
@@ -123,11 +128,13 @@ async function setupSettings() {
                 const newWidth = numValue === 0 ? '100%' : `${numValue}ch`;
                 const newHeight = parseFloat(heightInput.value);
                 const newLineBreak = lineBreakSelect.value;
+                const newWordBreak = wordBreakSelect.value;
 
                 // Storeに保存
                 await store.set('editorMaxWidth', newWidth);
                 await store.set('editorLineHeight', newHeight);
                 await store.set('editorLineBreak', newLineBreak);
+                await store.set('editorWordBreak', newWordBreak);
 
                 if (pendingBgPath) await store.set('userBackgroundImagePath', pendingBgPath);
                 else await store.delete('userBackgroundImagePath');
@@ -143,7 +150,8 @@ async function setupSettings() {
                     editorLineHeight: newHeight,
                     editorLineBreak: newLineBreak,
                     userBackgroundImagePath: pendingBgPath,
-                    userBgmPath: pendingBgmPath
+                    userBgmPath: pendingBgmPath,
+                    editorWordBreak: newWordBreak
                 });
 
             } catch (err) {
