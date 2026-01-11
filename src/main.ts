@@ -65,6 +65,7 @@ class App {
   private editorLineHeight = 1.6;
   private editorLineBreak = 'strict';
   private editorWordBreak = 'break-all';
+  private userFontFamily = 'default';
   private userBackgroundImagePath = '';
   private userBgmPath = '';
   private bgmElement: HTMLAudioElement | null = null; // Win/Mac用
@@ -123,7 +124,7 @@ class App {
         }
       }),
       this.themeCompartment.of(this.isDarkMode ? this.darkTheme : this.lightTheme),
-      this.fontFamilyCompartment.of(this.fontThemes[this.currentFontIndex]),
+      this.fontFamilyCompartment.of(this.getCurrentFontTheme()),
       this.fontSizeCompartment.of(this.createFontSizeTheme(this.currentFontSize)),
       EditorView.updateListener.of((update: ViewUpdate) => this.onEditorUpdate(update)),
       scrollPastEnd(),
@@ -187,13 +188,13 @@ class App {
     this.editorView.dispatch({
       effects: [
         this.themeCompartment.reconfigure(this.isDarkMode ? this.darkTheme : this.lightTheme),
-        this.fontFamilyCompartment.reconfigure(this.fontThemes[this.currentFontIndex]),
         this.fontSizeCompartment.reconfigure(this.createFontSizeTheme(this.currentFontSize)),
         this.highlightingCompartment.reconfigure(syntaxHighlighting(this.isDarkMode ? this.darkHighlightStyle : this.lightHighlightStyle)),
         //  スポットライトの初期状態も反映
         this.spotlightCompartment.reconfigure(this.createSpotlightPlugin(this.isSpotlightMode))
       ]
     });
+    this.updateFontSettings();
     document.body.classList.toggle('dark-mode', this.isDarkMode);
     document.body.classList.remove(...this.fontClassNames);
     document.body.classList.add(this.fontClassNames[this.currentFontIndex]);
@@ -218,6 +219,10 @@ class App {
       if (s.editorLineHeight) this.updateEditorLineHeight(s.editorLineHeight);
       if (s.editorLineBreak) this.updateEditorLineBreak(s.editorLineBreak);
       if (s.editorWordBreak) this.updateEditorWordBreak(s.editorWordBreak);
+      if (s.userFontFamily !== undefined) {
+        this.userFontFamily = s.userFontFamily;
+        this.updateFontSettings();
+      }
 
       // ★画像・BGMの更新
       // ペイロードに含まれていれば更新する
@@ -244,7 +249,7 @@ class App {
           this.isBgmPlaying = true;
           document.querySelector('#btn-bgm-toggle')?.classList.add('playing');
         }
-        // パスが同じなら何もしない -> 曲は止まらない！
+        // パスが同じなら何もしない -> 曲は止まらない
       }
     });
 
@@ -289,12 +294,14 @@ class App {
     this.editorLineHeight = await this.store.get<number>('editorLineHeight') ?? 1.6;
     this.editorLineBreak = await this.store.get<string>('editorLineBreak') ?? 'strict';
     this.editorWordBreak = await this.store.get<string>('editorWordBreak') ?? 'break-all';
+    this.userFontFamily = await this.store.get<string>('userFontFamily') ?? 'default';
 
     // 初期反映 (CSS変数)
     document.documentElement.style.setProperty('--editor-max-width', this.editorMaxWidth);
     document.documentElement.style.setProperty('--editor-line-height', this.editorLineHeight.toString());
     document.documentElement.style.setProperty('--editor-line-break', this.editorLineBreak);
     document.documentElement.style.setProperty('--editor-word-break', this.editorWordBreak);
+    document.documentElement.style.setProperty('--user-font-family', this.userFontFamily);
 
     // --- ★ 型エラーの修正 (undefined なら空文字を入れる) ---
     this.userBackgroundImagePath = await this.store.get<string>('userBackgroundImagePath') ?? '';
@@ -329,6 +336,30 @@ class App {
     document.documentElement.style.setProperty('--editor-word-break', value);
     this.editorWordBreak = value;
     this.saveSettings(); // 必要ならメイン側のプロパティも更新
+  }
+  private updateFontSettings() {
+    // CSS変数の更新
+    if (this.userFontFamily && this.userFontFamily !== 'default') {
+      document.documentElement.style.setProperty('--user-font-family', `"${this.userFontFamily}"`);
+    } else {
+      document.documentElement.style.removeProperty('--user-font-family');
+    }
+
+    // CodeMirrorの更新 (ヘルパーを使う)
+    this.editorView.dispatch({
+      effects: this.fontFamilyCompartment.reconfigure(this.getCurrentFontTheme())
+    });
+  }
+
+  /** 現在の設定に基づいたフォントテーマを取得するヘルパー */
+  private getCurrentFontTheme() {
+    // ユーザー指定があればそれを使う
+    if (this.userFontFamily && this.userFontFamily !== 'default') {
+      // 引用符で囲む処理もここで行う
+      return this.createFontTheme(`"${this.userFontFamily}"`);
+    }
+    // 指定がなければ、現在のサイクルインデックスのフォントを使う
+    return this.fontThemes[this.currentFontIndex];
   }
 
   // スポットライト用のプラグイン定義
@@ -481,9 +512,15 @@ class App {
         backgroundColor: 'rgba(255, 255, 255, 0.4)',
       },
     }, { dark: true });
-    const createFontTheme = (fontFamilyValue: string) => EditorView.theme({ '&': { fontFamily: fontFamilyValue }, '.cm-content': { fontFamily: `${fontFamilyValue} !important` } });
     const serif = "'Yu Mincho', 'Hiragino Mincho ProN', serif", sansSerif = "'Tsukushi A Round Gothic','Hiragino Sans','Meiryo','Yu Gothic',sans-serif", monospace = "'BIZ UDゴシック', 'Osaka-Mono', monospace";
-    this.fontThemes = [createFontTheme(serif), createFontTheme(sansSerif), createFontTheme(monospace)];
+    this.fontThemes = [this.createFontTheme(serif), this.createFontTheme(sansSerif), this.createFontTheme(monospace)];
+  }
+
+  private createFontTheme(fontFamilyValue: string) {
+    return EditorView.theme({
+      '&': { fontFamily: fontFamilyValue },
+      '.cm-content': { fontFamily: `${fontFamilyValue} !important` }
+    });
   }
 
   private lightHighlightStyle = HighlightStyle.define([
@@ -1643,7 +1680,7 @@ class App {
     const transaction = stateToSet.update({
       effects: [
         this.themeCompartment.reconfigure(this.isDarkMode ? this.darkTheme : this.lightTheme),
-        this.fontFamilyCompartment.reconfigure(this.fontThemes[this.currentFontIndex]),
+        this.fontFamilyCompartment.reconfigure(this.getCurrentFontTheme()),
         this.fontSizeCompartment.reconfigure(this.createFontSizeTheme(this.currentFontSize)),
         this.highlightingCompartment.reconfigure(
           syntaxHighlighting(this.isDarkMode ? this.darkHighlightStyle : this.lightHighlightStyle)

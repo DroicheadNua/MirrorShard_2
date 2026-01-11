@@ -2,6 +2,7 @@
 
 // --- use文 (ファイルの先頭に追加) ---
 use encoding_rs::{SHIFT_JIS, UTF_8};
+use font_kit::source::SystemSource;
 use std::fs;
 use std::path::{Path, PathBuf};
 use std::sync::Mutex;
@@ -19,6 +20,7 @@ struct FileEntry {
     is_dir: bool,
 }
 #[derive(serde::Serialize)]
+#[serde(rename_all = "camelCase")]
 struct FileData {
     content: String,
     encoding: String,
@@ -31,6 +33,20 @@ struct SecondInstanceFile(Mutex<Option<String>>);
 // ★ Mac用のファイルパス保持場所
 struct MacFileBuffer(Mutex<Option<String>>);
 // --- Tauriコマンドの定義 ---
+
+#[tauri::command]
+async fn get_system_fonts() -> Result<Vec<String>, String> {
+    // この処理は重いので、asyncで実行してメインスレッドをブロックしないようにする
+    let source = SystemSource::new();
+    let fonts = source.all_families().map_err(|e| e.to_string())?;
+
+    // 重複を削除してソート
+    let mut font_list = fonts;
+    font_list.sort();
+    font_list.dedup();
+
+    Ok(font_list)
+}
 
 #[tauri::command]
 fn get_mac_file_event(state: State<MacFileBuffer>) -> Option<String> {
@@ -284,7 +300,8 @@ pub fn run() {
             get_second_instance_file,
             open_settings_window,
             read_binary_file,
-            get_mac_file_event
+            get_mac_file_event,
+            get_system_fonts,
         ])
         .build(tauri::generate_context!())
         .expect("error while building tauri application")

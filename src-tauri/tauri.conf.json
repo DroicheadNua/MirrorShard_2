@@ -75,7 +75,9 @@
       "icons/icon.ico"
     ],
     "resources": [
-      "docs/*"
+      "../docs/*",
+      "../README.md",
+      "../Changelog.md"
     ],
     "windows": {
       "wix": {

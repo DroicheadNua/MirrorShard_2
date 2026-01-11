@@ -445,18 +445,20 @@ body {
   /* 左右の余白 */
   box-sizing: border-box;
   font-family: monospace;
-  font-size: 12px;
-  opacity: 70%;
+  font-size: 0.8rem;
+  opacity: 0.8;
   color: var(--outline-text-color);
   background-color: transparent;
   pointer-events: none;
+  white-space: nowrap;
+  /* 折り返し禁止 */
+  overflow: hidden;
+  user-select: none;
 
   /* ★ フォーカスモードでは非表示に */
   body.focus-mode & {
     display: none;
   }
-
-  ;
 
   body.zen-mode & {
     display: none;
@@ -467,21 +469,6 @@ body {
   margin-left: 1em;
   pointer-events: auto;
   cursor: default;
-}
-
-#status-bar {
-  flex-shrink: 0;
-  height: 24px;
-  background-color: var(--bg-color);
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 0 10px;
-  font-size: 0.8em;
-  white-space: nowrap;
-  /* 折り返し禁止 */
-  overflow: hidden;
-  user-select: none;
 }
 
 .status-left {
@@ -531,7 +518,7 @@ body {
   /* 長い場合は ... にする */
   white-space: nowrap;
   color: var(--text-color);
-  opacity: 0.6;
+  opacity: 0.8;
   flex-grow: 1;
   /* 左側の余白を埋める */
 }

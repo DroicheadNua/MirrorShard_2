@@ -4,6 +4,7 @@ import { emit } from '@tauri-apps/api/event';
 import { getCurrentWindow } from '@tauri-apps/api/window';
 import { open } from '@tauri-apps/plugin-dialog';
 import { type } from '@tauri-apps/plugin-os';
+import { invoke } from '@tauri-apps/api/core';
 // CSSのインポート (Viteが処理します)
 import './settings.css';
 
@@ -32,6 +33,8 @@ async function setupSettings() {
 
         const wordBreakSelect = document.querySelector('#word-break-select') as HTMLSelectElement;
 
+        const fontSelect = document.querySelector('#font-family-select') as HTMLSelectElement;
+
         if (!applyBtn || !closeBtn) {
             console.error("Critical UI elements not found");
             return;
@@ -52,6 +55,9 @@ async function setupSettings() {
 
         const initWordBreak = await store.get<string>('editorWordBreak');
         if (wordBreakSelect) wordBreakSelect.value = initWordBreak ?? 'break-all';
+
+        const initFontFamily = await store.get<string>('userFontFamily');
+        if (fontSelect) fontSelect.value = initFontFamily ?? 'default';
 
         if (pendingBgPath) bgPathDisplay.textContent = pendingBgPath.split(/[/\\]/).pop() || '';
         if (pendingBgmPath) bgmPathDisplay.textContent = pendingBgmPath.split(/[/\\]/).pop() || '';
@@ -120,6 +126,30 @@ async function setupSettings() {
             await emit('settings-changed', { userBgmPath: null });
         });
 
+        // --- 5. フォントセレクト ---
+
+        // 現在の設定値を読み込み
+        const currentFont = await store.get<string>('userFontFamily') || 'default';
+
+        // 非同期でシステムフォントを取得してリスト生成
+        invoke<string[]>('get_system_fonts').then(fonts => {
+            // デフォルト選択肢
+            const defaultOpt = document.createElement('option');
+            defaultOpt.value = 'default';
+            defaultOpt.text = 'デフォルト (Ctrl+Shift+Fで切替)';
+            fontSelect.appendChild(defaultOpt);
+
+            // システムフォント
+            fonts.forEach(fontName => {
+                const opt = document.createElement('option');
+                opt.value = fontName;
+                opt.text = fontName;
+                fontSelect.appendChild(opt);
+            });
+
+            // 値をセット
+            fontSelect.value = currentFont;
+        }).catch(err => console.error("Font loading failed:", err));
 
         // --- 6. 適用ボタン (保存・通知・閉じる) ---
         applyBtn.addEventListener('click', async () => {
@@ -129,12 +159,14 @@ async function setupSettings() {
                 const newHeight = parseFloat(heightInput.value);
                 const newLineBreak = lineBreakSelect.value;
                 const newWordBreak = wordBreakSelect.value;
+                const newUserFont = fontSelect.value;
 
                 // Storeに保存
                 await store.set('editorMaxWidth', newWidth);
                 await store.set('editorLineHeight', newHeight);
                 await store.set('editorLineBreak', newLineBreak);
                 await store.set('editorWordBreak', newWordBreak);
+                await store.set('userFontFamily', newUserFont);
 
                 if (pendingBgPath) await store.set('userBackgroundImagePath', pendingBgPath);
                 else await store.delete('userBackgroundImagePath');
@@ -151,7 +183,8 @@ async function setupSettings() {
                     editorLineBreak: newLineBreak,
                     userBackgroundImagePath: pendingBgPath,
                     userBgmPath: pendingBgmPath,
-                    editorWordBreak: newWordBreak
+                    editorWordBreak: newWordBreak,
+                    userFontFamily: newUserFont
                 });
 
             } catch (err) {
