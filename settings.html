@@ -60,6 +60,47 @@
                 <label for="font-family-select">フォント:</label>
                 <select id="font-family-select"></select>
             </div>
+
+            <hr>
+            <h3>エディタ外観</h3>
+
+            <div class="setting-item">
+                <label>配置:</label>
+                <select id="editor-align-select">
+                    <option value="center">中央 (デフォルト)</option>
+                    <option value="left">左寄せ</option>
+                    <option value="right">右寄せ</option>
+                </select>
+            </div>
+
+            <div class="setting-item">
+                <label>背景設定:</label>
+                <div style="display: flex; align-items: center; gap: 10px;">
+                    <label>
+                        <input type="checkbox" id="editor-bg-dark"> 黒背景にする
+                    </label>
+                    <span>不透明度:</span>
+                    <input type="range" id="editor-bg-opacity" min="0" max="100" value="0" style="width: 80px;">
+                    <span id="bg-opacity-val">0%</span>
+                </div>
+            </div>
+
+            <div class="setting-item">
+                <label>すりガラス強度 (Blur):</label>
+                <input type="range" id="editor-blur-range" min="0" max="20" value="0">
+                <span id="blur-val">0px</span>
+            </div>
+
+            <div class="setting-item">
+                <label>UI文字色:</label>
+                <label>
+                    <input type="checkbox" id="ui-text-white"> 白文字にする
+                </label>
+                <label style="margin-left: 10px;">
+                    <input type="checkbox" id="use-ui-text-shadow"> 影を付ける
+                </label>
+            </div>
+
         </div>
     </div>
     <script type="module" src="/src/settings.ts"></script>

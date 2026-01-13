@@ -180,8 +180,21 @@ body {
     text-align: start;
 }
 
+.setting-item input[type="checkbox"] {
+    margin-right: -4px;
+    width: 18px;
+}
+
 #word-break-select {
     width: 148px;
+}
+
+#font-family-select {
+    width: 210px;
+}
+
+#editor-align-select {
+    width: 128px;
 }
 
 body::-webkit-scrollbar {

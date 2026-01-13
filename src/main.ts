@@ -61,11 +61,20 @@ class App {
   private typeSoundBuffer: AudioBuffer | null = null;
 
   private recentFiles: string[] = [];
-  private editorMaxWidth = '80ch';
+  private editorMaxWidth = '80';
   private editorLineHeight = 1.6;
   private editorLineBreak = 'strict';
   private editorWordBreak = 'break-all';
   private userFontFamily = 'default';
+  private editorAlign = 'center';
+  private editorBgColorHex = '#ffffff';
+  private editorBgOpacity = 0;
+  private editorBlur = 0;
+  private editorTextColor = '';
+  private editorIsBgDark = false;
+  private uiTextColor = '#000000';
+  private useUiTextShadow = false;
+  private TranslucentDarkTheme!: any;
   private userBackgroundImagePath = '';
   private userBgmPath = '';
   private bgmElement: HTMLAudioElement | null = null; // Win/Mac用
@@ -215,7 +224,9 @@ class App {
       const s = event.payload;
 
       // エディタ設定の更新
-      if (s.editorMaxWidth) this.updateEditorWidth(s.editorMaxWidth);
+      if (s.editorMaxWidth) {
+        this.updateEditorWidthVariable(s.editorMaxWidth);
+      }
       if (s.editorLineHeight) this.updateEditorLineHeight(s.editorLineHeight);
       if (s.editorLineBreak) this.updateEditorLineBreak(s.editorLineBreak);
       if (s.editorWordBreak) this.updateEditorWordBreak(s.editorWordBreak);
@@ -251,6 +262,46 @@ class App {
         }
         // パスが同じなら何もしない -> 曲は止まらない
       }
+
+      if (s.editorAlign) this.updateEditorAlign(s.editorAlign);
+      if (s.editorBgColorRGBA) document.documentElement.style.setProperty('--editor-bg-color', s.editorBgColorRGBA);
+      if (s.editorBlur) document.documentElement.style.setProperty('--editor-blur', s.editorBlur);
+
+      // 文字色 (空文字なら変数を削除＝テーマの色に戻る)
+      if (s.editorTextColor !== undefined) {
+        if (s.editorTextColor) {
+          document.documentElement.style.setProperty('--editor-text-color', s.editorTextColor);
+        } else {
+          document.documentElement.style.removeProperty('--editor-text-color');
+        }
+      }
+      // 半透明ウィンドウ反映
+      if (s.editorAlign) {
+        this.editorAlign = s.editorAlign; // プロパティ更新
+        this.updateEditorAlign(s.editorAlign);
+      }
+
+      if (s.editorBgColorHex !== undefined || s.editorIsBgDark !== undefined) {
+        if (s.editorIsBgDark !== undefined) this.editorIsBgDark = s.editorIsBgDark;
+        if (s.editorBgColorHex !== undefined) this.editorBgColorHex = s.editorBgColorHex;
+
+        // 第3のテーマ（TranslucentDarkTheme）を適用するために必須
+        this.applyAppearance();
+      }
+      if (s.editorBgOpacity !== undefined) {
+        this.editorBgOpacity = s.editorBgOpacity;
+      }
+      if (s.editorBlur !== undefined) {
+        this.editorBlur = s.editorBlur;
+      }
+      if (s.editorTextColor !== undefined) this.editorTextColor = s.editorTextColor;
+      if (s.uiTextColor) this.uiTextColor = s.uiTextColor;
+      if (s.useUiTextShadow !== undefined) this.useUiTextShadow = s.useUiTextShadow;
+
+      // UI文字色の反映
+      if (s.uiTextColor || s.useUiTextShadow !== undefined) {
+        this.updateUiTextColor(this.uiTextColor, this.useUiTextShadow);
+      }
     });
 
     if (hasInitialFile && fileToOpen) {
@@ -271,7 +322,6 @@ class App {
     await getCurrentWindow().show();
   }
 
-  // 戻り値の型を Promise<string[]> にする
   private async loadSettings(): Promise<string[]> {
     // --- 基本設定の読み込み ---
     const savedIsDarkMode = await this.store.get<boolean>('isDarkMode');
@@ -289,37 +339,76 @@ class App {
     const savedSpotlight = await this.store.get<boolean>('isSpotlightMode');
     this.isSpotlightMode = savedSpotlight ?? false;
 
-    // --- 共有設定の読み込み ---
-    this.editorMaxWidth = await this.store.get<string>('editorMaxWidth') ?? '80ch';
-    this.editorLineHeight = await this.store.get<number>('editorLineHeight') ?? 1.6;
-    this.editorLineBreak = await this.store.get<string>('editorLineBreak') ?? 'strict';
-    this.editorWordBreak = await this.store.get<string>('editorWordBreak') ?? 'break-all';
-    this.userFontFamily = await this.store.get<string>('userFontFamily') ?? 'default';
+    // --- エディタ設定 (ヘルパーがあるものはヘルパーに任せる) ---
 
-    // 初期反映 (CSS変数)
-    document.documentElement.style.setProperty('--editor-max-width', this.editorMaxWidth);
+    // 1. エディタ幅 (ヘルパーあり)
+    this.editorMaxWidth = await this.store.get<string>('editorMaxWidth') ?? '80';
+    this.updateEditorWidthVariable(this.editorMaxWidth); // ★ここでCSS設定完了
+
+    // 2. 行の高さ (ヘルパーはないのでここで設定)
+    this.editorLineHeight = await this.store.get<number>('editorLineHeight') ?? 1.6;
     document.documentElement.style.setProperty('--editor-line-height', this.editorLineHeight.toString());
+
+    // 3. 禁則・ワードラップ (ヘルパーはないのでここで設定)
+    this.editorLineBreak = await this.store.get<string>('editorLineBreak') ?? 'strict';
     document.documentElement.style.setProperty('--editor-line-break', this.editorLineBreak);
+
+    this.editorWordBreak = await this.store.get<string>('editorWordBreak') ?? 'break-all';
     document.documentElement.style.setProperty('--editor-word-break', this.editorWordBreak);
+
+    // 4. フォント (専用メソッドがあるので読み込みのみ)
+    this.userFontFamily = await this.store.get<string>('userFontFamily') ?? 'default';
     document.documentElement.style.setProperty('--user-font-family', this.userFontFamily);
 
-    // --- ★ 型エラーの修正 (undefined なら空文字を入れる) ---
+    const align = await this.store.get<string>('editorAlign') ?? 'center';
+    this.updateEditorAlign(align);
+
+    // --- 配色設定 ---
+    this.editorIsBgDark = await this.store.get<boolean>('editorIsBgDark') ?? false;
+    this.editorBgOpacity = await this.store.get<number>('editorBgOpacity') ?? 0;
+    this.editorBgColorHex = await this.store.get<string>('editorBgColorHex') ?? '#ffffff';
+
+    const rgb = this.editorIsBgDark ? '0, 0, 0' : '255, 255, 255';
+    document.documentElement.style.setProperty('--editor-bg-color', `rgba(${rgb}, ${this.editorBgOpacity / 100})`);
+
+    this.editorTextColor = await this.store.get<string>('editorTextColor') ?? '';
+    // 文字色は値があるときのみ適用
+    if (this.editorTextColor) {
+      document.documentElement.style.setProperty('--editor-text-color', this.editorTextColor);
+    } else {
+      document.documentElement.style.removeProperty('--editor-text-color');
+    }
+
+    // ブラー
+    const blur = await this.store.get<number>('editorBlur') ?? 0;
+    this.editorBlur = blur;
+    document.documentElement.style.setProperty('--editor-blur', `${blur}px`);
+
+    // --- UI文字色 (ヘルパーあり) ---
+    const isUiWhite = await this.store.get<boolean>('uiTextIsWhite') ?? false;
+    const uiColor = isUiWhite ? '#DDDDDD' : '#333333';
+    const useUiShadow = await this.store.get<boolean>('useUiTextShadow') ?? false;
+    this.updateUiTextColor(uiColor, useUiShadow);
+
+    // --- パス ---
     this.userBackgroundImagePath = await this.store.get<string>('userBackgroundImagePath') ?? '';
     this.userBgmPath = await this.store.get<string>('userBgmPath') ?? '';
 
-    // --- ★ セッションパスを取得して返す ---
+    // --- 外観の適用 (テーマ、ハイライトなど) ---
+    this.applyAppearance();
+
+    // --- セッションパス ---
     const savedSessionPaths = await this.store.get<string[]>('sessionFilePaths');
-    // 読み取った値を return する (これで「読み取られない」エラーは消える)
     return savedSessionPaths ?? [];
   }
 
-  /** エディタの幅を更新するメソッド */
-  private updateEditorWidth(newWidth: string) {
-    // ★ CSS変数を設定する「だけ」。これだけで即時反映される。
-    document.documentElement.style.setProperty('--editor-max-width', newWidth);
-    // Appクラスのプロパティを更新
-    this.editorMaxWidth = newWidth;
-    // storeにも保存
+  // CSS変数を更新するヘルパー
+  private updateEditorWidthVariable(rawValue: string | number) {
+    const num = typeof rawValue === 'string' ? parseInt(rawValue, 10) : rawValue;
+    const cssValue = num === 0 ? '100%' : `calc(${num}ch + 20px)`;
+    document.documentElement.style.setProperty('--editor-max-width', cssValue);
+
+    this.editorMaxWidth = num.toString();
     this.saveSettings();
   }
   private updateEditorLineHeight(newHeight: number) {
@@ -349,6 +438,74 @@ class App {
     this.editorView.dispatch({
       effects: this.fontFamilyCompartment.reconfigure(this.getCurrentFontTheme())
     });
+  }
+
+  private updateEditorAlign(align: string) {
+    const style = document.documentElement.style;
+    switch (align) {
+      case 'left':
+        style.setProperty('--editor-margin-left', '30px');
+        style.setProperty('--editor-margin-right', 'auto');
+        break;
+      case 'right':
+        style.setProperty('--editor-margin-left', 'auto');
+        style.setProperty('--editor-margin-right', '30px');
+        break;
+      case 'center':
+      default:
+        style.setProperty('--editor-margin-left', 'auto');
+        style.setProperty('--editor-margin-right', 'auto');
+        break;
+    }
+    this.saveSettings(); // ★ここでも保存
+  }
+
+  private updateUiTextColor(color: string, useShadow: boolean) {
+    const style = document.documentElement.style;
+    style.setProperty('--ui-text-color', color);
+
+    if (useShadow) {
+      // 文字色が明るい(#DDDDDD)なら、影は黒く。
+      // 文字色が暗い(#333333)なら、影は白くする。
+      const shadowColor = (color === '#DDDDDD')
+        ? '1px 1px 2px rgba(0,0,0,0.8)'   // 黒い影
+        : '1px 1px 2px rgba(255,255,255,0.8)'; // 白い影
+
+      style.setProperty('--ui-text-shadow', shadowColor);
+    } else {
+      style.setProperty('--ui-text-shadow', 'none');
+    }
+  }
+
+  private getCurrentTheme() {
+    if (this.isDarkMode) {
+      return this.darkTheme;
+    } else if (this.editorIsBgDark) {
+      // ライトモードだが黒背景設定なら、透過ダークテーマを返す
+      return this.TranslucentDarkTheme;
+    } else {
+      return this.lightTheme;
+    }
+  }
+
+  private applyAppearance() {
+    this.editorView.dispatch({
+      effects: [
+        this.themeCompartment.reconfigure(this.getCurrentTheme()),
+        this.highlightingCompartment.reconfigure(
+          syntaxHighlighting((this.isDarkMode || this.editorIsBgDark) ? this.darkHighlightStyle : this.lightHighlightStyle)
+        ),
+        this.fontFamilyCompartment.reconfigure(this.fontThemes[this.currentFontIndex]),
+        this.fontSizeCompartment.reconfigure(this.createFontSizeTheme(this.currentFontSize)),
+        this.spotlightCompartment.reconfigure(this.createSpotlightPlugin(this.isSpotlightMode))
+      ]
+    });
+
+    // bodyクラスのトグル
+    document.body.classList.toggle('dark-mode', this.isDarkMode);
+
+    // 背景画像の更新
+    this.updateBackground();
   }
 
   /** 現在の設定に基づいたフォントテーマを取得するヘルパー */
@@ -473,6 +630,49 @@ class App {
       '&': {
         color: lightText,
         backgroundColor: dark
+      },
+      '.cm-content': {
+        lineHeight: 'var(--editor-line-height, 1.6)',
+        lineBreak: 'var(--editor-line-break, strict)',
+        wordBreak: 'var(--editor-word-break, break-all)',
+        caretColor: lightText
+      },
+      '.cm-cursor, .cm-dropCursor': {
+        borderLeftColor: lightText
+      },
+      '&.cm-focused .cm-selectionBackground, .cm-selectionBackground, .cm-content ::selection': {
+        backgroundColor: stone
+      },
+      '&.cm-focused .cm-activeLine': {
+        backgroundColor: 'transparent'
+      },
+      '.cm-activeLineGutter': {
+        backgroundColor: 'transparent'
+      },
+      '&.cm-focused': {
+        outline: 'none',
+      },
+      '& ::-webkit-scrollbar': {
+        width: '18px',
+      },
+      '& ::-webkit-scrollbar-track': {
+        backgroundColor: 'transparent',
+      },
+      '& ::-webkit-scrollbar-thumb': {
+        backgroundColor: 'rgba(255, 255, 255, 0.15)',
+        borderRadius: '9px',
+        border: '3px solid transparent',
+        backgroundClip: 'content-box',
+        minHeight: '40px'
+      },
+      '& ::-webkit-scrollbar-thumb:hover': {
+        backgroundColor: 'rgba(255, 255, 255, 0.4)',
+      },
+    }, { dark: true });
+    this.TranslucentDarkTheme = EditorView.theme({
+      '&': {
+        color: lightText,
+        backgroundColor: 'transparent'
       },
       '.cm-content': {
         lineHeight: 'var(--editor-line-height, 1.6)',
@@ -1156,6 +1356,13 @@ class App {
     await this.store.set('editorLineHeight', this.editorLineHeight);
     await this.store.set('editorLineBreak', this.editorLineBreak);
     await this.store.set('editorWordBreak', this.editorWordBreak);
+    await this.store.set('editorAlign', this.editorAlign);
+    await this.store.set('editorBgColorHex', this.editorBgColorHex);
+    await this.store.set('editorBgOpacity', this.editorBgOpacity);
+    await this.store.set('editorBlur', this.editorBlur);
+    await this.store.set('editorTextColor', this.editorTextColor);
+    await this.store.set('uiTextColor', this.uiTextColor);
+    await this.store.set('useUiTextShadow', this.useUiTextShadow);
 
     // 画像と音楽のパス (存在する場合のみ保存、あるいは空文字で保存)
     if (this.userBackgroundImagePath) {
@@ -1679,11 +1886,13 @@ class App {
     // Stateに対してトランザクションを作成し、設定系Compartmentをすべて現在の値で上書きする
     const transaction = stateToSet.update({
       effects: [
-        this.themeCompartment.reconfigure(this.isDarkMode ? this.darkTheme : this.lightTheme),
+        this.themeCompartment.reconfigure(this.getCurrentTheme()),
         this.fontFamilyCompartment.reconfigure(this.getCurrentFontTheme()),
         this.fontSizeCompartment.reconfigure(this.createFontSizeTheme(this.currentFontSize)),
         this.highlightingCompartment.reconfigure(
-          syntaxHighlighting(this.isDarkMode ? this.darkHighlightStyle : this.lightHighlightStyle)
+          syntaxHighlighting(
+            (this.isDarkMode || this.editorIsBgDark) ? this.darkHighlightStyle : this.lightHighlightStyle
+          )
         ),
         this.spotlightCompartment.reconfigure(this.createSpotlightPlugin(this.isSpotlightMode))
       ]

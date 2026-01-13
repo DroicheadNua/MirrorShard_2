@@ -35,6 +35,16 @@ async function setupSettings() {
 
         const fontSelect = document.querySelector('#font-family-select') as HTMLSelectElement;
 
+        const alignSelect = document.querySelector('#editor-align-select') as HTMLSelectElement;
+        const editorBgDark = document.querySelector('#editor-bg-dark') as HTMLInputElement;
+        const bgOpacityRange = document.querySelector('#editor-bg-opacity') as HTMLInputElement;
+        const bgOpacityVal = document.querySelector('#bg-opacity-val');
+        const blurRange = document.querySelector('#editor-blur-range') as HTMLInputElement;
+        const blurVal = document.querySelector('#blur-val');
+
+        const uiTextWhite = document.querySelector('#ui-text-white') as HTMLInputElement;
+        const useUiTextShadow = document.querySelector('#use-ui-text-shadow') as HTMLInputElement;
+
         if (!applyBtn || !closeBtn) {
             console.error("Critical UI elements not found");
             return;
@@ -58,6 +68,27 @@ async function setupSettings() {
 
         const initFontFamily = await store.get<string>('userFontFamily');
         if (fontSelect) fontSelect.value = initFontFamily ?? 'default';
+
+        const align = await store.get<string>('editorAlign') ?? 'center';
+        alignSelect.value = align;
+
+        const isBgDark = await store.get<boolean>('editorIsBgDark') ?? false;
+        editorBgDark.checked = isBgDark;
+
+        const bgOpacity = await store.get<number>('editorBgOpacity') ?? 0;
+        bgOpacityRange.value = bgOpacity.toString();
+        if (bgOpacityVal) bgOpacityVal.textContent = `${bgOpacity}%`;
+
+        const blur = await store.get<number>('editorBlur') ?? 0;
+        blurRange.value = blur.toString();
+        if (blurVal) blurVal.textContent = `${blur}`;
+
+        // ★ UI文字色
+        const isUiWhite = await store.get<boolean>('uiTextIsWhite') ?? false;
+        uiTextWhite.checked = isUiWhite;
+
+        const isUiShadow = await store.get<boolean>('useUiTextShadow') ?? false;
+        useUiTextShadow.checked = isUiShadow;
 
         if (pendingBgPath) bgPathDisplay.textContent = pendingBgPath.split(/[/\\]/).pop() || '';
         if (pendingBgmPath) bgmPathDisplay.textContent = pendingBgmPath.split(/[/\\]/).pop() || '';
@@ -126,6 +157,9 @@ async function setupSettings() {
             await emit('settings-changed', { userBgmPath: null });
         });
 
+        bgOpacityRange.addEventListener('input', () => { if (bgOpacityVal) bgOpacityVal.textContent = `${bgOpacityRange.value}%`; });
+        blurRange.addEventListener('input', () => { if (blurVal) blurVal.textContent = `${blurRange.value}px`; });
+
         // --- 5. フォントセレクト ---
 
         // 現在の設定値を読み込み
@@ -155,18 +189,47 @@ async function setupSettings() {
         applyBtn.addEventListener('click', async () => {
             try {
                 const numValue = parseInt(widthInput.value, 10);
-                const newWidth = numValue === 0 ? '100%' : `${numValue}ch`;
                 const newHeight = parseFloat(heightInput.value);
                 const newLineBreak = lineBreakSelect.value;
                 const newWordBreak = wordBreakSelect.value;
                 const newUserFont = fontSelect.value;
 
+                const newAlign = alignSelect.value;
+
+                const newIsBgDark = editorBgDark.checked;
+                const newBgOpacity = parseInt(bgOpacityRange.value, 10);
+                const newBlur = parseInt(blurRange.value, 10);
+                const newIsUiWhite = uiTextWhite.checked;
+                const newUseUiShadow = useUiTextShadow.checked;
+
+                // 色の計算ロジック 
+                // 背景色: 黒(0,0,0) か 白(255,255,255)
+                const rgb = newIsBgDark ? '0, 0, 0' : '255, 255, 255';
+                const rgbaString = `rgba(${rgb}, ${newBgOpacity / 100})`;
+
+                // エディタ文字色: 背景が黒なら白(#dddddd)、白なら黒(#333333)
+                // 自動決定するので保存・通知するのは「色コード」でOK
+                const newEditorTextColor = newIsBgDark ? '#DDDDDD' : '#333333';
+
+                // UI文字色: 指定に従う
+                const newUiTextColor = newIsUiWhite ? '#DDDDDD' : '#333333';
+
                 // Storeに保存
-                await store.set('editorMaxWidth', newWidth);
+                await store.set('editorMaxWidth', numValue);
                 await store.set('editorLineHeight', newHeight);
                 await store.set('editorLineBreak', newLineBreak);
                 await store.set('editorWordBreak', newWordBreak);
                 await store.set('userFontFamily', newUserFont);
+                await store.set('editorAlign', newAlign);
+                await store.set('editorIsBgDark', newIsBgDark);
+                await store.set('editorBgOpacity', newBgOpacity);
+                await store.set('editorBlur', newBlur);
+
+                // 自動決定した文字色は保存しなくても計算できるが、main.tsに渡すために保存しても良い
+                // ここではフラグだけ保存
+
+                await store.set('uiTextIsWhite', newIsUiWhite);
+                await store.set('useUiTextShadow', newUseUiShadow);
 
                 if (pendingBgPath) await store.set('userBackgroundImagePath', pendingBgPath);
                 else await store.delete('userBackgroundImagePath');
@@ -178,13 +241,21 @@ async function setupSettings() {
 
                 // メインウィンドウに通知
                 await emit('settings-changed', {
-                    editorMaxWidth: newWidth,
+                    editorMaxWidth: numValue,
                     editorLineHeight: newHeight,
                     editorLineBreak: newLineBreak,
                     userBackgroundImagePath: pendingBgPath,
                     userBgmPath: pendingBgmPath,
                     editorWordBreak: newWordBreak,
-                    userFontFamily: newUserFont
+                    userFontFamily: newUserFont,
+                    editorAlign: newAlign,
+                    editorBgColorRGBA: rgbaString, // 計算済みRGBA
+                    editorBlur: `${newBlur}px`,
+                    editorTextColor: newEditorTextColor, // 自動決定した文字色
+                    uiTextColor: newUiTextColor,
+                    useUiTextShadow: newUseUiShadow,
+                    editorIsBgDark: newIsBgDark,
+                    editorBgOpacity: newBgOpacity,
                 });
 
             } catch (err) {
