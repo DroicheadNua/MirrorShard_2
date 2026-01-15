@@ -44,6 +44,7 @@ async function setupSettings() {
 
         const uiTextWhite = document.querySelector('#ui-text-white') as HTMLInputElement;
         const useUiTextShadow = document.querySelector('#use-ui-text-shadow') as HTMLInputElement;
+        const useUiBgCheck = document.querySelector('#use-ui-bg') as HTMLInputElement;
 
         if (!applyBtn || !closeBtn) {
             console.error("Critical UI elements not found");
@@ -54,8 +55,8 @@ async function setupSettings() {
         let pendingBgPath = await store.get<string>('userBackgroundImagePath') || null;
         let pendingBgmPath = await store.get<string>('userBgmPath') || null;
 
-        const initWidth = await store.get<string>('editorMaxWidth');
-        if (widthInput) widthInput.value = parseInt(initWidth ?? '80', 10).toString();
+        const initWidth = await store.get<string | number>('editorMaxWidth');
+        widthInput.value = (initWidth !== null && initWidth !== undefined) ? initWidth.toString() : '80';
 
         const initHeight = await store.get<number>('editorLineHeight');
         if (heightInput) heightInput.value = (initHeight ?? 1.6).toString();
@@ -69,8 +70,8 @@ async function setupSettings() {
         const initFontFamily = await store.get<string>('userFontFamily');
         if (fontSelect) fontSelect.value = initFontFamily ?? 'default';
 
-        const align = await store.get<string>('editorAlign') ?? 'center';
-        alignSelect.value = align;
+        const align = await store.get<string>('editorAlign');
+        alignSelect.value = align ?? 'center';
 
         const isBgDark = await store.get<boolean>('editorIsBgDark') ?? false;
         editorBgDark.checked = isBgDark;
@@ -89,6 +90,9 @@ async function setupSettings() {
 
         const isUiShadow = await store.get<boolean>('useUiTextShadow') ?? false;
         useUiTextShadow.checked = isUiShadow;
+
+        const isUiBg = await store.get<boolean>('useUiBg') ?? false;
+        useUiBgCheck.checked = isUiBg;
 
         if (pendingBgPath) bgPathDisplay.textContent = pendingBgPath.split(/[/\\]/).pop() || '';
         if (pendingBgmPath) bgmPathDisplay.textContent = pendingBgmPath.split(/[/\\]/).pop() || '';
@@ -188,7 +192,9 @@ async function setupSettings() {
         // --- 6. 適用ボタン (保存・通知・閉じる) ---
         applyBtn.addEventListener('click', async () => {
             try {
-                const numValue = parseInt(widthInput.value, 10);
+                const rawValue = parseInt(widthInput.value, 10);
+                // NaNかチェックし、NaNでなければその値を、NaNならデフォルトを使う
+                const numValue = isNaN(rawValue) ? 80 : rawValue;
                 const newHeight = parseFloat(heightInput.value);
                 const newLineBreak = lineBreakSelect.value;
                 const newWordBreak = wordBreakSelect.value;
@@ -201,6 +207,7 @@ async function setupSettings() {
                 const newBlur = parseInt(blurRange.value, 10);
                 const newIsUiWhite = uiTextWhite.checked;
                 const newUseUiShadow = useUiTextShadow.checked;
+                const newUseUiBg = useUiBgCheck.checked;
 
                 // 色の計算ロジック 
                 // 背景色: 黒(0,0,0) か 白(255,255,255)
@@ -215,7 +222,7 @@ async function setupSettings() {
                 const newUiTextColor = newIsUiWhite ? '#DDDDDD' : '#333333';
 
                 // Storeに保存
-                await store.set('editorMaxWidth', numValue);
+                await store.set('editorMaxWidth', numValue.toString());
                 await store.set('editorLineHeight', newHeight);
                 await store.set('editorLineBreak', newLineBreak);
                 await store.set('editorWordBreak', newWordBreak);
@@ -230,6 +237,7 @@ async function setupSettings() {
 
                 await store.set('uiTextIsWhite', newIsUiWhite);
                 await store.set('useUiTextShadow', newUseUiShadow);
+                await store.set('useUiBg', newUseUiBg);
 
                 if (pendingBgPath) await store.set('userBackgroundImagePath', pendingBgPath);
                 else await store.delete('userBackgroundImagePath');
@@ -256,6 +264,7 @@ async function setupSettings() {
                     useUiTextShadow: newUseUiShadow,
                     editorIsBgDark: newIsBgDark,
                     editorBgOpacity: newBgOpacity,
+                    useUiBg: newUseUiBg,
                 });
 
             } catch (err) {

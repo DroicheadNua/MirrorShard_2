@@ -74,6 +74,7 @@ class App {
   private editorIsBgDark = false;
   private uiTextColor = '#000000';
   private useUiTextShadow = false;
+  private useUiBg = false;
   private TranslucentDarkTheme!: any;
   private userBackgroundImagePath = '';
   private userBgmPath = '';
@@ -232,6 +233,7 @@ class App {
       if (s.editorWordBreak) this.updateEditorWordBreak(s.editorWordBreak);
       if (s.userFontFamily !== undefined) {
         this.userFontFamily = s.userFontFamily;
+        document.documentElement.style.setProperty('--user-font-family', this.userFontFamily);
         this.updateFontSettings();
       }
 
@@ -297,6 +299,10 @@ class App {
       if (s.editorTextColor !== undefined) this.editorTextColor = s.editorTextColor;
       if (s.uiTextColor) this.uiTextColor = s.uiTextColor;
       if (s.useUiTextShadow !== undefined) this.useUiTextShadow = s.useUiTextShadow;
+      if (s.useUiBg !== undefined) {
+        this.useUiBg = s.useUiBg;
+        this.updateUiBg();
+      }
 
       // UI文字色の反映
       if (s.uiTextColor || s.useUiTextShadow !== undefined) {
@@ -389,6 +395,8 @@ class App {
     const uiColor = isUiWhite ? '#DDDDDD' : '#333333';
     const useUiShadow = await this.store.get<boolean>('useUiTextShadow') ?? false;
     this.updateUiTextColor(uiColor, useUiShadow);
+    this.useUiBg = await this.store.get<boolean>('useUiBg') ?? false;
+    this.updateUiBg();
 
     // --- パス ---
     this.userBackgroundImagePath = await this.store.get<string>('userBackgroundImagePath') ?? '';
@@ -405,7 +413,7 @@ class App {
   // CSS変数を更新するヘルパー
   private updateEditorWidthVariable(rawValue: string | number) {
     const num = typeof rawValue === 'string' ? parseInt(rawValue, 10) : rawValue;
-    const cssValue = num === 0 ? '100%' : `calc(${num}ch + 20px)`;
+    const cssValue = (num === 0 || isNaN(num)) ? '100%' : `calc(${num}ch + 20px)`;
     document.documentElement.style.setProperty('--editor-max-width', cssValue);
 
     this.editorMaxWidth = num.toString();
@@ -475,6 +483,10 @@ class App {
     } else {
       style.setProperty('--ui-text-shadow', 'none');
     }
+  }
+
+  private updateUiBg() {
+    document.body.classList.toggle('ui-bg-enabled', this.useUiBg);
   }
 
   private getCurrentTheme() {
