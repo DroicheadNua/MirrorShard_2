@@ -84,6 +84,13 @@ class App {
   private bgmSource: AudioBufferSourceNode | null = null; // Linux用
   private isBgmPlaying = false;
   private currentOs: string | null = null;
+  private isLoading = false;
+
+  private dynamicFontTheme: any;
+  private readonly serifFont = '"Yu Mincho", "Hiragino Mincho ProN", serif';
+  private readonly sansSerifFont = '"Tsukushi A Round Gothic","Hiragino Sans","Meiryo","Yu Gothic",sans-serif';
+  private readonly monospaceFont = '"BIZ UDゴシック", "Osaka-Mono", monospace';
+  private fontList = [this.serifFont, this.sansSerifFont, this.monospaceFont];
 
   // --- 静的ファクトリメソッド ---
   public static create() {
@@ -94,10 +101,6 @@ class App {
 
 
   private createEditorExtensions(): any[] {
-
-    const typeWriterTheme = EditorView.theme({
-      '.cm-scroller': { paddingBottom: '50vh' },
-    });
 
     // カーソル位置を補正するフィルタ 
     const preventCursorBeyondDocEndFilter = EditorState.transactionFilter.of(tr => {
@@ -134,11 +137,10 @@ class App {
         }
       }),
       this.themeCompartment.of(this.isDarkMode ? this.darkTheme : this.lightTheme),
-      this.fontFamilyCompartment.of(this.getCurrentFontTheme()),
+      this.dynamicFontTheme,
       this.fontSizeCompartment.of(this.createFontSizeTheme(this.currentFontSize)),
       EditorView.updateListener.of((update: ViewUpdate) => this.onEditorUpdate(update)),
       scrollPastEnd(),
-      typeWriterTheme,
       preventCursorBeyondDocEndFilter,
       this.highlightingCompartment.of(syntaxHighlighting(this.isDarkMode ? this.darkHighlightStyle : this.lightHighlightStyle)),
       this.spotlightCompartment.of(this.createSpotlightPlugin(this.isSpotlightMode)),
@@ -225,7 +227,7 @@ class App {
       const s = event.payload;
 
       // エディタ設定の更新
-      if (s.editorMaxWidth) {
+      if (s.editorMaxWidth !== undefined) {
         this.updateEditorWidthVariable(s.editorMaxWidth);
       }
       if (s.editorLineHeight) this.updateEditorLineHeight(s.editorLineHeight);
@@ -233,7 +235,6 @@ class App {
       if (s.editorWordBreak) this.updateEditorWordBreak(s.editorWordBreak);
       if (s.userFontFamily !== undefined) {
         this.userFontFamily = s.userFontFamily;
-        document.documentElement.style.setProperty('--user-font-family', this.userFontFamily);
         this.updateFontSettings();
       }
 
@@ -265,7 +266,7 @@ class App {
         // パスが同じなら何もしない -> 曲は止まらない
       }
 
-      if (s.editorAlign) this.updateEditorAlign(s.editorAlign);
+      if (s.editorAlign !== undefined) { this.updateEditorAlign(s.editorAlign); }
       if (s.editorBgColorRGBA) document.documentElement.style.setProperty('--editor-bg-color', s.editorBgColorRGBA);
       if (s.editorBlur) document.documentElement.style.setProperty('--editor-blur', s.editorBlur);
 
@@ -329,6 +330,7 @@ class App {
   }
 
   private async loadSettings(): Promise<string[]> {
+    this.isLoading = true;
     // --- 基本設定の読み込み ---
     const savedIsDarkMode = await this.store.get<boolean>('isDarkMode');
     this.isDarkMode = savedIsDarkMode ?? this.isDarkMode;
@@ -407,6 +409,7 @@ class App {
 
     // --- セッションパス ---
     const savedSessionPaths = await this.store.get<string[]>('sessionFilePaths');
+    this.isLoading = false;
     return savedSessionPaths ?? [];
   }
 
@@ -435,17 +438,35 @@ class App {
     this.saveSettings(); // 必要ならメイン側のプロパティも更新
   }
   private updateFontSettings() {
-    // CSS変数の更新
+    let targetFontString = '';
+
     if (this.userFontFamily && this.userFontFamily !== 'default') {
-      document.documentElement.style.setProperty('--user-font-family', `"${this.userFontFamily}"`);
+      // ユーザー指定ありの場合
+      // bodyのクラスはすべて削除 (UIフォントをデフォルトに戻す、あるいは指定フォントにする)
+      document.body.classList.remove(...this.fontClassNames);
+
+      // エディタ用フォント文字列 (スペース対策で引用符で囲む)
+      targetFontString = `"${this.userFontFamily}"`;
+
+      // 必要ならUI用変数も更新
+      document.documentElement.style.setProperty('--user-font-family', targetFontString);
+
     } else {
+      // デフォルト (サイクル) の場合
+
+      // 配列から取得
+      targetFontString = this.fontList[this.currentFontIndex];
+
+      // UI用クラスを適用
+      document.body.classList.remove(...this.fontClassNames);
+      document.body.classList.add(this.fontClassNames[this.currentFontIndex]);
+
       document.documentElement.style.removeProperty('--user-font-family');
     }
 
-    // CodeMirrorの更新 (ヘルパーを使う)
-    this.editorView.dispatch({
-      effects: this.fontFamilyCompartment.reconfigure(this.getCurrentFontTheme())
-    });
+    // CodeMirrorを再構築するのではなく、CSS変数の値を書き換えるだけ
+    // これで即座に反映される
+    document.documentElement.style.setProperty('--dynamic-editor-font', targetFontString);
   }
 
   private updateEditorAlign(align: string) {
@@ -465,7 +486,7 @@ class App {
         style.setProperty('--editor-margin-right', 'auto');
         break;
     }
-    this.saveSettings(); // ★ここでも保存
+    this.editorAlign = align;
   }
 
   private updateUiTextColor(color: string, useShadow: boolean) {
@@ -524,8 +545,7 @@ class App {
   private getCurrentFontTheme() {
     // ユーザー指定があればそれを使う
     if (this.userFontFamily && this.userFontFamily !== 'default') {
-      // 引用符で囲む処理もここで行う
-      return this.createFontTheme(`"${this.userFontFamily}"`);
+      return this.createFontTheme(this.userFontFamily);
     }
     // 指定がなければ、現在のサイクルインデックスのフォントを使う
     return this.fontThemes[this.currentFontIndex];
@@ -724,8 +744,12 @@ class App {
         backgroundColor: 'rgba(255, 255, 255, 0.4)',
       },
     }, { dark: true });
-    const serif = "'Yu Mincho', 'Hiragino Mincho ProN', serif", sansSerif = "'Tsukushi A Round Gothic','Hiragino Sans','Meiryo','Yu Gothic',sans-serif", monospace = "'BIZ UDゴシック', 'Osaka-Mono', monospace";
-    this.fontThemes = [this.createFontTheme(serif), this.createFontTheme(sansSerif), this.createFontTheme(monospace)];
+    this.dynamicFontTheme = EditorView.theme({
+      '.cm-content': {
+        // ★ CSS変数を参照させる (!importantで強制)
+        fontFamily: 'var(--dynamic-editor-font) !important'
+      }
+    });
   }
 
   private createFontTheme(fontFamilyValue: string) {
@@ -850,11 +874,13 @@ class App {
     document.querySelector('#btn-settings')?.addEventListener('click', () => this.openSettingsWindow());
 
     window.addEventListener('mouseup', (e) => {
-      if (e.button === 3) { // 戻るボタン
+      if (e.button === 3) {
         e.preventDefault();
+        e.stopPropagation();
         this.cycleTab('prev');
-      } else if (e.button === 4) { // 進むボタン
+      } else if (e.button === 4) {
         e.preventDefault();
+        e.stopPropagation();
         this.cycleTab('next');
       }
     });
@@ -915,14 +941,23 @@ class App {
       await menu.popup();
     });
 
-
+    this.editorContainer?.addEventListener('mousedown', (e) => {
+      if (e.button !== 0) {
+        e.preventDefault();
+        e.stopPropagation();
+      }
+    }, true);
 
     const isMac = navigator.userAgent.includes('Mac');
 
     if (isMac && this.editorContainer) {
       this.editorContainer.addEventListener('mousedown', (e) => {
         // 左クリック以外は無視
-        if (e.button !== 0) return;
+        if (e.button !== 0) {
+          e.preventDefault();
+          e.stopPropagation();
+          return;
+        }
         if (!this.editorView) return;
 
         // 1. スクロールバー判定
@@ -1358,6 +1393,7 @@ class App {
 
   // --- 機能メソッド ---
   private async saveSettings() {
+    if (this.isLoading) return;
     // 1. 個別の設定値をルートに保存
     await this.store.set('isDarkMode', this.isDarkMode);
     await this.store.set('currentFontIndex', this.currentFontIndex);
@@ -1440,10 +1476,9 @@ class App {
   }
 
   private cycleEditorFont() {
-    document.body.classList.remove(this.fontClassNames[this.currentFontIndex]);
-    this.currentFontIndex = (this.currentFontIndex + 1) % this.fontThemes.length;
-    this.editorView.dispatch({ effects: this.fontFamilyCompartment.reconfigure(this.fontThemes[this.currentFontIndex]) });
-    document.body.classList.add(this.fontClassNames[this.currentFontIndex]);
+    this.userFontFamily = 'default';
+    this.currentFontIndex = (this.currentFontIndex + 1) % this.fontList.length;
+    this.updateFontSettings();
     this.saveSettings();
   }
 

@@ -1,13 +1,18 @@
-.font-serif {
+body.font-serif {
   font-family: "Yu Mincho", "Hiragino Mincho ProN", serif;
 }
 
-.font-sans-serif {
+body.font-sans-serif {
   font-family: "Tsukushi A Round Gothic", "Hiragino Sans", "Meiryo", "Yu Gothic", sans-serif;
 }
 
-.font-monospace {
+body.font-monospace {
   font-family: "BIZ UDゴシック", "Osaka-Mono", monospace;
+}
+
+body:not(.font-serif):not(.font-sans-serif):not(.font-monospace) {
+  /* 変数が未定義の場合はシステムUIフォントへフォールバック */
+  font-family: var(--user-font-family, system-ui, sans-serif);
 }
 
 /* 基本的なリセットとフォント設定 */

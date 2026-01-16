@@ -198,8 +198,9 @@ async function setupSettings() {
                 const newHeight = parseFloat(heightInput.value);
                 const newLineBreak = lineBreakSelect.value;
                 const newWordBreak = wordBreakSelect.value;
-                const newUserFont = fontSelect.value;
-
+                const fontSelect = document.querySelector('#font-family-select') as HTMLSelectElement;
+                const newUserFont = fontSelect ? fontSelect.value : 'default';
+                console.log('Applying Font:', newUserFont);
                 const newAlign = alignSelect.value;
 
                 const newIsBgDark = editorBgDark.checked;

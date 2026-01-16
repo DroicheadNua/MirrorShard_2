@@ -1,6 +1,6 @@
 [package]
 name = "mirrorshard2"
-version = "0.2.0"
+version = "0.3.0"
 description = "A minimal markdown editor for creative writing."
 authors = ["DroicheadNua"]
 edition = "2021"
