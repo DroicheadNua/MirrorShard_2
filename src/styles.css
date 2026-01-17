@@ -223,26 +223,24 @@ body.dark-mode .window-controls button {
 }
 
 #editor-container::-webkit-scrollbar {
-  width: 14px;
-  height: 14px;
-  /* 横スクロールバーの高さ */
+  height: 18px;
 }
 
 #editor-container::-webkit-scrollbar-track {
   background-color: transparent !important;
-  /* これで白帯が消える */
   border: none !important;
 }
 
 #editor-container::-webkit-scrollbar-thumb {
-  background-color: rgba(128, 128, 128, 0.4) !important;
-  border-radius: 7px;
+  background-color: rgba(0, 0, 0, 0.15) !important;
+  border-radius: 9px;
   border: 3px solid transparent;
   background-clip: content-box;
+  min-width: 40px;
 }
 
 #editor-container::-webkit-scrollbar-thumb:hover {
-  background-color: rgba(128, 128, 128, 0.7) !important;
+  background-color: rgba(0, 0, 0, 0.25) !important;
 }
 
 #editor-container::-webkit-scrollbar-corner {
