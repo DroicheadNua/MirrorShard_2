@@ -7,7 +7,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 
 
-## [0.3.0] - 2026-1-XX  
+## [0.3.0] - 2026-1-17  
 
 ### Added (新機能)  
 - 半透明ウィンドウの実装、及び画面カスタマイズの強化  
@@ -24,7 +24,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed (修正点)  
 - マウスのサイドボタン（戻る/進む）でタブを切り替える際、意図せずカーソル移動が発生してしまう問題を修正。  
-- タブ切り替え時、カーソルが最終行にあったときに表示がおかしくなる問題を修正  
 
 
 ## [0.2.0] - 2025-12-02  
@@ -50,6 +49,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - 「名前を付けて保存」の挙動を修正  
 - モード切替時にハイライトが追従していなかった不具合を修正  
 - Macでダブルクリック・右クリックメニューからファイルを開けなかった不具合を修正  
+
 
 ## [0.1.0] - 2025-11-22  
 
