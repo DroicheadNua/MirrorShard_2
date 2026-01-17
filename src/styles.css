@@ -222,6 +222,33 @@ body.dark-mode .window-controls button {
   width: 100%;
 }
 
+#editor-container::-webkit-scrollbar {
+  width: 14px;
+  height: 14px;
+  /* 横スクロールバーの高さ */
+}
+
+#editor-container::-webkit-scrollbar-track {
+  background-color: transparent !important;
+  /* これで白帯が消える */
+  border: none !important;
+}
+
+#editor-container::-webkit-scrollbar-thumb {
+  background-color: rgba(128, 128, 128, 0.4) !important;
+  border-radius: 7px;
+  border: 3px solid transparent;
+  background-clip: content-box;
+}
+
+#editor-container::-webkit-scrollbar-thumb:hover {
+  background-color: rgba(128, 128, 128, 0.7) !important;
+}
+
+#editor-container::-webkit-scrollbar-corner {
+  background-color: transparent !important;
+}
+
 /* CodeMirror自体がコンテナいっぱいに広がるように */
 .cm-editor {
   height: 100%;
