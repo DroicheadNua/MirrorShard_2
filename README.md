@@ -1,36 +1,26 @@
-# MirrorShard 2 ver. 0.2.0 Beta  
+# MirrorShard 2 ver. 0.3.0 Beta  
 
 創作支援用テキストエディタ「MirrorShard」のソフトウェアフレームワークをTauriに変更、高速化と軽量化を図ったものです。  
 ベータ版のため機能は限定的ですが、エディタのコア機能の移植は概ね完了していますので、創作用エディタとして、また巨大テキストファイルを扱えるアウトラインプロセッサとして、特に問題なく運用できるかと思います。  
 
-![MirrorShard_2 Key Visual](screenshots/ScreenShot01.png)
+![MirrorShard_2 Key Visual](screenshots/ScreenShot02.png)
 
 ## ダウンロード  
 
 [![Windows](https://img.shields.io/badge/Download-Windows-blue)]  
-(https://github.com/DroicheadNua/MirrorShard_2/releases/download/v0.2.0/MirrorShard.2_0.2.0_x64_ja-JP.msi)  
+(https://github.com/DroicheadNua/MirrorShard_2/releases/download/v0.3.0/MirrorShard.2_0.3.0_x64_ja-JP.msi)  
 [![Mac (Apple Silicon)](https://img.shields.io/badge/Download-Mac_(Apple_Silicon)-green)]  
-(https://github.com/DroicheadNua/MirrorShard_2/releases/download/v0.2.0/MirrorShard.2_0.2.0_aarch64.dmg)  
-[![Linux(x64: deb)](https://img.shields.io/badge/Download-Linux-lightgrey)]  
-(https://github.com/DroicheadNua/MirrorShard_2/releases/download/v0.2.0/MirrorShard.2_0.2.0_amd64.deb)  
-[![Linux(x64: rpm)](https://img.shields.io/badge/Download-Linux-lightgrey)]  
-(https://github.com/DroicheadNua/MirrorShard_2/releases/download/v0.2.0/MirrorShard.2-0.2.0-1.x86_64.rpm)  
-[![Linux(ARM64 / Raspberry Pi, experimental)](https://img.shields.io/badge/Download-Linux-lightgrey)]  
-(https://github.com/DroicheadNua/MirrorShard_2/releases/download/v0.2.0/MirrorShard.2_0.2.0_arm64.deb)  
+(https://github.com/DroicheadNua/MirrorShard_2/releases/download/v0.3.0/MirrorShard.2_0.3.0_aarch64.dmg)  
 
 または、[最新のリリース一覧ページ](https://github.com/DroicheadNua/MirrorShard_2/releases/latest)からダウンロードできます。  
 最下段の「Assets」の項目が折りたたまれている場合は、▶マークを押して展開してください。    
 
 ## 既知の問題 (Known Issues)  
 
-現在、v0.2.0 Betaにおいて以下の問題が確認されています。  
+現在、v0.3.0 Betaにおいて以下の問題が確認されています。  
 
-## Mac版  
+### Mac版  
 ・広範囲を範囲選択したとき、選択範囲の表示が若干不自然になることがあります。  
-
-### Linux版（x64, ARM64）:  
-・Tauri 2.0を採用しているためインライン変換ができず、IMEの表示に不具合があります。  
-・上記と関連して、入力未確定状態の打鍵にはタイプ音が反映されません。   
 
 ## 注意事項  
 　インストールやご使用などにつきまして、何か疑問の点等ございましたら「FAQ.md」を御覧ください。  
@@ -45,11 +35,14 @@ mirrorshard.dev@gmail.com
 ・マークダウン記法によるアウトライン機能を搭載。アウトラインプロセッサとしても運用可能  
 ・安全なファイル保存機能（アトミックセーブ）を採用。停電やPCクラッシュなど、不測の事態にも強い設計  
 　※ただし仕様上、「ファイル作成日＝ファイル更新日」になります。詳しくはFAQを御覧ください。  
+・背景画像を活かせる半透明ウィンドウを実装。お好みで痛エディタも作成可能  
 
 ## 前作（Electron版）からの変更点  
 ・フレームワークの変更により軽量化と高速化に成功。メモリ消費量も減少  
 ・ファイルサイズも大幅削減、前作のほぼ20分の1程度に  
 ・アイコンをSVG画像に変更、よりミニマルなデザインに  
+・禁則処理やワードラップなど、ワープロとしての設定項目を強化  
+・テキストエリアの幅や右寄せ・左寄せの設定が可能になり、半透明ウィンドウがより強力に  
 ・ファイル一覧とアウトラインペインを分離  
 ・軽量化のため添付音源と画像を各1種ずつに  
 ・機能の移植が未完了のため、アイデアプロセッサやAI機能などには未対応。最終的には既存の全機能を移植する予定  
@@ -79,7 +72,7 @@ mirrorshard.dev@gmail.com
 フォント切替	Ctrl + Shift + F（Cmd + Shift + F）　フォントを切り替えます。sans_serif（ゴシック体など）→monospace（等幅フォント）→serif（明朝体など）の順でサイクルしますが、使用されるフォントはお使いのPCに依存します。  
 BGM再生/停止	Ctrl + Shift + P（Cmd + Shift + P）　BGMを再生／停止します。  
 タイプ音　Ctrl + Shift + T（Cmd + Shift + T）　タイプ音の再生／停止を切り替えます。  
-高度な設定　F2　「高度な設定」ウィンドウを開きます（詳細は後述）。  
+高度な設定　F2　「高度な設定」ウィンドウを開きます。  
 
 
 
@@ -143,15 +136,17 @@ by word (チェックボックス): チェックを入れると、単語単位�
 ◯禁則処理……禁則処理の厳密さを設定します。  
 ◯背景画像……任意の背景画像を読み込みます。背景画像はライトモードでのみ有効となります。  
 ◯BGM……任意のBGMを読み込みます。  
+◯折り返し設定……単語（欧文）の途中で折り返すかどうかを設定します。  
+◯フォント……お使いのPCからフォントを読み込みます。  
+◯配置……エディタを画面のどこに配置するかを設定します。  
+◯背景設定……エディタ部分の背景色、及び不透明度やすりガラス効果の強度を設定します。  
+◯UI文字色……UI（アウトライン、ステータスバーなど）の文字色を設定します。  
+◯UI背景……UI部分にもエディタと同じ背景を設定するかどうかを設定します。  
 
-## Linux(x64)版について  
-　ビルド上の不具合によりAppImageの配布を見送り、debとrpm(experimental)での提供となります。  
-　deb版は動作確認済ですが、rpm版は開発環境の都合により実機検証ができておりません。あらかじめご了承ください。  
-
-## Linux (ARM64 / Raspberry Pi) 版(experimental)について  
-　本ソフトウェアのARM64版 (.deb) は、Raspberry Pi 5 上の MX Linux にて動作検証を行っています。  
-　Raspberry Pi OS (Bookworm) 等、Wayland を標準採用している環境では、描画の乱れやマウス入力の座標ズレが発生することが確認されています。  
-　MX Linuxでは概ね正常に動作しますが、IME関連の不具合があります。詳細は「既知の問題」の項目をご覧ください。  
+## Linux版について  
+Linux版はグラフィック環境由来（特にNvidia製グラフィックボード使用時やWayland環境）の不具合が多いため、バイナリの配布は停止しています。  
+ただ、X11ベースの軽量環境（MX Linux, Zorin OS Lite等）においては、Electron版より軽快に動作することを確認しています。  
+詳細な条件やビルド方法については [Linux版について](docs/Linux版について.md)をご覧ください。  
 
 ## 🎵 BGM機能とパフォーマンスについて  
 
@@ -185,8 +180,8 @@ by word (チェックボックス): チェックを入れると、単語単位�
 （https://github.com/hundredrabbits/Left）
 から多くの影響を受けています。特にアウトライン機能はLeftのソースコードを参考にしています。  
 
-　なお、本ソフトウェアのコードの大半はGemini 2.5 pro（およびGemini 3 pro Preview）君が書いてくれました。ありがとうGemini君。  
+　なお、本ソフトウェアのコードの大半はGemini（2.5 proおよび3 pro preview）君が書いてくれました。ありがとうGemini君。  
 
-　Copyright (c) 2025 [DroicheadNua]  
+　Copyright (c) 2025-2026 [DroicheadNua]  
 　mirrorshard.dev@gmail.com  
 　https://github.com/DroicheadNua/MirrorShard_2  
