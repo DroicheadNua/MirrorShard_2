@@ -587,6 +587,11 @@ body.dark-mode .window-controls button {
   transition: opacity 0.2s;
 }
 
+#btn-typesound.enabled,
+#btn-spotlight.enabled {
+  opacity: 1;
+}
+
 body:not(.dark-mode) #editor-container .cm-scroller {
 
   /* 1. 幅制限 (既存) */
@@ -646,6 +651,66 @@ body:not(.dark-mode).ui-bg-enabled #status-bar,
 body:not(.dark-mode).ui-bg-enabled .titlebar {
   background-color: var(--editor-bg-color, transparent);
   opacity: 1;
+}
+
+/* --- ZENモード時のスタイル --- */
+
+/* 1. サイドバーとステータスバーを非表示（レイアウトから消す） */
+/* これによりエディタが画面中央に広がる */
+body.zen-mode #sidebar-pane,
+body.zen-mode #status-bar {
+  display: none !important;
+}
+
+/* 2. タイトルバーの背景を透明にし、境界線を消す */
+body.zen-mode .titlebar {
+  background-color: transparent !important;
+  border-bottom: none !important;
+  backdrop-filter: none !important;
+  /* もしUI背景がある場合 */
+}
+
+/* 3. タイトルバー内の要素を透明にする（消えるがそこにある状態） */
+body.zen-mode .titlebar-buttons button,
+body.zen-mode .window-controls button,
+body.zen-mode .titlebar-buttons #btn-typesound,
+body.zen-mode .titlebar-buttons #btn-spotlight {
+  opacity: 0;
+  pointer-events: none;
+  /* クリックできないようにする */
+  transition: opacity 0.5s ease;
+}
+
+/* 4. 例外：ZENモードボタンだけは表示する */
+body.zen-mode .titlebar-buttons #btn-zen-mode {
+  opacity: 0.3 !important;
+  /* 少し薄くして邪魔にならないように */
+  pointer-events: auto;
+  /* クリック可能にする */
+}
+
+/* ホバー時は濃くする */
+body.zen-mode .titlebar-buttons #btn-zen-mode:hover {
+  opacity: 1 !important;
+}
+
+/* マウスをタイトルバー上部に持っていった時だけ全ボタンを表示する */
+body.zen-mode .titlebar:hover .titlebar-buttons button,
+body.zen-mode .titlebar:hover .window-controls button {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+body.zen-mode .titlebar:hover .titlebar-buttons #btn-typesound.enabled,
+body.zen-mode .titlebar:hover .titlebar-buttons #btn-spotlight.enabled {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+body.zen-mode .titlebar:hover .titlebar-buttons #btn-typesound,
+body.zen-mode .titlebar:hover .titlebar-buttons #btn-spotlight {
+  opacity: 0.4;
+  pointer-events: auto;
 }
 
 /* 各ボタンにSVGアイコンを割り当て */
@@ -747,4 +812,9 @@ body:not(.dark-mode).ui-bg-enabled .titlebar {
 #btn-settings {
   -webkit-mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Ccircle cx='12' cy='12' r='3'%3E%3C/circle%3E%3Cpath d='M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51h.01a1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z'%3E%3C/path%3E%3C/svg%3E");
   mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Ccircle cx='12' cy='12' r='3'%3E%3C/circle%3E%3Cpath d='M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51h.01a1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z'%3E%3C/path%3E%3C/svg%3E");
+}
+
+#btn-zen-mode {
+  -webkit-mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M2 22h20'/%3E%3Cpath d='M12 2a10 10 0 0 1 10 10c0 5.5-4.5 10-10 10S2 17.5 2 12 12 2 12 2z'/%3E%3Cpath d='M12 2v20'/%3E%3Cpath d='M2 12h20'/%3E%3C/svg%3E");
+  mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M2 22s5-4 10-14c0 0-4 9-10 14z'/%3E%3Cpath d='M22 2s-5 4-10 14c0 0 4-9 10-14z'/%3E%3C/svg%3E");
 }

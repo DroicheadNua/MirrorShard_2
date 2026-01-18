@@ -39,6 +39,7 @@ class App {
   private openTabs: OpenTab[] = [];
   private activeTabPath: string | null = null;
   private isDarkMode = false;
+  private isZenMode = false;
   private currentFontIndex = 1;
   private currentFontSize = 15;
   private themeCompartment = new Compartment();
@@ -212,9 +213,17 @@ class App {
     document.body.classList.add(this.fontClassNames[this.currentFontIndex]);
 
     const btnTypesound = document.querySelector('#btn-typesound') as HTMLElement;
-    if (btnTypesound) btnTypesound.style.opacity = this.isTypeSoundEnabled ? '1' : '0.4';
+    if (this.isTypeSoundEnabled) {
+      btnTypesound.classList.add('enabled');
+    } else {
+      btnTypesound.classList.remove('enabled');
+    }
     const btnSpotlight = document.querySelector('#btn-spotlight') as HTMLElement;
-    if (btnSpotlight) btnSpotlight.style.opacity = this.isSpotlightMode ? '1' : '0.4';
+    if (this.isSpotlightMode) {
+      btnSpotlight.classList.add('enabled');
+    } else {
+      btnSpotlight.classList.remove('enabled');
+    }
 
     //  背景画像、BGM、タイプ音の初期化
     await this.updateBackground();
@@ -335,6 +344,9 @@ class App {
     const savedIsDarkMode = await this.store.get<boolean>('isDarkMode');
     this.isDarkMode = savedIsDarkMode ?? this.isDarkMode;
 
+    const savedZen = await this.store.get<boolean>('isZenMode');
+    this.isZenMode = savedZen ?? false;
+
     const savedFontIndex = await this.store.get<number>('currentFontIndex');
     this.currentFontIndex = savedFontIndex ?? this.currentFontIndex;
 
@@ -406,6 +418,7 @@ class App {
 
     // --- 外観の適用 (テーマ、ハイライトなど) ---
     this.applyAppearance();
+    this.updateZenModeUI();
 
     // --- セッションパス ---
     const savedSessionPaths = await this.store.get<string[]>('sessionFilePaths');
@@ -549,6 +562,24 @@ class App {
     }
     // 指定がなければ、現在のサイクルインデックスのフォントを使う
     return this.fontThemes[this.currentFontIndex];
+  }
+
+  private toggleZenMode() {
+    if (this.isZenMode) {
+      this.isZenMode = false;
+    } else {
+      this.isZenMode = true;
+    }
+    this.updateZenModeUI();
+    this.saveSettings();
+  }
+
+  private updateZenModeUI() {
+    if (this.isZenMode) {
+      document.body.classList.add('zen-mode');
+    } else {
+      document.body.classList.remove('zen-mode');
+    }
   }
 
   // スポットライト用のプラグイン定義
@@ -853,6 +884,7 @@ class App {
       this.editorView.focus();
     });
     document.querySelector('#btn-toggle-theme')?.addEventListener('click', () => this.toggleDarkMode());
+    document.querySelector('#btn-zen-mode')?.addEventListener('click', () => this.toggleZenMode());
     document.querySelector('#btn-fullscreen')?.addEventListener('click', async () => {
       this.toggleFullscreen();
     });
@@ -1196,6 +1228,12 @@ class App {
       e.stopPropagation();
       this.openSettingsWindow();
     }
+    // ZENモード (Ctrl + Shift + C)
+    if (isCtrlOrCmd && isShift && key === 'c') {
+      e.preventDefault();
+      e.stopPropagation();
+      this.toggleZenMode();
+    }
   }
 
   private onEditorUpdate(update: ViewUpdate) {
@@ -1396,6 +1434,7 @@ class App {
     if (this.isLoading) return;
     // 1. 個別の設定値をルートに保存
     await this.store.set('isDarkMode', this.isDarkMode);
+    await this.store.set('isZenMode', this.isZenMode);
     await this.store.set('currentFontIndex', this.currentFontIndex);
     await this.store.set('currentFontSize', this.currentFontSize);
     await this.store.set('isTypeSoundEnabled', this.isTypeSoundEnabled);
@@ -1464,10 +1503,18 @@ class App {
 
   // トグル関数
   private toggleSpotlightMode() {
-    this.isSpotlightMode = !this.isSpotlightMode;
+    if (this.isSpotlightMode) {
+      this.isSpotlightMode = false;
+    } else {
+      this.isSpotlightMode = true;
+    }
     // ボタンの見た目を変える処理 (id="btn-spotlight"と仮定)
     const btn = document.querySelector('#btn-spotlight') as HTMLElement;
-    if (btn) btn.style.opacity = this.isSpotlightMode ? '1' : '0.4';
+    if (this.isSpotlightMode) {
+      btn.classList.add('enabled');
+    } else {
+      btn.classList.remove('enabled');
+    }
 
     this.editorView.dispatch({
       effects: this.spotlightCompartment.reconfigure(this.createSpotlightPlugin(this.isSpotlightMode))
@@ -1604,18 +1651,26 @@ class App {
   }
 
   private async toggleTypeSound() {
-    this.isTypeSoundEnabled = !this.isTypeSoundEnabled;
+    if (this.isTypeSoundEnabled) {
+      this.isTypeSoundEnabled = false;
+    } else {
+      this.isTypeSoundEnabled = true;
+    }
 
     // ★ 有効化されたタイミングで、まだロードされていなければロードする
     if (this.isTypeSoundEnabled && !this.typeSoundBuffer) {
       await this.initializeTypeSound();
     }
 
-    // UI反映 & 保存 (変更なし)
+    // UI反映 & 保存
     const btn = document.querySelector('#btn-typesound') as HTMLElement;
-    if (btn) btn.style.opacity = this.isTypeSoundEnabled ? '1' : '0.4';
+    if (this.isTypeSoundEnabled) {
+      btn.classList.add('enabled');
+    } else {
+      btn.classList.remove('enabled');
+    }
 
-    // AudioContextの再開処理 (変更なし)
+    // AudioContextの再開処理
     if (this.isTypeSoundEnabled && this.audioContext?.state === 'suspended') {
       this.audioContext.resume();
     }
