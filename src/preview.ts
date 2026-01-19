@@ -1,0 +1,127 @@
+import { listen, emit } from '@tauri-apps/api/event';
+import { getCurrentWindow } from '@tauri-apps/api/window';
+import updateArticle from './scripts/ruby';
+import { backgroundImage } from './assets/images.ts';
+
+interface PreviewPayload {
+    text: string;
+    isDarkMode: boolean;
+    cursorLine: number;
+    fontFamily: string;
+    fontSize: string;
+    lineHeight: number;
+}
+
+async function initPreview() {
+    const contentDiv = document.getElementById('content');
+    const refreshBtn = document.getElementById('btn-refresh');
+    const closeBtn = document.getElementById('btn-close');
+    const paperArea = document.getElementById('paper-area');
+
+    // --- メインからのデータ受信 ---
+    await listen<PreviewPayload>('preview-update-data', (event) => {
+        const { text, isDarkMode, cursorLine, fontFamily, fontSize, lineHeight } = event.payload;
+
+        // 1. ダークモード反映
+        document.body.classList.toggle('dark-mode', isDarkMode);
+
+        // 2. 背景画像設定
+        if (isDarkMode) {
+            document.documentElement.style.backgroundImage = 'none';
+        } else {
+            document.documentElement.style.backgroundImage = `url(${backgroundImage})`;
+        }
+
+
+        if (contentDiv && paperArea) {
+            // 2. ★★★ コンテンツの生成（Electron版ロジック移植） ★★★
+            // 行ごとに分割し、ID付きのspanで囲む
+            const lines = text.split('\n');
+            const htmlWithLineNumbers = lines.map((line: string, index: number) => {
+                // 空行でも高さを持たせるためにスペースを入れる等の処理
+                const content = line || ' ';
+                // IDは line-1, line-2... となる
+                return `<span id="line-${index + 1}" class="preview-line">${content}</span>`;
+            }).join('<br>');
+
+            contentDiv.innerHTML = htmlWithLineNumbers;
+            contentDiv.style.fontFamily = fontFamily;
+            contentDiv.style.fontSize = fontSize;
+            contentDiv.style.lineHeight = lineHeight.toString();
+
+            // 3. ルビ変換
+            updateArticle(contentDiv);
+
+            // 4. カーソル位置へのスクロール
+            // レンダリング待ちのため少し遅延させる
+            setTimeout(() => {
+                const targetElement = document.getElementById(`line-${cursorLine}`);
+                if (targetElement) {
+                    // scrollIntoViewは縦書き(RTL)でも要素を視界に入れてくれる
+                    // block: 'center' で左右(縦書きの場合の行送り方向)の中央に来る
+                    targetElement.scrollIntoView({
+                        behavior: 'auto',
+                        block: 'center',
+                        inline: 'center'
+                    });
+                } else {
+                    // ターゲットが見つからない場合（巨大ファイル制限など）、先頭へ
+                    // paper-areaのスクロール方向(RTL)に合わせて0または右端へ
+                    paperArea.scrollTo({ left: 0, behavior: 'auto' });
+                }
+            }, 200);
+        }
+    });
+    // --- 設定変更の監視 (リアルタイムダークモード切替) ---
+    await listen('settings-changed', () => {
+        // 引数は使わず、単にリクエストを飛ばすだけ
+        emit('preview-request-update');
+    });
+
+    // --- 更新ボタン ---
+    refreshBtn?.addEventListener('click', async () => {
+        await emit('preview-request-update');
+    });
+
+    // --- 閉じる ---
+    closeBtn?.addEventListener('click', () => getCurrentWindow().close());
+
+    // --- ショートカットキー ---
+    document.addEventListener('keydown', (e) => {
+        const isCtrlOrCmd = e.ctrlKey || e.metaKey;
+        const isShift = e.shiftKey;
+        const key = e.key.toLowerCase();
+
+        if (isCtrlOrCmd && key === 'p' && !isShift) {
+            e.preventDefault();
+            getCurrentWindow().close();
+        }
+        if (isCtrlOrCmd && key === 't' && !isShift) {
+            e.preventDefault();
+            emit('preview-toggle-theme');
+        }
+    });
+
+    // --- マウスホイールでの横スクロール変換 ---
+    if (paperArea) {
+        paperArea.addEventListener('wheel', (e) => {
+            // 縦スクロールの成分が横スクロールより大きい場合のみ処理（トラックパッド等の斜め移動対策）
+            if (Math.abs(e.deltaY) < Math.abs(e.deltaX)) return;
+
+            // 標準の縦スクロールをキャンセル
+            e.preventDefault();
+
+            // 縦スクロール量(deltaY) を 横スクロール(scrollLeft) に変換
+            const scrollSpeed = 1.0;
+            paperArea.scrollLeft -= e.deltaY * scrollSpeed;
+
+        }, { passive: false }); // preventDefaultするために passive: false が必要
+    }
+
+    // 起動時に一度データ要求
+    setTimeout(async () => {
+        await emit('preview-request-update');
+    }, 100);
+}
+
+window.addEventListener('DOMContentLoaded', initPreview);

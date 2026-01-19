@@ -11,7 +11,7 @@ import { HighlightStyle, syntaxHighlighting } from '@codemirror/language';
 import { tags } from '@lezer/highlight';
 import { getCurrentWindow } from '@tauri-apps/api/window';
 import { open, ask, message, save } from '@tauri-apps/plugin-dialog';
-import { listen } from '@tauri-apps/api/event';
+import { listen, emit } from '@tauri-apps/api/event';
 import { Menu, MenuItem, PredefinedMenuItem, Submenu } from '@tauri-apps/api/menu';
 import { convertFileSrc } from '@tauri-apps/api/core';
 import { type } from '@tauri-apps/plugin-os';
@@ -63,6 +63,7 @@ class App {
 
   private recentFiles: string[] = [];
   private editorMaxWidth = '80';
+  private editorPaddingX = 10;
   private editorLineHeight = 1.6;
   private editorLineBreak = 'strict';
   private editorWordBreak = 'break-all';
@@ -239,6 +240,9 @@ class App {
       if (s.editorMaxWidth !== undefined) {
         this.updateEditorWidthVariable(s.editorMaxWidth);
       }
+      if (s.editorPaddingX !== undefined) {
+        this.updateEditorPaddingXVariable(s.editorPaddingX);
+      }
       if (s.editorLineHeight) this.updateEditorLineHeight(s.editorLineHeight);
       if (s.editorLineBreak) this.updateEditorLineBreak(s.editorLineBreak);
       if (s.editorWordBreak) this.updateEditorWordBreak(s.editorWordBreak);
@@ -320,8 +324,17 @@ class App {
       }
     });
 
+    // ★ プレビューからの更新要求に応える
+    await listen('preview-request-update', async () => {
+      await this.sendDataToPreview();
+    });
+
+    await listen('preview-toggle-theme', () => {
+      this.toggleDarkMode();
+    });
+
     if (hasInitialFile && fileToOpen) {
-      // ★ 指定起動ならそのファイルを開く
+      // 指定起動ならそのファイルを開く
       await this.openOrSwitchTab(fileToOpen);
     } else {
       // 通常起動なら復元
@@ -365,7 +378,11 @@ class App {
     this.editorMaxWidth = await this.store.get<string>('editorMaxWidth') ?? '80';
     this.updateEditorWidthVariable(this.editorMaxWidth); // ★ここでCSS設定完了
 
-    // 2. 行の高さ (ヘルパーはないのでここで設定)
+    // 2. エディタ左右余白
+    this.editorPaddingX = await this.store.get<number>('editorPaddingX') ?? 10;
+    this.updateEditorPaddingXVariable(this.editorPaddingX);
+
+    // 3. 行の高さ (ヘルパーはないのでここで設定)
     this.editorLineHeight = await this.store.get<number>('editorLineHeight') ?? 1.6;
     document.documentElement.style.setProperty('--editor-line-height', this.editorLineHeight.toString());
 
@@ -433,6 +450,11 @@ class App {
     document.documentElement.style.setProperty('--editor-max-width', cssValue);
 
     this.editorMaxWidth = num.toString();
+    this.saveSettings();
+  }
+  private updateEditorPaddingXVariable(newPaddingX: number) {
+    document.documentElement.style.setProperty('--editor-padding-x', newPaddingX.toString() + 'px');
+    this.editorPaddingX = newPaddingX;
     this.saveSettings();
   }
   private updateEditorLineHeight(newHeight: number) {
@@ -904,6 +926,9 @@ class App {
     document.querySelector('#btn-typesound')?.addEventListener('click', () => this.toggleTypeSound());
     document.querySelector('#btn-spotlight')?.addEventListener('click', () => this.toggleSpotlightMode());
     document.querySelector('#btn-settings')?.addEventListener('click', () => this.openSettingsWindow());
+    document.querySelector('#btn-preview')?.addEventListener('click', () => {
+      invoke('open_preview_window');
+    });
 
     window.addEventListener('mouseup', (e) => {
       if (e.button === 3) {
@@ -1234,6 +1259,10 @@ class App {
       e.stopPropagation();
       this.toggleZenMode();
     }
+    if (isCtrlOrCmd && key === 'p' && !isShift) {
+      e.preventDefault();
+      invoke('open_preview_window');
+    }
   }
 
   private onEditorUpdate(update: ViewUpdate) {
@@ -1440,6 +1469,7 @@ class App {
     await this.store.set('isTypeSoundEnabled', this.isTypeSoundEnabled);
     await this.store.set('isSpotlightMode', this.isSpotlightMode);
     await this.store.set('editorMaxWidth', this.editorMaxWidth);
+    await this.store.set('editorPaddingX', this.editorPaddingX);
     await this.store.set('editorLineHeight', this.editorLineHeight);
     await this.store.set('editorLineBreak', this.editorLineBreak);
     await this.store.set('editorWordBreak', this.editorWordBreak);
@@ -1499,6 +1529,58 @@ class App {
     document.body.classList.toggle('dark-mode', this.isDarkMode);
     this.updateBackground();
     this.saveSettings();
+    this.sendDataToPreview();
+  }
+
+  private async sendDataToPreview() {
+    // エディタの内容などを取得
+    let text = this.editorView.state.doc.toString();
+    const limit = 50000;
+    let cursorLine = 1;
+
+    // 文字数が多すぎる場合の警告
+    if (text.length > limit) {
+      const confirmed = await ask(
+        `テキストが非常に長いため（${text.length}文字）、プレビューの生成に時間がかかる可能性があります。\n\n先頭の ${limit} 文字だけをプレビューしますか？\n（「キャンセル」を押すと処理を中止します）`,
+        {
+          title: 'プレビューの確認',
+          kind: 'warning',
+          okLabel: '制限して表示',
+          cancelLabel: 'キャンセル'
+        }
+      );
+
+      if (!confirmed) return; // キャンセル
+
+      // テキストを切り詰める
+      text = text.substring(0, limit) + "\n\n(……以降は省略されました)";
+    }
+
+    if (text.length <= limit) {
+      const state = this.editorView.state;
+      cursorLine = state.doc.lineAt(state.selection.main.head).number;
+    }
+
+    // 現在のフォント設定を取得
+    const fontFamilyVal = this.userFontFamily && this.userFontFamily !== 'default'
+      ? `"${this.userFontFamily}"`
+      : (this.currentFontIndex === 0 ? "serif" : this.currentFontIndex === 1 ? "sans-serif" : "monospace");
+    // ※簡易的にCSSの総称フォントファミリーを送るか、
+    // 厳密にやるなら fontList[this.currentFontIndex] の中身を送る
+
+    // 現在のフォントサイズと行間を取得
+    const fontSizeVal = `${this.currentFontSize}pt`;
+    const lineHeightVal = this.editorLineHeight.toString();
+
+    // 送信
+    await emit('preview-update-data', {
+      text,
+      isDarkMode: this.isDarkMode,
+      cursorLine,
+      fontFamily: fontFamilyVal,
+      fontSize: fontSizeVal,
+      lineHeight: lineHeightVal
+    });
   }
 
   // トグル関数

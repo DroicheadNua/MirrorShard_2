@@ -5,7 +5,15 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.4.0] - 2026-1-XX
 
+### Added (新機能)
+- ZENモードを実装。Ctrl+Shift+Cでテキストエリア以外を非表示に  
+- 縦書きプレビューウィンドウを実装。青空文庫形式のルビにも対応  
+
+### Changed (変更点)
+
+### Fixed (修正点)
 
 ## [0.3.0] - 2026-1-17  
 

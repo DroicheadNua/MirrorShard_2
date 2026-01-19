@@ -12,7 +12,8 @@
   "description": "Capability for the main window",
   "windows": [
     "main",
-    "settings"
+    "settings",
+    "preview"
   ],
   "permissions": [
     "core:default",
@@ -47,6 +48,7 @@
     "core:window:allow-is-focused",
     "core:window:allow-create",
     "core:event:allow-emit",
-    "core:event:allow-listen"
+    "core:event:allow-listen",
+    "core:event:default"
   ]
 }

@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html lang="ja">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>縦書きプレビュー</title>
+    <link rel="stylesheet" href="/src/preview.css">
+</head>
+
+<body>
+    <div data-tauri-drag-region class="preview-titlebar">
+        <div class="preview-controls">
+            <button id="btn-refresh" title="更新">↻</button>
+            <button id="btn-close" title="閉じる">×</button>
+        </div>
+    </div>
+
+    <div id="preview-container">
+        <div id="paper-area">
+            <div id="content"></div>
+        </div>
+    </div>
+    <script type="module" src="/src/preview.ts"></script>
+</body>
+
+</html>

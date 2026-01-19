@@ -100,6 +100,45 @@ async fn open_settings_window(app: AppHandle) {
     window.set_focus().unwrap();
 }
 
+#[tauri::command]
+fn open_preview_window(app: AppHandle) {
+    // 既に開いているかチェック
+    if app.get_webview_window("preview").is_some() {
+        app.get_webview_window("preview").unwrap().close().unwrap();
+        return;
+    }
+
+    // 新しいウィンドウをビルド
+    let builder = tauri::WebviewWindowBuilder::new(
+        &app,
+        "preview", // taiconf.jsonで定義したラベルと同じ名前
+        tauri::WebviewUrl::App("preview.html".into()), // taiconf.jsonで定義したURLと同じ
+    )
+    .title("プレビュー")
+    .transparent(true)
+    .inner_size(600.0, 480.0)
+    .resizable(true)
+    .decorations(false)
+    .visible(false);
+    #[cfg(target_os = "macos")]
+    let builder = builder.title_bar_style(tauri::TitleBarStyle::Transparent);
+    #[cfg(any(windows, target_os = "macos"))]
+    let builder = builder.effects(tauri::utils::config::WindowEffectsConfig {
+        effects: vec![],
+        state: None,
+        radius: Some(24.0),
+        color: None,
+    });
+
+    #[cfg(debug_assertions)]
+    let window = builder.devtools(true).build().unwrap();
+    #[cfg(not(debug_assertions))]
+    let window = builder.build().unwrap();
+
+    window.show().unwrap();
+    window.set_focus().unwrap();
+}
+
 // --- フロントエンドからの問い合わせに応えるコマンド ---
 #[tauri::command]
 fn get_second_instance_file(state: State<SecondInstanceFile>) -> Option<String> {
@@ -299,6 +338,7 @@ pub fn run() {
             get_initial_file,
             get_second_instance_file,
             open_settings_window,
+            open_preview_window,
             read_binary_file,
             get_mac_file_event,
             get_system_fonts,

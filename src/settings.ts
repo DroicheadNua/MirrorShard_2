@@ -22,6 +22,7 @@ async function setupSettings() {
 
         // --- 3. UI要素の取得 ---
         const widthInput = document.querySelector('#editor-width-input') as HTMLInputElement;
+        const editorPaddingXInput = document.querySelector('#editor-padding-x') as HTMLInputElement;
         const heightInput = document.querySelector('#line-height-input') as HTMLInputElement;
         const lineBreakSelect = document.querySelector('#line-break-select') as HTMLSelectElement;
 
@@ -57,6 +58,9 @@ async function setupSettings() {
 
         const initWidth = await store.get<string | number>('editorMaxWidth');
         widthInput.value = (initWidth !== null && initWidth !== undefined) ? initWidth.toString() : '80';
+
+        const initEditorPaddingX = await store.get<number>('editorPaddingX');
+        if (editorPaddingXInput) editorPaddingXInput.value = (initEditorPaddingX ?? 10).toString();
 
         const initHeight = await store.get<number>('editorLineHeight');
         if (heightInput) heightInput.value = (initHeight ?? 1.6).toString();
@@ -195,6 +199,8 @@ async function setupSettings() {
                 const rawValue = parseInt(widthInput.value, 10);
                 // NaNかチェックし、NaNでなければその値を、NaNならデフォルトを使う
                 const numValue = isNaN(rawValue) ? 80 : rawValue;
+                const rawPaddingX = parseInt(editorPaddingXInput.value, 10);
+                const newPaddingX = isNaN(rawPaddingX) ? 10 : rawPaddingX;
                 const newHeight = parseFloat(heightInput.value);
                 const newLineBreak = lineBreakSelect.value;
                 const newWordBreak = wordBreakSelect.value;
@@ -224,6 +230,7 @@ async function setupSettings() {
 
                 // Storeに保存
                 await store.set('editorMaxWidth', numValue.toString());
+                await store.set('editorPaddingX', newPaddingX);
                 await store.set('editorLineHeight', newHeight);
                 await store.set('editorLineBreak', newLineBreak);
                 await store.set('editorWordBreak', newWordBreak);
@@ -251,6 +258,7 @@ async function setupSettings() {
                 // メインウィンドウに通知
                 await emit('settings-changed', {
                     editorMaxWidth: numValue,
+                    editorPaddingX: newPaddingX,
                     editorLineHeight: newHeight,
                     editorLineBreak: newLineBreak,
                     userBackgroundImagePath: pendingBgPath,
