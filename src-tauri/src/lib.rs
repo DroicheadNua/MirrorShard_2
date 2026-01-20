@@ -2,6 +2,9 @@
 
 // --- use文 (ファイルの先頭に追加) ---
 use encoding_rs::{SHIFT_JIS, UTF_8};
+use epub_builder::{
+    EpubBuilder, EpubContent, EpubVersion, PageDirection, ReferenceType, ZipLibrary,
+};
 use font_kit::source::SystemSource;
 use std::fs;
 use std::path::{Path, PathBuf};
@@ -26,6 +29,11 @@ struct FileData {
     encoding: String,
     line_ending: String,
 }
+#[derive(serde::Deserialize)]
+struct EpubSection {
+    title: String,
+    content: String,
+}
 // Mutexでラップして、スレッドセーフにする
 struct InitialFile(Mutex<Option<String>>);
 // 2回目に開かれたファイルパスを保持するための状態
@@ -33,6 +41,166 @@ struct SecondInstanceFile(Mutex<Option<String>>);
 // ★ Mac用のファイルパス保持場所
 struct MacFileBuffer(Mutex<Option<String>>);
 // --- Tauriコマンドの定義 ---
+
+#[tauri::command]
+async fn export_epub(
+    path: String,
+    title: String,
+    author: String,
+    cover_path: Option<String>,
+    sections: Vec<EpubSection>,
+    is_vertical: bool,
+) -> Result<(), String> {
+    let css = if is_vertical {
+        // ★ 縦書き用CSS
+        r#"
+        body { font-family: serif; line-height: 1.8; margin: 0; padding: 0; writing-mode: vertical-rl; }
+        p { margin: 0; }
+        /* 縦書きの見出しは上マージン（横書きでいう右） */
+        h1, h2 { margin-right: 1em; margin-left: 0; page-break-before: always; }
+        img { max-width: 100%; height: auto; display: block; margin: 0 auto; }
+        .cover { height: 100%; width: 100%; display: flex; align-items: center; justify-content: center; }
+        .title-page { text-align: center; margin-right: 30%; writing-mode: vertical-rl; }
+        "#
+    } else {
+        // ★ 横書き用CSS
+        r#"
+        body { font-family: serif; line-height: 1.8; margin: 0; padding: 0; }
+        p { margin: 0; }
+        h1, h2, h3 { margin-bottom: 1em; } 
+        img { max-width: 100%; height: auto; display: block; margin: 0 auto; }
+        .cover { height: 100%; width: 100%; display: flex; align-items: center; justify-content: center; }
+        .title-page { text-align: center; margin-top: 30%; }
+        "#
+    };
+
+    let mut builder = EpubBuilder::new(ZipLibrary::new().map_err(|e| e.to_string())?)
+        .map_err(|e| e.to_string())?;
+
+    builder
+        .metadata("author", &author)
+        .map_err(|e| e.to_string())?;
+    builder
+        .metadata("title", &title)
+        .map_err(|e| e.to_string())?;
+    builder.metadata("lang", "ja").map_err(|e| e.to_string())?;
+
+    builder
+        .add_resource("style.css", css.as_bytes(), "text/css")
+        .map_err(|e| e.to_string())?;
+
+    // --- 表紙 (Cover) ---
+    if let Some(cp) = &cover_path {
+        let mime = if cp.to_lowercase().ends_with(".png") {
+            "image/png"
+        } else {
+            "image/jpeg"
+        };
+        let file = fs::File::open(cp).map_err(|e| format!("Failed to open cover image: {}", e))?;
+
+        builder
+            .add_cover_image("images/cover.jpg", file, mime)
+            .map_err(|e| format!("Failed to add cover image: {}", e))?;
+
+        let cover_xhtml = r#"<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+<title>Cover</title>
+<link rel="stylesheet" type="text/css" href="style.css" />
+</head>
+<body>
+  <div class="cover"><img src="images/cover.jpg" alt="Cover" /></div>
+</body>
+</html>"#;
+        builder
+            .add_content(
+                EpubContent::new("cover.xhtml", cover_xhtml.as_bytes())
+                    .title("表紙")
+                    .reftype(ReferenceType::Cover),
+            )
+            .map_err(|e| e.to_string())?;
+    }
+
+    // --- ★ 2. タイトルページ (Title Page) の追加 ---
+    // 表紙の次、本文の前に「書名と著者名」のページを挿入します
+    let title_xhtml = format!(
+        r#"<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+<title>{}</title>
+<link rel="stylesheet" type="text/css" href="style.css" />
+</head>
+<body>
+  <div class="title-page">
+    <h1>{}</h1>
+    <p>{}</p>
+  </div>
+</body>
+</html>"#,
+        title, title, author
+    );
+
+    builder
+        .add_content(
+            EpubContent::new("title_page.xhtml", title_xhtml.as_bytes())
+                .title("扉") // 目次上の表示（必要なら）
+                .reftype(ReferenceType::TitlePage), // TitlePageとしてマーク
+        )
+        .map_err(|e| e.to_string())?;
+
+    // --- 本文 (Content) ---
+    for (index, section) in sections.iter().enumerate() {
+        if section.content.trim().is_empty() {
+            continue;
+        }
+
+        let xhtml = format!(
+            r#"<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="ja" lang="ja">
+<head>
+<title>{}</title>
+<link rel="stylesheet" type="text/css" href="style.css" />
+</head>
+<body>
+{}
+</body>
+</html>"#,
+            section.title, section.content
+        );
+
+        let filename = format!("page_{}.xhtml", index + 1);
+
+        builder
+            .add_content(
+                EpubContent::new(filename, xhtml.as_bytes())
+                    .title(&section.title)
+                    .reftype(ReferenceType::Text),
+            )
+            .map_err(|e| e.to_string())?;
+    }
+    // 1. まずバージョンをV3.0に設定 (これをしないとdirectionが書き込まれない)
+    builder.epub_version(EpubVersion::V30);
+
+    // 2. 縦書きなら方向をRTLに設定
+    if is_vertical {
+        println!("Setting EPUB direction to RTL"); // デバッグログ
+        builder.epub_direction(PageDirection::Rtl);
+    } else {
+        println!("Setting EPUB direction to LTR");
+        builder.epub_direction(PageDirection::Ltr);
+    }
+
+    // ★★★ デバッグ用：Builderの状態を確認 ★★★
+    // EpubBuilderはDebugトレイトを持っているので、中身を表示できるはずです
+    println!("Builder state before generate: {:?}", builder);
+    let mut file = fs::File::create(&path).map_err(|e| e.to_string())?;
+    builder.generate(&mut file).map_err(|e| e.to_string())?;
+
+    Ok(())
+}
 
 #[tauri::command]
 async fn get_system_fonts() -> Result<Vec<String>, String> {
@@ -101,7 +269,46 @@ async fn open_settings_window(app: AppHandle) {
 }
 
 #[tauri::command]
-fn open_preview_window(app: AppHandle) {
+async fn open_export_window(app: AppHandle) {
+    if app.get_webview_window("export").is_some() {
+        app.get_webview_window("export").unwrap().close().unwrap();
+        return;
+    }
+
+    let builder = tauri::WebviewWindowBuilder::new(
+        &app,
+        "export",
+        tauri::WebviewUrl::App("export.html".into()),
+    )
+    .title("エクスポート / 印刷")
+    .inner_size(800.0, 900.0)
+    .resizable(false)
+    .decorations(false)
+    .transparent(true)
+    .visible(false);
+    #[cfg(target_os = "macos")]
+    let builder = builder.title_bar_style(tauri::TitleBarStyle::Transparent);
+    #[cfg(any(windows, target_os = "macos"))]
+    let builder = builder.effects(tauri::utils::config::WindowEffectsConfig {
+        effects: vec![
+            tauri::window::Effect::HudWindow,
+            tauri::window::Effect::Acrylic,
+        ],
+        state: None,
+        radius: Some(24.0),
+        color: None,
+    });
+
+    #[cfg(debug_assertions)]
+    let window = builder.devtools(true).build().unwrap();
+    #[cfg(not(debug_assertions))]
+    let window = builder.build().unwrap();
+
+    window.show().unwrap();
+}
+
+#[tauri::command]
+async fn open_preview_window(app: AppHandle) {
     // 既に開いているかチェック
     if app.get_webview_window("preview").is_some() {
         app.get_webview_window("preview").unwrap().close().unwrap();
@@ -339,9 +546,11 @@ pub fn run() {
             get_second_instance_file,
             open_settings_window,
             open_preview_window,
+            open_export_window,
             read_binary_file,
             get_mac_file_event,
             get_system_fonts,
+            export_epub,
         ])
         .build(tauri::generate_context!())
         .expect("error while building tauri application")

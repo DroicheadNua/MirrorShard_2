@@ -1,0 +1,331 @@
+<!DOCTYPE html>
+<html lang="ja">
+
+<head>
+    <meta charset="UTF-8">
+    <title>エクスポート</title>
+    <link rel="stylesheet" href="/src/export.css">
+</head>
+
+<body>
+    <!-- ★ 全体を囲むラッパーを追加 -->
+    <div id="export-wrapper">
+
+        <!-- タイトルバー -->
+        <div data-tauri-drag-region class="export-titlebar no-print">
+            <div class="export-controls">
+                <!-- 設定コントロールを追加 -->
+                <select id="font-select" title="フォント" style="height: 22px;">
+                    <option value="serif">明朝 (Serif)</option>
+                    <option value="sans-serif">ゴシック (Sans)</option>
+                    <option value="monospace">等幅</option>
+                    <!-- 必要ならシステムフォントもここに追加 -->
+                </select>
+
+                <input type="number" id="font-size" value="16" min="8" max="72" title="フォントサイズ (px)"
+                    style="width: 40px;">
+
+                <label title="行間"><span style="color:white; font-size:0.8em;"></span>
+                    <input type="number" id="line-height" value="1.8" min="1.0" max="3.0" step="0.1"
+                        style="width: 40px;">
+                </label>
+
+                <span style="border-left: 1px solid #666; margin: 0 10px;"></span>
+
+                <button id="btn-print" title="印刷 / PDF保存">🖨️</button>
+                <button id="btn-html" title="HTML保存">HTML</button>
+                <button id="btn-epub" title="EPUB保存">EPUB</button>
+                <button id="btn-close" title="閉じる">×</button>
+            </div>
+        </div>
+
+        <!-- 原稿エリア -->
+        <div id="print-container">
+            <div id="paper-area">
+                <div id="content"></div>
+            </div>
+        </div>
+        <!-- EPUB設定モーダル -->
+        <div id="epub-modal" class="modal-overlay" style="display: none;">
+            <div class="modal-content">
+                <h3>EPUB出力設定</h3>
+
+                <div class="modal-item">
+                    <label>タイトル:</label>
+                    <input type="text" id="epub-title" placeholder="作品名">
+                </div>
+
+                <div class="modal-item">
+                    <label>著者名:</label>
+                    <input type="text" id="epub-author" placeholder="著者名" value="Author">
+                </div>
+
+                <div class="modal-item">
+                    <label>表紙画像 (任意):</label>
+                    <div style="display: flex; gap: 5px;">
+                        <input type="text" id="epub-cover-path" readonly placeholder="未選択">
+                        <button id="btn-select-cover">選択</button>
+                        <button id="btn-clear-cover">×</button>
+                    </div>
+                </div>
+
+                <div class="modal-item">
+                    <label>書字方向:</label>
+                    <label style="font-weight: normal;">
+                        <input type="checkbox" id="epub-vertical" checked> 縦書きにする
+                    </label>
+                </div>
+
+                <div class="modal-buttons">
+                    <button id="btn-cancel-epub">キャンセル</button>
+                    <button id="btn-exec-epub" class="primary">保存...</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- スクリプト (インライン推奨) -->
+    <script type="module">
+        import { listen, emit } from '@tauri-apps/api/event';
+        import { invoke } from '@tauri-apps/api/core';
+        import { getCurrentWindow } from '@tauri-apps/api/window';
+        import { open, save } from '@tauri-apps/plugin-dialog';
+        import updateArticle from '/src/scripts/ruby.ts';
+
+        async function initExport() {
+            const contentDiv = document.getElementById('content');
+            const fontSelect = document.getElementById('font-select');
+            const fontSizeInput = document.getElementById('font-size');
+            const lineHeightInput = document.getElementById('line-height');
+            const epubModal = document.getElementById('epub-modal');
+            const epubTitleInput = document.getElementById('epub-title');
+            const epubAuthorInput = document.getElementById('epub-author');
+            const epubCoverPathInput = document.getElementById('epub-cover-path');
+            const epubVerticalInput = document.getElementById('epub-vertical');
+
+            // データ受信
+            await listen('export-data', (event) => {
+                const { text } = event.payload;
+                if (contentDiv) {
+                    // 1. 基本的な改行変換
+                    contentDiv.innerHTML = text.replace(/\n/g, '<br>');
+                    // 2. ルビ変換を実行
+                    updateArticle(contentDiv);
+                    updateStyles();
+                }
+            });
+
+            // --- スタイル更新関数 ---
+            function updateStyles() {
+                if (!contentDiv) return;
+                const font = fontSelect.value;
+                const size = fontSizeInput.value;
+                const lh = lineHeightInput.value;
+
+                contentDiv.style.fontFamily = font === 'serif' ? '"Yu Mincho", serif' :
+                    font === 'sans-serif' ? '"Hiragino Sans", sans-serif' : 'monospace';
+                contentDiv.style.fontSize = `${size}px`;
+                contentDiv.style.lineHeight = lh;
+            }
+
+            // イベントリスナー
+            fontSelect.addEventListener('change', updateStyles);
+            fontSizeInput.addEventListener('input', updateStyles);
+            lineHeightInput.addEventListener('input', updateStyles);
+
+            // データ要求 (起動直後)
+            setTimeout(() => emit('export-request-data'), 100);
+
+            // --- 印刷 ---
+            document.getElementById('btn-print')?.addEventListener('click', () => {
+                window.print();
+            });
+
+            // --- HTML保存 ---
+            document.getElementById('btn-html')?.addEventListener('click', async () => {
+                const path = await save({ filters: [{ name: 'HTML', extensions: ['html'] }] });
+                if (path && contentDiv) {
+                    // プレビューと同じスタイルを埋め込む
+                    const currentFont = contentDiv.style.fontFamily;
+                    const currentSize = contentDiv.style.fontSize;
+                    const currentLineHeight = contentDiv.style.lineHeight;
+
+                    const style = `
+            <style>
+                body {
+                    background-color: #555;
+                    margin: 0;
+                    padding: 20px;
+                    display: flex;
+                    justify-content: center;
+                }
+                /* 紙面のスタイルを再現 */
+                .paper {
+                    background-color: white;
+                    color: black;
+                    width: 210mm;
+                    min-height: 297mm;
+                    padding: 20mm;
+                    box-sizing: border-box; /* これが重要 */
+                    margin: 0 auto;
+                    box-shadow: 0 0 10px rgba(0,0,0,0.5);
+                    
+                    /* 現在の設定を反映 */
+                    font-family: ${currentFont};
+                    font-size: ${currentSize};
+                    line-height: ${currentLineHeight};
+                    word-wrap: break-word;
+                }
+                /* 印刷時の設定 */
+                @media print {
+                    body { background: none; display: block; padding: 0; }
+                    .paper { width: 100%; margin: 0; box-shadow: none; min-height: auto; }
+                }
+            </style>`;
+
+                    // contentDivの中身を .paper クラスのdivで包む
+                    const fullHtml = `<!DOCTYPE html><html><head><meta charset="UTF-8">${style}</head><body><div class="paper">${contentDiv.innerHTML}</div></body></html>`;
+
+                    await invoke('write_file', { path, content: fullHtml, encoding: 'UTF-8' });
+                    alert('保存しました');
+                }
+            });
+
+            // --- EPUB保存 ---
+            document.getElementById('btn-epub')?.addEventListener('click', async () => {
+                epubTitleInput.value = "";
+                epubModal.style.display = 'flex';
+            });
+
+            // --- 表紙画像選択 ---
+            document.getElementById('btn-select-cover')?.addEventListener('click', async () => {
+                const path = await window.__TAURI__.dialog.open({ // ※インポートに合わせて修正してください
+                    filters: [{ name: 'Image', extensions: ['jpg', 'jpeg', 'png'] }]
+                });
+                if (path) epubCoverPathInput.value = path;
+            });
+
+            document.getElementById('btn-clear-cover')?.addEventListener('click', () => {
+                epubCoverPathInput.value = "";
+            });
+
+            // --- キャンセル ---
+            document.getElementById('btn-cancel-epub')?.addEventListener('click', () => {
+                epubModal.style.display = 'none';
+            });
+
+            // --- 実行 (保存) ---
+            document.getElementById('btn-exec-epub')?.addEventListener('click', async () => {
+                const title = epubTitleInput.value || "Untitled";
+                const author = epubAuthorInput.value || "Author";
+                const coverPath = epubCoverPathInput.value || null;
+                const isVertical = epubVerticalInput.checked;
+
+                epubModal.style.display = 'none'; // 先に閉じる
+
+                // 保存ダイアログ
+                const path = await save({
+                    defaultPath: title + ".epub",
+                    filters: [{ name: 'EPUB Book', extensions: ['epub'] }]
+                });
+
+                if (path && contentDiv) {
+                    const fileName = path.split(/[/\\]/).pop() || 'Untitled';
+                    const title = fileName.replace(/\.[^/.]+$/, "");
+
+                    // 1. HTMLを行ごとに分解 (ルビタグ等は維持される)
+                    // MirrorShardは改行を <br> で表現している前提
+                    const rawHtml = contentDiv.innerHTML;
+                    // <br> または <br/> または <br /> で分割
+                    const lines = rawHtml.split(/<br\s*\/?>/i);
+
+                    const sections = [];
+                    // 初期セクション
+                    let currentSection = { title: title, content: "" };
+                    let isFirstSectionEmpty = true; // 冒頭の空セクション判定用
+
+                    // 2. 行ごとに解析
+                    lines.forEach((line) => {
+                        // トリムして空行チェック（ただしルビタグなどがあるので慎重に）
+                        const cleanLine = line.trim();
+
+                        // ★ Markdown見出しの判定 (# ＋ スペース ＋ 文字列)
+                        // HTMLタグが含まれている可能性があるので、タグを除去して判定するか、
+                        // 単純に先頭一致を見る。ここではシンプルに先頭一致を見る。
+                        // (ルビが見出しに含まれることは稀という前提)
+                        const match = cleanLine.match(/^(#+)\s+(.*)/);
+
+                        if (match) {
+                            // 見出しが見つかった
+
+                            // 前のセクションに中身があれば保存
+                            if (!isFirstSectionEmpty || currentSection.content.trim() !== "") {
+                                sections.push(currentSection);
+                            }
+
+                            const level = match[1].length; // # の数
+                            const headingText = match[2]; // 見出し本文
+
+                            // 新しいセクションを開始
+                            currentSection = {
+                                title: headingText, // これが目次になる
+                                // 本文には <h1>見出し</h1> として追加
+                                content: `<h${level}>${headingText}</h${level}>`
+                            };
+                            isFirstSectionEmpty = false;
+
+                        } else {
+                            // 通常の行
+                            if (cleanLine !== "") {
+                                // 段落 <p> または単純な改行として追加
+                                // EPUB (XHTML) なので <br /> を付与
+                                currentSection.content += `<p>${line}</p>`;
+                            }
+                        }
+                    });
+
+                    // 最後のセクションを保存
+                    if (currentSection.content.trim() !== "") {
+                        sections.push(currentSection);
+                    }
+
+                    // 3. サニタイズ (XHTML化)
+                    const sanitizedSections = sections.map(sec => {
+                        return {
+                            title: sec.title,
+                            content: sec.content
+                                .replace(/&nbsp;/g, '&#160;')
+                                // <p>タグで囲んだので <br> 置換は不要かもしれないが、
+                                // lineの中に残っているタグがあれば閉じる処理が必要
+                                .replace(/<hr>/g, '<hr />')
+                        };
+                    });
+
+                    // Rustへ送信 (sanitizedSections を送る)
+
+                    try {
+                        await invoke('export_epub', {
+                            path,
+                            title,
+                            author,
+                            coverPath,
+                            sections: sanitizedSections,
+                            isVertical
+                        });
+                        alert('EPUBファイルを作成しました');
+                    } catch (e) {
+                        console.error(e);
+                        alert('EPUB作成に失敗しました: ' + e);
+                    }
+                }
+            });
+
+
+            // 閉じる
+            document.getElementById('btn-close')?.addEventListener('click', () => getCurrentWindow().close());
+        }
+        window.addEventListener('DOMContentLoaded', initExport);
+    </script>
+</body>
+
+</html>

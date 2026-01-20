@@ -13,7 +13,8 @@
   "windows": [
     "main",
     "settings",
-    "preview"
+    "preview",
+    "export"
   ],
   "permissions": [
     "core:default",
@@ -49,6 +50,7 @@
     "core:window:allow-create",
     "core:event:allow-emit",
     "core:event:allow-listen",
-    "core:event:default"
+    "core:event:default",
+    "core:webview:allow-print"
   ]
 }

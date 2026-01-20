@@ -324,9 +324,25 @@ class App {
       }
     });
 
-    // ★ プレビューからの更新要求に応える
+    // プレビューからの更新要求に応える
     await listen('preview-request-update', async () => {
       await this.sendDataToPreview();
+    });
+
+    // --- エクスポートウィンドウとの連携 ---
+    await listen('export-request-data', async () => {
+      // 現在のテキストを取得
+      const text = this.editorView.state.doc.toString();
+
+      // 必要ならここでMarkdownをHTMLに変換したり、ルビ変換をかけたりする
+      // とりあえず生テキストと、簡易HTMLを送る
+      // (本格的なMarkdown変換は marked.js などを導入すると楽)
+
+      await emit('export-data', {
+        text: text,
+        // 簡易的なHTML変換例 (改行をbrに)
+        html: `<p>${text.replace(/\n/g, '<br>')}</p>`
+      });
     });
 
     await listen('preview-toggle-theme', () => {
@@ -929,6 +945,9 @@ class App {
     document.querySelector('#btn-preview')?.addEventListener('click', () => {
       invoke('open_preview_window');
     });
+    document.querySelector('#btn-export')?.addEventListener('click', () => {
+      invoke('open_export_window');
+    });
 
     window.addEventListener('mouseup', (e) => {
       if (e.button === 3) {
@@ -1262,6 +1281,10 @@ class App {
     if (isCtrlOrCmd && key === 'p' && !isShift) {
       e.preventDefault();
       invoke('open_preview_window');
+    }
+    if (isCtrlOrCmd && key === 'e' && !isShift) {
+      e.preventDefault();
+      invoke('open_export_window');
     }
   }
 

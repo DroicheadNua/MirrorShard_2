@@ -34,6 +34,7 @@ export default defineConfig(async () => ({
         main: resolve(__dirname, 'index.html'),
         settings: resolve(__dirname, 'settings.html'),
         preview: resolve(__dirname, 'preview.html'),
+        export: resolve(__dirname, 'export.html'),
       }
     }
   },

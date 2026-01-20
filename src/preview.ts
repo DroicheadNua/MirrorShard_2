@@ -2,6 +2,7 @@ import { listen, emit } from '@tauri-apps/api/event';
 import { getCurrentWindow } from '@tauri-apps/api/window';
 import updateArticle from './scripts/ruby';
 import { backgroundImage } from './assets/images.ts';
+import { type } from '@tauri-apps/plugin-os';
 
 interface PreviewPayload {
     text: string;
@@ -16,7 +17,9 @@ async function initPreview() {
     const contentDiv = document.getElementById('content');
     const refreshBtn = document.getElementById('btn-refresh');
     const closeBtn = document.getElementById('btn-close');
+    const printBtn = document.getElementById('btn-print');
     const paperArea = document.getElementById('paper-area');
+    const wrapper = document.getElementById('preview-wrapper');
 
     // --- メインからのデータ受信 ---
     await listen<PreviewPayload>('preview-update-data', (event) => {
@@ -26,10 +29,12 @@ async function initPreview() {
         document.body.classList.toggle('dark-mode', isDarkMode);
 
         // 2. 背景画像設定
-        if (isDarkMode) {
-            document.documentElement.style.backgroundImage = 'none';
-        } else {
-            document.documentElement.style.backgroundImage = `url(${backgroundImage})`;
+        if (wrapper) {
+            if (isDarkMode) {
+                wrapper.style.backgroundImage = 'none';
+            } else {
+                wrapper.style.backgroundImage = `url(${backgroundImage})`;
+            }
         }
 
 
@@ -76,6 +81,16 @@ async function initPreview() {
     await listen('settings-changed', () => {
         // 引数は使わず、単にリクエストを飛ばすだけ
         emit('preview-request-update');
+    });
+
+    const osType = await type();
+    if (osType === 'macos') {
+        document.body.classList.add('is-mac');
+    }
+
+    // --- 印刷ボタン ---
+    printBtn?.addEventListener('click', () => {
+        window.print();
     });
 
     // --- 更新ボタン ---
