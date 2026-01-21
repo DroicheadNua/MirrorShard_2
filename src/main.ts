@@ -326,7 +326,7 @@ class App {
 
     // プレビューからの更新要求に応える
     await listen('preview-request-update', async () => {
-      await this.sendDataToPreview();
+      await this.sendDataToPreview(true);
     });
 
     // --- エクスポートウィンドウとの連携 ---
@@ -943,7 +943,7 @@ class App {
     document.querySelector('#btn-spotlight')?.addEventListener('click', () => this.toggleSpotlightMode());
     document.querySelector('#btn-settings')?.addEventListener('click', () => this.openSettingsWindow());
     document.querySelector('#btn-preview')?.addEventListener('click', () => {
-      invoke('open_preview_window');
+      this.openPreviewWindowWithCheck();
     });
     document.querySelector('#btn-export')?.addEventListener('click', () => {
       invoke('open_export_window');
@@ -1280,7 +1280,7 @@ class App {
     }
     if (isCtrlOrCmd && key === 'p' && !isShift) {
       e.preventDefault();
-      invoke('open_preview_window');
+      this.openPreviewWindowWithCheck();
     }
     if (isCtrlOrCmd && key === 'e' && !isShift) {
       e.preventDefault();
@@ -1552,34 +1552,19 @@ class App {
     document.body.classList.toggle('dark-mode', this.isDarkMode);
     this.updateBackground();
     this.saveSettings();
-    this.sendDataToPreview();
+    emit('preview-update-data', {
+      isDarkMode: this.isDarkMode,
+    });
   }
 
-  private async sendDataToPreview() {
+  private async sendDataToPreview(truncate: boolean = false) {
     // エディタの内容などを取得
     let text = this.editorView.state.doc.toString();
-    const limit = 50000;
     let cursorLine = 1;
-
-    // 文字数が多すぎる場合の警告
-    if (text.length > limit) {
-      const confirmed = await ask(
-        `テキストが非常に長いため（${text.length}文字）、プレビューの生成に時間がかかる可能性があります。\n\n先頭の ${limit} 文字だけをプレビューしますか？\n（「キャンセル」を押すと処理を中止します）`,
-        {
-          title: 'プレビューの確認',
-          kind: 'warning',
-          okLabel: '制限して表示',
-          cancelLabel: 'キャンセル'
-        }
-      );
-
-      if (!confirmed) return; // キャンセル
-
-      // テキストを切り詰める
+    const limit = 50000;
+    if (truncate && text.length > limit) {
       text = text.substring(0, limit) + "\n\n(……以降は省略されました)";
-    }
-
-    if (text.length <= limit) {
+    } else {
       const state = this.editorView.state;
       cursorLine = state.doc.lineAt(state.selection.main.head).number;
     }
@@ -1604,6 +1589,30 @@ class App {
       fontSize: fontSizeVal,
       lineHeight: lineHeightVal
     });
+  }
+
+  private async openPreviewWindowWithCheck() {
+    const textLength = this.editorView.state.doc.length;
+    const limit = 50000;
+    let shouldTruncate = false;
+
+    // 巨大ファイルチェック
+    if (textLength > limit) {
+      const confirmed = await ask(
+        `テキストが非常に長いため（${textLength}文字）、プレビューの生成に時間がかかる可能性があります。\n\n先頭の ${limit} 文字だけをプレビューしますか？\n（「キャンセル」を押すと処理を中止します）`,
+        { title: 'プレビューの確認', kind: 'warning', okLabel: '制限して表示', cancelLabel: 'キャンセル' }
+      );
+
+      if (!confirmed) return; // キャンセルならここで終了（ウィンドウは開かない）
+
+      shouldTruncate = true;
+    }
+
+    // ウィンドウを開く
+    await invoke('open_preview_window');
+
+    // データを送る (ウィンドウの準備待ち時間を少し入れる)
+    setTimeout(() => this.sendDataToPreview(shouldTruncate), 200);
   }
 
   // トグル関数

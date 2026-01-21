@@ -2,9 +2,7 @@
 
 // --- use文 (ファイルの先頭に追加) ---
 use encoding_rs::{SHIFT_JIS, UTF_8};
-use epub_builder::{
-    EpubBuilder, EpubContent, EpubVersion, PageDirection, ReferenceType, ZipLibrary,
-};
+use epub_builder::{EpubBuilder, EpubContent, ReferenceType, ZipLibrary};
 use font_kit::source::SystemSource;
 use std::fs;
 use std::path::{Path, PathBuf};
@@ -49,20 +47,8 @@ async fn export_epub(
     author: String,
     cover_path: Option<String>,
     sections: Vec<EpubSection>,
-    is_vertical: bool,
 ) -> Result<(), String> {
-    let css = if is_vertical {
-        // ★ 縦書き用CSS
-        r#"
-        body { font-family: serif; line-height: 1.8; margin: 0; padding: 0; writing-mode: vertical-rl; }
-        p { margin: 0; }
-        /* 縦書きの見出しは上マージン（横書きでいう右） */
-        h1, h2 { margin-right: 1em; margin-left: 0; page-break-before: always; }
-        img { max-width: 100%; height: auto; display: block; margin: 0 auto; }
-        .cover { height: 100%; width: 100%; display: flex; align-items: center; justify-content: center; }
-        .title-page { text-align: center; margin-right: 30%; writing-mode: vertical-rl; }
-        "#
-    } else {
+    let css = {
         // ★ 横書き用CSS
         r#"
         body { font-family: serif; line-height: 1.8; margin: 0; padding: 0; }
@@ -181,21 +167,7 @@ async fn export_epub(
             )
             .map_err(|e| e.to_string())?;
     }
-    // 1. まずバージョンをV3.0に設定 (これをしないとdirectionが書き込まれない)
-    builder.epub_version(EpubVersion::V30);
 
-    // 2. 縦書きなら方向をRTLに設定
-    if is_vertical {
-        println!("Setting EPUB direction to RTL"); // デバッグログ
-        builder.epub_direction(PageDirection::Rtl);
-    } else {
-        println!("Setting EPUB direction to LTR");
-        builder.epub_direction(PageDirection::Ltr);
-    }
-
-    // ★★★ デバッグ用：Builderの状態を確認 ★★★
-    // EpubBuilderはDebugトレイトを持っているので、中身を表示できるはずです
-    println!("Builder state before generate: {:?}", builder);
     let mut file = fs::File::create(&path).map_err(|e| e.to_string())?;
     builder.generate(&mut file).map_err(|e| e.to_string())?;
 
@@ -315,11 +287,10 @@ async fn open_preview_window(app: AppHandle) {
         return;
     }
 
-    // 新しいウィンドウをビルド
     let builder = tauri::WebviewWindowBuilder::new(
         &app,
-        "preview", // taiconf.jsonで定義したラベルと同じ名前
-        tauri::WebviewUrl::App("preview.html".into()), // taiconf.jsonで定義したURLと同じ
+        "preview",
+        tauri::WebviewUrl::App("preview.html".into()),
     )
     .title("プレビュー")
     .transparent(true)
@@ -338,12 +309,9 @@ async fn open_preview_window(app: AppHandle) {
     });
 
     #[cfg(debug_assertions)]
-    let window = builder.devtools(true).build().unwrap();
+    let _window = builder.devtools(true).build().unwrap();
     #[cfg(not(debug_assertions))]
-    let window = builder.build().unwrap();
-
-    window.show().unwrap();
-    window.set_focus().unwrap();
+    let _window = builder.build().unwrap();
 }
 
 // --- フロントエンドからの問い合わせに応えるコマンド ---

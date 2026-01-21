@@ -32,10 +32,10 @@
 
                 <span style="border-left: 1px solid #666; margin: 0 10px;"></span>
 
-                <button id="btn-print" title="印刷 / PDF保存">🖨️</button>
+                <button id="btn-print" title="印刷 / PDF保存(Ctrl+P)">🖨️</button>
                 <button id="btn-html" title="HTML保存">HTML</button>
                 <button id="btn-epub" title="EPUB保存">EPUB</button>
-                <button id="btn-close" title="閉じる">×</button>
+                <button id="btn-close" title="閉じる(Ctrl+E)">×</button>
             </div>
         </div>
 
@@ -69,13 +69,6 @@
                     </div>
                 </div>
 
-                <div class="modal-item">
-                    <label>書字方向:</label>
-                    <label style="font-weight: normal;">
-                        <input type="checkbox" id="epub-vertical" checked> 縦書きにする
-                    </label>
-                </div>
-
                 <div class="modal-buttons">
                     <button id="btn-cancel-epub">キャンセル</button>
                     <button id="btn-exec-epub" class="primary">保存...</button>
@@ -101,7 +94,6 @@
             const epubTitleInput = document.getElementById('epub-title');
             const epubAuthorInput = document.getElementById('epub-author');
             const epubCoverPathInput = document.getElementById('epub-cover-path');
-            const epubVerticalInput = document.getElementById('epub-vertical');
 
             // データ受信
             await listen('export-data', (event) => {
@@ -219,7 +211,6 @@
                 const title = epubTitleInput.value || "Untitled";
                 const author = epubAuthorInput.value || "Author";
                 const coverPath = epubCoverPathInput.value || null;
-                const isVertical = epubVerticalInput.checked;
 
                 epubModal.style.display = 'none'; // 先に閉じる
 
@@ -310,7 +301,6 @@
                             author,
                             coverPath,
                             sections: sanitizedSections,
-                            isVertical
                         });
                         alert('EPUBファイルを作成しました');
                     } catch (e) {
@@ -323,6 +313,19 @@
 
             // 閉じる
             document.getElementById('btn-close')?.addEventListener('click', () => getCurrentWindow().close());
+
+            // ショートカット
+            document.addEventListener('keydown', (e) => {
+                const isCtrlOrCmd = e.ctrlKey || e.metaKey;
+                if (isCtrlOrCmd && e.key.toLowerCase() === 'p') {
+                    e.preventDefault();
+                    window.print();
+                }
+                if (isCtrlOrCmd && e.key.toLowerCase() === 'e') {
+                    e.preventDefault();
+                    getCurrentWindow().close();
+                }
+            });
         }
         window.addEventListener('DOMContentLoaded', initExport);
     </script>

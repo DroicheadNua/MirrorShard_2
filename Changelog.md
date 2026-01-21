@@ -11,6 +11,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - ZENモードを実装。Ctrl+Shift+Cでテキストエリア以外を非表示に  
 - 縦書きプレビューウィンドウを実装。青空文庫形式のルビにも対応  
 - エクスポート機能を実装。PDF・HTML・EPUBでの出力、及びプリンタでの印刷に対応（※すべて横書きのみ）  
+- テキストエリアの左右の余白を調整可能に  
 
 ### Changed (変更点)  
 

@@ -17,28 +17,29 @@ async function initPreview() {
     const contentDiv = document.getElementById('content');
     const refreshBtn = document.getElementById('btn-refresh');
     const closeBtn = document.getElementById('btn-close');
-    const printBtn = document.getElementById('btn-print');
     const paperArea = document.getElementById('paper-area');
     const wrapper = document.getElementById('preview-wrapper');
 
     // --- メインからのデータ受信 ---
-    await listen<PreviewPayload>('preview-update-data', (event) => {
+    await listen<PreviewPayload>('preview-update-data', async (event) => {
         const { text, isDarkMode, cursorLine, fontFamily, fontSize, lineHeight } = event.payload;
 
         // 1. ダークモード反映
-        document.body.classList.toggle('dark-mode', isDarkMode);
+        if (isDarkMode !== undefined) {
+            document.body.classList.toggle('dark-mode', isDarkMode);
 
-        // 2. 背景画像設定
-        if (wrapper) {
-            if (isDarkMode) {
-                wrapper.style.backgroundImage = 'none';
-            } else {
-                wrapper.style.backgroundImage = `url(${backgroundImage})`;
+            // 2. 背景画像設定
+            if (wrapper) {
+                if (isDarkMode) {
+                    wrapper.style.backgroundImage = 'none';
+                } else {
+                    wrapper.style.backgroundImage = `url(${backgroundImage})`;
+                }
             }
         }
 
 
-        if (contentDiv && paperArea) {
+        if (text !== undefined && contentDiv && paperArea) {
             // 2. ★★★ コンテンツの生成（Electron版ロジック移植） ★★★
             // 行ごとに分割し、ID付きのspanで囲む
             const lines = text.split('\n');
@@ -75,6 +76,11 @@ async function initPreview() {
                     paperArea.scrollTo({ left: 0, behavior: 'auto' });
                 }
             }, 200);
+            // 5. 描画完了後にウィンドウを表示
+            setTimeout(async () => {
+                await getCurrentWindow().show();
+                await getCurrentWindow().setFocus();
+            }, 100);
         }
     });
     // --- 設定変更の監視 (リアルタイムダークモード切替) ---
@@ -87,11 +93,6 @@ async function initPreview() {
     if (osType === 'macos') {
         document.body.classList.add('is-mac');
     }
-
-    // --- 印刷ボタン ---
-    printBtn?.addEventListener('click', () => {
-        window.print();
-    });
 
     // --- 更新ボタン ---
     refreshBtn?.addEventListener('click', async () => {
