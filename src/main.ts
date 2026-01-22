@@ -281,7 +281,10 @@ class App {
 
       if (s.editorAlign !== undefined) { this.updateEditorAlign(s.editorAlign); }
       if (s.editorBgColorRGBA) document.documentElement.style.setProperty('--editor-bg-color', s.editorBgColorRGBA);
-      if (s.editorBlur) document.documentElement.style.setProperty('--editor-blur', s.editorBlur);
+      if (s.editorBlur !== undefined) {
+        this.editorBlur = s.editorBlur;
+        document.documentElement.style.setProperty('--editor-blur', `${s.editorBlur}px`);
+      }
 
       // 文字色 (空文字なら変数を削除＝テーマの色に戻る)
       if (s.editorTextColor !== undefined) {
@@ -1795,7 +1798,18 @@ class App {
   private async toggleFullscreen() {
     const window = getCurrentWindow();
     const isFullscreen = await window.isFullscreen();
-    window.setFullscreen(!isFullscreen);
+    const appcontainer = document.querySelector('#app-container') as HTMLElement;
+    if (isFullscreen) {
+      await window.setFullscreen(false);
+      if (appcontainer) {
+        appcontainer.style.borderRadius = '6px';
+      }
+    } else {
+      await window.setFullscreen(true);
+      if (appcontainer) {
+        appcontainer.style.borderRadius = '0px';
+      }
+    }
   }
   private async setMinimize() {
     const window = getCurrentWindow();
@@ -1814,8 +1828,12 @@ class App {
     }
 
     if (shouldClose) {
+      // 終了前にフルスクリーンを解除する
+      const window = getCurrentWindow();
+      if (await window.isFullscreen()) {
+        await window.setFullscreen(false);
+      }
       await this.saveSettings();
-      // ★ Rustに「強制終了して」と命令する
       await invoke('force_close_app');
     }
   }

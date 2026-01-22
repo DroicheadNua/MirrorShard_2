@@ -16,6 +16,7 @@ interface PreviewPayload {
 async function initPreview() {
     const contentDiv = document.getElementById('content');
     const refreshBtn = document.getElementById('btn-refresh');
+    const fullscreenBtn = document.getElementById('btn-fullscreen');
     const closeBtn = document.getElementById('btn-close');
     const paperArea = document.getElementById('paper-area');
     const wrapper = document.getElementById('preview-wrapper');
@@ -99,22 +100,43 @@ async function initPreview() {
         await emit('preview-request-update');
     });
 
+    // --- フルスクリーンボタン ---
+    fullscreenBtn?.addEventListener('click', async () => {
+        await previewToggleFullscreen();
+    });
+
     // --- 閉じる ---
-    closeBtn?.addEventListener('click', () => getCurrentWindow().close());
+    closeBtn?.addEventListener('click', async () => {
+        previewClose()
+    });
 
     // --- ショートカットキー ---
     document.addEventListener('keydown', (e) => {
         const isCtrlOrCmd = e.ctrlKey || e.metaKey;
         const isShift = e.shiftKey;
         const key = e.key.toLowerCase();
+        const isMac = osType === 'macos';
+        const isCtrl = e.ctrlKey;
+        const isCmd = e.metaKey;
 
         if (isCtrlOrCmd && key === 'p' && !isShift) {
             e.preventDefault();
-            getCurrentWindow().close();
+            previewClose();
         }
         if (isCtrlOrCmd && key === 't' && !isShift) {
             e.preventDefault();
             emit('preview-toggle-theme');
+        }
+        if (isMac && isCtrl && isCmd && key === 'f') {
+            e.preventDefault();
+            previewToggleFullscreen();
+            return;
+        }
+        // --- Windows/Linux用フルスクリーン (F11) ---
+        if (!isMac && e.key === 'F11') {
+            e.preventDefault();
+            previewToggleFullscreen();
+            return;
         }
     });
 
@@ -132,6 +154,32 @@ async function initPreview() {
             paperArea.scrollLeft -= e.deltaY * scrollSpeed;
 
         }, { passive: false }); // preventDefaultするために passive: false が必要
+    }
+
+    // --- フルスクリーン切り替え ---
+    async function previewToggleFullscreen() {
+        const window = getCurrentWindow();
+        const isFullscreen = await window.isFullscreen();
+        if (isFullscreen) {
+            await window.setFullscreen(false);
+            if (wrapper) {
+                wrapper.style.borderRadius = '6px';
+            }
+        } else {
+            await window.setFullscreen(true);
+            if (wrapper) {
+                wrapper.style.borderRadius = '0px';
+            }
+        }
+    }
+
+    // --- 閉じる ---
+    async function previewClose() {
+        const window = getCurrentWindow();
+        if (await window.isFullscreen()) {
+            await window.setFullscreen(false);
+        }
+        window.close();
     }
 
     // 起動時に一度データ要求

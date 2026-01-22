@@ -214,7 +214,7 @@ async fn open_settings_window(app: AppHandle) {
     )
     .title("設定")
     .transparent(true)
-    .inner_size(600.0, 800.0)
+    .inner_size(640.0, 820.0)
     .resizable(false)
     .decorations(false)
     .visible(false);
@@ -493,10 +493,10 @@ pub fn run() {
             Builder::new()
                 .with_state_flags(
                     StateFlags::POSITION | // 位置は保存
-                    StateFlags::SIZE |     // サイズは保存
-                    StateFlags::MAXIMIZED |// 最大化状態は保存
-                    StateFlags::FULLSCREEN, // フルスクリーン状態は保存
-                                            // VISIBLE を除外することで、表示状態は保存・復元されなくなる
+                    StateFlags::SIZE, // サイズは保存
+                                      // StateFlags::MAXIMIZED |// 最大化状態は保存しない
+                                      // StateFlags::FULLSCREEN, // フルスクリーン状態は保存しない
+                                      // VISIBLE を除外することで、表示状態は保存・復元されなくなる
                 )
                 .with_denylist(&["settings"])
                 .build(),

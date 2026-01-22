@@ -7,7 +7,6 @@ body {
     overflow-x: hidden;
     word-wrap: break-word;
     background-color: transparent;
-    border-radius: 6px;
     font-family: "Yu Mincho", "Hiragino Mincho ProN", serif;
 }
 
@@ -149,6 +148,10 @@ body.dark-mode .preview-controls button:hover {
 
 #btn-refresh {
     background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23333' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='23 4 23 10 17 10'%3E%3C/polyline%3E%3Cpath d='M20.49 15a9 9 0 1 1-2.12-9.36L23 10'%3E%3C/path%3E%3C/svg%3E");
+}
+
+#btn-fullscreen {
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3'%3E%3C/path%3E%3C/svg%3E");
 }
 
 #btn-close {

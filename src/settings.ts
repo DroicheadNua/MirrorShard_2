@@ -12,9 +12,11 @@ async function setupSettings() {
     try {
         // --- 1. OSごとの見た目調整 ---
         const wrapper = document.querySelector('#settings-wrapper') as HTMLElement;
+        const body = document.querySelector('body') as HTMLElement;
         const osType = await type();
-        if (osType === 'linux') {
-            wrapper.style.backgroundImage = 'radial-gradient(circle, #22d3ee, #8b5cf6eb)';
+        if (osType !== 'macos') {
+            wrapper.style.backgroundImage = 'radial-gradient(circle, #bdd6daff, grey)';
+            body.style.backgroundColor = 'silver';
         }
 
         // --- 2. Storeのロード ---
@@ -86,7 +88,7 @@ async function setupSettings() {
 
         const blur = await store.get<number>('editorBlur') ?? 0;
         blurRange.value = blur.toString();
-        if (blurVal) blurVal.textContent = `${blur}`;
+        if (blurVal) blurVal.textContent = `${blur}px`;
 
         // ★ UI文字色
         const isUiWhite = await store.get<boolean>('uiTextIsWhite') ?? false;
@@ -267,7 +269,7 @@ async function setupSettings() {
                     userFontFamily: newUserFont,
                     editorAlign: newAlign,
                     editorBgColorRGBA: rgbaString, // 計算済みRGBA
-                    editorBlur: `${newBlur}px`,
+                    editorBlur: newBlur,
                     editorTextColor: newEditorTextColor, // 自動決定した文字色
                     uiTextColor: newUiTextColor,
                     useUiTextShadow: newUseUiShadow,

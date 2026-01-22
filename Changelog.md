@@ -16,6 +16,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Changed (変更点)  
 
 ### Fixed (修正点)  
+- フルスクリーン状態で終了したときの不具合を修正  
+- 起動時にすりガラス効果が適用されていなかった不具合を修正  
+- Windows版の設定ウィンドウの外観を改善  
 
 ## [0.3.0] - 2026-1-17  
 

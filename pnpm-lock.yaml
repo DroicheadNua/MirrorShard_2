@@ -63,12 +63,15 @@ importers:
       '@tauri-apps/cli':
         specifier: ^2
         version: 2.9.4
+      '@types/node':
+        specifier: ^25.0.10
+        version: 25.0.10
       typescript:
         specifier: ~5.9.3
         version: 5.9.3
       vite:
         specifier: ^7.2.2
-        version: 7.2.2
+        version: 7.2.2(@types/node@25.0.10)
 
 packages:
 
@@ -496,6 +499,9 @@ packages:
   '@types/estree@1.0.8':
     resolution: {integrity: sha512-dWHzHa2WqEXI/O1E9OjrocMTKJl2mSrEolh1Iomrv6U+JuNwaHXsXx9bLu5gG7BUWFIN0skIQJQ/L1rIex4X6w==}
 
+  '@types/node@25.0.10':
+    resolution: {integrity: sha512-zWW5KPngR/yvakJgGOmZ5vTBemDoSqF3AcV/LrO5u5wTWyEAVVh+IT39G4gtyAkh3CtTZs8aX/yRM82OfzHJRg==}
+
   crelt@1.0.6:
     resolution: {integrity: sha512-VQ2MBenTq1fWZUH9DJNGti7kKv6EeAuYr3cLwxUWhIu1baTaXh4Ib5W2CqHVqib4/MqbYGJqiL3Zb8GJZr3l4g==}
 
@@ -554,6 +560,9 @@ packages:
     resolution: {integrity: sha512-jl1vZzPDinLr9eUt3J/t7V6FgNEw9QjvBPdysz9KfQDD41fQrC2Y4vKQdiaUpFT4bXlb1RHhLpp8wtm6M5TgSw==}
     engines: {node: '>=14.17'}
     hasBin: true
+
+  undici-types@7.16.0:
+    resolution: {integrity: sha512-Zz+aZWSj8LE6zoxD+xrjh4VfkIG8Ya6LvYkZqtUQGJPZjYl53ypCaUwWqo7eI0x66KBGeRo+mlBEkMSeSZ38Nw==}
 
   vite@7.2.2:
     resolution: {integrity: sha512-BxAKBWmIbrDgrokdGZH1IgkIk/5mMHDreLDmCJ0qpyJaAteP8NvMhkwr/ZCQNqNH97bw/dANTE9PDzqwJghfMQ==}
@@ -948,6 +957,10 @@ snapshots:
 
   '@types/estree@1.0.8': {}
 
+  '@types/node@25.0.10':
+    dependencies:
+      undici-types: 7.16.0
+
   crelt@1.0.6: {}
 
   esbuild@0.25.12:
@@ -1037,7 +1050,9 @@ snapshots:
 
   typescript@5.9.3: {}
 
-  vite@7.2.2:
+  undici-types@7.16.0: {}
+
+  vite@7.2.2(@types/node@25.0.10):
     dependencies:
       esbuild: 0.25.12
       fdir: 6.5.0(picomatch@4.0.3)
@@ -1046,6 +1061,7 @@ snapshots:
       rollup: 4.53.2
       tinyglobby: 0.2.15
     optionalDependencies:
+      '@types/node': 25.0.10
       fsevents: 2.3.3
 
   w3c-keyname@2.2.8: {}

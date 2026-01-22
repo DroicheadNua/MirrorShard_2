@@ -65,7 +65,7 @@ body {
   height: 100vh;
   width: 100vw;
   background-color: var(--bg-color);
-  border-radius: 8px;
+  border-radius: 6px;
   overflow: hidden;
   background-image: var(--app-bg-image, none);
   /*背景画像はCSS変数を参照。
