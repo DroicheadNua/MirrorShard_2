@@ -52,9 +52,6 @@ async function initPreview() {
             }).join('<br>');
 
             contentDiv.innerHTML = htmlWithLineNumbers;
-            contentDiv.style.fontFamily = fontFamily;
-            contentDiv.style.fontSize = fontSize;
-            contentDiv.style.lineHeight = lineHeight.toString();
 
             // 3. ルビ変換
             updateArticle(contentDiv);
@@ -82,6 +79,18 @@ async function initPreview() {
                 await getCurrentWindow().show();
                 await getCurrentWindow().setFocus();
             }, 100);
+        }
+
+        if (contentDiv) {
+            if (fontSize) {
+                contentDiv.style.fontSize = fontSize;
+            }
+            if (lineHeight) {
+                contentDiv.style.lineHeight = lineHeight.toString();
+            }
+            if (fontFamily) {
+                contentDiv.style.fontFamily = fontFamily;
+            }
         }
     });
     // --- 設定変更の監視 (リアルタイムダークモード切替) ---
@@ -137,6 +146,18 @@ async function initPreview() {
             e.preventDefault();
             previewToggleFullscreen();
             return;
+        }
+        if (isCtrlOrCmd && (e.code === 'Equal' || e.code === 'NumpadAdd')) {
+            e.preventDefault();
+            emit('preview-font-size', 'up');
+        }
+        if (isCtrlOrCmd && (e.code === 'Minus' || e.code === 'NumpadSubtract')) {
+            e.preventDefault();
+            emit('preview-font-size', 'down');
+        }
+        if (isCtrlOrCmd && (e.code === 'Digit0' || e.code === 'Numpad0')) {
+            e.preventDefault();
+            emit('preview-font-size', 'reset');
         }
     });
 

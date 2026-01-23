@@ -352,6 +352,16 @@ class App {
       this.toggleDarkMode();
     });
 
+    await listen('preview-font-size', (event: any) => {
+      if (event.payload === 'up') {
+        this.changeFontSize(this.currentFontSize + 1);
+      } else if (event.payload === 'down') {
+        this.changeFontSize(this.currentFontSize - 1);
+      } else if (event.payload === 'reset') {
+        this.changeFontSize(15);
+      }
+    });
+
     if (hasInitialFile && fileToOpen) {
       // 指定起動ならそのファイルを開く
       await this.openOrSwitchTab(fileToOpen);
@@ -1651,6 +1661,9 @@ class App {
     this.currentFontSize = newSize;
     this.editorView.dispatch({ effects: this.fontSizeCompartment.reconfigure(this.createFontSizeTheme(this.currentFontSize)) });
     this.saveSettings();
+    emit('preview-update-data', {
+      fontSize: `${newSize}pt`,
+    });
   }
 
   private async toggleBGM() {
