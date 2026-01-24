@@ -183,12 +183,12 @@ async function initPreview() {
         const isFullscreen = await window.isFullscreen();
         if (isFullscreen) {
             await window.setFullscreen(false);
-            if (wrapper) {
+            if (osType !== 'macos' && wrapper) {
                 wrapper.style.borderRadius = '6px';
             }
         } else {
             await window.setFullscreen(true);
-            if (wrapper) {
+            if (osType !== 'macos' && wrapper) {
                 wrapper.style.borderRadius = '0px';
             }
         }

@@ -472,6 +472,22 @@ class App {
     return savedSessionPaths ?? [];
   }
 
+  // カーソル行数を取得するヘルパー
+  private getCursorLineSafe(): number {
+    try {
+      const state = this.editorView.state;
+      // ドキュメントが空、または選択範囲がない場合は 1 を返す
+      if (!state.doc || state.doc.length === 0 || !state.selection) {
+        return 1;
+      }
+      const head = state.selection.main.head;
+      return state.doc.lineAt(head).number;
+    } catch (e) {
+      console.warn("Cursor position calc failed, defaulting to 1", e);
+      return 1; // エラー時は強制的に1行目とする
+    }
+  }
+
   // CSS変数を更新するヘルパー
   private updateEditorWidthVariable(rawValue: string | number) {
     const num = typeof rawValue === 'string' ? parseInt(rawValue, 10) : rawValue;
@@ -1578,8 +1594,7 @@ class App {
     if (truncate && text.length > limit) {
       text = text.substring(0, limit) + "\n\n(……以降は省略されました)";
     } else {
-      const state = this.editorView.state;
-      cursorLine = state.doc.lineAt(state.selection.main.head).number;
+      cursorLine = this.getCursorLineSafe();
     }
 
     // 現在のフォント設定を取得
@@ -1812,18 +1827,20 @@ class App {
     const window = getCurrentWindow();
     const isFullscreen = await window.isFullscreen();
     const appcontainer = document.querySelector('#app-container') as HTMLElement;
+    const osType = await type();
     if (isFullscreen) {
       await window.setFullscreen(false);
-      if (appcontainer) {
+      if (osType !== 'macos' && appcontainer) {
         appcontainer.style.borderRadius = '6px';
       }
     } else {
       await window.setFullscreen(true);
-      if (appcontainer) {
+      if (osType !== 'macos' && appcontainer) {
         appcontainer.style.borderRadius = '0px';
       }
     }
   }
+
   private async setMinimize() {
     const window = getCurrentWindow();
     window.minimize();

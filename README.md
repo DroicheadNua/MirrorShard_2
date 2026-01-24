@@ -1,4 +1,4 @@
-# MirrorShard 2 ver. 0.3.0 Beta  
+# MirrorShard 2 ver. 0.4.0 Beta  
 
 創作支援用テキストエディタ「MirrorShard」のソフトウェアフレームワークをTauriに変更、高速化と軽量化を図ったものです。  
 ベータ版のため機能は限定的ですが、エディタのコア機能の移植は概ね完了していますので、創作用エディタとして、また巨大テキストファイルを扱えるアウトラインプロセッサとして、特に問題なく運用できるかと思います。  
@@ -8,16 +8,16 @@
 ## ダウンロード  
 
 [![Windows](https://img.shields.io/badge/Download-Windows-blue)]  
-(https://github.com/DroicheadNua/MirrorShard_2/releases/download/v0.3.0/MirrorShard.2_0.3.0_x64_ja-JP.msi)  
+(https://github.com/DroicheadNua/MirrorShard_2/releases/download/v0.4.0/MirrorShard.2_0.4.0_x64_ja-JP.msi)  
 [![Mac (Apple Silicon)](https://img.shields.io/badge/Download-Mac_(Apple_Silicon)-green)]  
-(https://github.com/DroicheadNua/MirrorShard_2/releases/download/v0.3.0/MirrorShard.2_0.3.0_aarch64.dmg)  
+(https://github.com/DroicheadNua/MirrorShard_2/releases/download/v0.4.0/MirrorShard.2_0.4.0_aarch64.dmg)  
 
 または、[最新のリリース一覧ページ](https://github.com/DroicheadNua/MirrorShard_2/releases/latest)からダウンロードできます。  
 最下段の「Assets」の項目が折りたたまれている場合は、▶マークを押して展開してください。    
 
 ## 既知の問題 (Known Issues)  
 
-現在、v0.3.0 Betaにおいて以下の問題が確認されています。  
+現在、v0.4.0 Betaにおいて以下の問題が確認されています。  
 
 ### Mac版  
 ・広範囲を範囲選択したとき、選択範囲の表示が若干不自然になることがあります。  
@@ -36,6 +36,9 @@ mirrorshard.dev@gmail.com
 ・安全なファイル保存機能（アトミックセーブ）を採用。停電やPCクラッシュなど、不測の事態にも強い設計  
 　※ただし仕様上、「ファイル作成日＝ファイル更新日」になります。詳しくはFAQを御覧ください。  
 ・背景画像を活かせる半透明ウィンドウを実装。お好みで痛エディタも作成可能  
+・UIを非表示にし、没入感を高める「ZEN」モードを搭載。  
+・縦書きプレビューウィンドウを実装。青空文庫形式のルビにも対応。  
+・PDF・HTML・EPUBでの出力、及びプリンタでの印刷に対応（※すべて横書きのみ）。  
 
 ## 前作（Electron版）からの変更点  
 ・フレームワークの変更により軽量化と高速化に成功。メモリ消費量も減少  
@@ -45,6 +48,9 @@ mirrorshard.dev@gmail.com
 ・テキストエリアの幅や右寄せ・左寄せの設定が可能になり、半透明ウィンドウがより強力に  
 ・ファイル一覧とアウトラインペインを分離  
 ・軽量化のため添付音源と画像を各1種ずつに  
+・縦書きウィンドウのリアルタイムプレビューを廃止（代わりに更新ボタンを設置）  
+・エクスポート機能はPandocが不要に。ただし縦書きでの出力は不可に  
+・プリンタでの印刷が可能に  
 ・機能の移植が未完了のため、アイデアプロセッサやAI機能などには未対応。最終的には既存の全機能を移植する予定  
 
 ## ショートカット一覧  
@@ -54,16 +60,19 @@ mirrorshard.dev@gmail.com
 新規ファイル	Ctrl + N（Cmd + N）　新しいタブを作成します。  
 ファイルを開く	Ctrl + O（Cmd + O）　ファイル選択ダイアログを開きます。  
 ファイルを保存	Ctrl + S（Cmd + S）　上書き保存します。  
-アプリを終了	Ctrl + Q（Cmd + Q）　アプリを終了します。  
+アプリを終了	Ctrl + Q（Cmd + Q）	アプリを終了します。  
 
 
 ◯表示  
-ダークモード切替	Ctrl + T（Cmd + T）　通常モードとダークモードを切り替えます。  
-スポットライトモード切替	Ctrl + L（Cmd + L）　編集中の項目以外をぼかして表示します。  
-最小化	Ctrl + H（Cmd + H）　ウィンドウを最小化します。  
-フルスクリーン切替	F11（Cmd + Ctrl + F）　フルスクリーンにします。  
-文書切替　Ctrl+Tab  
-文書切替（逆順）　Ctrl+Shift+Tab　選択している文書を切り替えます。多ボタンマウスをお使いの場合は、戻る/進むボタンで切り替えることもできます。  
+ダークモード切替	Ctrl + T（Cmd + T）	通常モードとダークモードを切り替えます。  
+ZENモード切替	Ctrl + Shift + C（Cmd + Shift + C）	テキストエリア以外を非表示にします。  
+縦書きプレビュー	Ctrl + P（Cmd + P）	縦書きプレビューを表示します。  
+エクスポート	Ctrl + E（Cmd + E）	エクスポートウィンドウを開きます。  
+スポットライトモード切替	Ctrl + L（Cmd + L）	編集中の項目以外をぼかして表示します。  
+最小化	Ctrl + H（Cmd + H）	ウィンドウを最小化します。  
+フルスクリーン切替	F11（Cmd + Ctrl + F）	フルスクリーンにします。  
+文書切替	Ctrl+Tab  
+文書切替（逆順）	Ctrl+Shift+Tab	選択している文書を切り替えます。多ボタンマウスをお使いの場合は、戻る/進むボタンで切り替えることもできます。  
 
 ◯編集・設定  
 フォントサイズ拡大	Ctrl + +（Cmd + +）　フォントサイズを拡大します。メインウィンドウではテンキーの「＋」キーでは反応しないのでご注意ください。  
@@ -133,6 +142,7 @@ by word (チェックボックス): チェックを入れると、単語単位�
 
 ◯エディタの最大幅……エディタ（文字が書ける部分）の最大幅を設定します。  
 ◯行の高さ……行間隔を調整します。  
+◯エディタ左右余白……エディタの左右余白を調整します。  
 ◯禁則処理……禁則処理の厳密さを設定します。  
 ◯背景画像……任意の背景画像を読み込みます。背景画像はライトモードでのみ有効となります。  
 ◯BGM……任意のBGMを読み込みます。  

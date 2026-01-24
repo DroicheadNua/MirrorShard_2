@@ -715,6 +715,23 @@ body.zen-mode .titlebar:hover .titlebar-buttons #btn-spotlight {
   pointer-events: auto;
 }
 
+/* Windows IMEのアンダーライン対策 */
+#editor-container .cm-content {
+  /* 下線の色を文字色に合わせる（または特定の色にする） */
+  text-decoration-color: var(--editor-text-color, #000) !important;
+
+  /* 下線の太さを確保 */
+  text-decoration-thickness: 2px !important;
+}
+
+/* Chromium固有のターゲットテキスト（IME範囲など） */
+#editor-container .cm-content ::target-text {
+  text-decoration: underline 2px solid var(--ui-text-color, blue) !important;
+  background-color: rgba(100, 149, 237, 0.2);
+  /* 薄い青背景をつけて視認性を上げる */
+  color: inherit;
+}
+
 /* 各ボタンにSVGアイコンを割り当て */
 #btn-save {
   -webkit-mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z'%3E%3C/path%3E%3Cpolyline points='17 21 17 13 7 13 7 21'%3E%3C/polyline%3E%3Cpolyline points='7 3 7 8 15 8'%3E%3C/polyline%3E%3C/svg%3E");

@@ -463,6 +463,12 @@ pub fn run() {
                     }
                 }
             }
+            // メインウィンドウのスタイルをMac用に強制設定
+            #[cfg(target_os = "macos")]
+            if let Some(window) = app.get_webview_window("main") {
+                // プレビューウィンドウと同じ設定を適用
+                let _ = window.set_title_bar_style(tauri::TitleBarStyle::Transparent);
+            }
             Ok(())
         })
         .plugin(tauri_plugin_single_instance::init(|app, argv, _cwd| {

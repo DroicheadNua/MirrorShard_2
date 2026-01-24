@@ -5,7 +5,7 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [0.4.0] - 2026-1-XX  
+## [0.4.0] - 2026-1-24  
 
 ### Added (新機能)  
 - ZENモードを実装。Ctrl+Shift+Cでテキストエリア以外を非表示に  
@@ -19,6 +19,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - フルスクリーン状態で終了したときの不具合を修正  
 - 起動時にすりガラス効果が適用されていなかった不具合を修正  
 - Windows版の設定ウィンドウの外観を改善  
+- Windows版でIME変換中のアンダーラインが見えなくなっていた不具合を修正  
 
 ## [0.3.0] - 2026-1-17  
 
