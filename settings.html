@@ -4,6 +4,7 @@
 
 <head>
     <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>設定</title>
     <link rel="stylesheet" href="/src/settings.css">
 </head>
@@ -16,103 +17,158 @@
             </div>
         </div>
         <div data-tauri-drag-region id="settings-container">
-            <div class="settings-header">
-                <h1>設定</h1>
+            <div class="tabs">
+                <button class="tab-btn active" data-tab="tab-general">一般</button>
+                <button class="tab-btn" data-tab="tab-ai">AI設定</button>
+                <hr class="separator" style="color: transparent;">
                 <button id="save-settings-btn">適用</button>
             </div>
-            <div class="setting-item">
-                <label for="editor-width-input">エディタの最大幅 (半角文字数):</label>
-                <!-- ★ type="number" に変更 -->
-                <input type="number" id="editor-width-input" min="20" max="200" step="1">
+            <!-- ===== タブ1: 一般設定 ===== -->
+            <div id="tab-general" class="tab-content active">
 
-                <p class="setting-note">　※0を入力するとウィンドウ幅に追従します。
-                </p>
-                <label for="line-height-input">行の高さ:</label>
-                <input type="number" id="line-height-input" min="1.0" max="3.0" step="0.1">
-            </div>
-            <div class="setting-item">
-                <label for="editor-padding-x">エディタ左右余白:</label>
-                <input type="number" id="editor-padding-x" min="0" max="200" step="1">
-                <span style="margin-left: 5px;">px</span>
-            </div>
-            <div class="setting-item">
-                <label for="line-break-select">禁則処理:</label>
-                <select id="line-break-select">
-                    <option value="normal">標準</option>
-                    <option value="strict">厳格</option>
-                </select>
-            </div>
-            <div class="setting-item">
-                <label>背景画像:</label>
-                <button id="btn-select-bg-image">Select</button>
-                <button id="btn-clear-bg-image">Default</button>
-                <span id="current-bg-image-path"></span>
-            </div>
-            <div class="setting-item">
-                <label>BGM:</label>
-                <button id="btn-select-bgm">Select</button>
-                <button id="btn-clear-bgm">Default</button>
-                <span id="current-bgm-path"></span>
-            </div>
-            <div class="setting-item">
-                <label for="word-break-select">折り返し設定:</label>
-                <select id="word-break-select">
-                    <option value="break-all">文字単位 (日本語向け)</option>
-                    <option value="normal">単語単位 (英語向け)</option>
-                </select>
-            </div>
-            <div class="setting-item">
-                <label for="font-family-select">フォント:</label>
-                <select id="font-family-select"></select>
-            </div>
+                <div class="setting-item">
+                    <label for="editor-width-input">エディタの最大幅 (半角文字数):</label>
+                    <!-- ★ type="number" に変更 -->
+                    <input type="number" id="editor-width-input" min="20" max="200" step="1">
 
-            <hr>
-            <h3>エディタ外観</h3>
+                    <p class="setting-note">　※0を入力するとウィンドウ幅に追従します。
+                    </p>
+                    <label for="line-height-input">行の高さ:</label>
+                    <input type="number" id="line-height-input" min="1.0" max="3.0" step="0.1">
+                </div>
+                <div class="setting-item">
+                    <label for="editor-padding-x">エディタ左右余白:</label>
+                    <input type="number" id="editor-padding-x" min="0" max="200" step="1">
+                    <span style="margin-left: 5px;">px</span>
+                </div>
+                <div class="setting-item">
+                    <label for="line-break-select">禁則処理:</label>
+                    <select id="line-break-select">
+                        <option value="normal">標準</option>
+                        <option value="strict">厳格</option>
+                    </select>
+                </div>
+                <div class="setting-item">
+                    <label>背景画像:</label>
+                    <button id="btn-select-bg-image">Select</button>
+                    <button id="btn-clear-bg-image">Default</button>
+                    <span id="current-bg-image-path"></span>
+                </div>
+                <div class="setting-item">
+                    <label>BGM:</label>
+                    <button id="btn-select-bgm">Select</button>
+                    <button id="btn-clear-bgm">Default</button>
+                    <span id="current-bgm-path"></span>
+                </div>
+                <div class="setting-item">
+                    <label for="word-break-select">折り返し設定:</label>
+                    <select id="word-break-select">
+                        <option value="break-all">文字単位 (日本語向け)</option>
+                        <option value="normal">単語単位 (英語向け)</option>
+                    </select>
+                </div>
+                <div class="setting-item">
+                    <label for="font-family-select">フォント:</label>
+                    <select id="font-family-select"></select>
+                </div>
 
-            <div class="setting-item">
-                <label>配置:</label>
-                <select id="editor-align-select">
-                    <option value="center">中央 (デフォルト)</option>
-                    <option value="left">左寄せ</option>
-                    <option value="right">右寄せ</option>
-                </select>
-            </div>
+                <hr>
+                <h3>エディタ外観</h3>
 
-            <div class="setting-item">
-                <label>背景設定:</label>
-                <div style="display: flex; align-items: center; gap: 10px;">
+                <div class="setting-item">
+                    <label>配置:</label>
+                    <select id="editor-align-select">
+                        <option value="center">中央 (デフォルト)</option>
+                        <option value="left">左寄せ</option>
+                        <option value="right">右寄せ</option>
+                    </select>
+                </div>
+
+                <div class="setting-item">
+                    <label>背景設定:</label>
+                    <div style="display: flex; align-items: center; gap: 10px;">
+                        <label>
+                            <input type="checkbox" id="editor-bg-dark"> 黒背景にする
+                        </label>
+                        <span>不透明度:</span>
+                        <input type="range" id="editor-bg-opacity" min="0" max="100" value="0" style="width: 80px;">
+                        <span id="bg-opacity-val">0%</span>
+                    </div>
+                </div>
+
+                <div class="setting-item">
+                    <label>すりガラス強度 (Blur):</label>
+                    <input type="range" id="editor-blur-range" min="0" max="20" value="0">
+                    <span id="blur-val">0px</span>
+                </div>
+
+                <div class="setting-item">
+                    <label>UI文字色:</label>
                     <label>
-                        <input type="checkbox" id="editor-bg-dark"> 黒背景にする
+                        <input type="checkbox" id="ui-text-white"> 白文字にする
                     </label>
-                    <span>不透明度:</span>
-                    <input type="range" id="editor-bg-opacity" min="0" max="100" value="0" style="width: 80px;">
-                    <span id="bg-opacity-val">0%</span>
+                    <label style="margin-left: 10px;">
+                        <input type="checkbox" id="use-ui-text-shadow"> 影を付ける
+                    </label>
+                </div>
+
+                <div class="setting-item">
+                    <label>UI背景:</label>
+                    <label>
+                        <input type="checkbox" id="use-ui-bg"> サイドバー等にも背景を適用
+                    </label>
                 </div>
             </div>
+            <!-- タブ2: AI設定 -->
+            <div id="tab-ai" class="tab-content">
+                <div class="ai-setting-group">
+                    <h4>Google Gemini</h4>
+                    <label>
+                        API Key:
+                        <input type="password" id="gemini-api-key" placeholder="AIzaSy..."
+                            style="width: 100%; box-sizing: border-box;" />
+                    </label>
+                    <br />
+                    <label>
+                        Model:
+                        <div style="display: flex; gap: 5px;">
+                            <input type="text" id="gemini-model" placeholder="<モデル名を入力>"
+                                style="flex-grow: 1; box-sizing: border-box;" />
+                            <select id="gemini-model-preset" style="width: 25px;"
+                                onchange="document.getElementById('gemini-model').value = this.value;">
+                                <option value="gemini-2.5-flash">Gemini 2.5 Flash</option>
+                                <option value="gemini-2.5-pro">Gemini 2.5 Pro</option>
+                                <option value=>手動入力</option>
+                            </select>
+                        </div>
+                    </label>
+                </div>
 
-            <div class="setting-item">
-                <label>すりガラス強度 (Blur):</label>
-                <input type="range" id="editor-blur-range" min="0" max="20" value="0">
-                <span id="blur-val">0px</span>
+                <div class="ai-setting-group">
+                    <h4>Local LLM (LM Studio / Ollama)</h4>
+                    <label>
+                        Endpoint URL:
+                        <input type="text" id="local-llm-url" placeholder="http://127.0.0.1:1234/v1/chat/completions"
+                            style="width: 100%; box-sizing: border-box;" />
+                    </label>
+                </div>
+
+                <div class="ai-setting-group">
+                    <h4>Behavior</h4>
+                    <label>
+                        Max Output Tokens (最大応答長):
+                        <input type="number" id="ai-max-tokens" placeholder="2000" min="100" max="100000"
+                            style="width: 80px;" />
+                        <span style="font-size: 0.8em; color: #111;">(Gemini/Local共通)</span>
+                    </label>
+                    <br />
+                    <label>
+                        System Prompt (AIへの役割指示):
+                        <textarea id="ai-system-prompt" class="setting-textarea"
+                            placeholder="あなたは優秀な執筆アシスタントです..."></textarea>
+                    </label>
+                </div>
             </div>
-
-            <div class="setting-item">
-                <label>UI文字色:</label>
-                <label>
-                    <input type="checkbox" id="ui-text-white"> 白文字にする
-                </label>
-                <label style="margin-left: 10px;">
-                    <input type="checkbox" id="use-ui-text-shadow"> 影を付ける
-                </label>
-            </div>
-
-            <div class="setting-item">
-                <label>UI背景:</label>
-                <label>
-                    <input type="checkbox" id="use-ui-bg"> サイドバー等にも背景を適用
-                </label>
-            </div>
-
         </div>
     </div>
     <script type="module" src="/src/settings.ts"></script>

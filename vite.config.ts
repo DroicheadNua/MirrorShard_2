@@ -35,6 +35,7 @@ export default defineConfig(async () => ({
         settings: resolve(__dirname, 'settings.html'),
         preview: resolve(__dirname, 'preview.html'),
         export: resolve(__dirname, 'export.html'),
+        ai_chat: resolve(__dirname, 'ai_chat.html'),
       }
     }
   },

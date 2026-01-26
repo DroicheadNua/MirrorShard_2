@@ -10,6 +10,24 @@ import './settings.css';
 
 async function setupSettings() {
     try {
+        // --- 0. タブ切り替えロジック ---
+        const tabs = document.querySelectorAll('.tab-btn');
+        const contents = document.querySelectorAll('.tab-content');
+
+        tabs.forEach(tab => {
+            tab.addEventListener('click', () => {
+                // 全て非アクティブ化
+                tabs.forEach(t => t.classList.remove('active'));
+                contents.forEach(c => c.classList.remove('active'));
+
+                // クリックされたものをアクティブ化
+                tab.classList.add('active');
+                const targetId = tab.getAttribute('data-tab');
+                if (targetId) {
+                    document.getElementById(targetId)?.classList.add('active');
+                }
+            });
+        });
         // --- 1. OSごとの見た目調整 ---
         const wrapper = document.querySelector('#settings-wrapper') as HTMLElement;
         const body = document.querySelector('body') as HTMLElement;
@@ -48,6 +66,13 @@ async function setupSettings() {
         const uiTextWhite = document.querySelector('#ui-text-white') as HTMLInputElement;
         const useUiTextShadow = document.querySelector('#use-ui-text-shadow') as HTMLInputElement;
         const useUiBgCheck = document.querySelector('#use-ui-bg') as HTMLInputElement;
+
+        // --- 3.1. UI要素の取得 (AI新規) ---
+        const geminiApiKeyInput = document.querySelector('#gemini-api-key') as HTMLInputElement;
+        const geminiModelInput = document.querySelector('#gemini-model') as HTMLInputElement;
+        const localLlmUrlInput = document.querySelector('#local-llm-url') as HTMLInputElement;
+        const aiSystemPromptInput = document.querySelector('#ai-system-prompt') as HTMLTextAreaElement;
+        const aiMaxTokensInput = document.querySelector('#ai-max-tokens') as HTMLInputElement;
 
         if (!applyBtn || !closeBtn) {
             console.error("Critical UI elements not found");
@@ -102,6 +127,13 @@ async function setupSettings() {
 
         if (pendingBgPath) bgPathDisplay.textContent = pendingBgPath.split(/[/\\]/).pop() || '';
         if (pendingBgmPath) bgmPathDisplay.textContent = pendingBgmPath.split(/[/\\]/).pop() || '';
+
+        // AI Settings
+        geminiApiKeyInput.value = await store.get<string>('geminiApiKey') || '';
+        geminiModelInput.value = await store.get<string>('geminiModel') || 'gemini-2.5-flash';
+        localLlmUrlInput.value = await store.get<string>('localLlmUrl') || 'http://127.0.0.1:1234/v1/chat/completions';
+        aiSystemPromptInput.value = await store.get<string>('aiSystemPrompt') || '';
+        aiMaxTokensInput.value = (await store.get<number>('aiMaxTokens') || 2000).toString();
 
 
         // --- 5. イベントリスナー (ファイル選択) ---
@@ -230,6 +262,13 @@ async function setupSettings() {
                 // UI文字色: 指定に従う
                 const newUiTextColor = newIsUiWhite ? '#DDDDDD' : '#333333';
 
+                // AI Params
+                const newGeminiApiKey = geminiApiKeyInput.value.trim();
+                const newGeminiModel = geminiModelInput.value.trim();
+                const newLocalUrl = localLlmUrlInput.value.trim();
+                const newSystemPrompt = aiSystemPromptInput.value;
+                const newAiMaxTokens = parseInt(aiMaxTokensInput.value, 10) || 2000;
+
                 // Storeに保存
                 await store.set('editorMaxWidth', numValue.toString());
                 await store.set('editorPaddingX', newPaddingX);
@@ -241,6 +280,17 @@ async function setupSettings() {
                 await store.set('editorIsBgDark', newIsBgDark);
                 await store.set('editorBgOpacity', newBgOpacity);
                 await store.set('editorBlur', newBlur);
+
+                // AI設定の保存
+                if (newGeminiApiKey) await store.set('geminiApiKey', newGeminiApiKey);
+                await store.set('geminiModel', newGeminiModel);
+                await store.set('localLlmUrl', newLocalUrl);
+                await store.set('aiSystemPrompt', newSystemPrompt);
+                const currentApiType = await store.get<string>('selectedApiType');
+                if (!currentApiType) {
+                    await store.set('selectedApiType', 'gemini');
+                }
+                await store.set('aiMaxTokens', newAiMaxTokens);
 
                 // 自動決定した文字色は保存しなくても計算できるが、main.tsに渡すために保存しても良い
                 // ここではフラグだけ保存
@@ -276,6 +326,12 @@ async function setupSettings() {
                     editorIsBgDark: newIsBgDark,
                     editorBgOpacity: newBgOpacity,
                     useUiBg: newUseUiBg,
+                    geminiApiKey: newGeminiApiKey,
+                    geminiModel: newGeminiModel,
+                    localLlmUrl: newLocalUrl,
+                    aiSystemPrompt: newSystemPrompt,
+                    selectedApiType: currentApiType || 'gemini',
+                    aiMaxTokens: newAiMaxTokens,
                 });
 
             } catch (err) {

@@ -42,30 +42,17 @@ body {
     line-height: 1;
 }
 
-/* ヘッダーのレイアウト */
-.settings-header {
-    display: flex;
-    justify-content: left;
-    align-items: center;
-    padding: 0 0px;
-    border-bottom: 1px solid #ccc;
-    gap: 30px;
-    margin-top: 0;
-}
+#save-settings-btn {
 
-.settings-header button {
-    padding-bottom: 1px;
-    margin-bottom: 19px;
     border-color: #000000;
     border-width: 1px;
     border-radius: 4px;
     cursor: pointer;
     opacity: 0.8;
-    font-size: 12px;
     background-color: #eeeeee;
     color: #1e1e1e;
-    width: 48px;
-    height: 28px;
+    padding: 8px 16px;
+    font-size: 18px;
 }
 
 /* スクロールエリアの設定 */
@@ -213,6 +200,94 @@ body::-webkit-scrollbar-thumb {
 
 body::-webkit-scrollbar-thumb:hover {
     background: rgba(0, 0, 0, 0.25);
+}
+
+/* --- タブのスタイル --- */
+.tabs {
+    display: flex;
+    border-bottom: 1px solid #555;
+    margin-bottom: 15px;
+    padding-bottom: 5px;
+    /* スクロールバーとの干渉避け */
+}
+
+.tab-btn {
+    background: transparent;
+    border: none;
+    color: #888;
+    padding: 8px 16px;
+    cursor: pointer;
+    font-size: 14px;
+    border-radius: 6px;
+    border-bottom: 2px solid transparent;
+    transition: all 0.2s;
+}
+
+.tab-btn.active {
+    color: #333;
+    background-color: rgba(0, 0, 0, 0.1);
+}
+
+.tab-btn:hover {
+    color: #555;
+}
+
+
+/* タブの中身の切り替え */
+.tab-content {
+    display: none;
+    animation: fadeIn 0.2s ease-in-out;
+}
+
+.tab-content.active {
+    display: block;
+}
+
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(5px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* AI設定用のレイアウト調整 */
+.ai-setting-group {
+    margin-bottom: 15px;
+    border: 1px solid #444;
+    padding: 10px;
+    border-radius: 4px;
+    background: rgba(0, 0, 0, 0.2);
+}
+
+.ai-setting-group h4 {
+    margin-top: 0;
+    margin-bottom: 10px;
+    font-size: 13px;
+    color: #111;
+    border-bottom: 1px solid #555;
+    padding-bottom: 5px;
+}
+
+textarea.setting-textarea {
+    width: 100%;
+    height: 80px;
+    background: #333;
+    color: #eee;
+    border: 1px solid #555;
+    resize: vertical;
+    font-family: monospace;
+    border-radius: 4px;
+}
+
+textarea.setting-textarea::placeholder {
+    opacity: 0.8;
+    font-style: oblique;
+    font-family: serif;
 }
 
 #settings-btn-close {

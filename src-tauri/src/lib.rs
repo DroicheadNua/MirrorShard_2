@@ -199,6 +199,25 @@ async fn read_binary_file(path: String) -> Result<Vec<u8>, String> {
 }
 
 #[tauri::command]
+fn open_ai_chat(app: AppHandle) {
+    if let Some(window) = app.get_webview_window("ai_chat") {
+        // 既に存在する場合は前面に出す
+        let _ = window.show();
+        let _ = window.set_focus();
+    } else {
+        // 存在しない場合は新規作成
+        let _ = tauri::WebviewWindowBuilder::new(
+            &app,
+            "ai_chat",                                     // label
+            tauri::WebviewUrl::App("ai_chat.html".into()), // URL (vite.config.tsで設定したファイル)
+        )
+        .title("MirrorShard AI")
+        .inner_size(400.0, 600.0)
+        .build();
+    }
+}
+
+#[tauri::command]
 async fn open_settings_window(app: AppHandle) {
     // 既に開いているかチェック
     if app.get_webview_window("settings").is_some() {
@@ -525,6 +544,7 @@ pub fn run() {
             get_mac_file_event,
             get_system_fonts,
             export_epub,
+            open_ai_chat,
         ])
         .build(tauri::generate_context!())
         .expect("error while building tauri application")

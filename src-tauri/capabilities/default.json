@@ -2,19 +2,17 @@
   "$schema": "../gen/schemas/desktop-schema.json",
   "identifier": "fs:scope",
   "allow": [
-    {
-      "path": "$RESOURCE/**"
-    },
-    {
-      "path": "**"
-    }
+    "$HOME/**",
+    "$RESOURCE/**",
+    "**"
   ],
   "description": "Capability for the main window",
   "windows": [
     "main",
     "settings",
     "preview",
-    "export"
+    "export",
+    "ai_chat"
   ],
   "permissions": [
     "core:default",
@@ -51,6 +49,9 @@
     "core:event:allow-emit",
     "core:event:allow-listen",
     "core:event:default",
+    "fs:allow-read-text-file",
+    "fs:allow-write-text-file",
+    "fs:allow-exists",
     "core:webview:allow-print"
   ]
 }

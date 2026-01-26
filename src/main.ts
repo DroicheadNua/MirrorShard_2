@@ -1307,6 +1307,11 @@ class App {
       e.stopPropagation();
       this.toggleZenMode();
     }
+    if (isCtrlOrCmd && isShift && key === 'a') {
+      e.preventDefault();
+      e.stopPropagation();
+      this.openAiChat();
+    }
     if (isCtrlOrCmd && key === 'p' && !isShift) {
       e.preventDefault();
       this.openPreviewWindowWithCheck();
@@ -2041,6 +2046,10 @@ class App {
 
   private async openSettingsWindow() {
     await invoke('open_settings_window');
+  }
+
+  private async openAiChat() {
+    await invoke('open_ai_chat');
   }
 
   /**
