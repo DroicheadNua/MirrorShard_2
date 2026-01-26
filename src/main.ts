@@ -15,6 +15,7 @@ import { listen, emit } from '@tauri-apps/api/event';
 import { Menu, MenuItem, PredefinedMenuItem, Submenu } from '@tauri-apps/api/menu';
 import { convertFileSrc } from '@tauri-apps/api/core';
 import { type } from '@tauri-apps/plugin-os';
+import { readTextFile } from '@tauri-apps/plugin-fs';
 
 // --- 型定義 ---
 interface Heading { level: number; text: string; pos: number; isCollapsed: boolean; }
@@ -332,6 +333,11 @@ class App {
       await this.sendDataToPreview(true);
     });
 
+    // サブウィンドウから設定画面を開く
+    await listen('open-settings', async () => {
+      await this.openSettingsWindow();
+    });
+
     // --- エクスポートウィンドウとの連携 ---
     await listen('export-request-data', async () => {
       // 現在のテキストを取得
@@ -360,6 +366,12 @@ class App {
       } else if (event.payload === 'reset') {
         this.changeFontSize(15);
       }
+    });
+
+    // AIチャットからの送信を受け取る
+    await listen('request-new-tab', (event: any) => {
+      const { title, content } = event.payload;
+      this.createNewTabWithContent(title, content);
     });
 
     if (hasInitialFile && fileToOpen) {
@@ -977,6 +989,9 @@ class App {
     document.querySelector('#btn-export')?.addEventListener('click', () => {
       invoke('open_export_window');
     });
+    document.querySelector('#btn-ai-chat')?.addEventListener('click', () => {
+      this.openAiChat();
+    });
 
     window.addEventListener('mouseup', (e) => {
       if (e.button === 3) {
@@ -1040,6 +1055,10 @@ class App {
           await PredefinedMenuItem.new({ item: 'Paste' }),
           await PredefinedMenuItem.new({ item: 'Separator' }),
           await PredefinedMenuItem.new({ item: 'SelectAll' }),
+          await MenuItem.new({
+            text: 'Geminiログをインポート',
+            action: () => this.importGeminiLog()
+          })
         ]
       });
 
@@ -1969,6 +1988,7 @@ class App {
       await this.openOrSwitchTab(filePath);
     }
   }
+
   private createNewTab() {
     const newFilePath = "Untitled";
     const state = EditorState.create({ extensions: this.createEditorExtensions() });
@@ -1985,6 +2005,80 @@ class App {
 
     this.openTabs.push(tab);
     this.openOrSwitchTab(newFilePath);
+  }
+
+  // コンテンツを指定して新しいタブを開く
+  private createNewTabWithContent(title: string, content: string) {
+    // CodeMirrorのStateを作成（docプロパティで初期テキストを指定）
+    const state = EditorState.create({
+      doc: content, // ★ここがポイント
+      extensions: this.createEditorExtensions()
+    });
+
+    // 重複防止のため、既に同名のタブがあるかチェック（簡易的）
+    // 必要なら title = title + "_" + Date.now() 等しても良いが
+    // AIチャット側ですでにタイムスタンプを入れているのでそのまま使う
+
+    const tab: OpenTab = {
+      path: title, // 保存前なので、これを仮のファイル名/IDとして扱う
+      state,
+      isDirty: true, // 新規作成かつ内容があるので保存が必要
+      encoding: 'UTF-8',
+      lineEnding: 'LF',
+      headings: [], // 初期は空。後でupdateHeadings()が走れば更新されるはず
+    };
+
+    this.openTabs.push(tab);
+    this.openOrSwitchTab(title); // タブを切り替え
+
+    // もし見出し更新用のメソッドがあればここで呼ぶと親切
+    // this.updateHeadings(); 
+  }
+
+  // Geminiログのインポート機能
+  private async importGeminiLog() {
+    try {
+      const selected = await open({
+        title: 'Import Gemini Log'
+      });
+
+      if (!selected || typeof selected !== 'string') return;
+
+      const fileContent = await readTextFile(selected);
+      const history = this.parseGeminiLog(fileContent);
+
+      // テキスト形式に変換
+      const textContent = history.map(m =>
+        `■ ${m.role === 'user' ? 'User' : 'AI'}\n\n${m.content}`
+      ).join('\n\n---\n\n');
+
+      // ファイル名生成 (パスからファイル名を取得 + .txt)
+      // Windows/Mac両対応のため簡易的にセパレータで分割
+      const fileName = selected.split(/[/\\]/).pop() + '.txt';
+
+      this.createNewTabWithContent(fileName, textContent);
+
+    } catch (e: any) {
+      console.error("Gemini Import Error:", e);
+      // エラー表示
+      await message(`Geminiログのインポートに失敗しました。\n${e}`, { kind: 'error' });
+    }
+  }
+
+  // Geminiログパーサー
+  private parseGeminiLog(jsonString: string): { role: string, content: string }[] {
+    const data = JSON.parse(jsonString);
+
+    if (data.chunkedPrompt?.chunks && Array.isArray(data.chunkedPrompt.chunks)) {
+      return data.chunkedPrompt.chunks
+        .filter((chunk: any) => !chunk.isThought && chunk.text)
+        .map((chunk: any) => ({
+          role: chunk.role === 'model' ? 'assistant' : 'user',
+          content: (chunk.text as string).trim()
+        }));
+    } else {
+      throw new Error('Unsupported Gemini log format.');
+    }
   }
 
   private async closeTab(filePathToClose: string) {

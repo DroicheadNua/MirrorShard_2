@@ -9,6 +9,7 @@ import { marked } from "marked";
 import { emit, listen } from "@tauri-apps/api/event";
 import { convertFileSrc } from "@tauri-apps/api/core";
 import { type } from "@tauri-apps/plugin-os";
+import { Menu, MenuItem, PredefinedMenuItem } from "@tauri-apps/api/menu";
 
 // --- 型定義 ---
 interface ChatMessage {
@@ -183,6 +184,39 @@ function setupEventListeners() {
         await processUserMessage(text);
     });
 
+    // --- 右クリックメニュー (Context Menu) ---
+    document.addEventListener('contextmenu', async (e) => {
+        e.preventDefault();
+
+
+        // メニューの構築
+        const menu = await Menu.new({
+            items: [
+                await MenuItem.new({ text: 'New Chat (Clear)', action: clearLog }),
+                await PredefinedMenuItem.new({ item: 'Separator' }),
+                await MenuItem.new({ text: 'Load Log...', action: loadLog }),
+                await MenuItem.new({ text: 'Save Log...', action: saveLogOverwrite }),
+                await PredefinedMenuItem.new({ item: 'Separator' }),
+
+                // メインエディタに送る
+                await MenuItem.new({ text: 'Send to Editor', action: sendToEditor }),
+
+                await PredefinedMenuItem.new({ item: 'Separator' }),
+
+                // コピー/ペースト (OS標準機能を呼び出すか、自前実装)
+                // TauriのPredefinedMenuItemを使うとOS標準の挙動になる
+                await PredefinedMenuItem.new({ item: 'Copy' }),
+                await PredefinedMenuItem.new({ item: 'Paste' }),
+
+                await PredefinedMenuItem.new({ item: 'Separator' }),
+                await MenuItem.new({ text: 'Close Window', action: () => getCurrentWindow().close() })
+            ]
+        });
+
+        // マウス位置にポップアップ
+        await menu.popup();
+    });
+
     // --- ショートカットキー ---
     document.addEventListener('keydown', async (e) => {
         const isCtrlOrCmd = e.ctrlKey || e.metaKey;
@@ -242,6 +276,13 @@ function setupEventListeners() {
         if (isMac && isCtrl && isCmd && key === 'f') {
             e.preventDefault();
             await getCurrentWindow().toggleMaximize();
+            return;
+        }
+
+        // F2 : 設定
+        if (e.key === 'F2') {
+            e.preventDefault();
+            await emit('open-settings');
             return;
         }
     });
@@ -526,7 +567,7 @@ async function saveLogAs() {
 }
 
 async function clearLog() {
-    const yes = await ask('All logs will be cleared. Are you sure?', { title: 'MirrorShard AI', kind: 'warning' });
+    const yes = await ask('現在のチャットログをすべて消去しますか？', { title: 'MirrorShard AI', kind: 'warning' });
     if (!yes) return;
     chatHistory = [];
     chatLog.innerHTML = '';
@@ -541,6 +582,27 @@ async function loadLog() {
     const path = await open({ filters: [{ name: 'JSON', extensions: ['json'] }] });
     if (!path || typeof path !== 'string') return;
     await loadLogFile(path);
+}
+
+// --- ログを整形してメインエディタに送る ---
+async function sendToEditor() {
+    if (chatHistory.length === 0) return;
+
+    // テキスト形式に変換 (Electron版のロジックを踏襲)
+    const textContent = chatHistory.map(m => {
+        // 名前解決
+        const name = m.role === 'user' ? userName : aiName;
+        return `■ ${name}\n\n${m.content}`;
+    }).join('\n\n---\n\n');
+
+    // メインウィンドウに送信
+    // ファイル名は現在時刻などをつけてもいいですが、仮で AI_Log
+    await emit('request-new-tab', {
+        title: `AI_Log_${Date.now()}.txt`,
+        content: textContent
+    });
+
+    showNotification("Sent to Editor!");
 }
 
 // --- グローバル操作関数 ---
