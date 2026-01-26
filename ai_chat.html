@@ -8,40 +8,39 @@
 </head>
 
 <body>
-    <!-- タイトルバー -->
-    <div id="title-bar">
-        <!-- 左側にモデル選択を追加 (ドラッグ除外領域にする) -->
-        <div class="top-left-controls"
-            style="-webkit-app-region: no-drag; position: absolute; top: 4px; left: 4px; z-index: 150;">
-            <select id="api-selector"
-                style="background: rgba(0,0,0,0.3); color: white; border: 1px solid rgba(255,255,255,0.2); border-radius: 4px; font-size: 11px; padding: 2px;">
-                <option value="gemini">Gemini</option>
-                <option value="local">Local LLM</option>
-            </select>
+    <div id="ai-wrapper">
+        <!-- タイトルバー -->
+        <div data-tauri-drag-region id="title-bar">
+            <!-- 左側にモデル選択を追加 (ドラッグ除外領域にする) -->
+            <div class="top-left-controls">
+                <select id="api-selector">
+                    <option value="gemini">Gemini</option>
+                    <option value="local">Local LLM</option>
+                </select>
+            </div>
+
+            <div class="top-right-buttons">
+                <button id="ai-clear-log-btn" title="Clear Log (Ctrl+Shift+C)">C</button>
+                <button id="ai-save-overwrite-btn" title="Save Log (Ctrl+S)">S</button>
+                <button id="ai-save-log-btn" title="Save As">A</button>
+                <button id="ai-load-log-btn" title="Load Log (Ctrl+O)">L</button>
+                <!-- 最大化ボタン等はTauriのAPIで実装が必要だが一旦ボタンだけ配置 -->
+                <button id="ai-fullscreen-btn" title="Toggle Maximize (F11)">⤢</button>
+                <button id="ai-close-btn" title="Close Window (Ctrl+Shift+A)">×</button>
+            </div>
         </div>
 
-        <div class="top-right-buttons">
-            <button id="ai-clear-log-btn" title="Clear Log (Ctrl+Shift+C)">C</button>
-            <button id="ai-save-overwrite-btn" title="Save Log (Ctrl+S)">S</button>
-            <button id="ai-save-log-btn" title="Save As">A</button>
-            <button id="ai-load-log-btn" title="Load Log (Ctrl+O)">L</button>
-            <!-- 最大化ボタン等はTauriのAPIで実装が必要だが一旦ボタンだけ配置 -->
-            <button id="ai-fullscreen-btn" title="Toggle Maximize (F11)">⤢</button>
-            <button id="ai-close-btn" title="Close Window (Ctrl+Shift+A)">×</button>
+        <!-- チャットコンテナ -->
+        <div id="chat-container">
+            <div id="chat-log"></div>
+            <form id="chat-form">
+                <textarea id="message-input" rows="2" spellcheck="false" placeholder="Enter a prompt..."></textarea>
+                <button id="send-btn" type="submit">Run</button>
+            </form>
         </div>
+
+        <div id="notification-container"></div>
     </div>
-
-    <!-- チャットコンテナ -->
-    <div id="chat-container">
-        <div id="chat-log"></div>
-        <form id="chat-form">
-            <textarea id="message-input" rows="2" spellcheck="false" placeholder="Enter a prompt..."></textarea>
-            <button id="send-btn" type="submit">Run</button>
-        </form>
-    </div>
-
-    <div id="notification-container"></div>
-
     <script type="module" src="/src/ai_chat_main.ts"></script>
 </body>
 

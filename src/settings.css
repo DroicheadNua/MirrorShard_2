@@ -257,20 +257,21 @@ body::-webkit-scrollbar-thumb:hover {
 
 /* AI設定用のレイアウト調整 */
 .ai-setting-group {
-    margin-bottom: 15px;
+    margin-bottom: 10px;
     border: 1px solid #444;
     padding: 10px;
+    padding-top: 5px;
     border-radius: 4px;
     background: rgba(0, 0, 0, 0.2);
 }
 
 .ai-setting-group h4 {
     margin-top: 0;
-    margin-bottom: 10px;
+    margin-bottom: 0px;
     font-size: 13px;
     color: #111;
     border-bottom: 1px solid #555;
-    padding-bottom: 5px;
+    padding-bottom: 0px;
 }
 
 textarea.setting-textarea {

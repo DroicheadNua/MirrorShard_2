@@ -348,7 +348,7 @@ class App {
       });
     });
 
-    await listen('preview-toggle-theme', () => {
+    await listen('subwindow-toggle-theme', () => {
       this.toggleDarkMode();
     });
 
@@ -1586,9 +1586,8 @@ class App {
     document.body.classList.toggle('dark-mode', this.isDarkMode);
     this.updateBackground();
     this.saveSettings();
-    emit('preview-update-data', {
-      isDarkMode: this.isDarkMode,
-    });
+    emit('preview-update-data', { isDarkMode: this.isDarkMode });
+    emit('app:theme-changed', { isDarkMode: this.isDarkMode });
   }
 
   private async sendDataToPreview(truncate: boolean = false) {

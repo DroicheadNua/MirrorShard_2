@@ -73,6 +73,10 @@ async function setupSettings() {
         const localLlmUrlInput = document.querySelector('#local-llm-url') as HTMLInputElement;
         const aiSystemPromptInput = document.querySelector('#ai-system-prompt') as HTMLTextAreaElement;
         const aiMaxTokensInput = document.querySelector('#ai-max-tokens') as HTMLInputElement;
+        const userNameInput = document.querySelector('#user-name') as HTMLInputElement;
+        const userIconDisplay = document.querySelector('#user-icon-path') as HTMLElement;
+        const aiNameInput = document.querySelector('#ai-name') as HTMLInputElement;
+        const aiIconDisplay = document.querySelector('#ai-icon-path') as HTMLElement;
 
         if (!applyBtn || !closeBtn) {
             console.error("Critical UI elements not found");
@@ -82,6 +86,9 @@ async function setupSettings() {
         // --- 4. 一時保存用変数 & 初期値の読み込み ---
         let pendingBgPath = await store.get<string>('userBackgroundImagePath') || null;
         let pendingBgmPath = await store.get<string>('userBgmPath') || null;
+        let pendingUserIcon = await store.get<string>('aiChatUserIconPath') || null;
+        let pendingAiIcon = await store.get<string>('aiChatAiIconPath') || null;
+
 
         const initWidth = await store.get<string | number>('editorMaxWidth');
         widthInput.value = (initWidth !== null && initWidth !== undefined) ? initWidth.toString() : '80';
@@ -134,6 +141,10 @@ async function setupSettings() {
         localLlmUrlInput.value = await store.get<string>('localLlmUrl') || 'http://127.0.0.1:1234/v1/chat/completions';
         aiSystemPromptInput.value = await store.get<string>('aiSystemPrompt') || '';
         aiMaxTokensInput.value = (await store.get<number>('aiMaxTokens') || 2000).toString();
+        userNameInput.value = await store.get<string>('aiChatUserName') || 'User';
+        if (pendingUserIcon) userIconDisplay.textContent = pendingUserIcon.split(/[/\\]/).pop() || '';
+        aiNameInput.value = await store.get<string>('aiChatAiName') || 'AI';
+        if (pendingAiIcon) aiIconDisplay.textContent = pendingAiIcon.split(/[/\\]/).pop() || '';
 
 
         // --- 5. イベントリスナー (ファイル選択) ---
@@ -198,6 +209,33 @@ async function setupSettings() {
             // nullを通知
             await emit('settings-changed', { userBgmPath: null });
         });
+
+        // User Icon
+        document.querySelector('#btn-select-user-icon')?.addEventListener('click', async () => {
+            const path = await open({ filters: [{ name: 'Images', extensions: ['png', 'jpg', 'jpeg', 'webp', 'gif'] }] });
+            if (path && typeof path === 'string') {
+                pendingUserIcon = path;
+                userIconDisplay.textContent = path.split(/[/\\]/).pop() || path;
+            }
+        });
+        document.querySelector('#btn-clear-user-icon')?.addEventListener('click', () => {
+            pendingUserIcon = null;
+            userIconDisplay.textContent = '(Default)';
+        });
+
+        // AI Icon
+        document.querySelector('#btn-select-ai-icon')?.addEventListener('click', async () => {
+            const path = await open({ filters: [{ name: 'Images', extensions: ['png', 'jpg', 'jpeg', 'webp', 'gif'] }] });
+            if (path && typeof path === 'string') {
+                pendingAiIcon = path;
+                aiIconDisplay.textContent = path.split(/[/\\]/).pop() || path;
+            }
+        });
+        document.querySelector('#btn-clear-ai-icon')?.addEventListener('click', () => {
+            pendingAiIcon = null;
+            aiIconDisplay.textContent = '(Default)';
+        });
+
 
         bgOpacityRange.addEventListener('input', () => { if (bgOpacityVal) bgOpacityVal.textContent = `${bgOpacityRange.value}%`; });
         blurRange.addEventListener('input', () => { if (blurVal) blurVal.textContent = `${blurRange.value}px`; });
@@ -291,6 +329,14 @@ async function setupSettings() {
                     await store.set('selectedApiType', 'gemini');
                 }
                 await store.set('aiMaxTokens', newAiMaxTokens);
+                // User Profile
+                await store.set('aiChatUserName', userNameInput.value || 'User');
+                if (pendingUserIcon) await store.set('aiChatUserIconPath', pendingUserIcon);
+                else await store.delete('aiChatUserIconPath');
+                // AI Profile
+                await store.set('aiChatAiName', aiNameInput.value || 'AI');
+                if (pendingAiIcon) await store.set('aiChatAiIconPath', pendingAiIcon);
+                else await store.delete('aiChatAiIconPath');
 
                 // 自動決定した文字色は保存しなくても計算できるが、main.tsに渡すために保存しても良い
                 // ここではフラグだけ保存
@@ -332,6 +378,10 @@ async function setupSettings() {
                     aiSystemPrompt: newSystemPrompt,
                     selectedApiType: currentApiType || 'gemini',
                     aiMaxTokens: newAiMaxTokens,
+                    aiChatUserName: userNameInput.value || 'User',
+                    aiChatUserIconPath: pendingUserIcon,
+                    aiChatAiName: aiNameInput.value || 'AI',
+                    aiChatAiIconPath: pendingAiIcon
                 });
 
             } catch (err) {

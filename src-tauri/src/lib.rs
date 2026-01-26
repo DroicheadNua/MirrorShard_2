@@ -200,21 +200,38 @@ async fn read_binary_file(path: String) -> Result<Vec<u8>, String> {
 
 #[tauri::command]
 fn open_ai_chat(app: AppHandle) {
-    if let Some(window) = app.get_webview_window("ai_chat") {
-        // 既に存在する場合は前面に出す
-        let _ = window.show();
-        let _ = window.set_focus();
-    } else {
-        // 存在しない場合は新規作成
-        let _ = tauri::WebviewWindowBuilder::new(
-            &app,
-            "ai_chat",                                     // label
-            tauri::WebviewUrl::App("ai_chat.html".into()), // URL (vite.config.tsで設定したファイル)
-        )
-        .title("MirrorShard AI")
-        .inner_size(400.0, 600.0)
-        .build();
+    if app.get_webview_window("ai_chat").is_some() {
+        app.get_webview_window("ai_chat").unwrap().close().unwrap();
+        return;
     }
+
+    let builder = tauri::WebviewWindowBuilder::new(
+        &app,
+        "ai_chat",
+        tauri::WebviewUrl::App("ai_chat.html".into()),
+    )
+    .title("AI Chat")
+    .inner_size(400.0, 600.0)
+    .resizable(true)
+    .decorations(false)
+    .transparent(true)
+    .visible(false);
+    #[cfg(target_os = "macos")]
+    let builder = builder.title_bar_style(tauri::TitleBarStyle::Transparent);
+    #[cfg(any(windows, target_os = "macos"))]
+    let builder = builder.effects(tauri::utils::config::WindowEffectsConfig {
+        effects: vec![],
+        state: None,
+        radius: Some(24.0),
+        color: None,
+    });
+
+    #[cfg(debug_assertions)]
+    let window = builder.devtools(true).build().unwrap();
+    #[cfg(not(debug_assertions))]
+    let window = builder.build().unwrap();
+
+    window.show().unwrap();
 }
 
 #[tauri::command]

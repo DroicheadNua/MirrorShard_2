@@ -124,32 +124,28 @@
                 <div class="ai-setting-group">
                     <h4>Google Gemini</h4>
                     <label>
-                        API Key:
-                        <input type="password" id="gemini-api-key" placeholder="AIzaSy..."
-                            style="width: 100%; box-sizing: border-box;" />
+                        API Key
+                        <input type="password" id="gemini-api-key" placeholder="AIzaSy..." style="width: 446px;" />
                     </label>
                     <br />
                     <label>
-                        Model:
-                        <div style="display: flex; gap: 5px;">
-                            <input type="text" id="gemini-model" placeholder="<モデル名を入力>"
-                                style="flex-grow: 1; box-sizing: border-box;" />
-                            <select id="gemini-model-preset" style="width: 25px;"
-                                onchange="document.getElementById('gemini-model').value = this.value;">
-                                <option value="gemini-2.5-flash">Gemini 2.5 Flash</option>
-                                <option value="gemini-2.5-pro">Gemini 2.5 Pro</option>
-                                <option value=>手動入力</option>
-                            </select>
-                        </div>
+                        Model
+                        <input type="text" id="gemini-model" placeholder="<モデル名を入力>" style="width: 460px;" />
+                        <select id="gemini-model-preset" style="width: 25px;"
+                            onchange="document.getElementById('gemini-model').value = this.value;">
+                            <option value="gemini-2.5-flash">Gemini 2.5 Flash</option>
+                            <option value="gemini-2.5-pro">Gemini 2.5 Pro</option>
+                            <option value=>手動入力</option>
+                        </select>
                     </label>
                 </div>
 
                 <div class="ai-setting-group">
                     <h4>Local LLM (LM Studio / Ollama)</h4>
                     <label>
-                        Endpoint URL:
+                        Endpoint URL
                         <input type="text" id="local-llm-url" placeholder="http://127.0.0.1:1234/v1/chat/completions"
-                            style="width: 100%; box-sizing: border-box;" />
+                            style="width: 440px;" />
                     </label>
                 </div>
 
@@ -167,6 +163,38 @@
                         <textarea id="ai-system-prompt" class="setting-textarea"
                             placeholder="あなたは優秀な執筆アシスタントです..."></textarea>
                     </label>
+                </div>
+
+                <div class="ai-setting-group">
+                    <h4>User Profile</h4>
+                    <label>
+                        Name
+                        <input type="text" id="user-name" placeholder="User" style="width: 495px;" />
+                    </label>
+                    <br />
+                    <div class="file-select-row">
+                        <span>Icon:</span>
+                        <span id="user-icon-path" class="path-display"
+                            style="font-size: 0.8em; color: #111;">(Default)</span>
+                        <button id="btn-select-user-icon">Select</button>
+                        <button id="btn-clear-user-icon">Clear</button>
+                    </div>
+                </div>
+
+                <div class="ai-setting-group">
+                    <h4>AI Profile</h4>
+                    <label>
+                        Name
+                        <input type="text" id="ai-name" placeholder="AI" style="width: 495px;" />
+                    </label>
+                    <br />
+                    <div class="file-select-row">
+                        <span>Icon:</span>
+                        <span id="ai-icon-path" class="path-display"
+                            style="font-size: 0.8em; color: #111;">(Default)</span>
+                        <button id="btn-select-ai-icon">Select</button>
+                        <button id="btn-clear-ai-icon">Clear</button>
+                    </div>
                 </div>
             </div>
         </div>

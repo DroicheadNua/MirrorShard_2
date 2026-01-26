@@ -134,7 +134,7 @@ async function initPreview() {
         }
         if (isCtrlOrCmd && key === 't' && !isShift) {
             e.preventDefault();
-            emit('preview-toggle-theme');
+            emit('subwindow-toggle-theme');
         }
         if (isMac && isCtrl && isCmd && key === 'f') {
             e.preventDefault();

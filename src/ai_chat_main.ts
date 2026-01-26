@@ -6,7 +6,9 @@ import { writeTextFile, readTextFile } from "@tauri-apps/plugin-fs";
 import { writeText } from "@tauri-apps/plugin-clipboard-manager";
 import { getCurrentWindow } from "@tauri-apps/api/window";
 import { marked } from "marked";
-import { listen } from "@tauri-apps/api/event";
+import { emit, listen } from "@tauri-apps/api/event";
+import { convertFileSrc } from "@tauri-apps/api/core";
+import { type } from "@tauri-apps/plugin-os";
 
 // --- 型定義 ---
 interface ChatMessage {
@@ -44,9 +46,12 @@ let chatHistory: ChatMessage[] = [];
 let isProcessing = false;
 let currentFilePath: string | null = null;
 let aiSettings: ChatSettings = { apiType: 'gemini' };
-let userIcon = '';
-let aiIcon = '';
 let store: Store | null = null;
+let userName = 'User';
+let aiName = 'AI';
+let userIconSrc = '';
+let aiIconSrc = '';
+const osType = await type();
 
 const aiChat = new AiChat(onAiUpdate);
 
@@ -80,6 +85,10 @@ async function init() {
         const sysPrompt = await store.get<string>('aiSystemPrompt');
         const maxTokens = await store.get<number>('aiMaxTokens') || 2000;
         const savedApiType = await store.get<string>('selectedApiType') || 'gemini';
+        const isDark = await store.get<boolean>('isDarkMode');
+        if (isDark) {
+            document.body.classList.add('dark-mode');
+        }
 
         aiSettings = {
             apiType: (savedApiType as 'gemini' | 'local'),
@@ -92,20 +101,35 @@ async function init() {
 
         apiSelector.value = savedApiType;
         await aiChat.updateSettings(aiSettings);
+        await loadProfileSettings();
 
         setupEventListeners();
         setupSettingsListener();
+        setupThemeListener();
 
-        // 前回セッションのロード
-        const lastSessionPath = await store.get<string>('lastAiChatSessionPath');
-        if (lastSessionPath) {
-            console.log("Auto-loading session:", lastSessionPath);
-            await loadLogFile(lastSessionPath);
-        }
+        // 前回セッションのロード（※Mac版で動作しないので一旦コメントアウト）
+        // const lastSessionPath = await store.get<string>('lastAiChatSessionPath');
+        // if (lastSessionPath) {
+        //     console.log("Auto-loading session:", lastSessionPath);
+        //     await loadLogFile(lastSessionPath);
+        // }
 
     } catch (e) {
         console.error("Init Error:", e);
     }
+}
+
+// プロフィール読み込み関数
+async function loadProfileSettings() {
+    if (!store) return;
+    userName = await store.get<string>('aiChatUserName') || 'User';
+    aiName = await store.get<string>('aiChatAiName') || 'AI';
+
+    const uPath = await store.get<string>('aiChatUserIconPath');
+    userIconSrc = uPath ? convertFileSrc(uPath) : TRANSPARENT_ICON; // convertFileSrcでasset://URLに変換
+
+    const aPath = await store.get<string>('aiChatAiIconPath');
+    aiIconSrc = aPath ? convertFileSrc(aPath) : TRANSPARENT_ICON;
 }
 
 function setupSettingsListener() {
@@ -117,6 +141,26 @@ function setupSettingsListener() {
         aiSettings.systemPrompt = p.aiSystemPrompt ?? aiSettings.systemPrompt;
         aiSettings.maxTokens = p.aiMaxTokens ?? aiSettings.maxTokens;
         await aiChat.updateSettings(aiSettings);
+        // プロフィールの更新
+        if (p.aiChatUserName !== undefined) userName = p.aiChatUserName;
+        if (p.aiChatAiName !== undefined) aiName = p.aiChatAiName;
+        // アイコンパスが送られてきたらURL変換
+        if (p.aiChatUserIconPath !== undefined) {
+            userIconSrc = p.aiChatUserIconPath ? convertFileSrc(p.aiChatUserIconPath) : TRANSPARENT_ICON;
+        }
+        if (p.aiChatAiIconPath !== undefined) {
+            aiIconSrc = p.aiChatAiIconPath ? convertFileSrc(p.aiChatAiIconPath) : TRANSPARENT_ICON;
+        }
+        // ログを再描画して新しい名前/アイコンを反映
+        redrawLog();
+    });
+}
+
+// テーマ同期リスナー
+function setupThemeListener() {
+    listen('app:theme-changed', (event: any) => {
+        const isDark = event.payload.isDarkMode;
+        document.body.classList.toggle('dark-mode', isDark);
     });
 }
 
@@ -137,6 +181,69 @@ function setupEventListeners() {
         const text = messageInput.value.trim();
         if (!text || isProcessing) return;
         await processUserMessage(text);
+    });
+
+    // --- ショートカットキー ---
+    document.addEventListener('keydown', async (e) => {
+        const isCtrlOrCmd = e.ctrlKey || e.metaKey;
+        const isShift = e.shiftKey;
+        const key = e.key.toLowerCase();
+        const isMac = osType === 'macos';
+        const isCtrl = e.ctrlKey;
+        const isCmd = e.metaKey;
+
+        // 入力欄にフォーカスがある場合、一部のショートカットは無効化するか、挙動を変える
+        // ただし Ctrl+S などは効かせたいので、ここでは除外判定は緩めに
+
+        // Ctrl + T : ダークモード切替
+        if (isCtrlOrCmd && key === 't' && !isShift) {
+            e.preventDefault();
+            await emit('subwindow-toggle-theme');
+            return;
+        }
+
+        // Ctrl + S : 上書き保存
+        if (isCtrlOrCmd && !isShift && key === 's') {
+            e.preventDefault();
+            await saveLogOverwrite();
+            return;
+        }
+
+        // Ctrl + O : 読み込み
+        if (isCtrlOrCmd && !isShift && key === 'o') {
+            e.preventDefault();
+            await loadLog();
+            return;
+        }
+
+        // Ctrl + Shift + C : ログクリア
+        if (isCtrlOrCmd && isShift && key === 'c') {
+            e.preventDefault();
+            // 入力欄でのコピー操作と被らないよう注意が必要だが、
+            // 何も選択されていなければ発動、あるいはShift付きはクリアに割り当ててあるのでOK
+            await clearLog();
+            return;
+        }
+
+        // Ctrl + Shift + A : ウィンドウを閉じる
+        if (isCtrlOrCmd && isShift && key === 'a') {
+            e.preventDefault();
+            await getCurrentWindow().close();
+            return;
+        }
+
+        // F11 : 最大化トグル(Win/Linux)
+        if (!isMac && e.key === 'F11') {
+            e.preventDefault();
+            await getCurrentWindow().toggleMaximize();
+            return;
+        }
+        // 最大化トグル(Mac)
+        if (isMac && isCtrl && isCmd && key === 'f') {
+            e.preventDefault();
+            await getCurrentWindow().toggleMaximize();
+            return;
+        }
     });
 
     messageInput.addEventListener('keydown', (e) => {
@@ -194,9 +301,13 @@ function addMessageToLog(role: string, content: string, index: number) {
         htmlContent = escaped.replace(/\n/g, '<br>');
     }
 
+    // ★ userName, aiName, userIconSrc, aiIconSrc 変数を使用
+    const currentName = role === 'user' ? userName : aiName;
+    const currentIcon = role === 'user' ? userIconSrc : aiIconSrc;
+
     row.innerHTML = `
         <div class="avatar-container">
-            <img class="message-icon" src="${role === 'user' ? (userIcon || TRANSPARENT_ICON) : (aiIcon || TRANSPARENT_ICON)}">
+            <img class="message-icon" src="${currentIcon}">
             <div class="message-actions">
                 ${role === 'user'
             ? `<button class="action-btn btn-edit" onclick="window.editMsg(${index})"></button>
@@ -207,7 +318,7 @@ function addMessageToLog(role: string, content: string, index: number) {
             </div>
         </div>
         <div class="message-content">
-            <div class="message-sender">${role === 'user' ? 'User' : 'AI'}</div>
+            <div class="message-sender">${currentName}</div>
             <div class="message-bubble">${htmlContent}</div>
         </div>
     `;
