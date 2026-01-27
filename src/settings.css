@@ -20,7 +20,26 @@ body {
     box-sizing: border-box;
     width: 100%;
     height: 100%;
-    overflow: hidden;
+    overflow-x: hidden;
+    overflow-y: auto;
+}
+
+#settings-wrapper::-webkit-scrollbar {
+    width: 8px;
+}
+
+#settings-wrapper::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+#settings-wrapper::-webkit-scrollbar-thumb {
+    background: rgba(0, 0, 0, 0.15);
+    border-radius: 4px;
+    min-height: '40px';
+}
+
+#settings-wrapper::-webkit-scrollbar-thumb:hover {
+    background: rgba(0, 0, 0, 0.25);
 }
 
 #settings-container {
@@ -214,7 +233,7 @@ body::-webkit-scrollbar-thumb:hover {
 .tab-btn {
     background: transparent;
     border: none;
-    color: #888;
+    color: #333;
     padding: 8px 16px;
     cursor: pointer;
     font-size: 14px;
@@ -224,12 +243,12 @@ body::-webkit-scrollbar-thumb:hover {
 }
 
 .tab-btn.active {
-    color: #333;
+    color: #1e1e1e;
     background-color: rgba(0, 0, 0, 0.1);
 }
 
 .tab-btn:hover {
-    color: #555;
+    color: #eee;
 }
 
 
