@@ -139,6 +139,7 @@ function setupSettingsListener() {
         aiSettings.geminiApiKey = p.geminiApiKey ?? aiSettings.geminiApiKey;
         aiSettings.geminiModel = p.geminiModel ?? aiSettings.geminiModel;
         aiSettings.localUrl = p.localLlmUrl ?? aiSettings.localUrl;
+        aiSettings.localModel = p.localLlmModel ?? aiSettings.localModel;
         aiSettings.systemPrompt = p.aiSystemPrompt ?? aiSettings.systemPrompt;
         aiSettings.maxTokens = p.aiMaxTokens ?? aiSettings.maxTokens;
         await aiChat.updateSettings(aiSettings);

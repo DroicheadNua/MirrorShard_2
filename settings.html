@@ -143,9 +143,25 @@
                 <div class="ai-setting-group">
                     <h4>Local LLM (LM Studio / Ollama)</h4>
                     <label>
-                        Endpoint URL
-                        <input type="text" id="local-llm-url" placeholder="http://127.0.0.1:1234/v1/chat/completions"
-                            style="width: 440px;" />
+                        Endpoint URL:
+                        <div style="display: flex; gap: 5px;">
+                            <input type="text" id="local-llm-url"
+                                placeholder="http://127.0.0.1:1234/v1/chat/completions"
+                                style="flex-grow: 1; box-sizing: border-box;" />
+                            <select id="local-llm-url-preset" style="width: 25px;"
+                                onchange="document.getElementById('local-llm-url').value = this.value;">
+                                <!-- LM Studio Default -->
+                                <option value="http://127.0.0.1:1234/v1/chat/completions">LM Studio (Default)</option>
+                                <!-- Ollama Default -->
+                                <option value="http://127.0.0.1:11434/v1/chat/completions">Ollama (Default)</option>
+                                <option value=>手動入力</option>
+                            </select>
+                        </div>
+                    </label>
+                    <label>
+                        Model Name (Required for Ollama)
+                        <input type="text" id="local-llm-model" placeholder="※LM Studioの場合は無視されます"
+                            style="width: 270px;" />
                     </label>
                 </div>
 
@@ -169,7 +185,7 @@
                     <h4>User Profile</h4>
                     <label>
                         Name
-                        <input type="text" id="user-name" placeholder="User" style="width: 495px;" />
+                        <input type="text" id="user-name" placeholder="User" style="width: 485px;" />
                     </label>
                     <br />
                     <div class="file-select-row">
@@ -185,7 +201,7 @@
                     <h4>AI Profile</h4>
                     <label>
                         Name
-                        <input type="text" id="ai-name" placeholder="AI" style="width: 495px;" />
+                        <input type="text" id="ai-name" placeholder="AI" style="width: 485px;" />
                     </label>
                     <br />
                     <div class="file-select-row">

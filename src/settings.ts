@@ -77,6 +77,10 @@ async function setupSettings() {
         const userIconDisplay = document.querySelector('#user-icon-path') as HTMLElement;
         const aiNameInput = document.querySelector('#ai-name') as HTMLInputElement;
         const aiIconDisplay = document.querySelector('#ai-icon-path') as HTMLElement;
+        const modelPresetSelect = document.querySelector('#gemini-model-preset') as HTMLSelectElement;
+        const localLlmModelInput = document.querySelector('#local-llm-model') as HTMLInputElement;
+        const urlPresetSelect = document.querySelector('#local-llm-url-preset') as HTMLSelectElement;
+
 
         if (!applyBtn || !closeBtn) {
             console.error("Critical UI elements not found");
@@ -142,10 +146,29 @@ async function setupSettings() {
         aiSystemPromptInput.value = await store.get<string>('aiSystemPrompt') || '';
         aiMaxTokensInput.value = (await store.get<number>('aiMaxTokens') || 2000).toString();
         userNameInput.value = await store.get<string>('aiChatUserName') || 'User';
+        localLlmModelInput.value = await store.get<string>('localLlmModel') || 'local-model';
         if (pendingUserIcon) userIconDisplay.textContent = pendingUserIcon.split(/[/\\]/).pop() || '';
         aiNameInput.value = await store.get<string>('aiChatAiName') || 'AI';
         if (pendingAiIcon) aiIconDisplay.textContent = pendingAiIcon.split(/[/\\]/).pop() || '';
-
+        if (modelPresetSelect) {
+            // 保存されている値がプルダウンの選択肢に含まれているかチェック
+            const options = Array.from(modelPresetSelect.options).map(o => o.value);
+            if (options.includes(geminiModelInput.value)) {
+                modelPresetSelect.value = geminiModelInput.value;
+            } else {
+                // 含まれていなければ「手動入力」等の空欄やデフォルト位置にする
+                // (HTML側で <option value="">手動入力</option> としている場合)
+                modelPresetSelect.value = "";
+            }
+        }
+        if (urlPresetSelect) {
+            const options = Array.from(urlPresetSelect.options).map(o => o.value);
+            if (options.includes(localLlmUrlInput.value)) {
+                urlPresetSelect.value = localLlmUrlInput.value;
+            } else {
+                urlPresetSelect.value = ""; // カスタムURLの場合は選択解除
+            }
+        }
 
         // --- 5. イベントリスナー (ファイル選択) ---
 
@@ -306,6 +329,7 @@ async function setupSettings() {
                 const newLocalUrl = localLlmUrlInput.value.trim();
                 const newSystemPrompt = aiSystemPromptInput.value;
                 const newAiMaxTokens = parseInt(aiMaxTokensInput.value, 10) || 2000;
+                const newLocalModel = localLlmModelInput.value.trim();
 
                 // Storeに保存
                 await store.set('editorMaxWidth', numValue.toString());
@@ -337,6 +361,7 @@ async function setupSettings() {
                 await store.set('aiChatAiName', aiNameInput.value || 'AI');
                 if (pendingAiIcon) await store.set('aiChatAiIconPath', pendingAiIcon);
                 else await store.delete('aiChatAiIconPath');
+                await store.set('localLlmModel', newLocalModel);
 
                 // 自動決定した文字色は保存しなくても計算できるが、main.tsに渡すために保存しても良い
                 // ここではフラグだけ保存
@@ -381,7 +406,8 @@ async function setupSettings() {
                     aiChatUserName: userNameInput.value || 'User',
                     aiChatUserIconPath: pendingUserIcon,
                     aiChatAiName: aiNameInput.value || 'AI',
-                    aiChatAiIconPath: pendingAiIcon
+                    aiChatAiIconPath: pendingAiIcon,
+                    localLlmModel: newLocalModel
                 });
 
             } catch (err) {

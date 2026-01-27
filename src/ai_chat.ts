@@ -6,6 +6,7 @@ export interface ChatSettings {
     geminiApiKey?: string;
     geminiModel?: string;
     localUrl?: string;
+    localModel?: string;
     systemPrompt?: string;
     maxTokens?: number;
 }
@@ -82,6 +83,7 @@ export class AiChat {
     // Local LLMをストリーミング対応に書き換え
     private async sendToLocalLLM(history: { role: string, content: string }[]) {
         const url = this.currentSettings.localUrl || "http://127.0.0.1:1234/v1/chat/completions";
+        const model = this.currentSettings.localModel || "local-model";
 
         const messages = [];
         if (this.currentSettings.systemPrompt) {
@@ -99,7 +101,8 @@ export class AiChat {
                     messages: messages,
                     stream: true, // ストリーミング有効化
                     max_tokens: maxTokens, // API側への制限指示
-                    temperature: 0.7
+                    temperature: 0.7,
+                    model: model
                 })
             });
 
