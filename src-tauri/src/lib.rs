@@ -199,7 +199,7 @@ async fn read_binary_file(path: String) -> Result<Vec<u8>, String> {
 }
 
 #[tauri::command]
-fn open_ai_chat(app: AppHandle) {
+async fn open_ai_chat(app: AppHandle) {
     if app.get_webview_window("ai_chat").is_some() {
         app.get_webview_window("ai_chat").unwrap().close().unwrap();
         return;
