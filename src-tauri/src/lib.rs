@@ -199,6 +199,46 @@ async fn read_binary_file(path: String) -> Result<Vec<u8>, String> {
 }
 
 #[tauri::command]
+async fn open_shortcut(app: AppHandle) {
+    if app.get_webview_window("shortcut").is_some() {
+        app.get_webview_window("shortcut").unwrap().close().unwrap();
+        return;
+    }
+
+    let builder = tauri::WebviewWindowBuilder::new(
+        &app,
+        "shortcut",
+        tauri::WebviewUrl::App("shortcut.html".into()),
+    )
+    .title("Shortcuts")
+    .inner_size(640.0, 480.0)
+    .resizable(false)
+    .decorations(false)
+    .transparent(true)
+    .visible(false);
+    #[cfg(target_os = "macos")]
+    let builder = builder.title_bar_style(tauri::TitleBarStyle::Transparent);
+    #[cfg(any(windows, target_os = "macos"))]
+    let builder = builder.effects(tauri::utils::config::WindowEffectsConfig {
+        effects: vec![],
+        state: None,
+        radius: Some(24.0),
+        color: None,
+    });
+
+    #[cfg(debug_assertions)]
+    let window = builder.devtools(true).build().unwrap();
+    #[cfg(not(debug_assertions))]
+    let window = builder.build().unwrap();
+    #[cfg(target_os = "macos")]
+    {
+        let _ = window.eval("document.body.classList.add('is-mac');");
+    }
+    window.show().unwrap();
+    window.set_focus().unwrap();
+}
+
+#[tauri::command]
 async fn open_ai_chat(app: AppHandle) {
     if app.get_webview_window("ai_chat").is_some() {
         app.get_webview_window("ai_chat").unwrap().close().unwrap();
@@ -562,6 +602,7 @@ pub fn run() {
             get_system_fonts,
             export_epub,
             open_ai_chat,
+            open_shortcut,
         ])
         .build(tauri::generate_context!())
         .expect("error while building tauri application")

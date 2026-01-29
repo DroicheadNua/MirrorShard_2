@@ -1315,6 +1315,13 @@ class App {
       e.preventDefault();
       this.toggleSpotlightMode();
     }
+    // ショートカット (F1)
+    if (e.key === 'F1') {
+      e.preventDefault();
+      e.stopPropagation();
+      this.openShortcut();
+    }
+    // 設定 (F2)
     if (e.key === 'F2') {
       e.preventDefault();
       e.stopPropagation();
@@ -2143,6 +2150,10 @@ class App {
 
   private async openAiChat() {
     await invoke('open_ai_chat');
+  }
+
+  private async openShortcut() {
+    await invoke('open_shortcut');
   }
 
   /**

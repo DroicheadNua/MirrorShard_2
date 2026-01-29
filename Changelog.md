@@ -11,6 +11,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added (新機能)  
 - AIチャットウィンドウを実装。Google Gemini、およびローカルLLM（LM Studio、Ollama）に対応  
 - Geminiログのインポート機能を追加。メインエディタの右クリックメニューから開くことが可能  
+- ショートカットキー一覧ウィンドウを実装。F1で開閉可能  
 
 ### Changed (変更点)  
 

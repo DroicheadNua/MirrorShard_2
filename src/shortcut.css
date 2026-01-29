@@ -1,0 +1,69 @@
+html {
+  height: 100%;
+  background-color: #0A0A0A;
+}
+
+body {
+  margin: 0;
+  padding: 0;
+  min-height: 100%;
+  color: #00FF41;
+  font-family: sans-serif, monospace;
+  font-size: 12px;
+  text-shadow:
+    0 0 5px rgba(0, 255, 0, 0.5),
+    0 0 10px rgba(0, 255, 0, 0.4),
+    0 0 20px rgba(0, 255, 0, 0.3);
+}
+
+.content {
+  padding: 2em;
+}
+
+h1,
+h2 {
+  border-bottom: 1px solid #00FF41;
+
+}
+
+dl {
+  display: grid;
+  grid-template-columns: 200px 1fr;
+  gap: 0em 1em;
+}
+
+body::-webkit-scrollbar {
+  width: 12px;
+}
+
+body::-webkit-scrollbar-track {
+  background: #0A0A0A;
+}
+
+body::-webkit-scrollbar-thumb {
+  background-color: rgba(0, 255, 65, 0.2);
+  border-radius: 4px;
+}
+
+body::-webkit-scrollbar-thumb:hover {
+  background-color: rgba(0, 255, 65, 0.4);
+}
+
+.mac-only {
+  display: none;
+}
+
+body.is-mac .mac-only {
+  display: block;
+}
+
+/* ドラッグ用のタイトルバー */
+#sc-title-bar {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 54px;
+  -webkit-app-region: drag;
+  z-index: 1;
+}

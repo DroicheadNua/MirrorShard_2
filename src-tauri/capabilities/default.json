@@ -12,7 +12,8 @@
     "settings",
     "preview",
     "export",
-    "ai_chat"
+    "ai_chat",
+    "shortcut"
   ],
   "permissions": [
     "core:default",
