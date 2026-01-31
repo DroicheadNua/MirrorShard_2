@@ -3,7 +3,7 @@
 創作支援用テキストエディタ「MirrorShard」のソフトウェアフレームワークをTauriに変更、高速化と軽量化を図ったものです。  
 アイデアプロセッサ以外の機能はほぼ移植が完了していますので、創作用エディタとして、また巨大テキストファイルを扱えるアウトラインプロセッサとして、特に問題なく運用できるかと思います。  
 
-![MirrorShard_2 Key Visual](screenshots/ScreenShot02.png)
+![MirrorShard_2 Key Visual](screenshots/ScreenShot04.jpg)
 
 ## ダウンロード  
 
@@ -43,9 +43,9 @@ mirrorshard.dev@gmail.com
 ・安全なファイル保存機能（アトミックセーブ）を採用。停電やPCクラッシュなど、不測の事態にも強い設計  
 　※ただし仕様上、「ファイル作成日＝ファイル更新日」になります。詳しくはFAQを御覧ください。  
 ・背景画像を活かせる半透明ウィンドウを実装。お好みで痛エディタも作成可能  
+![MirrorShard_2 Background_Image](screenshots/ScreenShot02.png)
 ・UIを非表示にし、没入感を高める「ZEN」モードを搭載  
 ・縦書きプレビューウィンドウを実装。青空文庫形式のルビにも対応  
-![MirrorShard_2 Vertical_Preview](screenshots/ScreenShot04.jpg)
 ・PDF・HTML・EPUBでの出力、及びプリンタでの印刷に対応（※すべて横書きのみ）。  
 ・Geminiのログを読み込み可能。Geminiの膨大なログから必要な情報を検索・抽出するのに役立ちます  
 
