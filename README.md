@@ -1,23 +1,23 @@
-# MirrorShard 2 ver. 0.4.0 Beta  
+# MirrorShard 2 ver. 0.5.0 Beta  
 
 創作支援用テキストエディタ「MirrorShard」のソフトウェアフレームワークをTauriに変更、高速化と軽量化を図ったものです。  
-ベータ版のため機能は限定的ですが、エディタのコア機能の移植は概ね完了していますので、創作用エディタとして、また巨大テキストファイルを扱えるアウトラインプロセッサとして、特に問題なく運用できるかと思います。  
+アイデアプロセッサ以外の機能はほぼ移植が完了していますので、創作用エディタとして、また巨大テキストファイルを扱えるアウトラインプロセッサとして、特に問題なく運用できるかと思います。  
 
 ![MirrorShard_2 Key Visual](screenshots/ScreenShot02.png)
 
 ## ダウンロード  
 
 [![Windows](https://img.shields.io/badge/Download-Windows-blue)]  
-(https://github.com/DroicheadNua/MirrorShard_2/releases/download/v0.4.0/MirrorShard.2_0.4.0_x64_ja-JP.msi)  
+(https://github.com/DroicheadNua/MirrorShard_2/releases/download/v0.5.0/MirrorShard.2_0.5.0_x64_ja-JP.msi)  
 [![Mac (Apple Silicon)](https://img.shields.io/badge/Download-Mac_(Apple_Silicon)-green)]  
-(https://github.com/DroicheadNua/MirrorShard_2/releases/download/v0.4.0/MirrorShard.2_0.4.0_aarch64.dmg)  
+(https://github.com/DroicheadNua/MirrorShard_2/releases/download/v0.5.0/MirrorShard.2_0.5.0_aarch64.dmg)  
 
 または、[最新のリリース一覧ページ](https://github.com/DroicheadNua/MirrorShard_2/releases/latest)からダウンロードできます。  
 最下段の「Assets」の項目が折りたたまれている場合は、▶マークを押して展開してください。    
 
 ## 既知の問題 (Known Issues)  
 
-現在、v0.4.0 Betaにおいて以下の問題が確認されています。  
+現在、v0.5.0 Betaにおいて以下の問題が確認されています。  
 
 ### Windows版  
 - ATOK 2017などの旧バージョンのATOKを使用している環境において、変換中のアンダーラインや文節区切りが表示されない現象が確認されています。  
@@ -38,12 +38,14 @@ mirrorshard.dev@gmail.com
 ・没入感を妨げないミニマルなデザインとフレームレスウィンドウ  
 ・数十万行に及ぶ巨大サイズのテキストにも対応  
 ・マークダウン記法によるアウトライン機能を搭載。アウトラインプロセッサとしても運用可能  
+・AIチャット機能を搭載。Google Gemini（API使用）のほか、LM StudioやOllamaなどを介してローカルLLMとの連携も可能  
 ・安全なファイル保存機能（アトミックセーブ）を採用。停電やPCクラッシュなど、不測の事態にも強い設計  
 　※ただし仕様上、「ファイル作成日＝ファイル更新日」になります。詳しくはFAQを御覧ください。  
 ・背景画像を活かせる半透明ウィンドウを実装。お好みで痛エディタも作成可能  
-・UIを非表示にし、没入感を高める「ZEN」モードを搭載。  
-・縦書きプレビューウィンドウを実装。青空文庫形式のルビにも対応。  
+・UIを非表示にし、没入感を高める「ZEN」モードを搭載  
+・縦書きプレビューウィンドウを実装。青空文庫形式のルビにも対応  
 ・PDF・HTML・EPUBでの出力、及びプリンタでの印刷に対応（※すべて横書きのみ）。  
+・Geminiのログを読み込み可能。Geminiの膨大なログから必要な情報を検索・抽出するのに役立ちます  
 
 ## 前作（Electron版）からの変更点  
 ・フレームワークの変更により軽量化と高速化に成功。メモリ消費量も減少  
@@ -56,7 +58,10 @@ mirrorshard.dev@gmail.com
 ・縦書きウィンドウのリアルタイムプレビューを廃止（代わりに更新ボタンを設置）  
 ・エクスポート機能はPandocが不要に。ただし縦書きでの出力は不可に  
 ・プリンタでの印刷が可能に  
-・機能の移植が未完了のため、アイデアプロセッサやAI機能などには未対応。最終的には既存の全機能を移植する予定  
+・ZENモード時、ツールバーへのマウスオーバーでUIボタンが表示される仕様に  
+・AIチャット機能がOllamaにも対応  
+・AIチャット機能で、起動時に前回終了時のログを読み込む仕様を廃止  
+・アイデアプロセッサには未対応。最終的には既存の全機能を移植する予定  
 
 ## 操作方法  
 詳しい操作方法については、[ユーザーマニュアル](docs/User_Manual.md)をご覧ください。  
