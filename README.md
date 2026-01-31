@@ -39,11 +39,13 @@ mirrorshard.dev@gmail.com
 ・数十万行に及ぶ巨大サイズのテキストにも対応  
 ・マークダウン記法によるアウトライン機能を搭載。アウトラインプロセッサとしても運用可能  
 ・AIチャット機能を搭載。Google Gemini（API使用）のほか、LM StudioやOllamaなどを介してローカルLLMとの連携も可能  
+![MirrorShard_2 AI_Chat](screenshots/ScreenShot03.jpg)
 ・安全なファイル保存機能（アトミックセーブ）を採用。停電やPCクラッシュなど、不測の事態にも強い設計  
 　※ただし仕様上、「ファイル作成日＝ファイル更新日」になります。詳しくはFAQを御覧ください。  
 ・背景画像を活かせる半透明ウィンドウを実装。お好みで痛エディタも作成可能  
 ・UIを非表示にし、没入感を高める「ZEN」モードを搭載  
 ・縦書きプレビューウィンドウを実装。青空文庫形式のルビにも対応  
+![MirrorShard_2 Vertical_Preview](screenshots/ScreenShot04.jpg)
 ・PDF・HTML・EPUBでの出力、及びプリンタでの印刷に対応（※すべて横書きのみ）。  
 ・Geminiのログを読み込み可能。Geminiの膨大なログから必要な情報を検索・抽出するのに役立ちます  
 
