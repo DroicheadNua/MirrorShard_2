@@ -6,6 +6,16 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 
+## [1.0.0] - 2026-2-XX (正式リリース)   
+
+### Added (新機能)  
+- 縦書きエクスポート機能を追加。縦書きプレビューウィンドウのUIボタンから起動、EPUB及びHTML形式で出力可能（要Pandoc）  
+
+### Changed (変更点)    
+
+### Fixed (修正点)  
+
+
 ## [0.5.0] - 2026-1-31  
 
 ### Added (新機能)  

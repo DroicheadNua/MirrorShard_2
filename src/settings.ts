@@ -66,6 +66,7 @@ async function setupSettings() {
         const uiTextWhite = document.querySelector('#ui-text-white') as HTMLInputElement;
         const useUiTextShadow = document.querySelector('#use-ui-text-shadow') as HTMLInputElement;
         const useUiBgCheck = document.querySelector('#use-ui-bg') as HTMLInputElement;
+        const pandocPath = document.querySelector('#pandoc-path') as HTMLInputElement;
 
         // --- 3.1. UI要素の取得 (AI新規) ---
         const geminiApiKeyInput = document.querySelector('#gemini-api-key') as HTMLInputElement;
@@ -125,6 +126,9 @@ async function setupSettings() {
         const blur = await store.get<number>('editorBlur') ?? 0;
         blurRange.value = blur.toString();
         if (blurVal) blurVal.textContent = `${blur}px`;
+
+        const pandoc = await store.get<string>('pandocPath') ?? '';
+        if (pandocPath) pandocPath.value = pandoc;
 
         // ★ UI文字色
         const isUiWhite = await store.get<boolean>('uiTextIsWhite') ?? false;
@@ -233,6 +237,18 @@ async function setupSettings() {
             await emit('settings-changed', { userBgmPath: null });
         });
 
+        document.querySelector('#btn-select-pandoc')?.addEventListener('click', async () => {
+            // Windowsはexe, Mac/Linuxは拡張子なしを想定
+            const path = await open({
+                filters: [{ name: 'Executables', extensions: [''] }]
+            });
+
+            if (path && typeof path === 'string') {
+                const input = document.querySelector('#pandoc-path') as HTMLInputElement;
+                if (input) input.value = path;
+            }
+        });
+
         // User Icon
         document.querySelector('#btn-select-user-icon')?.addEventListener('click', async () => {
             const path = await open({ filters: [{ name: 'Images', extensions: ['png', 'jpg', 'jpeg', 'webp', 'gif'] }] });
@@ -303,6 +319,7 @@ async function setupSettings() {
                 const newUserFont = fontSelect ? fontSelect.value : 'default';
                 console.log('Applying Font:', newUserFont);
                 const newAlign = alignSelect.value;
+                const newPandocPath = pandocPath.value;
 
                 const newIsBgDark = editorBgDark.checked;
                 const newBgOpacity = parseInt(bgOpacityRange.value, 10);
@@ -342,6 +359,7 @@ async function setupSettings() {
                 await store.set('editorIsBgDark', newIsBgDark);
                 await store.set('editorBgOpacity', newBgOpacity);
                 await store.set('editorBlur', newBlur);
+                await store.set('pandocPath', newPandocPath);
 
                 // AI設定の保存
                 if (newGeminiApiKey) await store.set('geminiApiKey', newGeminiApiKey);
@@ -397,6 +415,7 @@ async function setupSettings() {
                     editorIsBgDark: newIsBgDark,
                     editorBgOpacity: newBgOpacity,
                     useUiBg: newUseUiBg,
+                    pandocPath: newPandocPath,
                     geminiApiKey: newGeminiApiKey,
                     geminiModel: newGeminiModel,
                     localLlmUrl: newLocalUrl,

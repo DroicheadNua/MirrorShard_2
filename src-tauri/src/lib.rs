@@ -6,6 +6,7 @@ use epub_builder::{EpubBuilder, EpubContent, ReferenceType, ZipLibrary};
 use font_kit::source::SystemSource;
 use std::fs;
 use std::path::{Path, PathBuf};
+use std::process::Command;
 use std::sync::Mutex;
 #[cfg(target_os = "macos")]
 use tauri::RunEvent;
@@ -39,6 +40,136 @@ struct SecondInstanceFile(Mutex<Option<String>>);
 // ★ Mac用のファイルパス保持場所
 struct MacFileBuffer(Mutex<Option<String>>);
 // --- Tauriコマンドの定義 ---
+
+#[tauri::command]
+async fn export_with_pandoc(
+    app: AppHandle,
+    source_content: String, // エディタから受け取ったMarkdownテキスト
+    output_path: String,
+    format: String, // "pdf", "epub", "html"
+    is_vertical: bool,
+    pandoc_path_setting: Option<String>,
+    metadata: serde_json::Value, // title, authorなど
+) -> Result<(), String> {
+    // 1. Pandocのパス決定 (設定値 -> デフォルト探索)
+    let pandoc_exe = resolve_pandoc_path(pandoc_path_setting);
+    if pandoc_exe.is_none() {
+        return Err("Pandoc not found. Please install Pandoc or set path in settings.".to_string());
+    }
+    let pandoc_exe = pandoc_exe.unwrap();
+
+    // 2. 一時ファイルの準備
+    let temp_dir = std::env::temp_dir();
+    let input_md = temp_dir.join("mirrorshard_input.md");
+
+    // Markdownの前処理（ルビ変換など）はフロントエンド（TS）で済ませてから
+    // ここに渡す。今回は source_content をそのまま書き込む
+    fs::write(&input_md, &source_content).map_err(|e| e.to_string())?;
+
+    // 3. コマンド構築
+    let mut cmd = Command::new(&pandoc_exe);
+    cmd.arg(&input_md);
+
+    // 共通オプション
+    cmd.arg("--standalone");
+
+    // メタデータ設定
+    if let Some(title) = metadata.get("title").and_then(|v| v.as_str()) {
+        cmd.arg("--metadata").arg(format!("title={}", title));
+    }
+    if let Some(author) = metadata.get("author").and_then(|v| v.as_str()) {
+        cmd.arg("--metadata").arg(format!("author={}", author));
+    }
+
+    let cover_image = metadata.get("cover").and_then(|v| v.as_str());
+
+    cmd.arg("--metadata").arg("lang=ja-JP");
+
+    // フォーマット別処理
+    match format.as_str() {
+        "epub" => {
+            cmd.arg("-o").arg(&output_path);
+            if is_vertical {
+                cmd.arg("--css").arg(resolve_resource_path(
+                    &app,
+                    "resources/styles/epubvertical.css",
+                )?);
+                cmd.arg("--metadata").arg("page-progression-direction=rtl");
+            }
+
+            if let Some(cover) = cover_image {
+                if !cover.is_empty() {
+                    cmd.arg(format!("--epub-cover-image={}", cover));
+                }
+            }
+        }
+
+        "html" => {
+            cmd.arg("-o").arg(&output_path);
+            // ★ HTMLの場合はリソース埋め込みが必須 (画像やCSSを1ファイルにするため)
+            cmd.arg("--embed-resources");
+            cmd.arg("--standalone");
+
+            if is_vertical {
+                // HTMLプレビュー用の縦書きCSSを適用
+                cmd.arg("--css").arg(resolve_resource_path(
+                    &app,
+                    "resources/styles/vertical.css",
+                )?);
+            }
+        }
+        _ => return Err("Unsupported format".to_string()),
+    }
+    // 実行
+    let output = cmd
+        .output()
+        .map_err(|e| format!("Failed to execute pandoc: {}", e))?;
+
+    if output.status.success() {
+        Ok(())
+    } else {
+        let stderr = String::from_utf8_lossy(&output.stderr);
+        Err(format!("Pandoc Error: {}", stderr))
+    }
+}
+
+// ヘルパー: リソースパスの解決
+fn resolve_resource_path(app: &AppHandle, path_str: &str) -> Result<String, String> {
+    app.path()
+        .resolve(path_str, tauri::path::BaseDirectory::Resource)
+        .map(|p| p.to_string_lossy().to_string())
+        .map_err(|e| e.to_string())
+}
+
+// ヘルパー: Pandocパス探索
+fn resolve_pandoc_path(setting: Option<String>) -> Option<String> {
+    if let Some(p) = setting {
+        if !p.is_empty() && Path::new(&p).exists() {
+            return Some(p);
+        }
+    }
+
+    // デフォルト探索
+    let candidates = if cfg!(target_os = "windows") {
+        vec![
+            r"C:\Program Files\Pandoc\pandoc.exe",
+            r"C:\Program Files (x86)\Pandoc\pandoc.exe",
+            // LocalAppDataなども必要なら追加
+        ]
+    } else {
+        vec!["/usr/bin/pandoc", "/usr/local/bin/pandoc"]
+    };
+
+    for path in candidates {
+        if Path::new(path).exists() {
+            return Some(path.to_string());
+        }
+    }
+
+    // PATH環境変数頼み
+    // (RustのCommandはPATHを見るので、単に "pandoc" を返して試すのもあり)
+    Some("pandoc".to_string())
+}
 
 #[tauri::command]
 async fn export_epub(
@@ -603,6 +734,7 @@ pub fn run() {
             export_epub,
             open_ai_chat,
             open_shortcut,
+            export_with_pandoc,
         ])
         .build(tauri::generate_context!())
         .expect("error while building tauri application")

@@ -12,6 +12,13 @@
     <div id="preview-wrapper">
         <div data-tauri-drag-region class="preview-titlebar">
             <div class="preview-controls">
+                <div class="dropdown-wrapper">
+                    <button id="btn-export-menu" title="エクスポート"></button>
+                    <div id="export-dropdown" class="dropdown-content">
+                        <div class="dropdown-item" data-action="epub">EPUB 出力</div>
+                        <div class="dropdown-item" data-action="html">HTML 出力</div>
+                    </div>
+                </div>
                 <button id="btn-refresh" title="更新"></button>
                 <button id="btn-fullscreen" title="フルスクリーン"></button>
                 <button id="btn-close" title="閉じる"></button>
@@ -23,6 +30,35 @@
                 <div id="content"></div>
             </div>
         </div>
+
+        <!-- EPUB設定モーダル -->
+        <div id="epub-modal" class="modal-overlay" style="display: none;">
+            <div class="modal-content">
+                <h3>EPUB Export Settings</h3>
+                <div class="modal-item">
+                    <label>Title:</label>
+                    <input type="text" id="epub-title" placeholder="作品名">
+                </div>
+                <div class="modal-item">
+                    <label>Author:</label>
+                    <input type="text" id="epub-author" placeholder="著者名" value="Author">
+                </div>
+                <div class="modal-item">
+                    <label>Cover Image:</label>
+                    <div style="display: flex; gap: 5px;">
+                        <input type="text" id="epub-cover-path" readonly placeholder="No image selected"
+                            style="flex-grow: 1;">
+                        <button id="btn-select-cover">Select</button>
+                        <button id="btn-clear-cover">×</button>
+                    </div>
+                </div>
+                <div class="modal-buttons">
+                    <button id="btn-cancel-epub">Cancel</button>
+                    <button id="btn-exec-epub" class="primary">Export</button>
+                </div>
+            </div>
+        </div>
+
     </div>
     <script type="module" src="/src/preview.ts"></script>
 </body>

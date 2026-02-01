@@ -7,6 +7,7 @@ body {
   color: #00FF41;
   font-family: sans-serif, monospace;
   font-size: 12px;
+  border-radius: 6px;
   text-shadow:
     0 0 5px rgba(0, 255, 0, 0.5),
     0 0 10px rgba(0, 255, 0, 0.4),
@@ -24,6 +25,7 @@ body {
 
 .content {
   padding: 2em;
+  border-radius: 6px;
 }
 
 h1,
@@ -43,7 +45,7 @@ dl {
 }
 
 #shortcut-wrapper::-webkit-scrollbar-track {
-  background: #0A0A0A;
+  background: transparent;
 }
 
 #shortcut-wrapper::-webkit-scrollbar-thumb {

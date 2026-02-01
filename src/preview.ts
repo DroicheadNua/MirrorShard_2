@@ -1,5 +1,8 @@
 import { listen, emit } from '@tauri-apps/api/event';
 import { getCurrentWindow } from '@tauri-apps/api/window';
+import { invoke } from '@tauri-apps/api/core';
+import { save, open } from '@tauri-apps/plugin-dialog';
+import { Store } from '@tauri-apps/plugin-store';
 import updateArticle from './scripts/ruby';
 import { backgroundImage } from './assets/images.ts';
 import { type } from '@tauri-apps/plugin-os';
@@ -13,17 +16,37 @@ interface PreviewPayload {
     lineHeight: number;
 }
 
+// 現在のテキストを保持する変数（印刷用）
+let currentRawText = "";
+
 async function initPreview() {
     const contentDiv = document.getElementById('content');
+    const exportMenuBtn = document.getElementById('btn-export-menu');
+    const exportDropdown = document.getElementById('export-dropdown');
+    const dropdownItems = document.querySelectorAll('.dropdown-item');
     const refreshBtn = document.getElementById('btn-refresh');
     const fullscreenBtn = document.getElementById('btn-fullscreen');
     const closeBtn = document.getElementById('btn-close');
     const paperArea = document.getElementById('paper-area');
     const wrapper = document.getElementById('preview-wrapper');
+    // モーダル要素
+    const epubModal = document.getElementById('epub-modal');
+    const epubTitleInput = document.getElementById('epub-title') as HTMLInputElement;
+    const epubAuthorInput = document.getElementById('epub-author') as HTMLInputElement;
+    const epubCoverInput = document.getElementById('epub-cover-path') as HTMLInputElement;
+    const btnSelectCover = document.getElementById('btn-select-cover');
+    const btnClearCover = document.getElementById('btn-clear-cover');
+    const btnCancelEpub = document.getElementById('btn-cancel-epub');
+    const btnExecEpub = document.getElementById('btn-exec-epub');
 
     // --- メインからのデータ受信 ---
     await listen<PreviewPayload>('preview-update-data', async (event) => {
         const { text, isDarkMode, cursorLine, fontFamily, fontSize, lineHeight } = event.payload;
+
+        // テキストを保持（印刷時に使う）
+        if (text !== undefined) {
+            currentRawText = text;
+        }
 
         // 1. ダークモード反映
         if (isDarkMode !== undefined) {
@@ -118,6 +141,128 @@ async function initPreview() {
     closeBtn?.addEventListener('click', async () => {
         previewClose()
     });
+
+    // --- ドロップダウンの開閉 ---
+    exportMenuBtn?.addEventListener('click', (e) => {
+        e.stopPropagation(); // 親への伝播を止める
+        exportDropdown?.classList.toggle('show');
+    });
+
+    // 画面のどこかをクリックしたら閉じる
+    document.addEventListener('click', () => {
+        exportDropdown?.classList.remove('show');
+    });
+
+    // --- 各項目のクリック処理 ---
+    dropdownItems.forEach(item => {
+        item.addEventListener('click', async (e) => {
+            const action = (e.target as HTMLElement).getAttribute('data-action');
+            if (!action) return;
+
+            // ドロップダウンを閉じる
+            exportDropdown?.classList.remove('show');
+
+            if (action === 'html') {
+                // HTMLは即座に保存ダイアログへ
+                await handlePandocExport('html');
+            } else if (action === 'epub') {
+                // EPUBはモーダルを開く
+                openEpubModal();
+            }
+        });
+    });
+
+    // --- EPUB モーダル制御 ---
+    function openEpubModal() {
+        if (!epubModal) return;
+        epubModal.style.display = 'flex';
+    }
+
+    btnCancelEpub?.addEventListener('click', () => {
+        if (epubModal) epubModal.style.display = 'none';
+    });
+
+    // 表紙選択
+    btnSelectCover?.addEventListener('click', async () => {
+        const path = await open({
+            title: 'Select Cover Image',
+            filters: [{ name: 'Images', extensions: ['jpg', 'jpeg', 'png'] }]
+        });
+        if (path && typeof path === 'string') {
+            epubCoverInput.value = path;
+        }
+    });
+
+    // 表紙クリア
+    btnClearCover?.addEventListener('click', () => {
+        epubCoverInput.value = "";
+    });
+
+    // EPUB実行
+    btnExecEpub?.addEventListener('click', async () => {
+        if (epubModal) epubModal.style.display = 'none';
+
+        const metadata = {
+            title: epubTitleInput.value || "Untitled",
+            author: epubAuthorInput.value || "Unknown",
+            cover: epubCoverInput.value || "" // Rust側で受け取るキー
+        };
+
+        await handlePandocExport('epub', metadata);
+    });
+
+    // --- Pandocエクスポート共通関数 ---
+    async function handlePandocExport(format: string, customMetadata?: any) {
+        if (!currentRawText) return;
+
+        try {
+            const ext = format;
+            const filterName = format.toUpperCase();
+
+            const path = await save({
+                title: `Export ${filterName}`,
+                filters: [{ name: filterName, extensions: [ext] }],
+                defaultPath: `output.${ext}`
+            });
+            if (!path) return;
+
+            const store = await Store.load('.settings.dat');
+            const pandocPath = await store.get<string>('pandocPath');
+
+            // テキスト整形 (既存ロジック)
+            let processedText = currentRawText.replace(/(?<!\n)\n(?!\n)/g, '  \n');
+            processedText = processedText.replace(/｜([^《]+)《([^》]+)》/g, '<ruby>$1<rt>$2</rt></ruby>');
+            const kanjiRange = '\\u4E00-\\u9FFF\\uF900-\\uFAFF\\u3400-\\u4DBF';
+            const kanjiRubyRegex = new RegExp(`([^｜|])([${kanjiRange}]+)《([^》\\n]+?)》`, 'gu');
+            processedText = processedText.replace(kanjiRubyRegex, '$1<ruby>$2<rt>$3</rt></ruby>');
+
+            // メタデータの決定
+            // HTMLの場合はファイル名をタイトルにする等の簡易処理
+            const filename = path.split(/[/\\]/).pop() || "Untitled";
+            const fileTitle = filename.replace(/\.[^/.]+$/, "");
+
+            // EPUBからの指定があればそれを使う、なければデフォルト
+            const finalMetadata = customMetadata || {
+                title: fileTitle,
+                author: ""
+            };
+
+            await invoke('export_with_pandoc', {
+                sourceContent: processedText,
+                outputPath: path,
+                format: format,
+                isVertical: true,
+                pandocPathSetting: pandocPath,
+                metadata: finalMetadata
+            });
+
+            alert(`${format.toUpperCase()} エクスポートが完了しました`);
+
+        } catch (e) {
+            console.error(e);
+            alert(`エクスポートに失敗しました: ${e}`);
+        }
+    }
 
     // --- ショートカットキー ---
     document.addEventListener('keydown', (e) => {
