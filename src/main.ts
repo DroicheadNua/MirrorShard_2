@@ -1413,9 +1413,13 @@ class App {
         while (hiddenLevels.length > 0 && h.level <= hiddenLevels[hiddenLevels.length - 1]) hiddenLevels.pop();
         if (hiddenLevels.length > 0) continue;
         if (h.isCollapsed) hiddenLevels.push(h.level);
+        const safeTitle = h.text.replace(/"/g, '&quot;');
         const hasChildren = (i + 1 < this.activeFileHeadings.length) && (this.activeFileHeadings[i + 1].level > h.level);
         const toggleIcon = h.isCollapsed ? '▶' : '▼';
-        outlineHtml += `<li class="outline-item outline-level-${h.level}">${hasChildren ? `<button class="toggle-collapse" data-pos="${h.pos}">${toggleIcon}</button>` : `<span class="toggle-collapse"></span>`}<span class="outline-text" data-pos="${h.pos}">${h.text}</span></li>`;
+        outlineHtml += `<li class="outline-item outline-level-${h.level}">
+            ${hasChildren ? `<button class="toggle-collapse" data-pos="${h.pos}">${toggleIcon}</button>` : `<span class="toggle-collapse"></span>`}
+            <span class="outline-text" data-pos="${h.pos}" title="${safeTitle}">${h.text}</span>
+        </li>`;
       }
       outlineHtml += '</ul>';
       this.outlineContainer.innerHTML = outlineHtml;

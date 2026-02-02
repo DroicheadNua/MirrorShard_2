@@ -29,6 +29,8 @@ async function initPreview() {
     const closeBtn = document.getElementById('btn-close');
     const paperArea = document.getElementById('paper-area');
     const wrapper = document.getElementById('preview-wrapper');
+    const pinBtn = document.getElementById('btn-pin');
+    let isPinned = false;
     // モーダル要素
     const epubModal = document.getElementById('epub-modal');
     const epubTitleInput = document.getElementById('epub-title') as HTMLInputElement;
@@ -140,6 +142,23 @@ async function initPreview() {
     // --- 閉じる ---
     closeBtn?.addEventListener('click', async () => {
         previewClose()
+    });
+
+    // --- 最前面固定切り替え ---
+    pinBtn?.addEventListener('click', async () => {
+        isPinned = !isPinned;
+
+        // Window APIを使って最前面設定を変更
+        await getCurrentWindow().setAlwaysOnTop(isPinned);
+
+        // ボタンの見た目を切り替え
+        if (isPinned) {
+            pinBtn.classList.add('active');
+            pinBtn.title = "固定を解除";
+        } else {
+            pinBtn.classList.remove('active');
+            pinBtn.title = "最前面に固定";
+        }
     });
 
     // --- ドロップダウンの開閉 ---

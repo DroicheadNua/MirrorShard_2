@@ -47,6 +47,7 @@
     "clipboard-manager:allow-read-text",
     "core:window:allow-is-focused",
     "core:window:allow-create",
+    "core:window:allow-set-always-on-top",
     "core:event:allow-emit",
     "core:event:allow-listen",
     "core:event:default",

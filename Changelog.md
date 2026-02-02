@@ -10,6 +10,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added (新機能)  
 - 縦書きエクスポート機能を追加。縦書きプレビューウィンドウのUIボタンから起動、EPUB及びHTML形式で出力可能（要Pandoc）  
+- 縦書きプレビューウィンドウの最前面表示機能を実装  
+- アウトラインの見出しが長すぎて省略されているとき、マウスオーバーで全文を表示できるようにした  
 
 ### Changed (変更点)    
 
