@@ -333,6 +333,15 @@ class App {
       await this.sendDataToPreview(true);
     });
 
+    await listen('markdown-request-update', () => {
+      const textLength = this.editorView.state.doc.length;
+      const limit = 50000;
+      // 更新ボタンやタブ切り替えで呼ばれた場合、いちいちダイアログを出すとうるさいので
+      // 巨大ファイルなら「自動的に」制限モード(true)で送る
+      const shouldTruncate = textLength > limit;
+      this.sendDataToMarkdownPreview(shouldTruncate);
+    });
+
     // サブウィンドウから設定画面を開く
     await listen('open-settings', async () => {
       await this.openSettingsWindow();
@@ -1227,6 +1236,20 @@ class App {
           effects: EditorView.scrollIntoView(pos, { y: 'center' })
         });
         this.editorView.focus();
+
+        // Markdownプレビューへのジャンプ命令
+        // 50,000文字制限のチェック
+        const limit = 50000;
+        if (pos < limit) {
+          // 見出しのテキストを取得
+          const headingText = (outlineTextTarget as HTMLElement).textContent || "";
+          // Emit
+          emit('markdown-jump', headingText);
+        } else {
+          // 必要なら通知などを出す
+          // console.log("Jump target is outside of preview limit.");
+        }
+
         return;
       }
     }
@@ -1341,6 +1364,10 @@ class App {
     if (isCtrlOrCmd && key === 'p' && !isShift) {
       e.preventDefault();
       this.openPreviewWindowWithCheck();
+    }
+    if (isCtrlOrCmd && key === 'm' && !isShift) {
+      e.preventDefault();
+      this.openMarkdownPreviewWithCheck();
     }
     if (isCtrlOrCmd && key === 'e' && !isShift) {
       e.preventDefault();
@@ -1675,6 +1702,47 @@ class App {
 
     // データを送る (ウィンドウの準備待ち時間を少し入れる)
     setTimeout(() => this.sendDataToPreview(shouldTruncate), 200);
+  }
+
+  private async openMarkdownPreviewWithCheck() {
+    const textLength = this.editorView.state.doc.length;
+    const limit = 50000;
+    let shouldTruncate = false;
+
+    // 巨大ファイルチェック
+    if (textLength > limit) {
+      const confirmed = await ask(
+        `テキストが非常に長いため（${textLength}文字）、プレビューの生成に時間がかかる可能性があります。\n\n先頭の ${limit} 文字だけをプレビューしますか？\n（「キャンセル」を押すと処理を中止します）`,
+        { title: 'Markdownプレビューの確認', kind: 'warning', okLabel: '制限して表示', cancelLabel: 'キャンセル' }
+      );
+      if (!confirmed) return;
+      shouldTruncate = true;
+    }
+
+    // Rust側でウィンドウ作成 (visible: false)
+    await invoke('open_markdown_preview');
+
+    // ウィンドウのロード待ちをしてからデータを送る
+    setTimeout(() => this.sendDataToMarkdownPreview(shouldTruncate), 200);
+  }
+
+  private async sendDataToMarkdownPreview(truncate: boolean = false) {
+    const state = this.editorView.state;
+    let text = state.doc.toString();
+    const limit = 50000;
+
+    if (truncate && text.length > limit) {
+      text = text.substring(0, limit) + "\n\n(……テキストが長すぎるため、プレビューは省略されました)";
+    }
+
+    // アクティブなファイルパスを送る
+    const filePath = this.activeTabPath || "Untitled";
+
+    await emit('markdown-update', {
+      text: text,
+      isDarkMode: this.isDarkMode,
+      filePath: filePath
+    });
   }
 
   // トグル関数

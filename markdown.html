@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<html lang="ja">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Markdown Preview</title>
+    <link rel="stylesheet" href="/src/markdown.css">
+</head>
+
+<body>
+    <div id="md-wrapper">
+        <div data-tauri-drag-region class="title-bar">
+            <div class="md-controls">
+                <button id="btn-copy-html" title="HTMLソースをコピー"></button>
+                <button id="btn-pin" title="最前面に固定"></button>
+                <button id="btn-refresh" title="更新"></button>
+                <button id="btn-close" title="閉じる"></button>
+            </div>
+        </div>
+        <div id="markdown-content" class="markdown-body"></div>
+    </div>
+    <script type="module" src="/src/markdown.ts"></script>
+</body>
+
+</html>

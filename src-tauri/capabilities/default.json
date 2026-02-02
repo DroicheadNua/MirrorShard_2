@@ -13,7 +13,8 @@
     "preview",
     "export",
     "ai_chat",
-    "shortcut"
+    "shortcut",
+    "markdown"
   ],
   "permissions": [
     "core:default",

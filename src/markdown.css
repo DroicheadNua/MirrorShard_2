@@ -1,0 +1,258 @@
+/* src/markdown.css */
+
+html,
+body {
+    margin: 0;
+    width: 100%;
+    height: 100%;
+    overflow-y: hidden;
+    overflow-x: hidden;
+    background-color: transparent;
+    font-family: sans-serif;
+    border-radius: 6px;
+}
+
+/* 全体のラッパー */
+#md-wrapper {
+    width: 100%;
+    height: 100%;
+    border-radius: 6px;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    background-color: #ffffff;
+    color: #333;
+    opacity: 0;
+    transition: opacity 0.1s ease-in;
+}
+
+#md-wrapper.loaded {
+    opacity: 1;
+}
+
+body.dark-mode #md-wrapper {
+    background-color: #0A0A0A;
+    color: #ddd;
+}
+
+/* タイトルバー (ここだけドラッグ可能にする) */
+.title-bar {
+    height: 30px;
+    background-color: transparent;
+    display: flex;
+    justify-content: flex-end;
+    align-items: center;
+    padding: 0 10px;
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    z-index: 1000;
+}
+
+.md-controls {
+    position: relative;
+    z-index: 1001;
+    background-color: transparent;
+}
+
+.md-controls button {
+    background-color: transparent;
+    border-radius: 8px;
+    border: none;
+    cursor: pointer;
+    font-size: 14px;
+    font-weight: bold;
+    background-repeat: no-repeat;
+    background-position: center;
+    background-size: 60%;
+    width: 28px;
+    height: 28px;
+}
+
+.md-controls button:hover {
+    background-color: rgba(0, 0, 0, 0.2);
+    opacity: 1;
+}
+
+body.dark-mode .md-controls button {
+    filter: invert(1);
+    opacity: 0.7;
+}
+
+body.dark-mode .md-controls button:hover {
+    opacity: 1;
+}
+
+/* コンテンツエリア */
+#markdown-content {
+    flex-grow: 1;
+    overflow-y: auto;
+    margin-top: 30px;
+    padding: 30px;
+    word-break: break-all;
+    overflow-wrap: anywhere;
+    -webkit-app-region: no-drag;
+    box-sizing: border-box;
+}
+
+/* Markdown要素のスタイル */
+.markdown-body img {
+    max-width: 100%;
+}
+
+::-webkit-scrollbar {
+    width: 18px;
+}
+
+::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+    background-color: rgba(0, 0, 0, 0.15) !important;
+    border-radius: 9px;
+    border: 3px solid transparent;
+    background-clip: content-box;
+    min-height: 40px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+    background-color: rgba(0, 0, 0, 0.25) !important;
+}
+
+body.dark-mode #markdown-content::-webkit-scrollbar-thumb {
+    background-color: rgba(255, 255, 255, 0.15) !important;
+}
+
+body.dark-mode #markdown-content::-webkit-scrollbar-thumb:hover {
+    background-color: rgba(255, 255, 255, 0.4) !important;
+}
+
+/* リンク色 (ライトモード) */
+.markdown-body a {
+    color: #0366d6;
+    text-decoration: none;
+}
+
+.markdown-body a:hover {
+    text-decoration: underline;
+}
+
+/* ダークモード時の調整 */
+body.dark-mode .markdown-body a {
+    color: #58a6ff;
+    /* 明るい青 */
+}
+
+/* コードブロック (<pre>) の折り返し対策 */
+.markdown-body pre {
+    white-space: pre-wrap;
+    /* 重要: 端で折り返すようにする */
+    word-break: break-all;
+    /* 長い単語も強制的に切る */
+    overflow-wrap: anywhere;
+    max-width: 100%;
+    /* 親要素からはみ出さない */
+
+    /* 見た目の調整 */
+    background: #ddd;
+    padding: 10px;
+    border-radius: 4px;
+    overflow-x: hidden;
+    /* 横スクロールバーを消す */
+}
+
+/* インラインコード (<code>) 対策 */
+.markdown-body code {
+    white-space: pre-wrap;
+    word-break: break-all;
+}
+
+body.dark-mode .markdown-body code {
+    background-color: rgba(110, 118, 129, 0.4);
+    /* 背景を少し明るく */
+    color: #e6edf3;
+    /* 文字を白っぽく */
+}
+
+body.dark-mode .markdown-body pre {
+    background-color: #161b22;
+    border: 1px solid #30363d;
+}
+
+body.dark-mode .markdown-body pre code {
+    background-color: transparent;
+    /* pre内のcodeは背景なし */
+    color: #e6edf3;
+}
+
+/* 引用 (Blockquote) */
+body.dark-mode .markdown-body blockquote {
+    color: #8b949e;
+    border-left-color: #30363d;
+}
+
+/* テーブル全体 */
+.markdown-body table {
+    border-collapse: collapse;
+    border-spacing: 0;
+    margin-bottom: 16px;
+    width: auto;
+    /* 幅いっぱいにするなら 100% */
+}
+
+/* セル */
+.markdown-body th,
+.markdown-body td {
+    padding: 6px 13px;
+    border: 1px solid #d0d7de;
+}
+
+/* ヘッダー */
+.markdown-body th {
+    font-weight: 600;
+    background-color: #f6f8fa;
+}
+
+/* 縞模様 (Zebra Striping) */
+.markdown-body tr:nth-child(2n) {
+    background-color: #f6f8fa;
+}
+
+/* ダークモード対応 */
+body.dark-mode .markdown-body th,
+body.dark-mode .markdown-body td {
+    border-color: #30363d;
+}
+
+body.dark-mode .markdown-body th {
+    background-color: #161b22;
+}
+
+body.dark-mode .markdown-body tr:nth-child(2n) {
+    background-color: #161b22;
+}
+
+#btn-refresh {
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23333' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='23 4 23 10 17 10'%3E%3C/polyline%3E%3Cpath d='M20.49 15a9 9 0 1 1-2.12-9.36L23 10'%3E%3C/path%3E%3C/svg%3E");
+}
+
+#btn-close {
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cline x1='18' y1='6' x2='6' y2='18'%3E%3C/line%3E%3Cline x1='6' y1='6' x2='18' y2='18'%3E%3C/line%3E%3C/svg%3E");
+}
+
+#btn-pin {
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cline x1='12' y1='17' x2='12' y2='22'%3E%3C/line%3E%3Cpath d='M5 17h14v-1.76a2 2 0 0 0-1.11-1.79l-1.78-.9A2 2 0 0 1 15 10.76V6h1a2 2 0 0 0 0-4H8a2 2 0 0 0 0 4h1v4.76a2 2 0 0 1-1.11 1.79l-1.78.9A2 2 0 0 0 5 15.24Z'%3E%3C/path%3E%3C/svg%3E");
+    opacity: 0.2;
+    transition: opacity 0.2s;
+}
+
+#btn-pin.active,
+#btn-pin:hover {
+    opacity: 1;
+}
+
+#btn-copy-html {
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2'%3E%3C/path%3E%3Crect x='8' y='2' width='8' height='4' rx='1' ry='1'%3E%3C/rect%3E%3Cpolyline points='8.5 13 10.5 15 8.5 17'%3E%3C/polyline%3E%3Cpolyline points='15.5 13 13.5 15 15.5 17'%3E%3C/polyline%3E%3C/svg%3E");
+}

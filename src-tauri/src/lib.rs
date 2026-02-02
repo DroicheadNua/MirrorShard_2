@@ -42,6 +42,40 @@ struct MacFileBuffer(Mutex<Option<String>>);
 // --- Tauriコマンドの定義 ---
 
 #[tauri::command]
+async fn open_markdown_preview(app: AppHandle) {
+    if app.get_webview_window("markdown").is_some() {
+        app.get_webview_window("markdown").unwrap().close().unwrap();
+        return;
+    }
+
+    let builder = tauri::WebviewWindowBuilder::new(
+        &app,
+        "markdown",
+        tauri::WebviewUrl::App("markdown.html".into()),
+    )
+    .title("Markdown Preview")
+    .inner_size(640.0, 640.0)
+    .resizable(true)
+    .decorations(false)
+    .transparent(true)
+    .visible(false);
+    #[cfg(target_os = "macos")]
+    let builder = builder.title_bar_style(tauri::TitleBarStyle::Transparent);
+    #[cfg(any(windows, target_os = "macos"))]
+    let builder = builder.effects(tauri::utils::config::WindowEffectsConfig {
+        effects: vec![],
+        state: None,
+        radius: Some(24.0),
+        color: None,
+    });
+
+    #[cfg(debug_assertions)]
+    let _ = builder.devtools(true).build();
+    #[cfg(not(debug_assertions))]
+    let _ = builder.build();
+}
+
+#[tauri::command]
 async fn export_with_pandoc(
     app: AppHandle,
     source_content: String, // エディタから受け取ったMarkdownテキスト
@@ -735,6 +769,7 @@ pub fn run() {
             open_ai_chat,
             open_shortcut,
             export_with_pandoc,
+            open_markdown_preview,
         ])
         .build(tauri::generate_context!())
         .expect("error while building tauri application")

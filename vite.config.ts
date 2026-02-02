@@ -37,6 +37,7 @@ export default defineConfig(async () => ({
         export: resolve(__dirname, 'export.html'),
         ai_chat: resolve(__dirname, 'ai_chat.html'),
         shortcut: resolve(__dirname, 'shortcut.html'),
+        markdown: resolve(__dirname, "markdown.html"),
       }
     }
   },
