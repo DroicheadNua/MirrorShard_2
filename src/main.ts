@@ -6,7 +6,7 @@ import { EditorView, keymap, ViewUpdate, scrollPastEnd, Decoration, DecorationSe
 import { history, historyKeymap, undo, redo, insertTab, cursorDocEnd, cursorDocStart, insertNewline } from '@codemirror/commands';
 import { markdown, markdownLanguage } from '@codemirror/lang-markdown';
 import { search, searchKeymap } from '@codemirror/search';
-import type { SelectionRange, StateEffect } from '@codemirror/state';
+import type { Extension, SelectionRange, StateEffect } from '@codemirror/state';
 import { HighlightStyle, syntaxHighlighting, bracketMatching } from '@codemirror/language';
 import { oneDark } from "@codemirror/theme-one-dark";
 import { tags } from '@lezer/highlight';
@@ -36,7 +36,6 @@ class App {
   // --- プロパティ ---
   private store!: Store;
   private editorView!: EditorView;
-  private editorExtensions!: any[];
   private activeFileHeadings: Heading[] = [];
   private openTabs: OpenTab[] = [];
   private activeTabPath: string | null = null;
@@ -101,6 +100,38 @@ class App {
 
   private isCodeMode = false;
   private currentCodeLanguage = 'html';
+  private wasLightModeBeforeCode = false;
+  // 全ての拡張機能を管理する区画
+  private mainCompartment = new Compartment();
+  private oneDarkCustomTheme: Extension = [
+    oneDark, // One Darkの全設定を継承
+    EditorView.theme({
+      // エディタ全体の背景を透明にして、#app-container の背景が見えるようにする
+      '&': {
+        backgroundColor: 'transparent !important'
+      },
+      '.cm-gutters': {
+        backgroundColor: 'transparent',
+        borderRight: 'none'
+      },
+      '& ::-webkit-scrollbar': {
+        width: '18px',
+      },
+      '& ::-webkit-scrollbar-track': {
+        backgroundColor: 'transparent',
+      },
+      '& ::-webkit-scrollbar-thumb': {
+        backgroundColor: 'rgba(255, 255, 255, 0.15)',
+        borderRadius: '9px',
+        border: '3px solid transparent',
+        backgroundClip: 'content-box',
+        minHeight: '40px'
+      },
+      '& ::-webkit-scrollbar-thumb:hover': {
+        backgroundColor: 'rgba(255, 255, 255, 0.4)',
+      },
+    })
+  ];
 
   // --- 静的ファクトリメソッド ---
   public static create() {
@@ -110,7 +141,7 @@ class App {
   }
 
 
-  private createEditorExtensions(): any[] {
+  private createEditorExtensions(): Extension[] {
 
     // カーソル位置を補正するフィルタ 
     const preventCursorBeyondDocEndFilter = EditorState.transactionFilter.of(tr => {
@@ -158,6 +189,21 @@ class App {
       this.lineNumbersCompartment.of([]),
     ];
   }
+
+  // ★追加: 「コード用」の拡張機能セットを返すヘルパー
+  private createCodeExtensions(): Extension[] {
+    return [
+      this.oneDarkCustomTheme,
+      lineNumbers(),
+      bracketMatching(),
+      history(),
+      keymap.of([...historyKeymap, ...searchKeymap]),
+      EditorView.lineWrapping,
+      scrollPastEnd(),
+      // 言語サポートは別で適用するので、ここでは空の区画だけ用意
+      this.languageCompartment.of([]),
+    ];
+  }
   // --- 初期化 ---
 
   private async initialize() {
@@ -173,7 +219,7 @@ class App {
 
     // CodeMirrorインスタンスを「デフォルト設定」で生成
     this.editorView = new EditorView({
-      state: EditorState.create({ extensions: this.editorExtensions }),
+      state: EditorState.create({ extensions: this.mainCompartment.of(this.createEditorExtensions()) }),
       parent: this.editorContainer,
     });
 
@@ -337,18 +383,15 @@ class App {
         this.updateUiTextColor(this.uiTextColor, this.useUiTextShadow);
       }
 
-      // ★コードブロックの言語設定
+      // コードブロックの言語設定
       if (s.codeLanguage) {
         const oldLang = this.currentCodeLanguage;
         this.currentCodeLanguage = s.codeLanguage;
         console.log(`Code language changed from ${oldLang} to ${this.currentCodeLanguage}`);
-        // ★重要: もし現在コードモード中なら、設定変更を即座に反映させる
+        // もし現在コードモード中なら、設定変更を即座に反映させる
         if (this.isCodeMode && oldLang !== this.currentCodeLanguage) {
-          // 言語だけを再適用
-          const langSupport = await this.getLanguageSupport();
-          this.editorView.dispatch({
-            effects: this.languageCompartment.reconfigure([langSupport, bracketMatching()])
-          });
+          await this.getLanguageSupport();
+          console.log("Code language applied immediately.");
         }
       }
     });
@@ -697,64 +740,98 @@ class App {
 
   // --- コードモード切替 ---
   private async toggleCodeMode() {
-    this.isCodeMode = !this.isCodeMode;
-
-    if (this.isCodeMode) {
+    // A. コードモードに入る場合
+    if (!this.isCodeMode) {
       console.log("Switching to Code Mode...");
 
-      // 1. 適用したい言語サポートを取得
-      const languageSupport = await this.getLanguageSupport();
+      // ★修正: ライトモード（または半透明モード）なら強制的にダークモードにする
+      if (!this.isDarkMode) {
+        this.toggleDarkMode();
+        this.wasLightModeBeforeCode = true; // 「元はライトだった」と記憶
+      } else {
+        this.wasLightModeBeforeCode = false; // 元からダークだった
+      }
 
-      // 2. 適用するエフェクトを一つの配列にまとめる
-      const effects = [
-        this.languageCompartment.reconfigure([languageSupport, bracketMatching()]),
-        this.lineNumbersCompartment.reconfigure(lineNumbers()),
-        this.themeCompartment.reconfigure(oneDark)
-      ];
+      // フラグを立てる (toggleDarkModeの後で行うのが重要)
+      this.isCodeMode = true;
 
-      // 3. 一度に dispatch する
-      this.editorView.dispatch({ effects });
+      // 1. まずテーマや行番号などの基本設定を適用
+      this.editorView.dispatch({
+        effects: this.mainCompartment.reconfigure(this.createCodeExtensions())
+      });
 
-    } else {
+      // 言語設定を確実にロード
+      const savedLang = await this.store.get<string>('codeLanguage');
+      if (savedLang) {
+        this.currentCodeLanguage = savedLang;
+      }
+
+      // 2. 言語サポート適用
+      await this.getLanguageSupport();
+
+    }
+    // B. コードモードから抜ける場合
+    else {
       console.log("Switching back to Text Mode...");
 
-      //  OFF にする処理 
+      // 先にフラグを下ろす (これがないと toggleDarkMode 内のガードに弾かれる可能性があるため)
+      this.isCodeMode = false;
+
+      // 通常モードに戻す
       this.editorView.dispatch({
-        effects: [
-          this.languageCompartment.reconfigure([]),
-          this.lineNumbersCompartment.reconfigure([]),
-          this.themeCompartment.reconfigure(this.getCurrentTheme())
-        ]
+        effects: this.mainCompartment.reconfigure(this.createEditorExtensions())
       });
+
+      // ★修正: 元がライトモード（または半透明）だったなら、ダークモードを解除して元に戻す
+      if (this.wasLightModeBeforeCode) {
+        this.toggleDarkMode();
+        this.wasLightModeBeforeCode = false; // リセット
+      }
     }
+
+    // Bodyクラスのトグル
+    document.body.classList.toggle('code-mode', this.isCodeMode);
   }
 
+  // --- 言語適用 (getLanguageSupport) ---
   private async getLanguageSupport() {
-    // 設定から言語を取得
-    if (!this.currentCodeLanguage) {
-      this.currentCodeLanguage = await this.store.get<string>('codeLanguage') || 'html';
-    }
+    let languageSupport;
+
+    console.log(`Loading language support for: ${this.currentCodeLanguage}`);
 
     switch (this.currentCodeLanguage) {
       case 'rust':
         const { rust } = await import('@codemirror/lang-rust');
-        return rust();
+        languageSupport = rust();
+        break;
       case 'python':
         const { python } = await import('@codemirror/lang-python');
-        return python();
+        languageSupport = python();
+        break;
       case 'typescript':
         const { javascript } = await import('@codemirror/lang-javascript');
-        return javascript({ typescript: true });
+        languageSupport = javascript({ typescript: true });
+        break;
       case 'markdown':
         const { markdown } = await import('@codemirror/lang-markdown');
-        return markdown();
+        languageSupport = markdown();
+        break;
       case 'html':
       default:
         const { html } = await import('@codemirror/lang-html');
+        // 依存関係もロード
         await import('@codemirror/lang-css');
         await import('@codemirror/lang-javascript');
-        return html();
+        languageSupport = html();
+        break;
     }
+
+    // ここで dispatch して適用する
+    this.editorView.dispatch({
+      effects: this.languageCompartment.reconfigure([
+        languageSupport
+      ])
+    });
   }
 
   // スポットライト用のプラグイン定義
@@ -1732,18 +1809,10 @@ class App {
   }
 
   private toggleDarkMode() {
-    if (this.isCodeMode) {
-      // bodyのクラスや設定保存だけ行い、エディタのテーマは One Dark のままにする
-      document.body.classList.toggle('dark-mode', this.isDarkMode);
-      this.saveSettings(); // isDarkMode の状態だけ保存
-
-      // 全ウィンドウへの通知
-      emit('app:theme-changed', { isDarkMode: this.isDarkMode });
-      return; // ここで処理を終了
-    }
+    if (this.isCodeMode) return;
     this.isDarkMode = !this.isDarkMode;
     this.editorView.dispatch({
-      effects: this.themeCompartment.reconfigure(this.getCurrentTheme())
+      effects: this.mainCompartment.reconfigure(this.createEditorExtensions())
     });
     document.body.classList.toggle('dark-mode', this.isDarkMode);
     this.updateBackground();
@@ -2175,9 +2244,12 @@ class App {
 
   private createNewTab() {
     const newFilePath = "Untitled";
-    const state = EditorState.create({ extensions: this.createEditorExtensions() });
+    const initialExtensions = this.isCodeMode ? this.createCodeExtensions() : this.createEditorExtensions();
 
-    // ★ encodingとlineEndingのデフォルト値を追加
+    const state = EditorState.create({
+      extensions: this.mainCompartment.of(initialExtensions)
+    });
+    // encodingとlineEndingのデフォルト値を追加
     const tab: OpenTab = {
       path: newFilePath,
       state,
@@ -2193,15 +2265,12 @@ class App {
 
   // コンテンツを指定して新しいタブを開く
   private createNewTabWithContent(title: string, content: string) {
-    // CodeMirrorのStateを作成（docプロパティで初期テキストを指定）
-    const state = EditorState.create({
-      doc: content, // ★ここがポイント
-      extensions: this.createEditorExtensions()
-    });
+    const initialExtensions = this.isCodeMode ? this.createCodeExtensions() : this.createEditorExtensions();
 
-    // 重複防止のため、既に同名のタブがあるかチェック（簡易的）
-    // 必要なら title = title + "_" + Date.now() 等しても良いが
-    // AIチャット側ですでにタイムスタンプを入れているのでそのまま使う
+    const state = EditorState.create({
+      doc: content,
+      extensions: this.mainCompartment.of(initialExtensions)
+    });
 
     const tab: OpenTab = {
       path: title, // 保存前なので、これを仮のファイル名/IDとして扱う
@@ -2408,7 +2477,7 @@ class App {
 
         const state = EditorState.create({
           doc: fileData.content,
-          extensions: this.createEditorExtensions()
+          extensions: this.mainCompartment.of(this.createEditorExtensions())
         });
 
         tab = {
@@ -2458,6 +2527,21 @@ class App {
 
     // 4. 最新設定が適用されたStateをビューにセット
     this.editorView.setState(stateToSet);
+
+    // 現在のグローバルなモードに合わせて、このタブの拡張機能を再構成する
+    this.editorView.dispatch({
+      effects: this.mainCompartment.reconfigure(
+        this.isCodeMode ? this.createCodeExtensions() : this.createEditorExtensions()
+      )
+    });
+
+    // コードモードなら言語設定と言語用CSSクラスも適用
+    if (this.isCodeMode) {
+      await this.getLanguageSupport(); // 言語読み込み・適用
+      document.body.classList.add('code-mode');
+    } else {
+      document.body.classList.remove('code-mode');
+    }
 
     const view = this.editorView;
 
