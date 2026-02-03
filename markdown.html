@@ -12,7 +12,12 @@
     <div id="md-wrapper">
         <div data-tauri-drag-region class="title-bar">
             <div class="md-controls">
+                <select id="preview-mode-select" title="プレビューモード">
+                    <option value="markdown">Markdown</option>
+                    <option value="html">HTML</option>
+                </select>
                 <button id="btn-copy-html" title="HTMLソースをコピー"></button>
+                <button id="btn-save-html" title="HTMLとして保存"></button>
                 <button id="btn-pin" title="最前面に固定"></button>
                 <button id="btn-refresh" title="更新"></button>
                 <button id="btn-close" title="閉じる"></button>

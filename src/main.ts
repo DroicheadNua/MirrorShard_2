@@ -2,12 +2,13 @@ import './styles.css';
 import { invoke } from '@tauri-apps/api/core';
 import { Store } from '@tauri-apps/plugin-store';
 import { EditorState, Compartment, RangeSetBuilder, Transaction, EditorSelection } from '@codemirror/state';
-import { EditorView, keymap, ViewUpdate, scrollPastEnd, Decoration, DecorationSet, ViewPlugin } from '@codemirror/view';
+import { EditorView, keymap, ViewUpdate, scrollPastEnd, Decoration, DecorationSet, ViewPlugin, lineNumbers } from '@codemirror/view';
 import { history, historyKeymap, undo, redo, insertTab, cursorDocEnd, cursorDocStart, insertNewline } from '@codemirror/commands';
 import { markdown, markdownLanguage } from '@codemirror/lang-markdown';
 import { search, searchKeymap } from '@codemirror/search';
 import type { SelectionRange, StateEffect } from '@codemirror/state';
-import { HighlightStyle, syntaxHighlighting } from '@codemirror/language';
+import { HighlightStyle, syntaxHighlighting, bracketMatching, defaultHighlightStyle } from '@codemirror/language';
+import { oneDarkHighlightStyle } from "@codemirror/theme-one-dark";
 import { tags } from '@lezer/highlight';
 import { getCurrentWindow } from '@tauri-apps/api/window';
 import { open, ask, message, save } from '@tauri-apps/plugin-dialog';
@@ -95,6 +96,11 @@ class App {
   private readonly monospaceFont = '"BIZ UDゴシック", "Osaka-Mono", monospace';
   private fontList = [this.serifFont, this.sansSerifFont, this.monospaceFont];
 
+  private languageCompartment = new Compartment();
+  private lineNumbersCompartment = new Compartment();
+
+  private isCodeMode = false;
+
   // --- 静的ファクトリメソッド ---
   public static create() {
     const app = new App();
@@ -147,6 +153,8 @@ class App {
       preventCursorBeyondDocEndFilter,
       this.highlightingCompartment.of(syntaxHighlighting(this.isDarkMode ? this.darkHighlightStyle : this.lightHighlightStyle)),
       this.spotlightCompartment.of(this.createSpotlightPlugin(this.isSpotlightMode)),
+      this.languageCompartment.of([]),
+      this.lineNumbersCompartment.of([]),
     ];
   }
   // --- 初期化 ---
@@ -670,6 +678,52 @@ class App {
     }
   }
 
+  // コードエディタモード切替 (Ctrl + K)
+  private async toggleCodeMode() {
+    this.isCodeMode = !this.isCodeMode;
+    const effects = [];
+
+    if (this.isCodeMode) {
+      console.log("Switching to Code Mode...");
+
+      // 1. 必要なライブラリを動的インポート
+      // とりあえずHTML/CSS/JSをまとめて読み込む「Webセット」として扱う
+      const [htmlLang] = await Promise.all([
+        import('@codemirror/lang-html'),
+        import('@codemirror/lang-css'),
+        import('@codemirror/lang-javascript')
+      ]);
+
+      // 2. 言語拡張を適用 (HTMLモードとして起動)
+      effects.push(this.languageCompartment.reconfigure([
+        htmlLang.html(), // HTML (CSS/JS含む)
+        bracketMatching() // 括弧の対応
+      ]));
+
+      // 3. 行番号を表示
+      effects.push(this.lineNumbersCompartment.reconfigure(lineNumbers()));
+
+      // 4. ハイライトスタイルをコード用に切り替え
+      const codeStyle = this.isDarkMode ? oneDarkHighlightStyle : defaultHighlightStyle;
+      effects.push(this.highlightingCompartment.reconfigure(
+        syntaxHighlighting(codeStyle)
+      ));
+    } else {
+      console.log("Switching back to Text Mode...");
+
+      // 通常モードに戻す (区画を空にする)
+      effects.push(this.languageCompartment.reconfigure([]));
+      effects.push(this.lineNumbersCompartment.reconfigure([]));
+      const textStyle = this.isDarkMode ? this.darkHighlightStyle : this.lightHighlightStyle;
+      effects.push(this.highlightingCompartment.reconfigure(
+        syntaxHighlighting(textStyle)
+      ));
+    }
+
+    // エディタに適用
+    this.editorView.dispatch({ effects });
+  }
+
   // スポットライト用のプラグイン定義
   private createSpotlightPlugin(isActive: boolean) {
     return ViewPlugin.fromClass(class {
@@ -742,6 +796,10 @@ class App {
         wordBreak: 'var(--editor-word-break, break-all)',
         caretColor: darkText
       },
+      '.cm-gutters': {
+        backgroundColor: 'transparent',
+        borderRight: 'none'
+      },
       '.cm-cursor, .cm-dropCursor': {
         borderLeftColor: darkText
       },
@@ -791,6 +849,10 @@ class App {
       '.cm-cursor, .cm-dropCursor': {
         borderLeftColor: lightText
       },
+      '.cm-gutters': {
+        backgroundColor: 'transparent',
+        borderRight: 'none'
+      },
       '&.cm-focused .cm-selectionBackground, .cm-selectionBackground, .cm-content ::selection': {
         backgroundColor: stone
       },
@@ -833,6 +895,10 @@ class App {
       },
       '.cm-cursor, .cm-dropCursor': {
         borderLeftColor: lightText
+      },
+      '.cm-gutters': {
+        backgroundColor: 'transparent',
+        borderRight: 'none'
       },
       '&.cm-focused .cm-selectionBackground, .cm-selectionBackground, .cm-content ::selection': {
         backgroundColor: stone
@@ -1373,6 +1439,10 @@ class App {
       e.preventDefault();
       invoke('open_export_window');
     }
+    if (isCtrlOrCmd && key === 'k' && !isShift) {
+      e.preventDefault();
+      this.toggleCodeMode();
+    }
   }
 
   private onEditorUpdate(update: ViewUpdate) {
@@ -1630,16 +1700,24 @@ class App {
 
   private toggleDarkMode() {
     this.isDarkMode = !this.isDarkMode;
-    this.editorView.dispatch(
-      {
-        effects:
-          this.themeCompartment.reconfigure(this.isDarkMode ? this.darkTheme : this.lightTheme)
-      },
-      {
-        effects:
-          this.highlightingCompartment.reconfigure(syntaxHighlighting(this.isDarkMode ? this.darkHighlightStyle : this.lightHighlightStyle))
-      }
-    );
+    const themeEffect = this.themeCompartment.reconfigure(this.isDarkMode ? this.darkTheme : this.lightTheme);
+
+    // ハイライトスタイルの決定ロジック
+    let newHighlightStyle;
+    if (this.isCodeMode) {
+      // コードモード中なら: OneDark か Default か
+      newHighlightStyle = this.isDarkMode ? oneDarkHighlightStyle : defaultHighlightStyle;
+    } else {
+      // 通常モード中なら: 小説用Dark か 小説用Light か
+      newHighlightStyle = this.isDarkMode ? this.darkHighlightStyle : this.lightHighlightStyle;
+    }
+
+    const highlightEffect = this.highlightingCompartment.reconfigure(syntaxHighlighting(newHighlightStyle));
+
+    // 適用
+    this.editorView.dispatch({
+      effects: [themeEffect, highlightEffect]
+    });
     document.body.classList.toggle('dark-mode', this.isDarkMode);
     this.updateBackground();
     this.saveSettings();

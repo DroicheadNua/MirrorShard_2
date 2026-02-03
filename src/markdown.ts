@@ -5,6 +5,8 @@ import { invoke } from '@tauri-apps/api/core';
 import { getCurrentWindow } from '@tauri-apps/api/window';
 import { writeText } from '@tauri-apps/plugin-clipboard-manager';
 import updateArticle from './scripts/ruby';
+import { save } from '@tauri-apps/plugin-dialog';
+import { writeTextFile } from '@tauri-apps/plugin-fs';
 
 // GFMと改行の有効化
 marked.use({
@@ -18,27 +20,59 @@ interface MarkdownPayload {
     filePath: string;
 }
 
+const refreshBtn = document.getElementById('btn-refresh');
+const closeBtn = document.getElementById('btn-close');
+const copyHtmlBtn = document.getElementById('btn-copy-html');
+const saveHtmlBtn = document.getElementById('btn-save-html');
+const pinBtn = document.getElementById('btn-pin');
+const modeSelect = document.getElementById('preview-mode-select') as HTMLSelectElement;
+const osType = await type();
+if (osType === 'macos') document.body.classList.add('is-mac');
 const contentDiv = document.getElementById('markdown-content');
 const wrapper = document.getElementById('md-wrapper');
 // スクロール位置保存用マップ (パス -> scrollTop)
 const scrollHistory = new Map<string, number>();
 // 直前に表示していたファイルパス
 let currentFilePath = "";
+let currentText = "";
+let currentMode = "markdown"; // 'markdown' | 'html'
+let isPinned = false;
+
+async function renderContent() {
+    if (!contentDiv) return;
+
+    if (currentMode === 'markdown') {
+        // --- Markdownモード ---
+        // 1. Markedパース
+        const rawHtml = await marked.parse(currentText);
+        contentDiv.innerHTML = rawHtml;
+
+        // 2. ルビ変換 (DOM操作)
+        updateArticle(contentDiv);
+
+    } else {
+        // --- HTMLモード ---
+        // テキストをそのままHTMLとして解釈
+        contentDiv.innerHTML = currentText;
+
+        // HTMLモードでもルビ記法を使いたい場合はここで updateArticle(contentDiv) を呼んでも良いが
+        // 純粋なHTMLプレビューとしては「書いたタグ通り」に出るのが正解
+    }
+}
 
 async function init() {
-    const refreshBtn = document.getElementById('btn-refresh');
-    const closeBtn = document.getElementById('btn-close');
-    const copyHtmlBtn = document.getElementById('btn-copy-html');
-    const pinBtn = document.getElementById('btn-pin');
-    let isPinned = false;
 
-    const osType = await type();
-    if (osType === 'macos') document.body.classList.add('is-mac');
+    // モード切替イベント
+    modeSelect?.addEventListener('change', async () => {
+        currentMode = modeSelect.value;
+        await renderContent();
+    });
 
     // データ受信リスナー
     await listen<MarkdownPayload>('markdown-update', async (event) => {
         const { text, isDarkMode, filePath } = event.payload;
         if (!contentDiv || !wrapper) return;
+        currentText = text;
 
         // 1. 直前のファイルのスクロール位置を保存
         // (初回起動時など currentFilePath が空の場合はスキップ)
@@ -55,15 +89,10 @@ async function init() {
         } else {
             document.body.classList.remove('dark-mode');
         }
-        // 4. HTML生成
-        // 先にMarkdownをパースする
-        const rawHtml = await marked.parse(text);
-        contentDiv.innerHTML = rawHtml;
+        // 4. 描画実行
+        await renderContent();
 
-        // 5. ルビ変換 (生成されたDOMに対して適用)
-        updateArticle(contentDiv);
-
-        // 6. 表示処理 & スクロール復元
+        // 5. 表示処理 & スクロール復元
         setTimeout(async () => {
             // スクロール位置の復元
             // マップにあればその位置、なければ(新規/別タブ) 0 (文頭)
@@ -140,6 +169,32 @@ async function init() {
             const html = contentDiv.innerHTML;
             await writeText(html);
             alert("HTML Source Copied!");
+        }
+    });
+
+    // --- HTML保存機能 (追加) ---
+    saveHtmlBtn?.addEventListener('click', async () => {
+        if (!contentDiv) return;
+
+        try {
+            // 保存ダイアログ
+            const path = await save({
+                title: 'Save as HTML',
+                filters: [{ name: 'HTML', extensions: ['html'] }],
+                defaultPath: 'export.html'
+            });
+
+            if (!path) return;
+
+            // プレビュー内容をそのまま保存
+            const htmlContent = contentDiv.innerHTML;
+
+            await writeTextFile(path, htmlContent);
+            alert("HTML Saved!");
+
+        } catch (e) {
+            console.error(e);
+            alert(`Save Failed: ${e}`);
         }
     });
 
