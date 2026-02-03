@@ -20,6 +20,7 @@
             <div class="tabs">
                 <button class="tab-btn active" data-tab="tab-general">一般</button>
                 <button class="tab-btn" data-tab="tab-ai">AI設定</button>
+                <button class="tab-btn" data-tab="tab-code">コードエディタ</button>
                 <hr class="separator" style="color: transparent;border: none;">
                 <button id="save-settings-btn">適用</button>
             </div>
@@ -215,6 +216,29 @@
                         <button id="btn-select-ai-icon">Select</button>
                         <button id="btn-clear-ai-icon">Clear</button>
                     </div>
+                </div>
+            </div>
+            <!-- タブ3: コードエディタ設定 -->
+            <div id="tab-code" class="tab-content">
+                <div class="setting-group">
+                    <h4>Code Editor Mode (Ctrl+K)</h4>
+                    <label>
+                        Syntax Highlight Language:
+                        <select id="code-language-select">
+                            <option value="html">HTML / CSS / JS (Web)</option>
+                            <option value="markdown">Markdown</option>
+                            <option value="typescript">TypeScript</option>
+                            <option value="rust">Rust</option>
+                            <option value="python">Python</option>
+                            <!-- 必要なら他も追加 -->
+                        </select>
+                    </label>
+                </div>
+
+                <div class="setting-group">
+                    <h4>Markdown Preview</h4>
+                    <!-- 将来的に GFMのオンオフとかを入れる場所 -->
+                    <p style="color: #888; font-size: 0.9em;">(Future settings will appear here)</p>
                 </div>
             </div>
         </div>

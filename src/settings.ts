@@ -67,6 +67,7 @@ async function setupSettings() {
         const useUiTextShadow = document.querySelector('#use-ui-text-shadow') as HTMLInputElement;
         const useUiBgCheck = document.querySelector('#use-ui-bg') as HTMLInputElement;
         const pandocPath = document.querySelector('#pandoc-path') as HTMLInputElement;
+        const codeLanguageSelect = document.querySelector('#code-language-select') as HTMLSelectElement;
 
         // --- 3.1. UI要素の取得 (AI新規) ---
         const geminiApiKeyInput = document.querySelector('#gemini-api-key') as HTMLInputElement;
@@ -129,6 +130,9 @@ async function setupSettings() {
 
         const pandoc = await store.get<string>('pandocPath') ?? '';
         if (pandocPath) pandocPath.value = pandoc;
+
+        const initCodeLanguage = await store.get<string>('codeLanguage') || 'html';
+        if (codeLanguageSelect) codeLanguageSelect.value = initCodeLanguage;
 
         // ★ UI文字色
         const isUiWhite = await store.get<boolean>('uiTextIsWhite') ?? false;
@@ -320,6 +324,7 @@ async function setupSettings() {
                 console.log('Applying Font:', newUserFont);
                 const newAlign = alignSelect.value;
                 const newPandocPath = pandocPath.value;
+                const newCodeLanguage = codeLanguageSelect.value;
 
                 const newIsBgDark = editorBgDark.checked;
                 const newBgOpacity = parseInt(bgOpacityRange.value, 10);
@@ -360,6 +365,7 @@ async function setupSettings() {
                 await store.set('editorBgOpacity', newBgOpacity);
                 await store.set('editorBlur', newBlur);
                 await store.set('pandocPath', newPandocPath);
+                await store.set('codeLanguage', newCodeLanguage);
 
                 // AI設定の保存
                 if (newGeminiApiKey) await store.set('geminiApiKey', newGeminiApiKey);
@@ -426,7 +432,8 @@ async function setupSettings() {
                     aiChatUserIconPath: pendingUserIcon,
                     aiChatAiName: aiNameInput.value || 'AI',
                     aiChatAiIconPath: pendingAiIcon,
-                    localLlmModel: newLocalModel
+                    localLlmModel: newLocalModel,
+                    codeLanguage: newCodeLanguage
                 });
 
             } catch (err) {

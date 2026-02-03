@@ -7,8 +7,8 @@ import { history, historyKeymap, undo, redo, insertTab, cursorDocEnd, cursorDocS
 import { markdown, markdownLanguage } from '@codemirror/lang-markdown';
 import { search, searchKeymap } from '@codemirror/search';
 import type { SelectionRange, StateEffect } from '@codemirror/state';
-import { HighlightStyle, syntaxHighlighting, bracketMatching, defaultHighlightStyle } from '@codemirror/language';
-import { oneDarkHighlightStyle } from "@codemirror/theme-one-dark";
+import { HighlightStyle, syntaxHighlighting, bracketMatching } from '@codemirror/language';
+import { oneDark } from "@codemirror/theme-one-dark";
 import { tags } from '@lezer/highlight';
 import { getCurrentWindow } from '@tauri-apps/api/window';
 import { open, ask, message, save } from '@tauri-apps/plugin-dialog';
@@ -100,6 +100,7 @@ class App {
   private lineNumbersCompartment = new Compartment();
 
   private isCodeMode = false;
+  private currentCodeLanguage = 'html';
 
   // --- 静的ファクトリメソッド ---
   public static create() {
@@ -243,6 +244,7 @@ class App {
     }
 
     await listen('settings-changed', async (event: any) => {
+      console.log("Received settings-changed payload:", event.payload);
       const s = event.payload;
 
       // エディタ設定の更新
@@ -333,6 +335,21 @@ class App {
       // UI文字色の反映
       if (s.uiTextColor || s.useUiTextShadow !== undefined) {
         this.updateUiTextColor(this.uiTextColor, this.useUiTextShadow);
+      }
+
+      // ★コードブロックの言語設定
+      if (s.codeLanguage) {
+        const oldLang = this.currentCodeLanguage;
+        this.currentCodeLanguage = s.codeLanguage;
+        console.log(`Code language changed from ${oldLang} to ${this.currentCodeLanguage}`);
+        // ★重要: もし現在コードモード中なら、設定変更を即座に反映させる
+        if (this.isCodeMode && oldLang !== this.currentCodeLanguage) {
+          // 言語だけを再適用
+          const langSupport = await this.getLanguageSupport();
+          this.editorView.dispatch({
+            effects: this.languageCompartment.reconfigure([langSupport, bracketMatching()])
+          });
+        }
       }
     });
 
@@ -678,50 +695,66 @@ class App {
     }
   }
 
-  // コードエディタモード切替 (Ctrl + K)
+  // --- コードモード切替 ---
   private async toggleCodeMode() {
     this.isCodeMode = !this.isCodeMode;
-    const effects = [];
 
     if (this.isCodeMode) {
       console.log("Switching to Code Mode...");
 
-      // 1. 必要なライブラリを動的インポート
-      // とりあえずHTML/CSS/JSをまとめて読み込む「Webセット」として扱う
-      const [htmlLang] = await Promise.all([
-        import('@codemirror/lang-html'),
-        import('@codemirror/lang-css'),
-        import('@codemirror/lang-javascript')
-      ]);
+      // 1. 適用したい言語サポートを取得
+      const languageSupport = await this.getLanguageSupport();
 
-      // 2. 言語拡張を適用 (HTMLモードとして起動)
-      effects.push(this.languageCompartment.reconfigure([
-        htmlLang.html(), // HTML (CSS/JS含む)
-        bracketMatching() // 括弧の対応
-      ]));
+      // 2. 適用するエフェクトを一つの配列にまとめる
+      const effects = [
+        this.languageCompartment.reconfigure([languageSupport, bracketMatching()]),
+        this.lineNumbersCompartment.reconfigure(lineNumbers()),
+        this.themeCompartment.reconfigure(oneDark)
+      ];
 
-      // 3. 行番号を表示
-      effects.push(this.lineNumbersCompartment.reconfigure(lineNumbers()));
+      // 3. 一度に dispatch する
+      this.editorView.dispatch({ effects });
 
-      // 4. ハイライトスタイルをコード用に切り替え
-      const codeStyle = this.isDarkMode ? oneDarkHighlightStyle : defaultHighlightStyle;
-      effects.push(this.highlightingCompartment.reconfigure(
-        syntaxHighlighting(codeStyle)
-      ));
     } else {
       console.log("Switching back to Text Mode...");
 
-      // 通常モードに戻す (区画を空にする)
-      effects.push(this.languageCompartment.reconfigure([]));
-      effects.push(this.lineNumbersCompartment.reconfigure([]));
-      const textStyle = this.isDarkMode ? this.darkHighlightStyle : this.lightHighlightStyle;
-      effects.push(this.highlightingCompartment.reconfigure(
-        syntaxHighlighting(textStyle)
-      ));
+      //  OFF にする処理 
+      this.editorView.dispatch({
+        effects: [
+          this.languageCompartment.reconfigure([]),
+          this.lineNumbersCompartment.reconfigure([]),
+          this.themeCompartment.reconfigure(this.getCurrentTheme())
+        ]
+      });
+    }
+  }
+
+  private async getLanguageSupport() {
+    // 設定から言語を取得
+    if (!this.currentCodeLanguage) {
+      this.currentCodeLanguage = await this.store.get<string>('codeLanguage') || 'html';
     }
 
-    // エディタに適用
-    this.editorView.dispatch({ effects });
+    switch (this.currentCodeLanguage) {
+      case 'rust':
+        const { rust } = await import('@codemirror/lang-rust');
+        return rust();
+      case 'python':
+        const { python } = await import('@codemirror/lang-python');
+        return python();
+      case 'typescript':
+        const { javascript } = await import('@codemirror/lang-javascript');
+        return javascript({ typescript: true });
+      case 'markdown':
+        const { markdown } = await import('@codemirror/lang-markdown');
+        return markdown();
+      case 'html':
+      default:
+        const { html } = await import('@codemirror/lang-html');
+        await import('@codemirror/lang-css');
+        await import('@codemirror/lang-javascript');
+        return html();
+    }
   }
 
   // スポットライト用のプラグイン定義
@@ -1699,24 +1732,18 @@ class App {
   }
 
   private toggleDarkMode() {
-    this.isDarkMode = !this.isDarkMode;
-    const themeEffect = this.themeCompartment.reconfigure(this.isDarkMode ? this.darkTheme : this.lightTheme);
-
-    // ハイライトスタイルの決定ロジック
-    let newHighlightStyle;
     if (this.isCodeMode) {
-      // コードモード中なら: OneDark か Default か
-      newHighlightStyle = this.isDarkMode ? oneDarkHighlightStyle : defaultHighlightStyle;
-    } else {
-      // 通常モード中なら: 小説用Dark か 小説用Light か
-      newHighlightStyle = this.isDarkMode ? this.darkHighlightStyle : this.lightHighlightStyle;
+      // bodyのクラスや設定保存だけ行い、エディタのテーマは One Dark のままにする
+      document.body.classList.toggle('dark-mode', this.isDarkMode);
+      this.saveSettings(); // isDarkMode の状態だけ保存
+
+      // 全ウィンドウへの通知
+      emit('app:theme-changed', { isDarkMode: this.isDarkMode });
+      return; // ここで処理を終了
     }
-
-    const highlightEffect = this.highlightingCompartment.reconfigure(syntaxHighlighting(newHighlightStyle));
-
-    // 適用
+    this.isDarkMode = !this.isDarkMode;
     this.editorView.dispatch({
-      effects: [themeEffect, highlightEffect]
+      effects: this.themeCompartment.reconfigure(this.getCurrentTheme())
     });
     document.body.classList.toggle('dark-mode', this.isDarkMode);
     this.updateBackground();
@@ -2136,10 +2163,10 @@ class App {
   private async openNewFile() {
     const filePath = await open({
       multiple: false,
-      filters: [{
-        name: 'Text Files',
-        extensions: ['md', 'txt']
-      }]
+      // filters: [{
+      //   name: 'Text Files',
+      //   extensions: ['md', 'txt']
+      // }]
     });
     if (typeof filePath === 'string') {
       await this.openOrSwitchTab(filePath);
