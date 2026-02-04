@@ -338,12 +338,12 @@ async function setupSettings() {
                 const rgb = newIsBgDark ? '0, 0, 0' : '255, 255, 255';
                 const rgbaString = `rgba(${rgb}, ${newBgOpacity / 100})`;
 
-                // エディタ文字色: 背景が黒なら白(#dddddd)、白なら黒(#333333)
+                // エディタ文字色: 背景が黒なら白(#dddddd)、白なら黒(#1e1e1e)
                 // 自動決定するので保存・通知するのは「色コード」でOK
-                const newEditorTextColor = newIsBgDark ? '#DDDDDD' : '#333333';
+                const newEditorTextColor = newIsBgDark ? '#DDDDDD' : '#1e1e1e';
 
                 // UI文字色: 指定に従う
-                const newUiTextColor = newIsUiWhite ? '#DDDDDD' : '#333333';
+                const newUiTextColor = newIsUiWhite ? '#DDDDDD' : '#1e1e1e';
 
                 // AI Params
                 const newGeminiApiKey = geminiApiKeyInput.value.trim();

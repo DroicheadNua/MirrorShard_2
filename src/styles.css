@@ -23,7 +23,7 @@ body:not(.font-serif):not(.font-sans-serif):not(.font-monospace) {
 
   /* ライトモード (デフォルト) */
   --bg-color: transparent;
-  --text-color: #333333;
+  --text-color: #1e1e1e;
   --border-color: #dddddd;
   --sidebar-hover-bg: rgba(0, 0, 0, 0.2);
   --tab-active-bg: var(--bg-color);
@@ -584,13 +584,15 @@ body.dark-mode .window-controls button {
 }
 
 #btn-typesound,
-#btn-spotlight {
+#btn-spotlight,
+#btn-code {
   opacity: 0.4;
   transition: opacity 0.2s;
 }
 
 #btn-typesound.enabled,
-#btn-spotlight.enabled {
+#btn-spotlight.enabled,
+body.code-mode #btn-code {
   opacity: 1;
 }
 
@@ -750,6 +752,7 @@ body.code-mode #status-breadcrumbs,
 body.code-mode #status-filepath {
   background-color: transparent !important;
   color: #7aa2f7 !important;
+  font-family: monospace !important;
   text-shadow:
     0 0 5px rgba(0, 50, 255, 0.5),
     0 0 10px rgba(0, 50, 255, 0.4),
@@ -783,6 +786,8 @@ body.code-mode .collapse-controls button:hover {
 body.code-mode .outline-text,
 body.code-mode .outline-item,
 body.code-mode .file-entry {
+  font-family: monospace !important;
+  font-size: 13px !important;
   color: #A599E9 !important;
 }
 

@@ -152,7 +152,7 @@ class App {
   // 全ての拡張機能を管理する区画
   private mainCompartment = new Compartment();
   private tokyoNightCustomTheme: Extension = [
-    tokyoNight, // One Darkの全設定を継承
+    tokyoNight, // tokyoNightの全設定を継承
     EditorView.theme({
       // エディタ全体の背景を透明にして、#app-container の背景が見えるようにする
       '&': {
@@ -241,7 +241,7 @@ class App {
     ];
   }
 
-  // ★追加: 「コード用」の拡張機能セットを返すヘルパー
+  // コード用の拡張機能セットを返すヘルパー
   private createCodeExtensions(): Extension[] {
     return [
       this.tokyoNightCustomTheme,
@@ -592,7 +592,7 @@ class App {
 
     // --- UI文字色 (ヘルパーあり) ---
     const isUiWhite = await this.store.get<boolean>('uiTextIsWhite') ?? false;
-    const uiColor = isUiWhite ? '#DDDDDD' : '#333333';
+    const uiColor = isUiWhite ? '#DDDDDD' : '#1e1e1e';
     const useUiShadow = await this.store.get<boolean>('useUiTextShadow') ?? false;
     this.updateUiTextColor(uiColor, useUiShadow);
     this.useUiBg = await this.store.get<boolean>('useUiBg') ?? false;
@@ -715,7 +715,7 @@ class App {
 
     if (useShadow) {
       // 文字色が明るい(#DDDDDD)なら、影は黒く。
-      // 文字色が暗い(#333333)なら、影は白くする。
+      // 文字色が暗い(#1e1e1e)なら、影は白くする。
       const shadowColor = (color === '#DDDDDD')
         ? '1px 1px 2px rgba(0,0,0,0.8)'   // 黒い影
         : '1px 1px 2px rgba(255,255,255,0.8)'; // 白い影
@@ -1977,6 +1977,7 @@ class App {
   }
 
   private cycleEditorFont() {
+    if (this.isCodeMode) return;
     this.userFontFamily = 'default';
     this.currentFontIndex = (this.currentFontIndex + 1) % this.fontList.length;
     this.updateFontSettings();
@@ -1984,9 +1985,14 @@ class App {
   }
 
   private changeFontSize(newSize: number) {
+    if (this.isCodeMode) return;
     if (newSize < 8 || newSize > 72) return;
     this.currentFontSize = newSize;
-    this.editorView.dispatch({ effects: this.fontSizeCompartment.reconfigure(this.createFontSizeTheme(this.currentFontSize)) });
+    this.editorView.dispatch({
+      effects: this.mainCompartment.reconfigure(
+        this.isCodeMode ? this.createCodeExtensions() : this.createEditorExtensions()
+      )
+    });
     this.saveSettings();
     emit('preview-update-data', {
       fontSize: `${newSize}pt`,
