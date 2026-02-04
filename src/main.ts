@@ -228,13 +228,15 @@ class App {
           return EditorView.scrollIntoView(range.from, { y: 'center' });
         }
       }),
-      this.isDarkMode ? this.darkTheme : this.lightTheme,
+      this.getCurrentTheme(),
       this.dynamicFontTheme,
       this.createFontSizeTheme(this.currentFontSize),
       EditorView.updateListener.of((update: ViewUpdate) => this.onEditorUpdate(update)),
       scrollPastEnd(),
       preventCursorBeyondDocEndFilter,
-      syntaxHighlighting(this.isDarkMode ? this.darkHighlightStyle : this.lightHighlightStyle),
+      syntaxHighlighting(
+        (this.isDarkMode || this.editorIsBgDark) ? this.darkHighlightStyle : this.lightHighlightStyle
+      ),
       this.createSpotlightPlugin(this.isSpotlightMode),
       [],
       [],
@@ -251,6 +253,7 @@ class App {
       keymap.of([...historyKeymap, ...searchKeymap]),
       EditorView.lineWrapping,
       scrollPastEnd(),
+      EditorView.updateListener.of((update: ViewUpdate) => this.onEditorUpdate(update)),
       // 言語サポートは別で適用するので、ここでは空の区画だけ用意
       this.languageCompartment.of([]),
     ];
@@ -414,6 +417,11 @@ class App {
 
         // 第3のテーマ（TranslucentDarkTheme）を適用するために必須
         this.applyAppearance();
+        if (!this.isCodeMode) {
+          this.editorView.dispatch({
+            effects: this.mainCompartment.reconfigure(this.createEditorExtensions())
+          });
+        }
       }
       if (s.editorBgOpacity !== undefined) {
         this.editorBgOpacity = s.editorBgOpacity;

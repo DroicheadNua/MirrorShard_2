@@ -678,7 +678,8 @@ body.zen-mode .titlebar {
 body.zen-mode .titlebar-buttons button,
 body.zen-mode .window-controls button,
 body.zen-mode .titlebar-buttons #btn-typesound,
-body.zen-mode .titlebar-buttons #btn-spotlight {
+body.zen-mode .titlebar-buttons #btn-spotlight,
+body.zen-mode .titlebar-buttons #btn-code {
   opacity: 0;
   pointer-events: none;
   /* クリックできないようにする */
@@ -706,7 +707,8 @@ body.zen-mode .titlebar:hover .window-controls button {
 }
 
 body.zen-mode .titlebar:hover .titlebar-buttons #btn-typesound.enabled,
-body.zen-mode .titlebar:hover .titlebar-buttons #btn-spotlight.enabled {
+body.zen-mode .titlebar:hover .titlebar-buttons #btn-spotlight.enabled,
+body.zen-mode .titlebar:hover .titlebar-buttons #btn-code {
   opacity: 1;
   pointer-events: auto;
 }
