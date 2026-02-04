@@ -1,7 +1,7 @@
 {
   "name": "mirrorshard2",
   "private": true,
-  "version": "0.5.0",
+  "version": "1.0.0",
   "type": "module",
   "scripts": {
     "dev": "vite",
@@ -20,7 +20,6 @@
     "@codemirror/language": "^6.11.3",
     "@codemirror/search": "^6.5.11",
     "@codemirror/state": "^6.5.2",
-    "@codemirror/theme-one-dark": "^6.1.3",
     "@codemirror/view": "^6.38.6",
     "@google/generative-ai": "^0.24.1",
     "@lezer/common": "^1.3.0",
@@ -30,7 +29,6 @@
     "@tauri-apps/plugin-clipboard-manager": "~2.3.2",
     "@tauri-apps/plugin-dialog": "^2.4.2",
     "@tauri-apps/plugin-fs": "^2.4.4",
-    "@tauri-apps/plugin-opener": "^2",
     "@tauri-apps/plugin-os": "~2.3.2",
     "@tauri-apps/plugin-store": "~2.4.1",
     "@tauri-apps/plugin-window-state": "~2.4.1",

@@ -42,6 +42,12 @@ struct MacFileBuffer(Mutex<Option<String>>);
 // --- Tauriコマンドの定義 ---
 
 #[tauri::command]
+fn open_in_browser(path: String) {
+    // システムのデフォルトブラウザでパス（ファイル）を開く
+    let _ = opener::open(path);
+}
+
+#[tauri::command]
 async fn open_markdown_preview(app: AppHandle) {
     if app.get_webview_window("markdown").is_some() {
         app.get_webview_window("markdown").unwrap().close().unwrap();
@@ -770,6 +776,7 @@ pub fn run() {
             open_shortcut,
             export_with_pandoc,
             open_markdown_preview,
+            open_in_browser,
         ])
         .build(tauri::generate_context!())
         .expect("error while building tauri application")

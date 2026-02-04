@@ -104,15 +104,15 @@ body {
 .font-controls button,
 .collapse-controls button {
   border: none;
-  width: 28px;
-  height: 28px;
+  width: 26px;
+  height: 26px;
   margin: 0px;
   padding: 4px;
   border-radius: 4px;
   cursor: pointer;
   transition: background-color 0.2s;
 
-  /* ★ ここが変更点: 背景画像ではなく「マスク」として画像を扱う */
+  /* 背景画像ではなく「マスク」として画像を扱う */
   /* デフォルトの色 (CSS変数で制御可能になる) */
   background-color: var(--text-color);
 
@@ -735,26 +735,55 @@ body.zen-mode .titlebar:hover .titlebar-buttons #btn-spotlight {
 /* コードモード有効時のスタイル */
 body.code-mode #app-container {
   background-image: none !important;
-  background-color: #282c34 !important;
-  /* oneDarkの背景色 */
+  background-color: rgba(26, 27, 38, 0.95) !important;
 }
 
-body.code-mode #editor-container::-webkit-scrollbar {
-  width: 18px;
+body.code-mode #editor-container {
+  text-shadow:
+    0 0 5px rgba(0, 50, 255, 0.5),
+    0 0 10px rgba(0, 50, 255, 0.4),
+    0 0 20px rgba(0, 50, 255, 0.3) !important;
 }
 
-body.code-mode #editor-container::-webkit-scrollbar-track {
+body.code-mode #status-bar,
+body.code-mode #status-breadcrumbs,
+body.code-mode #status-filepath {
   background-color: transparent !important;
-  border: none !important;
+  color: #7aa2f7 !important;
+  text-shadow:
+    0 0 5px rgba(0, 50, 255, 0.5),
+    0 0 10px rgba(0, 50, 255, 0.4),
+    0 0 20px rgba(0, 50, 255, 0.3) !important;
 }
 
-body.code-mode #editor-container::-webkit-scrollbar-thumb {
-  background-color: #525252 !important;
-  border-radius: 4px;
+body.code-mode .titlebar-buttons button,
+body.code-mode .window-controls button,
+body.code-mode .outline-controls button,
+body.code-mode .font-controls button,
+body.code-mode .collapse-controls button {
+  background-color: #7aa2f7 !important;
+  text-shadow:
+    0 0 5px rgba(0, 50, 255, 0.5),
+    0 0 10px rgba(0, 50, 255, 0.4),
+    0 0 20px rgba(0, 50, 255, 0.3) !important;
 }
 
-body.code-mode #editor-container::-webkit-scrollbar-thumb:hover {
-  background-color: #db0e0e !important;
+body.code-mode .titlebar-buttons button:hover,
+body.code-mode .window-controls button:hover,
+body.code-mode .outline-controls button:hover,
+body.code-mode .font-controls button:hover,
+body.code-mode .collapse-controls button:hover {
+  background-color: lavender !important;
+  text-shadow:
+    0 0 5px rgba(0, 50, 255, 0.5),
+    0 0 10px rgba(0, 50, 255, 0.4),
+    0 0 20px rgba(0, 50, 255, 0.3) !important;
+}
+
+body.code-mode .outline-text,
+body.code-mode .outline-item,
+body.code-mode .file-entry {
+  color: #A599E9 !important;
 }
 
 /* 各ボタンにSVGアイコンを割り当て */
@@ -876,4 +905,14 @@ body.code-mode #editor-container::-webkit-scrollbar-thumb:hover {
 #btn-ai-chat {
   -webkit-mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Crect x='3' y='4' width='18' height='12' rx='2' ry='2'%3E%3C/rect%3E%3Cline x1='8' y1='20' x2='16' y2='20'%3E%3C/line%3E%3Cline x1='12' y1='16' x2='12' y2='20'%3E%3C/line%3E%3Cpath d='M19 2l1 2 2 1-2 1-1 2-1-2-2-1 2-1z' stroke-width='1.5' fill='currentColor'%3E%3C/path%3E%3C/svg%3E");
   mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Crect x='3' y='4' width='18' height='12' rx='2' ry='2'%3E%3C/rect%3E%3Cline x1='8' y1='20' x2='16' y2='20'%3E%3C/line%3E%3Cline x1='12' y1='16' x2='12' y2='20'%3E%3C/line%3E%3Cpath d='M19 2l1 2 2 1-2 1-1 2-1-2-2-1 2-1z' stroke-width='1.5' fill='currentColor'%3E%3C/path%3E%3C/svg%3E");
+}
+
+#btn-markdown {
+  -webkit-mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M4 19.5A2.5 2.5 0 0 1 6.5 17H20'%3E%3C/path%3E%3Cpath d='M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z'%3E%3C/path%3E%3Cpath d='M8 7v6l3-3 3 3V7'%3E%3C/path%3E%3C/svg%3E");
+  mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M4 19.5A2.5 2.5 0 0 1 6.5 17H20'%3E%3C/path%3E%3Cpath d='M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z'%3E%3C/path%3E%3Cpath d='M8 7v6l3-3 3 3V7'%3E%3C/path%3E%3C/svg%3E");
+}
+
+#btn-code {
+  -webkit-mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='16 18 22 12 16 6'%3E%3C/polyline%3E%3Cpolyline points='8 6 2 12 8 18'%3E%3C/polyline%3E%3C/svg%3E");
+  mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='16 18 22 12 16 6'%3E%3C/polyline%3E%3Cpolyline points='8 6 2 12 8 18'%3E%3C/polyline%3E%3C/svg%3E");
 }

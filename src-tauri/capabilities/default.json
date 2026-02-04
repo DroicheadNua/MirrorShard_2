@@ -19,7 +19,6 @@
   "permissions": [
     "core:default",
     "core:window:default",
-    "opener:default",
     "core:window:allow-close",
     "core:window:allow-minimize",
     "core:window:allow-unminimize",

@@ -8,7 +8,7 @@ import { markdown, markdownLanguage } from '@codemirror/lang-markdown';
 import { search, searchKeymap } from '@codemirror/search';
 import type { Extension, SelectionRange, StateEffect } from '@codemirror/state';
 import { HighlightStyle, syntaxHighlighting, bracketMatching } from '@codemirror/language';
-import { oneDark } from "@codemirror/theme-one-dark";
+
 import { tags } from '@lezer/highlight';
 import { getCurrentWindow } from '@tauri-apps/api/window';
 import { open, ask, message, save } from '@tauri-apps/plugin-dialog';
@@ -28,6 +28,55 @@ interface OpenTab {
   lineEnding: 'LF' | 'CRLF' | '';
   headings: Heading[];
 }
+
+// Tokyo Night Color Palette
+const tnColors = {
+  background: "#1a1b26", // 青みがかった黒
+  foreground: "#a9b1d6",
+  selection: "#515c7e",
+  cursor: "#c0caf5",
+  comment: "#565f89",
+  keyword: "#bb9af7", // Purple
+  variable: "#c0caf5",
+  string: "#9ece6a",  // Green
+  number: "#ff9e64",  // Orange
+  tag: "#f7768e",     // Red
+  function: "#7aa2f7",// Blue
+  operator: "#89ddff" // Cyan
+};
+
+const tokyoNightTheme = EditorView.theme({
+  "&": {
+    color: tnColors.foreground,
+    backgroundColor: "transparent"
+  },
+  ".cm-content": { caretColor: tnColors.cursor },
+  "&.cm-focused .cm-cursor": { borderLeftColor: tnColors.cursor },
+  "&.cm-focused .cm-selectionBackground, .cm-selectionBackground, ::selection": {
+    backgroundColor: tnColors.selection
+  },
+  ".cm-activeLine": { backgroundColor: "#292e42" },
+}, { dark: true });
+
+const tokyoNightHighlightStyle = HighlightStyle.define([
+  { tag: tags.keyword, color: tnColors.keyword },
+  { tag: [tags.name, tags.deleted, tags.character, tags.propertyName, tags.macroName], color: tnColors.variable },
+  { tag: [tags.function(tags.variableName), tags.labelName], color: tnColors.function },
+  { tag: [tags.color, tags.constant(tags.name), tags.standard(tags.name)], color: tnColors.number },
+  { tag: [tags.definition(tags.name), tags.separator], color: tnColors.foreground },
+  { tag: [tags.typeName, tags.className, tags.number, tags.changed, tags.annotation, tags.modifier, tags.self, tags.namespace], color: tnColors.number },
+  { tag: [tags.operator, tags.operatorKeyword, tags.url, tags.escape, tags.regexp, tags.link, tags.special(tags.string)], color: tnColors.operator },
+  { tag: [tags.meta, tags.comment], color: tnColors.comment, fontStyle: "italic" },
+  { tag: tags.strong, fontWeight: "bold" },
+  { tag: tags.emphasis, fontStyle: "italic" },
+  { tag: tags.link, color: tnColors.comment, textDecoration: "underline" },
+  { tag: tags.heading, fontWeight: "bold", color: tnColors.tag },
+  { tag: [tags.atom, tags.bool, tags.special(tags.variableName)], color: tnColors.keyword },
+  { tag: [tags.processingInstruction, tags.string, tags.inserted], color: tnColors.string },
+  { tag: tags.tagName, color: tnColors.tag },
+]);
+
+const tokyoNight: Extension = [tokyoNightTheme, syntaxHighlighting(tokyoNightHighlightStyle)];
 
 /**
  * MirrorShardアプリケーションのすべてを管理するクラス
@@ -96,15 +145,14 @@ class App {
   private fontList = [this.serifFont, this.sansSerifFont, this.monospaceFont];
 
   private languageCompartment = new Compartment();
-  private lineNumbersCompartment = new Compartment();
 
   private isCodeMode = false;
   private currentCodeLanguage = 'html';
   private wasLightModeBeforeCode = false;
   // 全ての拡張機能を管理する区画
   private mainCompartment = new Compartment();
-  private oneDarkCustomTheme: Extension = [
-    oneDark, // One Darkの全設定を継承
+  private tokyoNightCustomTheme: Extension = [
+    tokyoNight, // One Darkの全設定を継承
     EditorView.theme({
       // エディタ全体の背景を透明にして、#app-container の背景が見えるようにする
       '&': {
@@ -114,6 +162,9 @@ class App {
         backgroundColor: 'transparent',
         borderRight: 'none'
       },
+      '.cm-activeLineGutter': {
+        backgroundColor: 'transparent'
+      },
       '& ::-webkit-scrollbar': {
         width: '18px',
       },
@@ -121,14 +172,14 @@ class App {
         backgroundColor: 'transparent',
       },
       '& ::-webkit-scrollbar-thumb': {
-        backgroundColor: 'rgba(255, 255, 255, 0.15)',
+        backgroundColor: 'rgba(105, 200, 255, 0.15)',
         borderRadius: '9px',
         border: '3px solid transparent',
         backgroundClip: 'content-box',
         minHeight: '40px'
       },
       '& ::-webkit-scrollbar-thumb:hover': {
-        backgroundColor: 'rgba(255, 255, 255, 0.4)',
+        backgroundColor: 'rgba(105, 200, 255, 0.4)',
       },
     })
   ];
@@ -177,23 +228,23 @@ class App {
           return EditorView.scrollIntoView(range.from, { y: 'center' });
         }
       }),
-      this.themeCompartment.of(this.isDarkMode ? this.darkTheme : this.lightTheme),
+      this.isDarkMode ? this.darkTheme : this.lightTheme,
       this.dynamicFontTheme,
-      this.fontSizeCompartment.of(this.createFontSizeTheme(this.currentFontSize)),
+      this.createFontSizeTheme(this.currentFontSize),
       EditorView.updateListener.of((update: ViewUpdate) => this.onEditorUpdate(update)),
       scrollPastEnd(),
       preventCursorBeyondDocEndFilter,
-      this.highlightingCompartment.of(syntaxHighlighting(this.isDarkMode ? this.darkHighlightStyle : this.lightHighlightStyle)),
-      this.spotlightCompartment.of(this.createSpotlightPlugin(this.isSpotlightMode)),
-      this.languageCompartment.of([]),
-      this.lineNumbersCompartment.of([]),
+      syntaxHighlighting(this.isDarkMode ? this.darkHighlightStyle : this.lightHighlightStyle),
+      this.createSpotlightPlugin(this.isSpotlightMode),
+      [],
+      [],
     ];
   }
 
   // ★追加: 「コード用」の拡張機能セットを返すヘルパー
   private createCodeExtensions(): Extension[] {
     return [
-      this.oneDarkCustomTheme,
+      this.tokyoNightCustomTheme,
       lineNumbers(),
       bracketMatching(),
       history(),
@@ -906,10 +957,6 @@ class App {
         wordBreak: 'var(--editor-word-break, break-all)',
         caretColor: darkText
       },
-      '.cm-gutters': {
-        backgroundColor: 'transparent',
-        borderRight: 'none'
-      },
       '.cm-cursor, .cm-dropCursor': {
         borderLeftColor: darkText
       },
@@ -917,9 +964,6 @@ class App {
         backgroundColor: '#d4d4d4',
       },
       '&.cm-focused .cm-activeLine': {
-        backgroundColor: 'transparent'
-      },
-      '.cm-activeLineGutter': {
         backgroundColor: 'transparent'
       },
       '&.cm-focused': {
@@ -959,17 +1003,10 @@ class App {
       '.cm-cursor, .cm-dropCursor': {
         borderLeftColor: lightText
       },
-      '.cm-gutters': {
-        backgroundColor: 'transparent',
-        borderRight: 'none'
-      },
       '&.cm-focused .cm-selectionBackground, .cm-selectionBackground, .cm-content ::selection': {
         backgroundColor: stone
       },
       '&.cm-focused .cm-activeLine': {
-        backgroundColor: 'transparent'
-      },
-      '.cm-activeLineGutter': {
         backgroundColor: 'transparent'
       },
       '&.cm-focused': {
@@ -1006,17 +1043,10 @@ class App {
       '.cm-cursor, .cm-dropCursor': {
         borderLeftColor: lightText
       },
-      '.cm-gutters': {
-        backgroundColor: 'transparent',
-        borderRight: 'none'
-      },
       '&.cm-focused .cm-selectionBackground, .cm-selectionBackground, .cm-content ::selection': {
         backgroundColor: stone
       },
       '&.cm-focused .cm-activeLine': {
-        backgroundColor: 'transparent'
-      },
-      '.cm-activeLineGutter': {
         backgroundColor: 'transparent'
       },
       '&.cm-focused': {
@@ -1176,6 +1206,12 @@ class App {
     });
     document.querySelector('#btn-ai-chat')?.addEventListener('click', () => {
       this.openAiChat();
+    });
+    document.querySelector('#btn-code')?.addEventListener('click', () => {
+      this.toggleCodeMode();
+    });
+    document.querySelector('#btn-markdown')?.addEventListener('click', () => {
+      this.openMarkdownPreviewWithCheck();
     });
 
     window.addEventListener('mouseup', (e) => {

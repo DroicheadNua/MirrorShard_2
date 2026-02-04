@@ -102,6 +102,8 @@ Linux版はグラフィック環境由来（特にNvidia製グラフィックボ
 　Pixabay https://pixabay.com より  
 　・ambient piano "Candrika" -Moonlight-（leela_takaki様）  
 
+　また、コードエディタモードの配色は[Tokyo Night](https://github.com/enkia/tokyo-night-vscode-theme) テーマをベースにしています。  
+
 ## ご利用にあたっての注意（免責事項）  
 このソフトウェアはフリーウェアであり、無保証（AS IS）で提供されます。  
 作者は、このソフトウェアの使用によって生じたいかなる損害（データの損失、逸失利益などを含むがこれに限らない）についても、一切の責任を負いません。  
@@ -111,7 +113,7 @@ Linux版はグラフィック環境由来（特にNvidia製グラフィックボ
 ## ライセンス  
 　本ソフトウェアはMITライセンスのもとで公開されています。  
 
-　本ソフトウェアはTauriで開発されました。エディタエンジンとしてCodeMirror 6 を採用しており、またオープンソースの小説用テキストエディタLeft
+　本ソフトウェアはTauriで開発されました。エディタエンジンとしてCodeMirror 6 を採用しており、またオープンソースの小説用テキストエディタLeft  
 （https://github.com/hundredrabbits/Left）
 から多くの影響を受けています。特にアウトライン機能はLeftのソースコードを参考にしています。  
 
