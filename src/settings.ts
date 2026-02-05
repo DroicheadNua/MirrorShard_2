@@ -67,7 +67,6 @@ async function setupSettings() {
         const useUiTextShadow = document.querySelector('#use-ui-text-shadow') as HTMLInputElement;
         const useUiBgCheck = document.querySelector('#use-ui-bg') as HTMLInputElement;
         const pandocPath = document.querySelector('#pandoc-path') as HTMLInputElement;
-        const codeLanguageSelect = document.querySelector('#code-language-select') as HTMLSelectElement;
 
         // --- 3.1. UI要素の取得 (AI新規) ---
         const geminiApiKeyInput = document.querySelector('#gemini-api-key') as HTMLInputElement;
@@ -83,6 +82,10 @@ async function setupSettings() {
         const localLlmModelInput = document.querySelector('#local-llm-model') as HTMLInputElement;
         const urlPresetSelect = document.querySelector('#local-llm-url-preset') as HTMLSelectElement;
 
+        // --- 3.2. Code Editor UI要素の取得 ---
+        const codeLanguageSelect = document.querySelector('#code-language-select') as HTMLSelectElement;
+        const codeFontSelect = document.querySelector('#code-font-family-select') as HTMLSelectElement;
+        const codeFontSizeInput = document.querySelector('#code-font-size-input') as HTMLInputElement;
 
         if (!applyBtn || !closeBtn) {
             console.error("Critical UI elements not found");
@@ -133,6 +136,25 @@ async function setupSettings() {
 
         const initCodeLanguage = await store.get<string>('codeLanguage') || 'html';
         if (codeLanguageSelect) codeLanguageSelect.value = initCodeLanguage;
+
+        const initCodeFont = await store.get<string>('codeFontFamily') || 'default';
+        invoke<string[]>('get_system_fonts').then(fonts => {
+            const defaultOpt = document.createElement('option');
+            defaultOpt.value = 'default';
+            defaultOpt.text = 'Monospace (Default)';
+            codeFontSelect.appendChild(defaultOpt);
+
+            fonts.forEach(fontName => {
+                const opt = document.createElement('option');
+                opt.value = fontName;
+                opt.text = fontName;
+                codeFontSelect.appendChild(opt);
+            });
+            codeFontSelect.value = initCodeFont;
+        }).catch(err => console.error("Code Font loading failed:", err));
+
+        const initCodeSize = await store.get<number>('codeFontSize') || 10;
+        if (codeFontSizeInput) codeFontSizeInput.value = initCodeSize.toString();
 
         // ★ UI文字色
         const isUiWhite = await store.get<boolean>('uiTextIsWhite') ?? false;
@@ -325,6 +347,9 @@ async function setupSettings() {
                 const newAlign = alignSelect.value;
                 const newPandocPath = pandocPath.value;
                 const newCodeLanguage = codeLanguageSelect.value;
+                const newCodeFont = codeFontSelect.value;
+                console.log('Applying Code Font:', newCodeFont);
+                const newCodeSize = parseInt(codeFontSizeInput.value, 10) || 10;
 
                 const newIsBgDark = editorBgDark.checked;
                 const newBgOpacity = parseInt(bgOpacityRange.value, 10);
@@ -366,6 +391,8 @@ async function setupSettings() {
                 await store.set('editorBlur', newBlur);
                 await store.set('pandocPath', newPandocPath);
                 await store.set('codeLanguage', newCodeLanguage);
+                await store.set('codeFontFamily', newCodeFont);
+                await store.set('codeFontSize', newCodeSize);
 
                 // AI設定の保存
                 if (newGeminiApiKey) await store.set('geminiApiKey', newGeminiApiKey);
@@ -433,7 +460,9 @@ async function setupSettings() {
                     aiChatAiName: aiNameInput.value || 'AI',
                     aiChatAiIconPath: pendingAiIcon,
                     localLlmModel: newLocalModel,
-                    codeLanguage: newCodeLanguage
+                    codeLanguage: newCodeLanguage,
+                    codeFontFamily: newCodeFont,
+                    codeFontSize: newCodeSize
                 });
 
             } catch (err) {

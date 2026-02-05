@@ -3,7 +3,7 @@ import { invoke } from '@tauri-apps/api/core';
 import { Store } from '@tauri-apps/plugin-store';
 import { EditorState, Compartment, RangeSetBuilder, Transaction, EditorSelection } from '@codemirror/state';
 import { EditorView, keymap, ViewUpdate, scrollPastEnd, Decoration, DecorationSet, ViewPlugin, lineNumbers } from '@codemirror/view';
-import { history, historyKeymap, undo, redo, insertTab, cursorDocEnd, cursorDocStart, insertNewline } from '@codemirror/commands';
+import { history, historyKeymap, undo, redo, insertTab, cursorDocEnd, cursorDocStart, insertNewline, defaultKeymap } from '@codemirror/commands';
 import { markdown, markdownLanguage } from '@codemirror/lang-markdown';
 import { search, searchKeymap } from '@codemirror/search';
 import type { Extension, SelectionRange, StateEffect } from '@codemirror/state';
@@ -49,6 +49,21 @@ const tokyoNightTheme = EditorView.theme({
   "&": {
     color: tnColors.foreground,
     backgroundColor: "transparent"
+  },
+  '.cm-gutters': { borderRight: 'none' },
+  // 対応する括弧の強調 (グローエフェクト)
+  '.cm-matchingBracket': {
+    backgroundColor: 'rgba(0, 255, 65, 0.2)', // ほのかな緑背景
+    color: '#00FF41 !important',             // ネオングリーン
+    textShadow: '0 0 8px rgba(0, 255, 65, 0.9), 0 0 15px rgba(0, 255, 65, 0.4) !important',
+    fontWeight: 'bold',
+    outline: '1px solid rgba(0, 255, 65, 0.5)'
+  },
+  // 対応していない括弧（エラー）
+  '.cm-nonmatchingBracket': {
+    backgroundColor: 'rgba(255, 0, 0, 0.2)',
+    color: '#FF0000 !important',
+    textShadow: '0 0 8px #FF0000 !important'
   },
   ".cm-content": { caretColor: tnColors.cursor },
   "&.cm-focused .cm-cursor": { borderLeftColor: tnColors.cursor },
@@ -149,8 +164,13 @@ class App {
   private isCodeMode = false;
   private currentCodeLanguage = 'html';
   private wasLightModeBeforeCode = false;
+  private codeFontFamily = 'default';
+  private codeFontSize = 10;
+  private codeExtras: any = null;
+  private isCodeExtrasLoaded = false;
   // 全ての拡張機能を管理する区画
   private mainCompartment = new Compartment();
+  private codeFontCompartment = new Compartment();
   private tokyoNightCustomTheme: Extension = [
     tokyoNight, // tokyoNightの全設定を継承
     EditorView.theme({
@@ -245,7 +265,8 @@ class App {
 
   // コード用の拡張機能セットを返すヘルパー
   private createCodeExtensions(): Extension[] {
-    return [
+    // 基本セット
+    const extensions: Extension[] = [
       this.tokyoNightCustomTheme,
       lineNumbers(),
       bracketMatching(),
@@ -254,10 +275,58 @@ class App {
       EditorView.lineWrapping,
       scrollPastEnd(),
       EditorView.updateListener.of((update: ViewUpdate) => this.onEditorUpdate(update)),
-      // 言語サポートは別で適用するので、ここでは空の区画だけ用意
       this.languageCompartment.of([]),
+      this.codeFontCompartment.of(this.createCodeFontTheme()),
     ];
+
+    // モジュールがロード済みなら、高度な機能を追加する
+    if (this.isCodeExtrasLoaded && this.codeExtras) {
+      const { lang, auto } = this.codeExtras;
+      extensions.push(
+        lang.foldGutter(),      // 折りたたみ
+        lang.indentOnInput(),   // オートインデント
+        auto.closeBrackets(),   // 括弧の自動補完
+        auto.autocompletion(), // オートコンプリート
+        keymap.of([
+          ...defaultKeymap,
+          ...lang.foldKeymap,
+          ...auto.closeBracketsKeymap,
+          ...auto.completionKeymap
+        ])
+      );
+    }
+
+    return extensions;
   }
+
+  // ヘルパー: コードモード用フォント設定の作成
+  private createCodeFontTheme(): Extension {
+    console.log(`Creating Code Font Theme: ${this.codeFontFamily}, ${this.codeFontSize}`);
+    return EditorView.theme({
+      '&': {
+        // フォントサイズとファミリーを適用
+        fontSize: `${this.codeFontSize}pt !important`,
+        fontFamily: this.codeFontFamily === 'default'
+          ? 'monospace !important'
+          : `"${this.codeFontFamily}", monospace !important`
+      },
+      '.cm-content': {
+        fontFamily: this.codeFontFamily === 'default'
+          ? 'monospace !important'
+          : `"${this.codeFontFamily}", monospace !important`
+      }
+    });
+  }
+
+  // コードモード用のフォントCSS変数を更新
+  private updateCodeFontCss() {
+    const fontVal = this.codeFontFamily === 'default'
+      ? "monospace" // デフォルトの場合
+      : `"${this.codeFontFamily}", monospace`; // 指定フォントの場合
+
+    document.body.style.setProperty('--code-font-family', fontVal);
+  }
+
   // --- 初期化 ---
 
   private async initialize() {
@@ -452,6 +521,15 @@ class App {
           await this.getLanguageSupport();
           console.log("Code language applied immediately.");
         }
+      }
+      if (s.codeFontFamily !== undefined) this.codeFontFamily = s.codeFontFamily;
+      if (s.codeFontSize !== undefined) this.codeFontSize = s.codeFontSize;
+
+      if (this.isCodeMode) {
+        this.editorView.dispatch({
+          effects: this.codeFontCompartment.reconfigure(this.createCodeFontTheme())
+        });
+        this.updateCodeFontCss();
       }
     });
 
@@ -803,12 +881,23 @@ class App {
     if (!this.isCodeMode) {
       console.log("Switching to Code Mode...");
 
-      // ★修正: ライトモード（または半透明モード）なら強制的にダークモードにする
+      // ライトモード（または半透明モード）なら強制的にダークモードにする
       if (!this.isDarkMode) {
         this.toggleDarkMode();
         this.wasLightModeBeforeCode = true; // 「元はライトだった」と記憶
       } else {
         this.wasLightModeBeforeCode = false; // 元からダークだった
+      }
+
+      // 高度な機能を初めて使う時だけロードする
+      if (!this.isCodeExtrasLoaded) {
+        console.log("Lazy loading code extras...");
+        const [lang, auto] = await Promise.all([
+          import("@codemirror/language"),
+          import("@codemirror/autocomplete")
+        ]);
+        this.codeExtras = { lang, auto };
+        this.isCodeExtrasLoaded = true;
       }
 
       // フラグを立てる (toggleDarkModeの後で行うのが重要)
@@ -818,6 +907,8 @@ class App {
       this.editorView.dispatch({
         effects: this.mainCompartment.reconfigure(this.createCodeExtensions())
       });
+      // UIのフォントを更新
+      this.updateCodeFontCss();
 
       // 言語設定を確実にロード
       const savedLang = await this.store.get<string>('codeLanguage');
@@ -2589,6 +2680,10 @@ class App {
     if (this.isCodeMode) {
       await this.getLanguageSupport(); // 言語読み込み・適用
       document.body.classList.add('code-mode');
+      this.editorView.dispatch({
+        effects: this.codeFontCompartment.reconfigure(this.createCodeFontTheme())
+      });
+      this.updateCodeFontCss();
     } else {
       document.body.classList.remove('code-mode');
     }

@@ -221,7 +221,7 @@
             <!-- タブ3: コードエディタ設定 -->
             <div id="tab-code" class="tab-content">
                 <div class="setting-group">
-                    <h4>Code Editor Mode (Ctrl+K)</h4>
+                    <h4>Code Editor Settings</h4>
                     <label>
                         Syntax Highlight Language:
                         <select id="code-language-select">
@@ -232,6 +232,14 @@
                             <option value="python">Python</option>
                             <!-- 必要なら他も追加 -->
                         </select>
+                    </label>
+                    <label style="display: flex; gap: 5px;">Font:
+                        <select id="code-font-family-select" style="flex-grow: 1;"></select>
+                    </label>
+                    <br>
+                    <label style="display: flex; gap: 5px;">Font Size:
+                        <input type="number" id="code-font-size-input" min="8" max="72" value="14"
+                            style="width: 60px;" />
                     </label>
                 </div>
 

@@ -754,7 +754,6 @@ body.code-mode #status-breadcrumbs,
 body.code-mode #status-filepath {
   background-color: transparent !important;
   color: #7aa2f7 !important;
-  font-family: monospace !important;
   text-shadow:
     0 0 5px rgba(0, 50, 255, 0.5),
     0 0 10px rgba(0, 50, 255, 0.4),
@@ -788,9 +787,17 @@ body.code-mode .collapse-controls button:hover {
 body.code-mode .outline-text,
 body.code-mode .outline-item,
 body.code-mode .file-entry {
-  font-family: monospace !important;
-  font-size: 13px !important;
   color: #A599E9 !important;
+  font-size: 13px !important;
+}
+
+body.code-mode .outline-text,
+body.code-mode .outline-item,
+body.code-mode .file-entry,
+body.code-mode #status-bar,
+body.code-mode #status-breadcrumbs,
+body.code-mode #status-filepath {
+  font-family: var(--code-font-family, monospace) !important;
 }
 
 /* 各ボタンにSVGアイコンを割り当て */

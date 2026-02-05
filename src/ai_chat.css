@@ -20,6 +20,7 @@ body {
   height: 100%;
   overflow: hidden;
   font-family: serif, monospace;
+  line-height: 1.5;
   background-color: #EAE3D2;
   color: black;
 }
@@ -27,7 +28,7 @@ body {
 body.dark-mode #ai-wrapper {
   background-color: #000000CC;
   color: #00ff00;
-  font-family: monospace, sans-serif;
+  font-family: sans-serif, monospace;
   border-radius: 6px;
   text-shadow:
     0 0 5px rgba(0, 255, 0, 0.5),
@@ -333,7 +334,7 @@ body.dark-mode .message-bubble {
   border-radius: 10px;
   padding: 5px 10px;
   cursor: pointer;
-  font-family: 'Noto Custom', monospace;
+  font-family: monospace;
   font-weight: bold;
 }
 
@@ -352,7 +353,7 @@ body.dark-mode .cyber-button:hover {
   border-radius: 5px;
   padding: 5px 10px;
   cursor: pointer;
-  font-family: 'Noto Custom', monospace;
+  font-family: monospace;
   font-style: oblique;
   resize: none;
 }
