@@ -230,6 +230,11 @@ async function init() {
         }
     });
 
+    // --- 右クリックメニューの無効化 ---
+    document.addEventListener('contextmenu', (e) => {
+        e.preventDefault();
+    });
+
     // --- ショートカットキー ---
     document.addEventListener('keydown', (e) => {
         const isCtrlOrCmd = e.ctrlKey || e.metaKey;

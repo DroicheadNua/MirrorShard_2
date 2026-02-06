@@ -484,6 +484,11 @@ async function setupSettings() {
             }
         });
 
+        // --- 右クリックメニューの無効化 ---
+        document.addEventListener('contextmenu', (e) => {
+            e.preventDefault();
+        });
+
     } catch (error) {
         // スクリプト全体のエラーをキャッチ
         alert(`設定画面のエラー: ${error}`);

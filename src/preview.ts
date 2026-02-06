@@ -325,6 +325,11 @@ async function initPreview() {
         }
     });
 
+    // --- 右クリックメニューの無効化 ---
+    document.addEventListener('contextmenu', (e) => {
+        e.preventDefault();
+    });
+
     // --- マウスホイールでの横スクロール変換 ---
     if (paperArea) {
         paperArea.addEventListener('wheel', (e) => {

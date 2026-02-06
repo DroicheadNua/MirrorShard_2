@@ -786,6 +786,7 @@ body.code-mode .collapse-controls button:hover {
 
 body.code-mode .outline-text,
 body.code-mode .outline-item,
+body.code-mode .toggle-collapse,
 body.code-mode .file-entry {
   color: #A599E9 !important;
   font-size: 13px !important;
@@ -798,6 +799,24 @@ body.code-mode #status-bar,
 body.code-mode #status-breadcrumbs,
 body.code-mode #status-filepath {
   font-family: var(--code-font-family, monospace) !important;
+}
+
+body.code-mode .sidebar-content::-webkit-scrollbar {
+  width: 8px;
+}
+
+body.code-mode .sidebar-content::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+body.code-mode .sidebar-content::-webkit-scrollbar-thumb {
+  background: #A599E955;
+  border-radius: 4px;
+  min-height: '40px';
+}
+
+body.code-mode .sidebar-content::-webkit-scrollbar-thumb:hover {
+  background: #A599E9aa;
 }
 
 /* 各ボタンにSVGアイコンを割り当て */

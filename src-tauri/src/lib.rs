@@ -61,6 +61,7 @@ async fn open_markdown_preview(app: AppHandle) {
     )
     .title("Markdown Preview")
     .inner_size(640.0, 640.0)
+    .min_inner_size(640.0, 480.0)
     .resizable(true)
     .decorations(false)
     .transparent(true)
@@ -423,6 +424,7 @@ async fn open_ai_chat(app: AppHandle) {
     )
     .title("AI Chat")
     .inner_size(400.0, 600.0)
+    .min_inner_size(400.0, 480.0)
     .resizable(true)
     .decorations(false)
     .transparent(true)
@@ -542,6 +544,7 @@ async fn open_preview_window(app: AppHandle) {
     .title("プレビュー")
     .transparent(true)
     .inner_size(600.0, 480.0)
+    .min_inner_size(600.0, 480.0)
     .resizable(true)
     .decorations(false)
     .visible(false);

@@ -291,8 +291,26 @@ class App {
           ...defaultKeymap,
           ...lang.foldKeymap,
           ...auto.closeBracketsKeymap,
-          ...auto.completionKeymap
-        ])
+          ...auto.completionKeymap,
+          { key: 'Tab', run: insertTab },
+          { key: 'Enter', run: insertNewline },
+          {
+            key: 'Mod-ArrowUp',
+            run: (v) => {
+              cursorDocStart(v);
+              v.dispatch({ effects: EditorView.scrollIntoView(0, { y: "start" }) });
+              return true;
+            }
+          },
+          {
+            key: 'Mod-ArrowDown',
+            run: (v) => {
+              cursorDocEnd(v);
+              v.dispatch({ effects: EditorView.scrollIntoView(v.state.selection.main.head, { y: "center" }) });
+              return true;
+            }
+          },
+        ]),
       );
     }
 
@@ -431,7 +449,7 @@ class App {
         this.updateFontSettings();
       }
 
-      // ★画像・BGMの更新
+      // 画像・BGMの更新
       // ペイロードに含まれていれば更新する
       // undefinedチェックに加え、null(リセット指示)も通す
       if (s.userBackgroundImagePath !== undefined) {
@@ -443,16 +461,21 @@ class App {
         }
       }
 
-      // ★ BGMのスマート更新
+      // BGMのスマート更新
       if (s.userBgmPath !== undefined) {
-        const newPath = s.userBgmPath || undefined; // nullならundefined
 
-        // パスが変更された場合のみ再初期化
-        if (this.userBgmPath !== newPath) {
-          this.userBgmPath = newPath;
-          // ★変更されたので、trueを渡して「即時再生」させる
+        // 比較のために正規化する
+        // (null, undefined, "" はすべて空文字 '' に変換して比較)
+        const currentPathNorm = this.userBgmPath || '';
+        const newPathNorm = s.userBgmPath || '';
+
+        // 正規化した状態で比較
+        if (currentPathNorm !== newPathNorm) {
+          // 変更があった場合のみ更新
+          this.userBgmPath = s.userBgmPath || undefined; // 実体は undefined にしておく(または空文字でも可)
+
           await this.loadBGMData();
-          this.playBGM();
+          this.playBGM(); // ここで再生される
           this.isBgmPlaying = true;
           document.querySelector('#btn-bgm-toggle')?.classList.add('playing');
         }
@@ -651,6 +674,11 @@ class App {
     // 4. フォント (専用メソッドがあるので読み込みのみ)
     this.userFontFamily = await this.store.get<string>('userFontFamily') ?? 'default';
     document.documentElement.style.setProperty('--user-font-family', this.userFontFamily);
+
+    // コードエディタ設定の読み込み 
+    this.codeFontFamily = await this.store.get<string>('codeFontFamily') ?? 'default';
+    this.codeFontSize = await this.store.get<number>('codeFontSize') ?? 10; // 初期値は10に合わせておく
+    this.currentCodeLanguage = await this.store.get<string>('codeLanguage') ?? 'html';
 
     const align = await this.store.get<string>('editorAlign') ?? 'center';
     this.updateEditorAlign(align);
