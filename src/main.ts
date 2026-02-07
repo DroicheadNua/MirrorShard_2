@@ -1160,9 +1160,6 @@ class App {
       '.cm-cursor, .cm-dropCursor': {
         borderLeftColor: lightText
       },
-      '&.cm-focused .cm-selectionBackground, .cm-selectionBackground, .cm-content ::selection': {
-        backgroundColor: stone
-      },
       '&.cm-focused .cm-activeLine': {
         backgroundColor: 'transparent'
       },
