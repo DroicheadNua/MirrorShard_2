@@ -235,6 +235,41 @@ async function init() {
         e.preventDefault();
     });
 
+    // リンククリックのハンドリング
+    document.addEventListener('click', async (e) => {
+        const target = (e.target as HTMLElement).closest('a');
+        if (target && target.getAttribute('href')) {
+            e.preventDefault(); // WebView内での遷移を阻止
+
+            const href = target.getAttribute('href')!;
+
+            // A. 外部リンク (http/https) -> ブラウザで開く
+            if (href.startsWith('http://') || href.startsWith('https://')) {
+                await invoke('open_in_browser', { path: href });
+                return;
+            }
+
+            // B. ページ内リンク (#) -> 無視またはスクロール
+            if (href.startsWith('#')) return;
+
+            // C. ローカルファイルへのリンク (相対パス)
+            // 現在開いているファイルのパスを基準に解決する
+            // ※ currentFilePath (現在表示中のファイルの絶対パス) がある前提
+            if (currentFilePath && currentFilePath !== "Untitled") {
+                // 簡易的なパス結合 (OSのセパレータを考慮)
+                const separator = currentFilePath.includes('\\') ? '\\' : '/';
+                const parentDir = currentFilePath.substring(0, currentFilePath.lastIndexOf(separator));
+
+                // リンク先の絶対パスを作成 (簡易実装: ../ などの解決は省略し、単純結合)
+                // ※本来はRust側で正規化したほうが安全だが、同階層ならこれで動く
+                let targetPath = `${parentDir}${separator}${href}`;
+
+                // メインプロセスへ「このファイルを開いて」と依頼
+                await emit('request-open-file', targetPath);
+            }
+        }
+    });
+
     // --- ショートカットキー ---
     document.addEventListener('keydown', (e) => {
         const isCtrlOrCmd = e.ctrlKey || e.metaKey;
@@ -248,6 +283,10 @@ async function init() {
         if (isCtrlOrCmd && key === 't' && !isShift) {
             e.preventDefault();
             emit('subwindow-toggle-theme');
+        }
+        if (isCtrlOrCmd && key === 'r' && !isShift) {
+            e.preventDefault();
+            emit('markdown-request-update');
         }
         if (isCtrlOrCmd && (e.code === 'Equal' || e.code === 'NumpadAdd')) {
             e.preventDefault(); updateZoom(10);

@@ -201,6 +201,9 @@ class App {
       '& ::-webkit-scrollbar-thumb:hover': {
         backgroundColor: 'rgba(105, 200, 255, 0.4)',
       },
+      '&.cm-focused .cm-selectionBackground, .cm-selectionBackground, ::selection': {
+        backgroundColor: 'rgba(100, 150, 255, 0.4) !important'
+      },
     })
   ];
 
@@ -343,6 +346,20 @@ class App {
       : `"${this.codeFontFamily}", monospace`; // 指定フォントの場合
 
     document.body.style.setProperty('--code-font-family', fontVal);
+  }
+
+  // 拡張子から言語IDを取得するヘルパー
+  private detectLanguageFromExtension(path: string): string | null {
+    const ext = path.split('.').pop()?.toLowerCase();
+    switch (ext) {
+      case 'rs': return 'rust';
+      case 'py': return 'python';
+      case 'ts': case 'js': case 'json': return 'typescript'; // JS/JSONもTSパーサーでOK
+      case 'md': case 'txt': return 'markdown';
+      case 'html': case 'htm': return 'html';
+      case 'css': return 'css';
+      default: return null; // 判別不能
+    }
   }
 
   // --- 初期化 ---
@@ -603,6 +620,13 @@ class App {
       } else if (event.payload === 'reset') {
         this.changeFontSize(15);
       }
+    });
+
+    await listen('request-open-file', async (event: any) => {
+      const path = event.payload;
+      // ファイルを開く（既に開いていればスイッチ、なければ新規ロード）
+      await this.openOrSwitchTab(path);
+      this.sendDataToMarkdownPreview(false);
     });
 
     // AIチャットからの送信を受け取る
@@ -986,13 +1010,19 @@ class App {
         const { python } = await import('@codemirror/lang-python');
         languageSupport = python();
         break;
+      case 'javascript':
       case 'typescript':
         const { javascript } = await import('@codemirror/lang-javascript');
+        // typescript: true にしておけばJSもTSも両方いける
         languageSupport = javascript({ typescript: true });
         break;
       case 'markdown':
         const { markdown } = await import('@codemirror/lang-markdown');
         languageSupport = markdown();
+        break;
+      case 'css':
+        const { css } = await import('@codemirror/lang-css');
+        languageSupport = css();
         break;
       case 'html':
       default:
@@ -2661,10 +2691,18 @@ class App {
         this.addToHistory(filePath);
       } catch (error) {
         console.error(`[openOrSwitchTab] Failed to open file: ${filePath}`, error);
-        await message(
-          `ファイルを読み込めませんでした。\n対応していないエンコード（UTF-8, Shift-JIS以外）の可能性があります。\n\n詳細: ${error}`,
-          { title: '読み込みエラー', kind: 'error' }
-        );
+        const errStr = String(error);
+        let msgTitle = '読み込みエラー';
+        let msgBody = `ファイルを読み込めませんでした。\n詳細: ${errStr}`;
+
+        if (errStr.includes("No such file") || errStr.includes("os error 2")) {
+          msgTitle = 'ファイルが見つかりません';
+          msgBody = `リンク先のファイルが存在しません。\nパス: ${filePath}`;
+        } else {
+          msgBody = `ファイルを読み込めませんでした。\n対応していないエンコード（UTF-8, Shift-JIS以外）の可能性があります。\n\n詳細: ${errStr}`;
+        }
+
+        await message(msgBody, { title: msgTitle, kind: 'error' });
         return;
       }
     }
@@ -2706,6 +2744,14 @@ class App {
 
     // コードモードなら言語設定と言語用CSSクラスも適用
     if (this.isCodeMode) {
+      // 拡張子による自動判別
+      const detectedLang = this.detectLanguageFromExtension(filePath);
+      if (detectedLang) {
+        console.log(`Auto-detected language: ${detectedLang}`);
+        this.currentCodeLanguage = detectedLang;
+        await this.store.set('codeLanguage', detectedLang);
+        await this.store.save();
+      }
       await this.getLanguageSupport(); // 言語読み込み・適用
       document.body.classList.add('code-mode');
       this.editorView.dispatch({

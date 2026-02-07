@@ -63,6 +63,18 @@
         ],
         "name": "Text Document",
         "role": "Editor"
+      },
+      {
+        "ext": [
+          "html",
+          "css",
+          "js",
+          "ts",
+          "rs",
+          "py"
+        ],
+        "name": "Source Code",
+        "role": "Editor"
       }
     ],
     "active": true,
