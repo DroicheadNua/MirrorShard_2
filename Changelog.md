@@ -5,6 +5,15 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.1.0] - 2026-2-XX  
+
+### Added (新機能)  
+
+### Changed (変更点)    
+
+### Fixed (修正点)  
+- オートインデントを修正  
+
 
 ## [1.0.0] - 2026-2-7 (正式リリース)   
 
@@ -21,6 +30,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Fixed (修正点)  
 - 一部のサブウィンドウにデフォルトの右クリックメニューが残っていたので無効化  
 - BGM設定がデフォルトのとき、起動後最初に設定を変更した際にBGMの一時停止が解除されてしまう不具合を修正  
+- 配色を一部修正  
 
 
 ## [0.5.0] - 2026-1-31  

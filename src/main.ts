@@ -3,11 +3,11 @@ import { invoke } from '@tauri-apps/api/core';
 import { Store } from '@tauri-apps/plugin-store';
 import { EditorState, Compartment, RangeSetBuilder, Transaction, EditorSelection } from '@codemirror/state';
 import { EditorView, keymap, ViewUpdate, scrollPastEnd, Decoration, DecorationSet, ViewPlugin, lineNumbers } from '@codemirror/view';
-import { history, historyKeymap, undo, redo, insertTab, cursorDocEnd, cursorDocStart, insertNewline, defaultKeymap } from '@codemirror/commands';
+import { history, historyKeymap, undo, redo, insertTab, cursorDocEnd, cursorDocStart, insertNewline, defaultKeymap, insertNewlineAndIndent } from '@codemirror/commands';
 import { markdown, markdownLanguage } from '@codemirror/lang-markdown';
 import { search, searchKeymap } from '@codemirror/search';
 import type { Extension, SelectionRange, StateEffect } from '@codemirror/state';
-import { HighlightStyle, syntaxHighlighting, bracketMatching } from '@codemirror/language';
+import { HighlightStyle, syntaxHighlighting, bracketMatching, indentUnit } from '@codemirror/language';
 
 import { tags } from '@lezer/highlight';
 import { getCurrentWindow } from '@tauri-apps/api/window';
@@ -272,6 +272,7 @@ class App {
     const extensions: Extension[] = [
       this.tokyoNightCustomTheme,
       lineNumbers(),
+      indentUnit.of("    "),
       bracketMatching(),
       history(),
       keymap.of([...historyKeymap, ...searchKeymap]),
@@ -296,7 +297,7 @@ class App {
           ...auto.closeBracketsKeymap,
           ...auto.completionKeymap,
           { key: 'Tab', run: insertTab },
-          { key: 'Enter', run: insertNewline },
+          { key: 'Enter', run: insertNewlineAndIndent },
           {
             key: 'Mod-ArrowUp',
             run: (v) => {
