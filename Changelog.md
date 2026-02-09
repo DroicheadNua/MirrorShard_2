@@ -9,6 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added (新機能)  
 - カラーピッカーを実装、テキスト色や背景色を自由に設定可能に   
+- Ctrl+@でターミナルを開けるように  
 
 ### Changed (変更点)    
 

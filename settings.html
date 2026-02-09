@@ -281,6 +281,25 @@
                     <!-- 将来的に GFMのオンオフとかを入れる場所 -->
                     <p style="color: #888; font-size: 0.9em;">(Future settings will appear here)</p>
                 </div>
+
+                <div class="setting-group">
+                    <h4>Terminal Settings</h4>
+                    <label>
+                        <div style="display: flex; gap: 5px;">Shell Path:
+                            <input type="text" id="shell-path" style="flex-grow: 1;margin: auto;"
+                                placeholder="(Auto Detect)" /></input>
+                            <button id="btn-select-shell">参照...</button>
+                        </div>
+                    </label>
+                    <label>
+                        <div style="display: flex; gap: 5px;">Startup Directory:
+                            <input type="text" id="terminal-cwd" style="flex-grow: 1;margin: auto;"
+                                placeholder="(User Home)" />
+                            <button id="btn-select-cwd">参照...</button>
+                        </div>
+                    </label>
+                </div>
+
             </div>
         </div>
     </div>

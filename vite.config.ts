@@ -38,6 +38,7 @@ export default defineConfig(async () => ({
         ai_chat: resolve(__dirname, 'ai_chat.html'),
         shortcut: resolve(__dirname, 'shortcut.html'),
         markdown: resolve(__dirname, "markdown.html"),
+        terminal: resolve(__dirname, "terminal.html"),
       }
     }
   },

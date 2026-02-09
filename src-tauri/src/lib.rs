@@ -4,16 +4,24 @@
 use encoding_rs::{SHIFT_JIS, UTF_8};
 use epub_builder::{EpubBuilder, EpubContent, ReferenceType, ZipLibrary};
 use font_kit::source::SystemSource;
+use portable_pty::{native_pty_system, CommandBuilder, MasterPty, PtySize};
 use std::fs;
+use std::io::{Read, Write};
 use std::path::{Path, PathBuf};
 use std::process::Command;
-use std::sync::Mutex;
+use std::sync::{Arc, Mutex};
+use std::thread;
 #[cfg(target_os = "macos")]
 use tauri::RunEvent;
 use tauri::{AppHandle, Emitter, Manager, State, WindowEvent};
 use tauri_plugin_cli::CliExt;
 use tauri_plugin_window_state::{Builder, StateFlags};
 
+// PTYの入力側を保持する構造体
+struct TerminalState {
+    writer: Arc<Mutex<Option<Box<dyn Write + Send>>>>,
+    master: Arc<Mutex<Option<Box<dyn MasterPty + Send>>>>,
+}
 // --- FileEntry構造体の定義 ---
 #[derive(serde::Serialize, Clone)] // Cloneを追加すると後で便利
 struct FileEntry {
@@ -40,6 +48,174 @@ struct SecondInstanceFile(Mutex<Option<String>>);
 // ★ Mac用のファイルパス保持場所
 struct MacFileBuffer(Mutex<Option<String>>);
 // --- Tauriコマンドの定義 ---
+
+// 1. Terminalを開くコマンド
+#[tauri::command]
+async fn open_terminal_window(app: AppHandle) {
+    if let Some(window) = app.get_webview_window("terminal") {
+        // すでに存在する場合は閉じる。
+        // close() の結果を待たずに、既存のインスタンスを葬る
+        let _ = window.close();
+    } else {
+        // ウィンドウ作成（設定は他と同じ）
+        let builder = tauri::WebviewWindowBuilder::new(
+            &app,
+            "terminal",
+            tauri::WebviewUrl::App("terminal.html".into()),
+        )
+        .title("")
+        .inner_size(640.0, 480.0)
+        .min_inner_size(640.0, 480.0)
+        .resizable(true)
+        .decorations(false)
+        .transparent(true)
+        .visible(false);
+
+        #[cfg(any(windows, target_os = "macos"))]
+        let builder = builder.effects(tauri::utils::config::WindowEffectsConfig {
+            effects: vec![],
+            state: None,
+            radius: Some(24.0),
+            color: None,
+        });
+
+        #[cfg(debug_assertions)]
+        let _ = builder.devtools(true).build();
+        #[cfg(not(debug_assertions))]
+        let _ = builder.build();
+    }
+}
+
+// 2. PTY初期化 (terminal.ts から呼ばれる)
+#[tauri::command]
+fn init_pty(
+    app: AppHandle,
+    state: State<TerminalState>,
+    rows: u16,
+    cols: u16,
+    shell_path: Option<String>,
+    cwd: Option<String>,
+) -> Result<(), String> {
+    // 新しい PTY を作る前に、既存の状態を確実にクリアする
+    {
+        let mut w = state.writer.lock().unwrap();
+        *w = None;
+    }
+    {
+        let mut m = state.master.lock().unwrap();
+        *m = None;
+    }
+    let pty_system = native_pty_system();
+
+    let pair = pty_system
+        .openpty(PtySize {
+            rows,
+            cols,
+            pixel_width: 0,
+            pixel_height: 0,
+        })
+        .map_err(|e| e.to_string())?;
+
+    // シェルの決定
+    let cmd = if let Some(path) = shell_path {
+        if path.is_empty() {
+            default_shell()
+        } else {
+            path
+        }
+    } else {
+        default_shell()
+    };
+
+    let mut cmd_builder = CommandBuilder::new(cmd);
+
+    // CWDの設定
+    if let Some(dir) = cwd {
+        if !dir.is_empty() {
+            cmd_builder.cwd(dir);
+        }
+    }
+
+    // 環境変数の設定 (文字化け対策などで重要)
+    if cfg!(target_os = "windows") {
+        cmd_builder.env("TERM", "cygwin");
+    } else {
+        cmd_builder.env("TERM", "xterm-256color");
+    }
+
+    let _child = pair
+        .slave
+        .spawn_command(cmd_builder)
+        .map_err(|e| e.to_string())?;
+
+    // 1. Writerの取得 (Masterから)
+    // take_writer は &mut self を取るので、先に reader をクローンするか、順序に注意
+    let writer = pair.master.take_writer().map_err(|e| e.to_string())?;
+
+    // 2. Readerの取得 (★修正: SlaveではなくMasterから取得)
+    let mut reader = pair.master.try_clone_reader().map_err(|e| e.to_string())?;
+
+    // ----------------
+
+    // Stateに保存
+    *state.writer.lock().unwrap() = Some(writer);
+    *state.master.lock().unwrap() = Some(pair.master);
+
+    // 読み取りスレッド開始
+    let app_clone = app.clone();
+
+    thread::spawn(move || {
+        let mut buffer = [0u8; 1024];
+        loop {
+            match reader.read(&mut buffer) {
+                Ok(n) if n > 0 => {
+                    let output = String::from_utf8_lossy(&buffer[..n]).to_string();
+                    let _ = app_clone.emit("terminal-data", output);
+                }
+                _ => {
+                    // 自動で閉じようとせず、単にループを抜けてスレッドを終了させる
+                    println!("PTY Reader thread finished.");
+                    break;
+                }
+            }
+        }
+    });
+
+    Ok(())
+}
+
+// 3. 入力送信
+#[tauri::command]
+fn write_pty(state: State<TerminalState>, data: String) {
+    if let Some(writer) = state.writer.lock().unwrap().as_mut() {
+        let _ = write!(writer, "{}", data);
+    }
+}
+
+// 4. リサイズ
+#[tauri::command]
+fn resize_pty(state: State<TerminalState>, rows: u16, cols: u16) {
+    if let Some(master) = state.master.lock().unwrap().as_mut() {
+        let _ = master.resize(PtySize {
+            rows,
+            cols,
+            pixel_width: 0,
+            pixel_height: 0,
+        });
+    }
+}
+
+// デフォルトシェル判定
+fn default_shell() -> String {
+    if cfg!(target_os = "windows") {
+        "powershell.exe".to_string()
+    } else {
+        match std::env::var("SHELL") {
+            Ok(s) => s,
+            Err(_) => "/bin/zsh".to_string(),
+        }
+    }
+}
 
 #[tauri::command]
 fn open_in_browser(path: String) {
@@ -702,6 +878,10 @@ pub fn run() {
         .manage(MacFileBuffer(Mutex::new(None)))
         .manage(InitialFile(Mutex::new(None))) // 最初の起動用
         .manage(SecondInstanceFile(Mutex::new(None))) // 2回目以降の起動用
+        .manage(TerminalState {
+            writer: Arc::new(Mutex::new(None)),
+            master: Arc::new(Mutex::new(None)),
+        })
         .setup(|app| {
             // ---  起動時引数を解析し、状態に書き込む ---
             if let Ok(matches) = app.cli().matches() {
@@ -780,6 +960,10 @@ pub fn run() {
             export_with_pandoc,
             open_markdown_preview,
             open_in_browser,
+            open_terminal_window, // ウィンドウを開く
+            init_pty,             // PTYを開始する
+            write_pty,            // 入力を送る
+            resize_pty            // サイズ変更
         ])
         .build(tauri::generate_context!())
         .expect("error while building tauri application")

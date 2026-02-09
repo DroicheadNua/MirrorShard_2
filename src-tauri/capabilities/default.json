@@ -14,7 +14,8 @@
     "export",
     "ai_chat",
     "shortcut",
-    "markdown"
+    "markdown",
+    "terminal"
   ],
   "permissions": [
     "core:default",

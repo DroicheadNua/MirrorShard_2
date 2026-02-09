@@ -1488,7 +1488,31 @@ class App {
           await MenuItem.new({
             text: 'Geminiログをインポート',
             action: () => this.importGeminiLog()
-          })
+          }),
+          await PredefinedMenuItem.new({ item: 'Separator' }),
+
+          // この場所でターミナルを開く
+          await MenuItem.new({
+            text: 'Open Terminal Here',
+            action: async () => {
+              if (this.activeTabPath) {
+                // ファイルパスからディレクトリパスを取得
+                // (簡易実装: 最後のセパレータまでを切り取る)
+                const sep = this.activeTabPath.includes('\\') ? '\\' : '/';
+                const dir = this.activeTabPath.substring(0, this.activeTabPath.lastIndexOf(sep));
+
+                // ストアに一時的なCWDとして保存
+                await this.store.set('terminalTempCwd', dir);
+                await this.store.save();
+
+                // ターミナルを開く
+                await invoke('open_terminal_window');
+              } else {
+                // 未保存ファイルなどの場合、単に開くか、アラート
+                await invoke('open_terminal_window');
+              }
+            }
+          }),
         ]
       });
 
@@ -1797,6 +1821,10 @@ class App {
     if (isCtrlOrCmd && key === 'k' && !isShift) {
       e.preventDefault();
       this.toggleCodeMode();
+    }
+    if (isCtrlOrCmd && key === '@' && !isShift) {
+      e.preventDefault();
+      invoke('open_terminal_window');
     }
   }
 

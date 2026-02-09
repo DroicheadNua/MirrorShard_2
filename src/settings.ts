@@ -81,6 +81,8 @@ async function setupSettings() {
         const glowRadiusVal = document.querySelector('#glow-radius-val') as HTMLElement;
         const useUiBgCheck = document.querySelector('#use-ui-bg') as HTMLInputElement;
         const pandocPath = document.querySelector('#pandoc-path') as HTMLInputElement;
+        const shellPath = document.querySelector('#shell-path') as HTMLInputElement;
+        const terminalDefaultCwd = document.querySelector('#terminal-cwd') as HTMLInputElement;
 
         // --- 3.1. UI要素の取得 (AI新規) ---
         const geminiApiKeyInput = document.querySelector('#gemini-api-key') as HTMLInputElement;
@@ -298,10 +300,16 @@ async function setupSettings() {
         setupPicker(pickerSelectionColor, inputSelectionColor, valSelectionColor, 'bottom');
         setupPicker(pickerScrollbarColor, inputScrollbarColor, valScrollbarColor, 'left');
         setupPicker(pickerHeadingColor, inputHeadingColor, valHeadingColor, 'bottom');
-        setupPicker(pickerGlowColor, inputGlowColor, valGlowColor, 'bottom');
+        setupPicker(pickerGlowColor, inputGlowColor, valGlowColor, 'left');
 
         const pandoc = await store.get<string>('pandocPath') ?? '';
         if (pandocPath) pandocPath.value = pandoc;
+
+        const shell = await store.get<string>('shellPath') ?? '';
+        if (shellPath) shellPath.value = shell;
+
+        const cwd = await store.get<string>('terminalDefaultCwd') ?? '';
+        if (terminalDefaultCwd) terminalDefaultCwd.value = cwd;
 
         const initCodeLanguage = await store.get<string>('codeLanguage') || 'html';
         if (codeLanguageSelect) codeLanguageSelect.value = initCodeLanguage;
@@ -442,13 +450,45 @@ async function setupSettings() {
         });
 
         document.querySelector('#btn-select-pandoc')?.addEventListener('click', async () => {
-            // Windowsはexe, Mac/Linuxは拡張子なしを想定
+            const osType = await type();
+            const extensions = osType === 'windows' ? ['exe'] : [''];
             const path = await open({
-                filters: [{ name: 'Executables', extensions: [''] }]
+                filters: [
+                    { name: 'Executables', extensions: extensions },
+                ]
             });
 
             if (path && typeof path === 'string') {
                 const input = document.querySelector('#pandoc-path') as HTMLInputElement;
+                if (input) input.value = path;
+            }
+        });
+
+        document.querySelector('#btn-select-cwd')?.addEventListener('click', async () => {
+            const path = await open({
+                title: 'ディレクトリを選択',
+                directory: true,
+                properties: ['openDirectory']
+            });
+
+            if (path && typeof path === 'string') {
+                const input = document.querySelector('#terminal-cwd') as HTMLInputElement;
+                if (input) input.value = path;
+            }
+        });
+
+        document.querySelector('#btn-select-shell')?.addEventListener('click', async () => {
+            const osType = await type();
+            const extensions = osType === 'windows' ? ['exe'] : [''];
+            const path = await open({
+                title: 'シェルを選択',
+                filters: [
+                    { name: 'Executables', extensions: extensions },
+                ]
+            });
+
+            if (path && typeof path === 'string') {
+                const input = document.querySelector('#shell-path') as HTMLInputElement;
                 if (input) input.value = path;
             }
         });
@@ -522,6 +562,8 @@ async function setupSettings() {
                 console.log('Applying Font:', newUserFont);
                 const newAlign = alignSelect.value;
                 const newPandocPath = pandocPath.value;
+                const newShellPath = shellPath.value;
+                const newTerminalDefaultCwd = terminalDefaultCwd.value;
                 const newCodeLanguage = codeLanguageSelect.value;
                 const newCodeFont = codeFontSelect.value;
                 console.log('Applying Code Font:', newCodeFont);
@@ -556,6 +598,8 @@ async function setupSettings() {
                 await store.set('editorAlign', newAlign);
                 await store.set('editorBlur', newBlur);
                 await store.set('pandocPath', newPandocPath);
+                await store.set('shellPath', newShellPath);
+                await store.set('terminalDefaultCwd', newTerminalDefaultCwd);
                 await store.set('codeLanguage', newCodeLanguage);
                 await store.set('codeFontFamily', newCodeFont);
                 await store.set('codeFontSize', newCodeSize);
@@ -615,6 +659,8 @@ async function setupSettings() {
                     editorBlur: newBlur,
                     useUiBg: newUseUiBg,
                     pandocPath: newPandocPath,
+                    shellPath: newShellPath,
+                    terminalDefaultCwd: newTerminalDefaultCwd,
                     geminiApiKey: newGeminiApiKey,
                     geminiModel: newGeminiModel,
                     localLlmUrl: newLocalUrl,

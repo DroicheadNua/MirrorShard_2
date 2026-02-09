@@ -1,0 +1,182 @@
+import { Terminal } from '@xterm/xterm';
+import { FitAddon } from '@xterm/addon-fit';
+import { invoke } from '@tauri-apps/api/core';
+import { listen } from '@tauri-apps/api/event';
+import { Store } from '@tauri-apps/plugin-store';
+import { getCurrentWindow } from '@tauri-apps/api/window';
+import { Menu, MenuItem, PredefinedMenuItem } from '@tauri-apps/api/menu';
+import { readText, writeText } from '@tauri-apps/plugin-clipboard-manager';
+
+import '@xterm/xterm/css/xterm.css';
+
+async function init() {
+    const store = await Store.load('.settings.dat');
+    const shellPath = await store.get<string>('shellPath');
+
+    // ★ CWDの決定ロジック
+    // 1. "Open Here" で指定された一時パス
+    let cwd = await store.get<string>('terminalTempCwd');
+
+    // 2. もし一時パスがなければ、設定画面で指定されたデフォルトCWD (あれば)
+    if (!cwd) {
+        cwd = await store.get<string>('terminalDefaultCwd');
+    }
+
+    console.log("Terminal CWD:", cwd);
+
+    // 一時パスは使い終わったら消しておく（次回通常起動時に影響させないため）
+    if (await store.get('terminalTempCwd')) {
+        await store.set('terminalTempCwd', null);
+        await store.save();
+    }
+
+    // --- フォント設定の読み込み ---
+    // コードエディタモードの設定を流用
+    const savedCodeFont = await store.get<string>('codeFontFamily') || 'default';
+    const savedCodeSize = await store.get<number>('codeFontSize') || 10;
+    // pt を px に変換して近似させる (1.35倍程度)
+    const fontSizePx = Math.round(savedCodeSize * 1.35);
+    // フォントファミリー文字列の生成
+    const fontFamily = savedCodeFont === 'default'
+        ? '"PlemolJP", "Consolas", monospace' // デフォルト
+        : `"${savedCodeFont}", "PlemolJP", "Consolas", monospace`; // 指定フォント優先
+
+    // --- 1. xterm初期化 ---
+    const term = new Terminal({
+        fontFamily: fontFamily,
+        fontSize: fontSizePx,
+        allowTransparency: true,
+        cursorBlink: true,
+        cursorStyle: 'block',
+
+        // 配色設定
+        theme: {
+            background: 'transparent',
+            foreground: '#e0e0e0', // 標準文字色 (白に近いグレー)
+            cursor: '#00FF41',     // カーソル (ネオングリーン)
+            selectionBackground: 'rgba(0, 255, 65, 0.3)', // 選択範囲
+
+            // ANSIカラー (ここを明るい色にする)
+            black: '#000000',
+            red: '#ff5555', // エラーなど
+            green: '#50fa7b', // 成功、ユーザー名など
+            yellow: '#f1fa8c', // 警告、パスなど
+            blue: '#bd93f9', // ディレクトリなど
+            magenta: '#ff79c6', // Xfceっぽいピンク
+            cyan: '#8be9fd',
+            white: '#bfbfbf',
+
+            // Bright (高輝度) 版
+            brightBlack: '#4d4d4d',
+            brightRed: '#ff6e67',
+            brightGreen: '#5af78e',
+            brightYellow: '#f4f99d',
+            brightBlue: '#caa9fa',
+            brightMagenta: '#ff92d0', // 明るいピンク
+            brightCyan: '#9aedfe',
+            brightWhite: '#e6e6e6',
+        }
+    });
+
+    const fitAddon = new FitAddon();
+    term.loadAddon(fitAddon);
+
+    const container = document.getElementById('terminal-container');
+    if (container) term.open(container);
+
+    fitAddon.fit();
+
+    // 2. PTY初期化 (Rustへ)
+    try {
+        await invoke('init_pty', {
+            rows: term.rows,
+            cols: term.cols,
+            shellPath: shellPath || "",
+            cwd: cwd || null
+        });
+    } catch (e) {
+        term.write('\r\n\x1b[31mFailed to initialize PTY: ' + e + '\x1b[0m\r\n');
+    }
+
+    // 3. データ受信 (Rust -> xterm)
+    await listen<string>('terminal-data', (event) => {
+        term.write(event.payload);
+    });
+
+    await listen('settings-changed', (event: any) => {
+        const s = event.payload;
+        if (s.codeFontSize) {
+            term.options.fontSize = Math.round(s.codeFontSize * 1.35);
+            fitAddon.fit(); // サイズが変わるので再計算
+        }
+        if (s.codeFontFamily) {
+            term.options.fontFamily = s.codeFontFamily === 'default'
+                ? '"PlemolJP", "Consolas", monospace'
+                : `"${s.codeFontFamily}", "PlemolJP", "Consolas", monospace`;
+            fitAddon.fit();
+        }
+    });
+
+    // シェル終了通知を受け取る
+    await listen('terminal-exit', () => {
+        console.log("Shell exited, closing window...");
+        getCurrentWindow().close();
+    });
+
+    // 4. データ送信 (xterm -> Rust)
+    term.onData((data) => {
+        invoke('write_pty', { data });
+    });
+
+    // 5. リサイズ同期
+    window.addEventListener('resize', () => {
+        fitAddon.fit();
+        invoke('resize_pty', { rows: term.rows, cols: term.cols });
+    });
+
+    document.getElementById('btn-close')?.addEventListener('click', () => {
+        getCurrentWindow().close();
+    });
+
+    window.addEventListener('contextmenu', async (e) => {
+        e.preventDefault();
+
+        // 選択範囲があるか確認
+        const selection = term.getSelection();
+
+        const menu = await Menu.new({
+            items: [
+                await MenuItem.new({
+                    text: 'コピー',
+                    enabled: !!selection,
+                    action: async () => {
+                        if (selection) {
+                            await writeText(selection);
+                        }
+                    }
+                }),
+                await MenuItem.new({
+                    text: '貼り付け',
+                    action: async () => {
+                        const text = await readText();
+                        if (text) invoke('write_pty', { data: text });
+                    }
+                }),
+                await PredefinedMenuItem.new({ item: 'Separator' }),
+                await MenuItem.new({
+                    text: 'ウィンドウを閉じる',
+                    action: () => getCurrentWindow().close()
+                }),
+            ],
+        });
+
+        await menu.popup();
+    });
+
+    // 表示
+    const win = getCurrentWindow();
+    await win.show();
+    term.focus();
+}
+
+init();
