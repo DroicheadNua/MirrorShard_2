@@ -644,7 +644,6 @@ body:not(.dark-mode) #status-breadcrumbs,
 body:not(.dark-mode) #status-filepath,
 body:not(.dark-mode) #status-bar span {
   color: var(--ui-text-color) !important;
-  text-shadow: var(--ui-text-shadow);
   transition: color 0.3s, text-shadow 0.3s;
 }
 
@@ -655,6 +654,24 @@ body:not(.dark-mode).ui-bg-enabled #status-bar,
 body:not(.dark-mode).ui-bg-enabled .titlebar {
   background-color: var(--editor-bg-color, transparent);
   opacity: 1;
+}
+
+body:not(.dark-mode) #app-container {
+  background-color: var(--window-bg-color, transparent);
+}
+
+body:not(.dark-mode) .sidebar-content::-webkit-scrollbar-thumb,
+body:not(.dark-mode) #editor-container::-webkit-scrollbar-thumb {
+  background-color: var(--scrollbar-thumb-color, rgba(0, 0, 0, 0.2)) !important;
+}
+
+body:not(.dark-mode) .sidebar-content::-webkit-scrollbar-thumb:hover,
+body:not(.dark-mode) #editor-container::-webkit-scrollbar-thumb:hover {
+  /* ホバー時は少し濃くする等の計算はCSS変数だと難しいので、
+       シンプルに不透明度を上げるか、同じ色にする */
+  background-color: var(--scrollbar-thumb-color, rgba(0, 0, 0, 0.4)) !important;
+  filter: brightness(0.8);
+  /* 簡易的な濃色化 */
 }
 
 /* --- ZENモード時のスタイル --- */

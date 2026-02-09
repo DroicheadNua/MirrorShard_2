@@ -134,15 +134,16 @@ class App {
   private editorWordBreak = 'break-all';
   private userFontFamily = 'default';
   private editorAlign = 'center';
-  private editorBgColorHex = '#ffffff';
-  private editorBgOpacity = 0;
   private editorBlur = 0;
-  private editorTextColor = '';
-  private editorIsBgDark = false;
-  private uiTextColor = '#000000';
-  private useUiTextShadow = false;
+  private customTextColor = '#1e1e1e';
+  private customUiTextColor = '#1e1e1e';
+  private customEditorBg = 'rgba(255, 255, 255, 0)';
+  private customWindowBg = '#ffffff';
+  private customSelectionColor = 'rgba(100, 150, 250, 0.3)';
+  private customScrollbarColor = 'rgba(0, 0, 0, 0.2)';
+  private customHeadingColor = '#0550AE';
+
   private useUiBg = false;
-  private TranslucentDarkTheme!: any;
   private userBackgroundImagePath = '';
   private userBgmPath = '';
   private bgmElement: HTMLAudioElement | null = null; // Win/Mac用
@@ -258,7 +259,7 @@ class App {
       scrollPastEnd(),
       preventCursorBeyondDocEndFilter,
       syntaxHighlighting(
-        (this.isDarkMode || this.editorIsBgDark) ? this.darkHighlightStyle : this.lightHighlightStyle
+        (this.isDarkMode) ? this.darkHighlightStyle : this.lightHighlightStyle
       ),
       this.createSpotlightPlugin(this.isSpotlightMode),
       [],
@@ -501,55 +502,79 @@ class App {
       }
 
       if (s.editorAlign !== undefined) { this.updateEditorAlign(s.editorAlign); }
-      if (s.editorBgColorRGBA) document.documentElement.style.setProperty('--editor-bg-color', s.editorBgColorRGBA);
       if (s.editorBlur !== undefined) {
         this.editorBlur = s.editorBlur;
         document.documentElement.style.setProperty('--editor-blur', `${s.editorBlur}px`);
       }
 
-      // 文字色 (空文字なら変数を削除＝テーマの色に戻る)
-      if (s.editorTextColor !== undefined) {
-        if (s.editorTextColor) {
-          document.documentElement.style.setProperty('--editor-text-color', s.editorTextColor);
-        } else {
-          document.documentElement.style.removeProperty('--editor-text-color');
-        }
-      }
       // 半透明ウィンドウ反映
       if (s.editorAlign) {
         this.editorAlign = s.editorAlign; // プロパティ更新
         this.updateEditorAlign(s.editorAlign);
       }
 
-      if (s.editorBgColorHex !== undefined || s.editorIsBgDark !== undefined) {
-        if (s.editorIsBgDark !== undefined) this.editorIsBgDark = s.editorIsBgDark;
-        if (s.editorBgColorHex !== undefined) this.editorBgColorHex = s.editorBgColorHex;
-
-        // 第3のテーマ（TranslucentDarkTheme）を適用するために必須
-        this.applyAppearance();
-        if (!this.isCodeMode) {
-          this.editorView.dispatch({
-            effects: this.mainCompartment.reconfigure(this.createEditorExtensions())
-          });
+      if (s.customEditorBg !== undefined) {
+        if (s.customEditorBg) {
+          document.documentElement.style.setProperty('--editor-bg-color', s.customEditorBg);
+        } else {
+          document.documentElement.style.removeProperty('--editor-bg-color');
         }
-      }
-      if (s.editorBgOpacity !== undefined) {
-        this.editorBgOpacity = s.editorBgOpacity;
+        this.customEditorBg = s.customEditorBg;
       }
       if (s.editorBlur !== undefined) {
         this.editorBlur = s.editorBlur;
       }
-      if (s.editorTextColor !== undefined) this.editorTextColor = s.editorTextColor;
-      if (s.uiTextColor) this.uiTextColor = s.uiTextColor;
-      if (s.useUiTextShadow !== undefined) this.useUiTextShadow = s.useUiTextShadow;
+      if (s.customWindowBg !== undefined) {
+        if (s.customWindowBg) {
+          document.documentElement.style.setProperty('--window-bg-color', s.customWindowBg);
+        } else {
+          document.documentElement.style.removeProperty('--window-bg-color');
+        }
+        this.customWindowBg = s.customWindowBg;
+      }
+      if (s.customTextColor !== undefined) {
+        if (s.customTextColor) {
+          document.documentElement.style.setProperty('--editor-text-color', s.customTextColor);
+        } else {
+          document.documentElement.style.removeProperty('--editor-text-color');
+        }
+        this.customTextColor = s.customTextColor;
+      }
+      if (s.customUiTextColor !== undefined) {
+        if (s.customUiTextColor) {
+          document.documentElement.style.setProperty('--ui-text-color', s.customUiTextColor);
+        } else {
+          document.documentElement.style.removeProperty('--ui-text-color');
+        }
+        this.customUiTextColor = s.customUiTextColor;
+      }
+      if (s.customSelectionColor !== undefined) {
+        if (s.customSelectionColor) {
+          document.documentElement.style.setProperty('--selection-color', s.customSelectionColor);
+        } else {
+          document.documentElement.style.removeProperty('--selection-color');
+        }
+        this.customSelectionColor = s.customSelectionColor;
+      }
+      if (s.customScrollbarColor !== undefined) {
+        if (s.customScrollbarColor) {
+          document.documentElement.style.setProperty('--scrollbar-color', s.customScrollbarColor);
+        } else {
+          document.documentElement.style.removeProperty('--scrollbar-color');
+        }
+        this.customScrollbarColor = s.customScrollbarColor;
+      }
+      if (s.customHeadingColor !== undefined) {
+        if (s.customHeadingColor) {
+          document.documentElement.style.setProperty('--heading-color', s.customHeadingColor);
+        } else {
+          document.documentElement.style.removeProperty('--heading-color');
+        }
+        this.customHeadingColor = s.customHeadingColor;
+      }
       if (s.useUiBg !== undefined) {
         this.useUiBg = s.useUiBg;
         this.updateUiBg();
-      }
-
-      // UI文字色の反映
-      if (s.uiTextColor || s.useUiTextShadow !== undefined) {
-        this.updateUiTextColor(this.uiTextColor, this.useUiTextShadow);
       }
 
       // コードブロックの言語設定
@@ -709,19 +734,44 @@ class App {
     this.updateEditorAlign(align);
 
     // --- 配色設定 ---
-    this.editorIsBgDark = await this.store.get<boolean>('editorIsBgDark') ?? false;
-    this.editorBgOpacity = await this.store.get<number>('editorBgOpacity') ?? 0;
-    this.editorBgColorHex = await this.store.get<string>('editorBgColorHex') ?? '#ffffff';
 
-    const rgb = this.editorIsBgDark ? '0, 0, 0' : '255, 255, 255';
-    document.documentElement.style.setProperty('--editor-bg-color', `rgba(${rgb}, ${this.editorBgOpacity / 100})`);
-
-    this.editorTextColor = await this.store.get<string>('editorTextColor') ?? '';
-    // 文字色は値があるときのみ適用
-    if (this.editorTextColor) {
-      document.documentElement.style.setProperty('--editor-text-color', this.editorTextColor);
+    this.customTextColor = await this.store.get<string>('customTextColor') ?? '#1e1e1e';
+    if (this.customTextColor) {
+      document.documentElement.style.setProperty('--editor-text-color', this.customTextColor);
     } else {
       document.documentElement.style.removeProperty('--editor-text-color');
+    }
+    this.customUiTextColor = await this.store.get<string>('customUiTextColor') ?? '#1e1e1e';
+    if (this.customUiTextColor) {
+      document.documentElement.style.setProperty('--ui-text-color', this.customUiTextColor);
+    } else {
+      document.documentElement.style.removeProperty('--ui-text-color');
+    }
+    this.customEditorBg = await this.store.get<string>('customEditorBg') ?? 'rgba(255, 255, 255, 0)';
+    if (this.customEditorBg) {
+      document.documentElement.style.setProperty('--editor-bg-color', this.customEditorBg);
+    }
+    this.customWindowBg = await this.store.get<string>('customWindowBg') ?? '#ffffff';
+    if (this.customWindowBg) {
+      document.documentElement.style.setProperty('--window-bg-color', this.customWindowBg);
+    }
+    this.customSelectionColor = await this.store.get<string>('customSelectionColor') ?? 'rgba(100, 150, 250, 0.3)';
+    if (this.customSelectionColor) {
+      document.documentElement.style.setProperty('--selection-color', this.customSelectionColor);
+    } else {
+      document.documentElement.style.removeProperty('--selection-color');
+    }
+    this.customScrollbarColor = await this.store.get<string>('customScrollbarColor') ?? 'rgba(0, 0, 0, 0.2)';
+    if (this.customScrollbarColor) {
+      document.documentElement.style.setProperty('--scrollbar-color', this.customScrollbarColor);
+    } else {
+      document.documentElement.style.removeProperty('--scrollbar-color');
+    }
+    this.customHeadingColor = await this.store.get<string>('customHeadingColor') ?? '#0550AE';
+    if (this.customHeadingColor) {
+      document.documentElement.style.setProperty('--heading-color', this.customHeadingColor);
+    } else {
+      document.documentElement.style.removeProperty('--heading-color');
     }
 
     // ブラー
@@ -729,11 +779,6 @@ class App {
     this.editorBlur = blur;
     document.documentElement.style.setProperty('--editor-blur', `${blur}px`);
 
-    // --- UI文字色 (ヘルパーあり) ---
-    const isUiWhite = await this.store.get<boolean>('uiTextIsWhite') ?? false;
-    const uiColor = isUiWhite ? '#DDDDDD' : '#1e1e1e';
-    const useUiShadow = await this.store.get<boolean>('useUiTextShadow') ?? false;
-    this.updateUiTextColor(uiColor, useUiShadow);
     this.useUiBg = await this.store.get<boolean>('useUiBg') ?? false;
     this.updateUiBg();
 
@@ -848,23 +893,6 @@ class App {
     this.editorAlign = align;
   }
 
-  private updateUiTextColor(color: string, useShadow: boolean) {
-    const style = document.documentElement.style;
-    style.setProperty('--ui-text-color', color);
-
-    if (useShadow) {
-      // 文字色が明るい(#DDDDDD)なら、影は黒く。
-      // 文字色が暗い(#1e1e1e)なら、影は白くする。
-      const shadowColor = (color === '#DDDDDD')
-        ? '1px 1px 2px rgba(0,0,0,0.8)'   // 黒い影
-        : '1px 1px 2px rgba(255,255,255,0.8)'; // 白い影
-
-      style.setProperty('--ui-text-shadow', shadowColor);
-    } else {
-      style.setProperty('--ui-text-shadow', 'none');
-    }
-  }
-
   private updateUiBg() {
     document.body.classList.toggle('ui-bg-enabled', this.useUiBg);
   }
@@ -872,9 +900,6 @@ class App {
   private getCurrentTheme() {
     if (this.isDarkMode) {
       return this.darkTheme;
-    } else if (this.editorIsBgDark) {
-      // ライトモードだが黒背景設定なら、透過ダークテーマを返す
-      return this.TranslucentDarkTheme;
     } else {
       return this.lightTheme;
     }
@@ -885,7 +910,7 @@ class App {
       effects: [
         this.themeCompartment.reconfigure(this.getCurrentTheme()),
         this.highlightingCompartment.reconfigure(
-          syntaxHighlighting((this.isDarkMode || this.editorIsBgDark) ? this.darkHighlightStyle : this.lightHighlightStyle)
+          syntaxHighlighting((this.isDarkMode) ? this.darkHighlightStyle : this.lightHighlightStyle)
         ),
         this.fontFamilyCompartment.reconfigure(this.fontThemes[this.currentFontIndex]),
         this.fontSizeCompartment.reconfigure(this.createFontSizeTheme(this.currentFontSize)),
@@ -1103,32 +1128,32 @@ class App {
   }
 
   private defineThemesAndFonts() {
-    const ivory = 'transparent', dark = '#333333', stone = '#555555', lightText = '#DDDDDD', darkText = '#1e1e1e';
+    const dark = '#333333', lightText = '#DDDDDD';
     this.lightTheme = EditorView.theme({
       '&': {
-        color: darkText,
-        backgroundColor: ivory
+        color: 'var(--editor-text-color, #1e1e1e)',
+        backgroundColor: 'var(--editor-bg-color, transparent)'
       },
       '.cm-content': {
         lineHeight: 'var(--editor-line-height, 1.6)',
         lineBreak: 'var(--editor-line-break, strict)',
         wordBreak: 'var(--editor-word-break, break-all)',
-        caretColor: darkText
+        caretColor: 'var(--editor-text-color, #1e1e1e)'
       },
       '.cm-cursor, .cm-dropCursor': {
-        borderLeftColor: darkText
+        borderLeftColor: 'var(--editor-text-color, #1e1e1e)'
       },
       '&.cm-focused .cm-selectionBackground, .cm-selectionBackground, .cm-content ::selection': {
-        backgroundColor: '#d4d4d4',
+        backgroundColor: 'var(--editor-selection-color, rgba(100, 150, 250, 0.3)) !important'
       },
       '&.cm-focused .cm-activeLine': {
         backgroundColor: 'transparent'
       },
       '&.cm-focused': {
-        outline: 'none',
+        outline: 'none !important'
       },
       '.cm-selectionBackground, ::selection': {
-        backgroundColor: 'rgba(0, 0, 0, 0.1) !important',
+        backgroundColor: 'var(--editor-selection-color, rgba(100, 150, 250, 0.3)) !important'
       },
       '& ::-webkit-scrollbar': {
         width: '18px',
@@ -1156,50 +1181,10 @@ class App {
         lineHeight: 'var(--editor-line-height, 1.6)',
         lineBreak: 'var(--editor-line-break, strict)',
         wordBreak: 'var(--editor-word-break, break-all)',
-        caretColor: lightText
+        caretColor: lightText,
       },
       '.cm-cursor, .cm-dropCursor': {
         borderLeftColor: lightText
-      },
-      '&.cm-focused .cm-activeLine': {
-        backgroundColor: 'transparent'
-      },
-      '&.cm-focused': {
-        outline: 'none',
-      },
-      '& ::-webkit-scrollbar': {
-        width: '18px',
-      },
-      '& ::-webkit-scrollbar-track': {
-        backgroundColor: 'transparent',
-      },
-      '& ::-webkit-scrollbar-thumb': {
-        backgroundColor: 'rgba(255, 255, 255, 0.15)',
-        borderRadius: '9px',
-        border: '3px solid transparent',
-        backgroundClip: 'content-box',
-        minHeight: '40px'
-      },
-      '& ::-webkit-scrollbar-thumb:hover': {
-        backgroundColor: 'rgba(255, 255, 255, 0.4)',
-      },
-    }, { dark: true });
-    this.TranslucentDarkTheme = EditorView.theme({
-      '&': {
-        color: lightText,
-        backgroundColor: 'transparent'
-      },
-      '.cm-content': {
-        lineHeight: 'var(--editor-line-height, 1.6)',
-        lineBreak: 'var(--editor-line-break, strict)',
-        wordBreak: 'var(--editor-word-break, break-all)',
-        caretColor: lightText
-      },
-      '.cm-cursor, .cm-dropCursor': {
-        borderLeftColor: lightText
-      },
-      '&.cm-focused .cm-selectionBackground, .cm-selectionBackground, .cm-content ::selection': {
-        backgroundColor: stone
       },
       '&.cm-focused .cm-activeLine': {
         backgroundColor: 'transparent'
@@ -1240,7 +1225,7 @@ class App {
   }
 
   private lightHighlightStyle = HighlightStyle.define([
-    { tag: tags.heading, color: '#0550AE', fontWeight: 'bold' } //  GitHubの青
+    { tag: tags.heading, color: 'var(--markdown-heading-color, #0550AE)', fontWeight: 'bold' } //  GitHubの青
   ]);
   private darkHighlightStyle = HighlightStyle.define([
     { tag: tags.heading, color: '#82AAFF', fontWeight: 'bold' } //  明るい青
@@ -1835,9 +1820,14 @@ class App {
 
     let imageUrl = '';
     if (this.userBackgroundImagePath) {
-      // ★ユーザー指定パスがあるなら convertFileSrc でURL化
-      imageUrl = convertFileSrc(this.userBackgroundImagePath);
-      console.log('User background image path:', this.userBackgroundImagePath);
+      if (this.userBackgroundImagePath === 'nothing') {
+        rootStyle.setProperty('--app-bg-image', 'none');
+        return;
+      } else {
+        // ★ユーザー指定パスがあるなら convertFileSrc でURL化
+        imageUrl = convertFileSrc(this.userBackgroundImagePath);
+        console.log('User background image path:', this.userBackgroundImagePath);
+      }
     } else {
       const { backgroundImage } = await import('./assets/images');
       // ★なければデフォルトのBase64文字列を使用
@@ -1959,12 +1949,15 @@ class App {
     await this.store.set('editorLineBreak', this.editorLineBreak);
     await this.store.set('editorWordBreak', this.editorWordBreak);
     await this.store.set('editorAlign', this.editorAlign);
-    await this.store.set('editorBgColorHex', this.editorBgColorHex);
-    await this.store.set('editorBgOpacity', this.editorBgOpacity);
     await this.store.set('editorBlur', this.editorBlur);
-    await this.store.set('editorTextColor', this.editorTextColor);
-    await this.store.set('uiTextColor', this.uiTextColor);
-    await this.store.set('useUiTextShadow', this.useUiTextShadow);
+    await this.store.set('customTextColor', this.customTextColor);
+    await this.store.set('customUiTextColor', this.customUiTextColor);
+    await this.store.set('customEditorBg', this.customEditorBg);
+    await this.store.set('customWindowBg', this.customWindowBg);
+    await this.store.set('customSelectionColor', this.customSelectionColor);
+    await this.store.set('customScrollbarColor', this.customScrollbarColor);
+    await this.store.set('customHeadingColor', this.customHeadingColor);
+
 
     // 画像と音楽のパス (存在する場合のみ保存、あるいは空文字で保存)
     if (this.userBackgroundImagePath) {
@@ -2719,7 +2712,7 @@ class App {
         this.fontSizeCompartment.reconfigure(this.createFontSizeTheme(this.currentFontSize)),
         this.highlightingCompartment.reconfigure(
           syntaxHighlighting(
-            (this.isDarkMode || this.editorIsBgDark) ? this.darkHighlightStyle : this.lightHighlightStyle
+            (this.isDarkMode) ? this.darkHighlightStyle : this.lightHighlightStyle
           )
         ),
         this.spotlightCompartment.reconfigure(this.createSpotlightPlugin(this.isSpotlightMode))

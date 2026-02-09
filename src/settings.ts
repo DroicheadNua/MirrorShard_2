@@ -5,7 +5,8 @@ import { getCurrentWindow } from '@tauri-apps/api/window';
 import { open } from '@tauri-apps/plugin-dialog';
 import { type } from '@tauri-apps/plugin-os';
 import { invoke } from '@tauri-apps/api/core';
-// CSSのインポート (Viteが処理します)
+import Picker from 'vanilla-picker';
+// CSSのインポート
 import './settings.css';
 
 async function setupSettings() {
@@ -57,14 +58,22 @@ async function setupSettings() {
         const fontSelect = document.querySelector('#font-family-select') as HTMLSelectElement;
 
         const alignSelect = document.querySelector('#editor-align-select') as HTMLSelectElement;
-        const editorBgDark = document.querySelector('#editor-bg-dark') as HTMLInputElement;
-        const bgOpacityRange = document.querySelector('#editor-bg-opacity') as HTMLInputElement;
-        const bgOpacityVal = document.querySelector('#bg-opacity-val');
         const blurRange = document.querySelector('#editor-blur-range') as HTMLInputElement;
         const blurVal = document.querySelector('#blur-val');
-
-        const uiTextWhite = document.querySelector('#ui-text-white') as HTMLInputElement;
-        const useUiTextShadow = document.querySelector('#use-ui-text-shadow') as HTMLInputElement;
+        const inputTextColor = document.querySelector('#input-text-color') as HTMLInputElement;
+        const pickerTextColor = document.querySelector('#picker-text-color') as HTMLElement;
+        const inputUiTextColor = document.querySelector('#input-ui-text-color') as HTMLInputElement;
+        const pickerUiTextColor = document.querySelector('#picker-ui-text-color') as HTMLElement;
+        const inputEditorBg = document.querySelector('#input-editor-bg') as HTMLInputElement;
+        const pickerEditorBg = document.querySelector('#picker-editor-bg') as HTMLElement;
+        const inputWindowBg = document.querySelector('#input-window-bg') as HTMLInputElement;
+        const pickerWindowBg = document.querySelector('#picker-window-bg') as HTMLElement;
+        const inputSelectionColor = document.querySelector('#input-selection-color') as HTMLInputElement;
+        const pickerSelectionColor = document.querySelector('#picker-selection-color') as HTMLElement;
+        const inputScrollbarColor = document.querySelector('#input-scrollbar-color') as HTMLInputElement;
+        const pickerScrollbarColor = document.querySelector('#picker-scrollbar-color') as HTMLElement;
+        const inputHeadingColor = document.querySelector('#input-heading-color') as HTMLInputElement;
+        const pickerHeadingColor = document.querySelector('#picker-heading-color') as HTMLElement;
         const useUiBgCheck = document.querySelector('#use-ui-bg') as HTMLInputElement;
         const pandocPath = document.querySelector('#pandoc-path') as HTMLInputElement;
 
@@ -120,16 +129,53 @@ async function setupSettings() {
         const align = await store.get<string>('editorAlign');
         alignSelect.value = align ?? 'center';
 
-        const isBgDark = await store.get<boolean>('editorIsBgDark') ?? false;
-        editorBgDark.checked = isBgDark;
-
-        const bgOpacity = await store.get<number>('editorBgOpacity') ?? 0;
-        bgOpacityRange.value = bgOpacity.toString();
-        if (bgOpacityVal) bgOpacityVal.textContent = `${bgOpacity}%`;
-
         const blur = await store.get<number>('editorBlur') ?? 0;
         blurRange.value = blur.toString();
         if (blurVal) blurVal.textContent = `${blur}px`;
+
+        const valTextColor = await store.get<string>('customTextColor') || '#1e1e1e';
+        const valUiTextColor = await store.get<string>('customUiTextColor') || '#1e1e1e';
+        const valEditorBg = await store.get<string>('customEditorBg') || 'rgba(255, 255, 255, 0)';
+        const valWindowBg = await store.get<string>('customWindowBg') || '#ffffff';
+        const valSelectionColor = await store.get<string>('customSelectionColor') || 'rgba(100, 150, 250, 0.3)';
+        const valScrollbarColor = await store.get<string>('customScrollbarColor') || 'rgba(0, 0, 0, 0.2)';
+        const valHeadingColor = await store.get<string>('customHeadingColor') || '#0550AE';
+
+        // --- ピッカーセットアップ用ヘルパー ---
+        const setupPicker = (previewEl: HTMLElement, inputEl: HTMLInputElement, initColor: string, alignment: 'bottom' | 'left' | 'right' = 'bottom') => {
+            previewEl.style.backgroundColor = initColor;
+            inputEl.value = initColor;
+
+            new Picker({
+                parent: previewEl,
+                popup: alignment,
+                alpha: true,
+                color: initColor,
+                editor: true,
+                onDone: (color) => {
+                    const c = color.rgbaString;
+                    previewEl.style.backgroundColor = c;
+                    inputEl.value = c;
+                },
+                onChange: (color) => {
+                    previewEl.style.backgroundColor = color.rgbaString;
+                }
+            });
+
+            // input手入力時の同期
+            inputEl.addEventListener('change', () => {
+                previewEl.style.backgroundColor = inputEl.value;
+            });
+        };
+
+        // --- ピッカー適用 ---
+        setupPicker(pickerTextColor, inputTextColor, valTextColor, 'bottom');
+        setupPicker(pickerUiTextColor, inputUiTextColor, valUiTextColor, 'bottom');
+        setupPicker(pickerEditorBg, inputEditorBg, valEditorBg, 'left');
+        setupPicker(pickerWindowBg, inputWindowBg, valWindowBg, 'left');
+        setupPicker(pickerSelectionColor, inputSelectionColor, valSelectionColor, 'bottom');
+        setupPicker(pickerScrollbarColor, inputScrollbarColor, valScrollbarColor, 'left');
+        setupPicker(pickerHeadingColor, inputHeadingColor, valHeadingColor, 'bottom');
 
         const pandoc = await store.get<string>('pandocPath') ?? '';
         if (pandocPath) pandocPath.value = pandoc;
@@ -155,13 +201,6 @@ async function setupSettings() {
 
         const initCodeSize = await store.get<number>('codeFontSize') || 10;
         if (codeFontSizeInput) codeFontSizeInput.value = initCodeSize.toString();
-
-        // ★ UI文字色
-        const isUiWhite = await store.get<boolean>('uiTextIsWhite') ?? false;
-        uiTextWhite.checked = isUiWhite;
-
-        const isUiShadow = await store.get<boolean>('useUiTextShadow') ?? false;
-        useUiTextShadow.checked = isUiShadow;
 
         const isUiBg = await store.get<boolean>('useUiBg') ?? false;
         useUiBgCheck.checked = isUiBg;
@@ -233,6 +272,14 @@ async function setupSettings() {
             await emit('settings-changed', { userBackgroundImagePath: null });
         });
 
+        document.querySelector('#btn-none-bg-image')?.addEventListener('click', async () => {
+            pendingBgPath = 'nothing';
+            await store.set('userBackgroundImagePath', 'nothing');
+            await store.save();
+            bgPathDisplay.textContent = '(なし)';
+            await emit('settings-changed', { userBackgroundImagePath: 'nothing' });
+        });
+
         document.querySelector('#btn-select-bgm')?.addEventListener('click', async () => {
             const path = await open({
                 title: 'BGMを選択',
@@ -301,8 +348,6 @@ async function setupSettings() {
             aiIconDisplay.textContent = '(Default)';
         });
 
-
-        bgOpacityRange.addEventListener('input', () => { if (bgOpacityVal) bgOpacityVal.textContent = `${bgOpacityRange.value}%`; });
         blurRange.addEventListener('input', () => { if (blurVal) blurVal.textContent = `${blurRange.value}px`; });
 
         // --- 5. フォントセレクト ---
@@ -350,25 +395,17 @@ async function setupSettings() {
                 const newCodeFont = codeFontSelect.value;
                 console.log('Applying Code Font:', newCodeFont);
                 const newCodeSize = parseInt(codeFontSizeInput.value, 10) || 10;
-
-                const newIsBgDark = editorBgDark.checked;
-                const newBgOpacity = parseInt(bgOpacityRange.value, 10);
                 const newBlur = parseInt(blurRange.value, 10);
-                const newIsUiWhite = uiTextWhite.checked;
-                const newUseUiShadow = useUiTextShadow.checked;
+
+                const newTextColor = inputTextColor.value;
+                const newUiTextColor = inputUiTextColor.value;
+                const newEditorBg = inputEditorBg.value;
+                const newWindowBg = inputWindowBg.value;
+                const newSelectionColor = inputSelectionColor.value;
+                const newScrollbarColor = inputScrollbarColor.value;
+                const newHeadingColor = inputHeadingColor.value;
+
                 const newUseUiBg = useUiBgCheck.checked;
-
-                // 色の計算ロジック 
-                // 背景色: 黒(0,0,0) か 白(255,255,255)
-                const rgb = newIsBgDark ? '0, 0, 0' : '255, 255, 255';
-                const rgbaString = `rgba(${rgb}, ${newBgOpacity / 100})`;
-
-                // エディタ文字色: 背景が黒なら白(#dddddd)、白なら黒(#1e1e1e)
-                // 自動決定するので保存・通知するのは「色コード」でOK
-                const newEditorTextColor = newIsBgDark ? '#DDDDDD' : '#1e1e1e';
-
-                // UI文字色: 指定に従う
-                const newUiTextColor = newIsUiWhite ? '#DDDDDD' : '#1e1e1e';
 
                 // AI Params
                 const newGeminiApiKey = geminiApiKeyInput.value.trim();
@@ -386,13 +423,19 @@ async function setupSettings() {
                 await store.set('editorWordBreak', newWordBreak);
                 await store.set('userFontFamily', newUserFont);
                 await store.set('editorAlign', newAlign);
-                await store.set('editorIsBgDark', newIsBgDark);
-                await store.set('editorBgOpacity', newBgOpacity);
                 await store.set('editorBlur', newBlur);
                 await store.set('pandocPath', newPandocPath);
                 await store.set('codeLanguage', newCodeLanguage);
                 await store.set('codeFontFamily', newCodeFont);
                 await store.set('codeFontSize', newCodeSize);
+                await store.set('customTextColor', newTextColor);
+                await store.set('customUiTextColor', newUiTextColor);
+                await store.set('customEditorBg', newEditorBg);
+                await store.set('customWindowBg', newWindowBg);
+                await store.set('customSelectionColor', newSelectionColor);
+                await store.set('customScrollbarColor', newScrollbarColor);
+                await store.set('customHeadingColor', newHeadingColor);
+                await store.set('useUiBg', newUseUiBg);
 
                 // AI設定の保存
                 if (newGeminiApiKey) await store.set('geminiApiKey', newGeminiApiKey);
@@ -414,11 +457,6 @@ async function setupSettings() {
                 else await store.delete('aiChatAiIconPath');
                 await store.set('localLlmModel', newLocalModel);
 
-                // 自動決定した文字色は保存しなくても計算できるが、main.tsに渡すために保存しても良い
-                // ここではフラグだけ保存
-
-                await store.set('uiTextIsWhite', newIsUiWhite);
-                await store.set('useUiTextShadow', newUseUiShadow);
                 await store.set('useUiBg', newUseUiBg);
 
                 if (pendingBgPath) await store.set('userBackgroundImagePath', pendingBgPath);
@@ -440,13 +478,7 @@ async function setupSettings() {
                     editorWordBreak: newWordBreak,
                     userFontFamily: newUserFont,
                     editorAlign: newAlign,
-                    editorBgColorRGBA: rgbaString, // 計算済みRGBA
                     editorBlur: newBlur,
-                    editorTextColor: newEditorTextColor, // 自動決定した文字色
-                    uiTextColor: newUiTextColor,
-                    useUiTextShadow: newUseUiShadow,
-                    editorIsBgDark: newIsBgDark,
-                    editorBgOpacity: newBgOpacity,
                     useUiBg: newUseUiBg,
                     pandocPath: newPandocPath,
                     geminiApiKey: newGeminiApiKey,
@@ -462,7 +494,14 @@ async function setupSettings() {
                     localLlmModel: newLocalModel,
                     codeLanguage: newCodeLanguage,
                     codeFontFamily: newCodeFont,
-                    codeFontSize: newCodeSize
+                    codeFontSize: newCodeSize,
+                    customTextColor: newTextColor,
+                    customUiTextColor: newUiTextColor,
+                    customEditorBg: newEditorBg,
+                    customWindowBg: newWindowBg,
+                    customSelectionColor: newSelectionColor,
+                    customScrollbarColor: newScrollbarColor,
+                    customHeadingColor: newHeadingColor,
                 });
 
             } catch (err) {
