@@ -132,139 +132,159 @@
                         <label for="picker-heading-color">見出し色</label>
                         <div id="picker-heading-color" class="color-preview"></div>
                         <input type="text" id="input-heading-color" style="flex-grow: 1;" placeholder="#0550AE" />
+                        <label for="picker-glow-color">グロー色:</label>
+                        <div id="picker-glow-color" class="color-preview"></div>
+                        <input type="text" id="input-glow-color" style="flex-grow: 1;"
+                            placeholder="rgba(0, 255, 65, 0.5)" />
                     </div>
+                </div>
 
-                    <label>
+                <div class="setting-item">
+                    <label for="theme-select">テーマプリセット</label>
+                    <select id="theme-select">
+                        <option value="default">Default (White)</option>
+                        <option value="paper">Paper (Sepia)</option>
+                        <option value="cyber">Cyber (Dark/Translucent)</option>
+                        <option value="cyber-tokyo">Cyberpunk-Tokyo</option>
+                    </select>
+                    <button id="btn-reset-custom">Reset</button>
+                </div>
+
+                <div class="setting-item">
+                    <div style="display: flex; gap: 10px; align-items: center;margin-bottom: 5px;">
+                        <input type="checkbox" id="check-enable-glow"> グロー
+                        <label for="input-glow-radius">強さ: <span id="glow-radius-val">5px</span></label>
+                        <input type="range" id="input-glow-radius" min="1" max="10" step="1" value="5" />
                         <input type="checkbox" id="use-ui-bg"> サイドバー等にも背景を適用
-                    </label>
-                </div>
-                <!-- タブ2: AI設定 -->
-                <div id="tab-ai" class="tab-content">
-                    <div class="ai-setting-group">
-                        <h4>Google Gemini</h4>
-                        <label style="display: flex; gap: 5px;">
-                            API Key
-                            <input type="password" id="gemini-api-key" placeholder="AIzaSy..."
-                                style="flex-grow: 1;margin: auto;" />
-                        </label>
-                        <br />
-                        <label style="display: flex; gap: 5px;">
-                            Model
-                            <input type="text" id="gemini-model" placeholder="<モデル名を入力>"
-                                style="flex-grow: 1;margin: auto;" />
-                            <select id="gemini-model-preset" style="flex-grow: 0;margin: auto;"
-                                onchange="document.getElementById('gemini-model').value = this.value;">
-                                <option value="gemini-2.5-flash">Gemini 2.5 Flash</option>
-                                <option value="gemini-2.5-pro">Gemini 2.5 Pro</option>
-                                <option value="">手動入力</option>
-                            </select>
-                        </label>
-                    </div>
-
-                    <div class="ai-setting-group">
-                        <h4>Local LLM (LM Studio / Ollama)</h4>
-                        <label style="display: flex; gap: 5px;">
-                            Endpoint URL
-                            <input type="text" id="local-llm-url"
-                                placeholder="http://127.0.0.1:1234/v1/chat/completions"
-                                style="flex-grow: 1;margin: auto;" />
-                            <select id="local-llm-url-preset" style="flex-grow: 0;margin: auto;"
-                                onchange="document.getElementById('local-llm-url').value = this.value;">
-                                <!-- LM Studio Default -->
-                                <option value="http://127.0.0.1:1234/v1/chat/completions">LM Studio (Default)</option>
-                                <!-- Ollama Default -->
-                                <option value="http://127.0.0.1:11434/v1/chat/completions">Ollama (Default)</option>
-                                <option value="">手動入力</option>
-                            </select>
-                        </label>
-                        <label style="display: flex; gap: 5px;">
-                            Model Name (Required for Ollama)
-                            <input type="text" id="local-llm-model" placeholder="※LM Studioの場合は無視されます"
-                                style="flex-grow: 1;margin: auto;" />
-                        </label>
-                    </div>
-
-                    <div class="ai-setting-group">
-                        <h4>Behavior</h4>
-                        <label>
-                            Max Output Tokens (最大応答長):
-                            <input type="number" id="ai-max-tokens" placeholder="2000" min="100" max="100000"
-                                style="width: 80px;" />
-                            <span style="font-size: 0.8em; color: #111;">(Gemini/Local共通)</span>
-                        </label>
-                        <br />
-                        <label>
-                            System Prompt (AIへの役割指示):
-                            <textarea id="ai-system-prompt" class="setting-textarea"
-                                placeholder="あなたは優秀な執筆アシスタントです..."></textarea>
-                        </label>
-                    </div>
-
-                    <div class="ai-setting-group">
-                        <h4>User Profile</h4>
-                        <label style="display: flex; gap: 5px;">
-                            Name
-                            <input type="text" id="user-name" placeholder="User" style="flex-grow: 1;margin: auto;" />
-                        </label>
-                        <div class="file-select-row">
-                            <span>Icon:</span>
-                            <span id="user-icon-path" class="path-display"
-                                style="font-size: 0.8em; color: #111;">(Default)</span>
-                            <button id="btn-select-user-icon">Select</button>
-                            <button id="btn-clear-user-icon">Clear</button>
-                        </div>
-                    </div>
-
-                    <div class="ai-setting-group">
-                        <h4>AI Profile</h4>
-                        <label style="display: flex; gap: 5px;">
-                            Name
-                            <input type="text" id="ai-name" placeholder="AI" style="flex-grow: 1;margin: auto;" />
-                        </label>
-                        <div class="file-select-row">
-                            <span>Icon:</span>
-                            <span id="ai-icon-path" class="path-display"
-                                style="font-size: 0.8em; color: #111;">(Default)</span>
-                            <button id="btn-select-ai-icon">Select</button>
-                            <button id="btn-clear-ai-icon">Clear</button>
-                        </div>
-                    </div>
-                </div>
-                <!-- タブ3: コードエディタ設定 -->
-                <div id="tab-code" class="tab-content">
-                    <div class="setting-group">
-                        <h4>Code Editor Settings</h4>
-                        <label>
-                            Syntax Highlight Language:
-                            <select id="code-language-select">
-                                <option value="html">HTML</option>
-                                <option value="css">CSS</option>
-                                <option value="javascript">JavaScript / TypeScript</option>
-                                <option value="markdown">Markdown</option>
-                                <option value="rust">Rust</option>
-                                <option value="python">Python</option>
-                                <!-- 必要なら他も追加 -->
-                            </select>
-                        </label>
-                        <label style="display: flex; gap: 5px;">Font:
-                            <select id="code-font-family-select" style="flex-grow: 1;"></select>
-                        </label>
-                        <br>
-                        <label style="display: flex; gap: 5px;">Font Size:
-                            <input type="number" id="code-font-size-input" min="8" max="72" value="14"
-                                style="width: 60px;" />
-                        </label>
-                    </div>
-
-                    <div class="setting-group">
-                        <h4>Markdown Preview</h4>
-                        <!-- 将来的に GFMのオンオフとかを入れる場所 -->
-                        <p style="color: #888; font-size: 0.9em;">(Future settings will appear here)</p>
                     </div>
                 </div>
             </div>
+            <!-- タブ2: AI設定 -->
+            <div id="tab-ai" class="tab-content">
+                <div class="ai-setting-group">
+                    <h4>Google Gemini</h4>
+                    <label style="display: flex; gap: 5px;">
+                        API Key
+                        <input type="password" id="gemini-api-key" placeholder="AIzaSy..."
+                            style="flex-grow: 1;margin: auto;" />
+                    </label>
+                    <br />
+                    <label style="display: flex; gap: 5px;">
+                        Model
+                        <input type="text" id="gemini-model" placeholder="<モデル名を入力>"
+                            style="flex-grow: 1;margin: auto;" />
+                        <select id="gemini-model-preset" style="flex-grow: 0;margin: auto;"
+                            onchange="document.getElementById('gemini-model').value = this.value;">
+                            <option value="gemini-2.5-flash">Gemini 2.5 Flash</option>
+                            <option value="gemini-2.5-pro">Gemini 2.5 Pro</option>
+                            <option value="">手動入力</option>
+                        </select>
+                    </label>
+                </div>
+
+                <div class="ai-setting-group">
+                    <h4>Local LLM (LM Studio / Ollama)</h4>
+                    <label style="display: flex; gap: 5px;">
+                        Endpoint URL
+                        <input type="text" id="local-llm-url" placeholder="http://127.0.0.1:1234/v1/chat/completions"
+                            style="flex-grow: 1;margin: auto;" />
+                        <select id="local-llm-url-preset" style="flex-grow: 0;margin: auto;"
+                            onchange="document.getElementById('local-llm-url').value = this.value;">
+                            <!-- LM Studio Default -->
+                            <option value="http://127.0.0.1:1234/v1/chat/completions">LM Studio (Default)</option>
+                            <!-- Ollama Default -->
+                            <option value="http://127.0.0.1:11434/v1/chat/completions">Ollama (Default)</option>
+                            <option value="">手動入力</option>
+                        </select>
+                    </label>
+                    <label style="display: flex; gap: 5px;">
+                        Model Name (Required for Ollama)
+                        <input type="text" id="local-llm-model" placeholder="※LM Studioの場合は無視されます"
+                            style="flex-grow: 1;margin: auto;" />
+                    </label>
+                </div>
+
+                <div class="ai-setting-group">
+                    <h4>Behavior</h4>
+                    <label>
+                        Max Output Tokens (最大応答長):
+                        <input type="number" id="ai-max-tokens" placeholder="2000" min="100" max="100000"
+                            style="width: 80px;" />
+                        <span style="font-size: 0.8em; color: #111;">(Gemini/Local共通)</span>
+                    </label>
+                    <br />
+                    <label>
+                        System Prompt (AIへの役割指示):
+                        <textarea id="ai-system-prompt" class="setting-textarea"
+                            placeholder="あなたは優秀な執筆アシスタントです..."></textarea>
+                    </label>
+                </div>
+
+                <div class="ai-setting-group">
+                    <h4>User Profile</h4>
+                    <label style="display: flex; gap: 5px;">
+                        Name
+                        <input type="text" id="user-name" placeholder="User" style="flex-grow: 1;margin: auto;" />
+                    </label>
+                    <div class="file-select-row">
+                        <span>Icon:</span>
+                        <span id="user-icon-path" class="path-display"
+                            style="font-size: 0.8em; color: #111;">(Default)</span>
+                        <button id="btn-select-user-icon">Select</button>
+                        <button id="btn-clear-user-icon">Clear</button>
+                    </div>
+                </div>
+
+                <div class="ai-setting-group">
+                    <h4>AI Profile</h4>
+                    <label style="display: flex; gap: 5px;">
+                        Name
+                        <input type="text" id="ai-name" placeholder="AI" style="flex-grow: 1;margin: auto;" />
+                    </label>
+                    <div class="file-select-row">
+                        <span>Icon:</span>
+                        <span id="ai-icon-path" class="path-display"
+                            style="font-size: 0.8em; color: #111;">(Default)</span>
+                        <button id="btn-select-ai-icon">Select</button>
+                        <button id="btn-clear-ai-icon">Clear</button>
+                    </div>
+                </div>
+            </div>
+            <!-- タブ3: コードエディタ設定 -->
+            <div id="tab-code" class="tab-content">
+                <div class="setting-group">
+                    <h4>Code Editor Settings</h4>
+                    <label>
+                        Syntax Highlight Language:
+                        <select id="code-language-select">
+                            <option value="html">HTML</option>
+                            <option value="css">CSS</option>
+                            <option value="javascript">JavaScript / TypeScript</option>
+                            <option value="markdown">Markdown</option>
+                            <option value="rust">Rust</option>
+                            <option value="python">Python</option>
+                            <!-- 必要なら他も追加 -->
+                        </select>
+                    </label>
+                    <label style="display: flex; gap: 5px;">Font:
+                        <select id="code-font-family-select" style="flex-grow: 1;"></select>
+                    </label>
+                    <br>
+                    <label style="display: flex; gap: 5px;">Font Size:
+                        <input type="number" id="code-font-size-input" min="8" max="72" value="14"
+                            style="width: 60px;" />
+                    </label>
+                </div>
+
+                <div class="setting-group">
+                    <h4>Markdown Preview</h4>
+                    <!-- 将来的に GFMのオンオフとかを入れる場所 -->
+                    <p style="color: #888; font-size: 0.9em;">(Future settings will appear here)</p>
+                </div>
+            </div>
         </div>
-        <script type="module" src="/src/settings.ts"></script>
+    </div>
+    <script type="module" src="/src/settings.ts"></script>
 </body>
 
 </html>

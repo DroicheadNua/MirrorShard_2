@@ -660,18 +660,12 @@ body:not(.dark-mode) #app-container {
   background-color: var(--window-bg-color, transparent);
 }
 
-body:not(.dark-mode) .sidebar-content::-webkit-scrollbar-thumb,
-body:not(.dark-mode) #editor-container::-webkit-scrollbar-thumb {
-  background-color: var(--scrollbar-thumb-color, rgba(0, 0, 0, 0.2)) !important;
+body:not(.dark-mode) .sidebar-content::-webkit-scrollbar-thumb {
+  background-color: var(--scrollbar-color, rgba(0, 0, 0, 0.2)) !important;
 }
 
-body:not(.dark-mode) .sidebar-content::-webkit-scrollbar-thumb:hover,
-body:not(.dark-mode) #editor-container::-webkit-scrollbar-thumb:hover {
-  /* ホバー時は少し濃くする等の計算はCSS変数だと難しいので、
-       シンプルに不透明度を上げるか、同じ色にする */
-  background-color: var(--scrollbar-thumb-color, rgba(0, 0, 0, 0.4)) !important;
-  filter: brightness(0.8);
-  /* 簡易的な濃色化 */
+body:not(.dark-mode) .sidebar-content::-webkit-scrollbar-thumb:hover {
+  background-color: var(--scrollbar-color, rgba(0, 0, 0, 0.4)) !important;
 }
 
 /* --- ZENモード時のスタイル --- */
@@ -835,6 +829,27 @@ body.code-mode .sidebar-content::-webkit-scrollbar-thumb {
 body.code-mode .sidebar-content::-webkit-scrollbar-thumb:hover {
   background: #A599E9aa;
 }
+
+
+/* カスタムグロー有効時 */
+body.custom-glow #editor-container,
+body.custom-glow #status-bar,
+body.custom-glow #status-breadcrumbs,
+body.custom-glow #status-filepath,
+body.custom-glow .titlebar-buttons button,
+body.custom-glow .window-controls button,
+body.custom-glow .outline-controls button,
+body.custom-glow .font-controls button,
+body.custom-glow .collapse-controls button,
+body.custom-glow .outline-text,
+/* アウトラインも光らせるなら */
+body.custom-glow .file-entry
+
+/* ファイル名も光らせるなら */
+  {
+  text-shadow: var(--custom-text-shadow) !important;
+}
+
 
 /* 各ボタンにSVGアイコンを割り当て */
 #btn-save {

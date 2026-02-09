@@ -21,7 +21,7 @@ body {
     width: 100%;
     height: 100%;
     overflow-x: hidden;
-    overflow-y: auto;
+    overflow-y: hidden;
 }
 
 #settings-wrapper::-webkit-scrollbar {
@@ -45,7 +45,7 @@ body {
 #settings-container {
     display: flex;
     flex-direction: column;
-    height: 100vh;
+    height: calc(100%-40px);
     width: 90vw;
     background-color: transparent;
     overflow: hidden;

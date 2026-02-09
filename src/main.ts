@@ -142,6 +142,9 @@ class App {
   private customSelectionColor = 'rgba(100, 150, 250, 0.3)';
   private customScrollbarColor = 'rgba(0, 0, 0, 0.2)';
   private customHeadingColor = '#0550AE';
+  private enableGlow = false;
+  private glowColor = 'rgba(0, 50, 255, 0.5)';
+  private glowRadius = 5;
 
   private useUiBg = false;
   private userBackgroundImagePath = '';
@@ -502,9 +505,11 @@ class App {
       }
 
       if (s.editorAlign !== undefined) { this.updateEditorAlign(s.editorAlign); }
-      if (s.editorBlur !== undefined) {
+      if (s.editorBlur !== undefined && s.editorBlur > 0) {
         this.editorBlur = s.editorBlur;
         document.documentElement.style.setProperty('--editor-blur', `${s.editorBlur}px`);
+      } else {
+        document.documentElement.style.setProperty('--editor-blur', `none`);
       }
 
       // 半透明ウィンドウ反映
@@ -571,6 +576,18 @@ class App {
           document.documentElement.style.removeProperty('--heading-color');
         }
         this.customHeadingColor = s.customHeadingColor;
+      }
+      if (s.enableGlow !== undefined) {
+        this.enableGlow = s.enableGlow;
+        this.updateGlowEffect();
+      }
+      if (s.glowColor !== undefined) {
+        this.glowColor = s.glowColor;
+        this.updateGlowEffect();
+      }
+      if (s.glowRadius !== undefined) {
+        this.glowRadius = s.glowRadius;
+        this.updateGlowEffect();
       }
       if (s.useUiBg !== undefined) {
         this.useUiBg = s.useUiBg;
@@ -774,10 +791,18 @@ class App {
       document.documentElement.style.removeProperty('--heading-color');
     }
 
+    this.enableGlow = await this.store.get<boolean>('enableGlow') ?? false;
+    this.glowColor = await this.store.get<string>('glowColor') ?? 'rgba(0, 50, 255, 0.5)';
+    this.glowRadius = await this.store.get<number>('glowRadius') ?? 5;
+
     // ブラー
     const blur = await this.store.get<number>('editorBlur') ?? 0;
     this.editorBlur = blur;
-    document.documentElement.style.setProperty('--editor-blur', `${blur}px`);
+    if (blur > 0) {
+      document.documentElement.style.setProperty('--editor-blur', `${blur}px`);
+    } else {
+      document.documentElement.style.setProperty('--editor-blur', `none`);
+    }
 
     this.useUiBg = await this.store.get<boolean>('useUiBg') ?? false;
     this.updateUiBg();
@@ -794,6 +819,47 @@ class App {
     const savedSessionPaths = await this.store.get<string[]>('sessionFilePaths');
     this.isLoading = false;
     return savedSessionPaths ?? [];
+  }
+
+  private updateGlowEffect() {
+    const body = document.body;
+
+    // ダークモードでない、かつグロー有効の場合のみ適用
+    if (!this.isDarkMode && this.enableGlow) {
+      body.classList.add('custom-glow');
+
+      // RGBAの解析 (簡易正規表現)
+      // "rgba(r, g, b, a)" または "rgb(r, g, b)"
+      const match = this.glowColor.match(/rgba?\((\d+),\s*(\d+),\s*(\d+)(?:,\s*([0-9.]+))?\)/);
+
+      if (match) {
+        const r = match[1];
+        const g = match[2];
+        const b = match[3];
+        let a = parseFloat(match[4] || '1'); // アルファがない場合は1
+
+        // 3段階の影を作成
+        // x1
+        const shadow1 = `0 0 ${this.glowRadius}px rgba(${r}, ${g}, ${b}, ${a})`;
+        // x2 (alpha - 0.1)
+        const a2 = Math.max(0, a - 0.1);
+        const shadow2 = `0 0 ${this.glowRadius * 2}px rgba(${r}, ${g}, ${b}, ${a2})`;
+        // x4 (alpha - 0.2)
+        const a3 = Math.max(0, a - 0.2);
+        const shadow3 = `0 0 ${this.glowRadius * 4}px rgba(${r}, ${g}, ${b}, ${a3})`;
+
+        const shadowVal = `${shadow1}, ${shadow2}, ${shadow3}`;
+
+        document.documentElement.style.setProperty('--custom-text-shadow', shadowVal);
+      } else {
+        // パース失敗時は色をそのまま使う（フォールバック）
+        document.documentElement.style.setProperty('--custom-text-shadow', `0 0 ${this.glowRadius}px ${this.glowColor}`);
+      }
+
+    } else {
+      body.classList.remove('custom-glow');
+      document.documentElement.style.removeProperty('--custom-text-shadow');
+    }
   }
 
   // カーソル行数を取得するヘルパー
@@ -923,6 +989,9 @@ class App {
 
     // 背景画像の更新
     this.updateBackground();
+
+    // グローエフェクトの更新
+    this.updateGlowEffect();
   }
 
   /** 現在の設定に基づいたフォントテーマを取得するヘルパー */
@@ -1162,14 +1231,14 @@ class App {
         backgroundColor: 'transparent',
       },
       '& ::-webkit-scrollbar-thumb': {
-        backgroundColor: 'rgba(0, 0, 0, 0.15)',
+        backgroundColor: 'var(--scrollbar-color, rgba(0, 0, 0, 0.2))',
         borderRadius: '9px',
         border: '3px solid transparent',
         backgroundClip: 'content-box',
         minHeight: '40px'
       },
       '& ::-webkit-scrollbar-thumb:hover': {
-        backgroundColor: 'rgba(0, 0, 0, 0.25)',
+        backgroundColor: 'var(--scrollbar-color, rgba(0, 0, 0, 0.4))',
       },
     }, { dark: false });
     this.darkTheme = EditorView.theme({
@@ -1225,7 +1294,7 @@ class App {
   }
 
   private lightHighlightStyle = HighlightStyle.define([
-    { tag: tags.heading, color: 'var(--markdown-heading-color, #0550AE)', fontWeight: 'bold' } //  GitHubの青
+    { tag: tags.heading, color: 'var(--heading-color, #0550AE)', fontWeight: 'bold' } //  GitHubの青
   ]);
   private darkHighlightStyle = HighlightStyle.define([
     { tag: tags.heading, color: '#82AAFF', fontWeight: 'bold' } //  明るい青
@@ -1957,6 +2026,9 @@ class App {
     await this.store.set('customSelectionColor', this.customSelectionColor);
     await this.store.set('customScrollbarColor', this.customScrollbarColor);
     await this.store.set('customHeadingColor', this.customHeadingColor);
+    await this.store.set('enableGlow', this.enableGlow);
+    await this.store.set('glowColor', this.glowColor);
+    await this.store.set('glowRadius', this.glowRadius);
 
 
     // 画像と音楽のパス (存在する場合のみ保存、あるいは空文字で保存)

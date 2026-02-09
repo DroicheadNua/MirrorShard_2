@@ -74,6 +74,11 @@ async function setupSettings() {
         const pickerScrollbarColor = document.querySelector('#picker-scrollbar-color') as HTMLElement;
         const inputHeadingColor = document.querySelector('#input-heading-color') as HTMLInputElement;
         const pickerHeadingColor = document.querySelector('#picker-heading-color') as HTMLElement;
+        const checkEnableGlow = document.querySelector('#check-enable-glow') as HTMLInputElement;
+        const inputGlowColor = document.querySelector('#input-glow-color') as HTMLInputElement;
+        const pickerGlowColor = document.querySelector('#picker-glow-color') as HTMLElement;
+        const inputGlowRadius = document.querySelector('#input-glow-radius') as HTMLInputElement;
+        const glowRadiusVal = document.querySelector('#glow-radius-val') as HTMLElement;
         const useUiBgCheck = document.querySelector('#use-ui-bg') as HTMLInputElement;
         const pandocPath = document.querySelector('#pandoc-path') as HTMLInputElement;
 
@@ -140,6 +145,10 @@ async function setupSettings() {
         const valSelectionColor = await store.get<string>('customSelectionColor') || 'rgba(100, 150, 250, 0.3)';
         const valScrollbarColor = await store.get<string>('customScrollbarColor') || 'rgba(0, 0, 0, 0.2)';
         const valHeadingColor = await store.get<string>('customHeadingColor') || '#0550AE';
+        const valEnableGlow = await store.get<boolean>('enableGlow') ?? false;
+        const valGlowColor = await store.get<string>('glowColor') || 'rgba(0, 50, 255, 0.5)';
+        const valGlowRadius = await store.get<number>('glowRadius') ?? 5;
+        checkEnableGlow.checked = valEnableGlow;
 
         // --- ピッカーセットアップ用ヘルパー ---
         const setupPicker = (previewEl: HTMLElement, inputEl: HTMLInputElement, initColor: string, alignment: 'bottom' | 'left' | 'right' = 'bottom') => {
@@ -168,6 +177,119 @@ async function setupSettings() {
             });
         };
 
+        // --- テーマ適用ヘルパー ---
+        const applyThemeData = async (data: any) => {
+            // 1. UIへの反映
+            if (data.textColor) {
+                inputTextColor.value = data.textColor;
+                pickerTextColor.style.backgroundColor = data.textColor;
+            }
+            if (data.uiColor) {
+                inputUiTextColor.value = data.uiColor;
+                pickerUiTextColor.style.backgroundColor = data.uiColor;
+            }
+            if (data.editorBg) {
+                inputEditorBg.value = data.editorBg;
+                pickerEditorBg.style.backgroundColor = data.editorBg;
+            }
+            if (data.windowBg) {
+                inputWindowBg.value = data.windowBg;
+                pickerWindowBg.style.backgroundColor = data.windowBg;
+            }
+            if (data.selection) {
+                inputSelectionColor.value = data.selection;
+                pickerSelectionColor.style.backgroundColor = data.selection;
+            }
+            if (data.scrollbar) {
+                inputScrollbarColor.value = data.scrollbar;
+                pickerScrollbarColor.style.backgroundColor = data.scrollbar;
+            }
+            if (data.heading) {
+                inputHeadingColor.value = data.heading;
+                pickerHeadingColor.style.backgroundColor = data.heading;
+            }
+
+            await store.set('customTextColor', inputTextColor.value);
+            await store.set('customUiTextColor', inputUiTextColor.value);
+            await store.set('customEditorBg', inputEditorBg.value);
+            await store.set('customWindowBg', inputWindowBg.value);
+            await store.set('customSelectionColor', inputSelectionColor.value);
+            await store.set('customScrollbarColor', inputScrollbarColor.value);
+            await store.set('customHeadingColor', inputHeadingColor.value);
+
+            await store.save();
+
+            await emit('settings-changed', {
+                customTextColor: inputTextColor.value,
+                customUiTextColor: inputUiTextColor.value,
+                customEditorBg: inputEditorBg.value,
+                customWindowBg: inputWindowBg.value,
+                customSelectionColor: inputSelectionColor.value,
+                customScrollbarColor: inputScrollbarColor.value,
+                customHeadingColor: inputHeadingColor.value,
+            });
+        };
+
+        // --- プリセット定義 ---
+        const presets: Record<string, any> = {
+            default: {
+                textColor: '#1e1e1e',
+                uiColor: '#1e1e1e',
+                editorBg: 'rgba(255, 255, 255, 0)',
+                windowBg: '#ffffff',
+                selection: 'rgba(100, 150, 250, 0.3)',
+                heading: '#005cc5',
+                scrollbar: 'rgba(0, 0, 0, 0.2)'
+            },
+            paper: {
+                textColor: '#3b3b3b',
+                uiColor: '#5a4632',
+                editorBg: 'rgba(255, 255, 255, 0)',
+                windowBg: '#f4ecd8',
+                selection: 'rgba(140, 100, 50, 0.2)',
+                heading: '#8b4513',
+                scrollbar: 'rgba(90, 70, 50, 0.2)'
+            },
+            cyber: {
+                textColor: '#00ff41',
+                uiColor: '#00ff41',
+                editorBg: 'rgba(0, 0, 0, 0)',
+                windowBg: 'rgba(0, 0, 0, 0.8)',
+                selection: 'rgba(0, 255, 65, 0.3)',
+                heading: '#00ff41',
+                scrollbar: 'rgba(0, 255, 65, 0.2)'
+            },
+            'cyber-tokyo': {
+                textColor: '#a9b1d6',
+                uiColor: '#7aa2f7',
+                editorBg: 'rgba(0, 0, 0, 0)',
+                windowBg: 'rgba(26, 27, 38, 0.95)',
+                selection: 'rgba(81, 92, 126, 0.4)', // Selection
+                heading: '#bb9af7',   // Purple
+                scrollbar: 'rgba(122, 162, 247, 0.3)'
+            }
+        };
+
+        // --- プルダウンのイベント ---
+        const themeSelect = document.querySelector('#theme-select') as HTMLSelectElement;
+
+        themeSelect?.addEventListener('change', () => {
+            const selected = themeSelect.value;
+            const data = presets[selected];
+
+            if (data) {
+                // 定義済みのヘルパー関数を使って、ピッカー更新・保存・Emitを一括で行う
+                applyThemeData(data);
+            }
+        });
+
+        // リセットボタン（デフォルトに戻す）
+        const resetThemeBtn = document.querySelector('#btn-reset-custom');
+        resetThemeBtn?.addEventListener('click', () => {
+            themeSelect.value = 'default';
+            applyThemeData(presets['default']);
+        });
+
         // --- ピッカー適用 ---
         setupPicker(pickerTextColor, inputTextColor, valTextColor, 'bottom');
         setupPicker(pickerUiTextColor, inputUiTextColor, valUiTextColor, 'bottom');
@@ -176,6 +298,7 @@ async function setupSettings() {
         setupPicker(pickerSelectionColor, inputSelectionColor, valSelectionColor, 'bottom');
         setupPicker(pickerScrollbarColor, inputScrollbarColor, valScrollbarColor, 'left');
         setupPicker(pickerHeadingColor, inputHeadingColor, valHeadingColor, 'bottom');
+        setupPicker(pickerGlowColor, inputGlowColor, valGlowColor, 'bottom');
 
         const pandoc = await store.get<string>('pandocPath') ?? '';
         if (pandocPath) pandocPath.value = pandoc;
@@ -204,6 +327,14 @@ async function setupSettings() {
 
         const isUiBg = await store.get<boolean>('useUiBg') ?? false;
         useUiBgCheck.checked = isUiBg;
+
+        inputGlowRadius.value = valGlowRadius.toString();
+        glowRadiusVal.textContent = `${valGlowRadius}px`;
+
+        // スライダーの数値表示更新
+        inputGlowRadius.addEventListener('input', () => {
+            glowRadiusVal.textContent = `${inputGlowRadius.value}px`;
+        });
 
         if (pendingBgPath) bgPathDisplay.textContent = pendingBgPath.split(/[/\\]/).pop() || '';
         if (pendingBgmPath) bgmPathDisplay.textContent = pendingBgmPath.split(/[/\\]/).pop() || '';
@@ -436,6 +567,9 @@ async function setupSettings() {
                 await store.set('customScrollbarColor', newScrollbarColor);
                 await store.set('customHeadingColor', newHeadingColor);
                 await store.set('useUiBg', newUseUiBg);
+                await store.set('enableGlow', checkEnableGlow.checked);
+                await store.set('glowColor', inputGlowColor.value);
+                await store.set('glowRadius', parseInt(inputGlowRadius.value));
 
                 // AI設定の保存
                 if (newGeminiApiKey) await store.set('geminiApiKey', newGeminiApiKey);
@@ -502,6 +636,9 @@ async function setupSettings() {
                     customSelectionColor: newSelectionColor,
                     customScrollbarColor: newScrollbarColor,
                     customHeadingColor: newHeadingColor,
+                    enableGlow: checkEnableGlow.checked,
+                    glowColor: inputGlowColor.value,
+                    glowRadius: parseInt(inputGlowRadius.value),
                 });
 
             } catch (err) {
