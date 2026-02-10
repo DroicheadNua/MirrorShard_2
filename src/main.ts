@@ -162,8 +162,9 @@ class App {
   private readonly sansSerifFont = '"Tsukushi A Round Gothic","Hiragino Sans","Meiryo","Yu Gothic",sans-serif';
   private readonly monospaceFont = '"BIZ UDゴシック", "Osaka-Mono", monospace';
   private fontList = [this.serifFont, this.sansSerifFont, this.monospaceFont];
-
   private languageCompartment = new Compartment();
+
+  private mainAiApi: 'gemini' | 'local' = 'gemini';
 
   private isCodeMode = false;
   private currentCodeLanguage = 'html';
@@ -243,6 +244,7 @@ class App {
         { key: 'Enter', run: insertNewline },
         { key: 'Mod-ArrowUp', run: (v) => { cursorDocStart(v); v.dispatch({ effects: EditorView.scrollIntoView(0, { y: "start" }) }); return true; } },
         { key: 'Mod-ArrowDown', run: (v) => { cursorDocEnd(v); v.dispatch({ effects: EditorView.scrollIntoView(v.state.selection.main.head, { y: "center" }) }); return true; } },
+        { key: 'Alt-Enter', run: () => { this.runAiCompletion(); return true; } },
       ]),
       EditorView.lineWrapping,
       markdown({ base: markdownLanguage }),
@@ -268,6 +270,258 @@ class App {
       [],
       [],
     ];
+  }
+
+  private initMainAiSelector() {
+    try {
+      console.log("Initializing Main AI Selector...");
+
+      const displayBtn = document.getElementById('main-ai-display');
+      const optionsContainer = document.getElementById('main-ai-options');
+      const options = document.querySelectorAll('.custom-option');
+
+      // 要素がない場合はログを出して終了（クラッシュさせない）
+      if (!displayBtn || !optionsContainer) {
+        console.error("Error: Custom dropdown elements not found in HTML.");
+        return;
+      }
+
+      console.log("Elements found. Setting up listeners...");
+
+      // 1. 開閉ロジック
+      displayBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        optionsContainer.classList.toggle('open');
+      });
+
+      document.addEventListener('click', () => {
+        optionsContainer.classList.remove('open');
+      });
+
+      // 2. 選択ロジック
+      options.forEach(opt => {
+        opt.addEventListener('click', async () => {
+          const value = opt.getAttribute('data-value');
+          const text = opt.textContent;
+
+          if (value && text) {
+            this.mainAiApi = value as any;
+            displayBtn.textContent = text;
+            optionsContainer.classList.remove('open');
+
+            // Store保存 (エラーハンドリング付き)
+            try {
+              await this.store.set('mainAiApi', this.mainAiApi);
+              await this.store.save();
+            } catch (err) {
+              console.error("Store save failed:", err);
+            }
+          }
+        });
+      });
+
+      // 3. 初期値ロード
+      // Storeがロードされる前でもエラーにならないよう非同期で実行
+      setTimeout(async () => {
+        try {
+          const val = await this.store.get<string>('mainAiApi');
+          if (val) {
+            this.mainAiApi = val as any;
+            // 値に対応するテキストを探して表示
+            // NodeListを配列に変換して検索
+            const target = Array.from(options).find(o => o.getAttribute('data-value') === val);
+            if (target && target.textContent) {
+              displayBtn.textContent = target.textContent;
+            }
+          }
+        } catch (err) {
+          console.error("Store get failed:", err);
+        }
+      }, 100);
+
+    } catch (e) {
+      // ここでエラーを捕まえるので、アプリ自体は止まらない
+      console.error("Fatal Error inside initMainAiSelector:", e);
+    }
+  }
+
+  // オーバーレイ制御用メソッド
+  private setAiLoading(isLoading: boolean) {
+    const overlay = document.getElementById('ai-loading-overlay');
+    if (overlay) {
+      overlay.style.display = isLoading ? 'flex' : 'none';
+    }
+  }
+
+  // AI補完を実行するメインロジック
+  private async runAiCompletion() {
+    const view = this.editorView;
+    const state = view.state;
+    const cursor = state.selection.main.head;
+
+    // 1. コンテキストの取得 (カーソル前の1000文字程度)
+    const contextLimit = 2000;
+    const from = Math.max(0, cursor - contextLimit);
+    const textContext = state.doc.sliceString(from, cursor);
+
+    if (!textContext.trim()) return;
+    this.setAiLoading(true);
+
+    // 2. UIのフィードバック
+    console.log("AI Completion requested...");
+
+    try {
+      let resultText = "";
+      const systemPrompt = "あなたは小説の執筆アシスタントです。渡された文章の続きを、文体やトーンを維持したまま執筆してください。続きの文章のみを出力し、挨拶や説明は不要です。";
+      if (this.mainAiApi === 'gemini') {
+        const apiKey = await this.store.get<string>('geminiApiKey');
+        if (!apiKey) throw new Error("Gemini API Key is not set.");
+
+        // AiChatで実装した通信ロジックを流用 (簡略化)
+        // ※ ここでは stream は使わず、一括で受け取るのが挿入しやすくて楽
+        const response = await this.requestGeminiDirect(apiKey, textContext, systemPrompt);
+        resultText = response;
+      } else {
+        const url = await this.store.get<string>('localLlmUrl') || "http://127.0.0.1:1234/v1/chat/completions";
+        const response = await this.requestLocalAiDirect(url, textContext, systemPrompt);
+        resultText = response;
+      }
+
+      // 3. エディタに挿入
+      if (resultText) {
+        const maxTokens = await this.store.get<number>('aiMaxTokens') || 2000;
+
+        // 日本語の場合、トークン数と文字数はイコールではないが、
+        // 安全策として「設定値の文字数」で切るのが確実
+        if (resultText.length > maxTokens) {
+          console.warn(`AI Output truncated: ${resultText.length} -> ${maxTokens}`);
+          resultText = resultText.substring(0, maxTokens);
+          // 文の途中で切れるのを防ぐなら、最後の「。」までで切る等の処理も可
+          const lastPeriod = resultText.lastIndexOf('。');
+          if (lastPeriod > maxTokens * 0.8) { // ある程度長さがあれば句点で切る
+            resultText = resultText.substring(0, lastPeriod + 1);
+          }
+        }
+
+        // エディタに挿入
+        view.dispatch({
+          changes: { from: cursor, insert: resultText },
+          selection: { anchor: cursor + resultText.length }
+        });
+
+        // 挿入箇所へスクロール
+        view.dispatch({
+          effects: EditorView.scrollIntoView(cursor + resultText.length, { y: "center" })
+        });
+      }
+
+    } catch (e) {
+      console.error(e);
+      await message(`AI Error: ${e}`, { title: 'Error', kind: 'error' });
+    } finally {
+      // 必ずローディングを消す
+      this.setAiLoading(false);
+      // エディタにフォーカスを戻す
+      this.editorView.focus();
+    }
+  }
+
+  // --- Geminiへの直接リクエスト ---
+  private async requestGeminiDirect(apiKey: string, prompt: string, systemPrompt: string): Promise<string> {
+    const model = await this.store.get<string>('geminiModel') || 'gemini-2.0-flash';
+
+    // 数値として確実に取得する (Storeから文字列で返ってくる場合の対策)
+    let maxTokens = await this.store.get<number | string>('aiMaxTokens') || 2000;
+    if (typeof maxTokens === 'string') maxTokens = parseInt(maxTokens, 10);
+
+    const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
+
+    try {
+      const response = await fetch(url, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          system_instruction: { parts: { text: systemPrompt } },
+          contents: [{ role: 'user', parts: [{ text: prompt }] }],
+          // 安全性フィルターを無効化
+          safetySettings: [
+            { category: "HARM_CATEGORY_HARASSMENT", threshold: "BLOCK_NONE" },
+            { category: "HARM_CATEGORY_HATE_SPEECH", threshold: "BLOCK_NONE" },
+            { category: "HARM_CATEGORY_SEXUALLY_EXPLICIT", threshold: "BLOCK_NONE" },
+            { category: "HARM_CATEGORY_DANGEROUS_CONTENT", threshold: "BLOCK_NONE" }
+          ],
+          generationConfig: {
+            maxOutputTokens: maxTokens,
+            temperature: 0.8 // 少し創造性を上げる (0.7 -> 0.8)
+          }
+        })
+      });
+
+      if (!response.ok) {
+        throw new Error(`Gemini API Error: ${response.status} ${response.statusText}`);
+      }
+
+      const data = await response.json();
+
+      // デバッグ用: ログを見て finishReason を確認する
+      // finishReason が "SAFETY" ならブロックされている、"MAX_TOKENS" なら長さ制限
+      console.log("Gemini Response Data:", data);
+
+      const text = data.candidates?.[0]?.content?.parts?.[0]?.text;
+
+      if (text) {
+        return text;
+      } else {
+        // テキストがない場合、ブロックされた理由が含まれている可能性がある
+        const finishReason = data.candidates?.[0]?.finishReason;
+        throw new Error(`No response text. Finish Reason: ${finishReason}`);
+      }
+
+    } catch (e) {
+      console.error(e);
+      throw e;
+    }
+  }
+
+  // --- Local AI (Ollama/LM Studio) への直接リクエスト ---
+  private async requestLocalAiDirect(url: string, prompt: string, systemPrompt: string): Promise<string> {
+    const modelName = await this.store.get<string>('localLlmModel') || 'local-model';
+    const maxTokens = await this.store.get<number>('aiMaxTokens') || 2000;
+
+    try {
+      const response = await fetch(url, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          model: modelName, // Ollamaのために必須
+          messages: [
+            { role: "system", content: systemPrompt },
+            { role: "user", content: prompt }
+          ],
+          stream: false, // 一括取得
+          max_tokens: maxTokens,
+          temperature: 0.7
+        })
+      });
+
+      if (!response.ok) {
+        throw new Error(`Local AI Error: ${response.status} ${response.statusText}`);
+      }
+
+      const data = await response.json();
+      // OpenAI互換フォーマットの解析
+      const text = data.choices?.[0]?.message?.content;
+
+      if (text) {
+        return text;
+      } else {
+        throw new Error("No response text from Local AI.");
+      }
+
+    } catch (e) {
+      console.error(e);
+      throw e;
+    }
   }
 
   // コード用の拡張機能セットを返すヘルパー
@@ -386,6 +640,8 @@ class App {
       parent: this.editorContainer,
     });
 
+    // AIセレクターの初期化
+    this.initMainAiSelector();
     // イベントリスナーを設定
     this.setupEventListeners();
 

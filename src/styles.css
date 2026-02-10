@@ -850,6 +850,144 @@ body.custom-glow .file-entry
   text-shadow: var(--custom-text-shadow) !important;
 }
 
+#main-ai-selector-container {
+  padding: 5px 10px;
+  background-color: transparent;
+}
+
+.custom-select-wrapper {
+  position: relative;
+  width: 100%;
+  user-select: none;
+}
+
+.custom-select-trigger {
+  width: 100%;
+  padding: 2px 5px;
+  font-size: 11px;
+  color: var(--ui-text-color, #eee);
+  background: transparent;
+  border: 1px solid var(--ui-text-color, #888);
+  border-radius: 4px;
+  cursor: pointer;
+  text-align: left;
+  position: relative;
+}
+
+/* 矢印アイコン（CSSで描画） */
+.custom-select-trigger::after {
+  content: "▼";
+  font-size: 8px;
+  position: absolute;
+  right: 8px;
+  top: 50%;
+  transform: translateY(-50%);
+  opacity: 0.7;
+}
+
+/* 展開されるリスト */
+.custom-options {
+  display: none;
+  /* デフォルト非表示 */
+  position: absolute;
+  top: 100%;
+  left: 0;
+  right: 0;
+  background-color: var(--window-bg-color, #1e1e1e);
+  /* テーマ色に合わせる */
+  border: 1px solid var(--ui-text-color, #888);
+  border-top: none;
+  border-radius: 0 0 4px 4px;
+  z-index: 1000;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.5);
+  overflow: hidden;
+}
+
+.custom-options.open {
+  display: block;
+}
+
+.custom-option {
+  padding: 5px 10px;
+  font-size: 11px;
+  color: var(--ui-text-color, #eee);
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.custom-option:hover {
+  background-color: rgba(0, 255, 65, 0.2);
+  /* サイバーなホバー色 */
+  color: #fff;
+}
+
+/* 選択済みアイテムのスタイル（必要なら） */
+.custom-option.selected {
+  background-color: rgba(0, 255, 65, 0.1);
+  font-weight: bold;
+}
+
+/* AI Writing Overlay */
+
+.loading-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-color: rgba(0, 0, 0, 0.5);
+  /* 半透明の黒 */
+  z-index: 9999;
+  /* 最前面 */
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  backdrop-filter: blur(2px);
+  cursor: wait;
+}
+
+.loading-text {
+  color: #00FF41;
+  font-family: monospace;
+  font-size: 1.5em;
+  margin-top: 15px;
+  text-shadow: 0 0 10px rgba(0, 255, 65, 0.8);
+  animation: blink 1.5s infinite;
+}
+
+/* 簡易スピナー (円形) */
+.spinner {
+  width: 50px;
+  height: 50px;
+  border: 4px solid rgba(0, 255, 65, 0.3);
+  border-top: 4px solid #00FF41;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+  box-shadow: 0 0 15px rgba(0, 255, 65, 0.5);
+}
+
+@keyframes spin {
+  0% {
+    transform: rotate(0deg);
+  }
+
+  100% {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes blink {
+
+  0%,
+  100% {
+    opacity: 1;
+  }
+
+  50% {
+    opacity: 0.5;
+  }
+}
 
 /* 各ボタンにSVGアイコンを割り当て */
 #btn-save {

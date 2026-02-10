@@ -9,6 +9,10 @@
 </head>
 
 <body>
+  <div id="ai-loading-overlay" class="loading-overlay" style="display: none;">
+    <div class="spinner"></div>
+    <div class="loading-text">AI is writing...</div>
+  </div>
   <div data-tauri-drag-region id="app-container">
     <!-- 1. 最上部のカスタムタイトルバー (ドラッグ領域) -->
     <div data-tauri-drag-region class="titlebar">
@@ -38,6 +42,19 @@
       <!-- 2A. サイドバー -->
       <nav id="sidebar-pane">
         <div class="sidebar-content">
+          <!-- メインエディタ用のAPIセレクター -->
+          <div id="main-ai-selector-container">
+            <!-- カスタムドロップダウン -->
+            <div class="custom-select-wrapper">
+              <button id="main-ai-display" class="custom-select-trigger">
+                Gemini (Cloud) <!-- 初期表示 -->
+              </button>
+              <div id="main-ai-options" class="custom-options">
+                <div class="custom-option" data-value="gemini">Gemini (Cloud)</div>
+                <div class="custom-option" data-value="local">Local AI (Ollama/LM)</div>
+              </div>
+            </div>
+          </div>
           <div id="file-list-container">
             <!-- ファイル一覧がここに描画される -->
           </div>
