@@ -842,11 +842,7 @@ body.custom-glow .outline-controls button,
 body.custom-glow .font-controls button,
 body.custom-glow .collapse-controls button,
 body.custom-glow .outline-text,
-/* アウトラインも光らせるなら */
-body.custom-glow .file-entry
-
-/* ファイル名も光らせるなら */
-  {
+body.custom-glow .file-entry {
   text-shadow: var(--custom-text-shadow) !important;
 }
 
@@ -872,6 +868,11 @@ body.custom-glow .file-entry
   cursor: pointer;
   text-align: left;
   position: relative;
+}
+
+body.dark-mode .custom-select-trigger {
+  color: var(--outline-text-color);
+  border: 1px solid var(--outline-text-color);
 }
 
 /* 矢印アイコン（CSSで描画） */
@@ -903,6 +904,12 @@ body.custom-glow .file-entry
   overflow: hidden;
 }
 
+body.dark-mode .custom-options {
+  background-color: #333;
+  border: 1px solid var(--outline-text-color);
+  border-top: none;
+}
+
 .custom-options.open {
   display: block;
 }
@@ -915,15 +922,23 @@ body.custom-glow .file-entry
   transition: background 0.2s;
 }
 
+body.dark-mode .custom-option {
+  color: var(--outline-text-color);
+}
+
 .custom-option:hover {
-  background-color: rgba(0, 255, 65, 0.2);
-  /* サイバーなホバー色 */
+  background-color: var(--selection-color, rgba(0, 255, 65, 0.2));
   color: #fff;
+}
+
+body.dark-mode .custom-option:hover {
+  background-color: var(--sidebar-hover-bg);
+  color: var(--outline-text-color);
 }
 
 /* 選択済みアイテムのスタイル（必要なら） */
 .custom-option.selected {
-  background-color: rgba(0, 255, 65, 0.1);
+  background-color: var(--selection-color, rgba(0, 255, 65, 0.1));
   font-weight: bold;
 }
 

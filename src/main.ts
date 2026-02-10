@@ -272,6 +272,60 @@ class App {
     ];
   }
 
+  // 必要な時だけDOMを生成して入力を受け取る関数
+  private async showDynamicInput(title: string, defaultValue: number): Promise<number | null> {
+    return new Promise((resolve) => {
+      // 1. オーバーレイの作成
+      const overlay = document.createElement('div');
+      overlay.style.cssText = `
+        position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+        background: rgba(0, 0, 0, 0.7); display: flex; align-items: center;
+        justify-content: center; z-index: 10000; backdrop-filter: blur(2px);
+      `;
+
+      // 2. コンテンツ容器の作成 (Cyberpunk-Tokyo風)
+      const container = document.createElement('div');
+      container.style.cssText = `
+        background: var(--window-bg-color, #1a1b26);
+        border: 1px solid var(--ui-text-color, #7aa2f7);
+        padding: 20px; border-radius: 8px; width: 260px;
+        box-shadow: 0 0 20px rgba(0, 0, 0, 0.5); color: var(--ui-text-color, #eee);
+        font-family: sans-serif;
+      `;
+
+      container.innerHTML = `
+        <div style="margin-bottom: 15px; font-weight: bold; border-bottom: 1px solid #555; padding-bottom: 5px;">${title}</div>
+        <input type="number" id="dynamic-num-input" value="${defaultValue}" 
+               style="width: 100%; background: rgba(0,0,0,0.3); color: inherit; border: 1px solid #555; padding: 5px; margin-bottom: 20px; box-sizing: border-box;">
+        <div style="display: flex; justify-content: flex-end; gap: 10px;">
+            <button id="dyn-btn-cancel" style="padding: 5px 12px; cursor: pointer; background: transparent; border: 1px solid #888; color: #888;">Cancel</button>
+            <button id="dyn-btn-ok" style="padding: 5px 12px; cursor: pointer; background: transparent; border: 1px solid var(--ui-text-color); color: var(--ui-text-color);">Run</button>
+        </div>
+      `;
+
+      overlay.appendChild(container);
+      document.body.appendChild(overlay);
+
+      const input = overlay.querySelector('#dynamic-num-input') as HTMLInputElement;
+      input.focus();
+      input.select();
+
+      // クリーンアップして結果を返す
+      const done = (val: number | null) => {
+        document.body.removeChild(overlay);
+        resolve(val);
+      };
+
+      overlay.querySelector('#dyn-btn-ok')?.addEventListener('click', () => done(parseInt(input.value, 10)));
+      overlay.querySelector('#dyn-btn-cancel')?.addEventListener('click', () => done(null));
+
+      input.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') done(parseInt(input.value, 10));
+        if (e.key === 'Escape') done(null);
+      });
+    });
+  }
+
   private initMainAiSelector() {
     try {
       console.log("Initializing Main AI Selector...");
@@ -347,10 +401,37 @@ class App {
 
   // オーバーレイ制御用メソッド
   private setAiLoading(isLoading: boolean) {
-    const overlay = document.getElementById('ai-loading-overlay');
-    if (overlay) {
-      overlay.style.display = isLoading ? 'flex' : 'none';
+    if (isLoading) {
+      // 生成
+      const overlay = document.createElement('div');
+      overlay.id = 'ai-loading-overlay';
+      overlay.className = 'loading-overlay'; // スタイルはCSSに
+      overlay.innerHTML = `
+        <div class="spinner"></div>
+        <div class="loading-text">AI is writing...</div>
+      `;
+      document.body.appendChild(overlay);
+    } else {
+      // 削除
+      const overlay = document.getElementById('ai-loading-overlay');
+      if (overlay) document.body.removeChild(overlay);
     }
+  }
+
+  // 選択範囲の文字数カウント
+  private async showSelectionCount() {
+    const selection = this.editorView.state.selection.main;
+    if (selection.empty) return;
+
+    const text = this.editorView.state.sliceDoc(selection.from, selection.to);
+    // 改行を除外するかどうかはお好みですが、一般的には「文字数」としてカウントします
+    const count = text.length;
+
+    // Tauri標準のメッセージダイアログで表示（手軽で確実です）
+    await message(`選択範囲の文字数: ${count} 文字`, {
+      title: '文字数カウント',
+      kind: 'info'
+    });
   }
 
   // AI補完を実行するメインロジック
@@ -426,13 +507,103 @@ class App {
     }
   }
 
+  // AIによる編集・加工実行メソッド
+  private async runAiEdit(mode: 'translate' | 'summary' | 'rewrite') {
+    const view = this.editorView;
+    const state = view.state;
+    const selection = state.selection.main;
+
+    // 選択範囲がない場合は何もしない
+    if (selection.empty) {
+      alert("テキストを選択してから実行してください。");
+      return;
+    }
+
+    const selectedText = state.sliceDoc(selection.from, selection.to);
+
+    // モードごとの設定
+    let systemPrompt = "";
+    let label = "";
+
+    switch (mode) {
+      case 'translate':
+        systemPrompt = "あなたはプロの翻訳家です。以下のテキストが日本語なら英語に、英語なら自然な日本語に翻訳してください。翻訳結果のみを出力し、解説は不要です。";
+        label = "■ 翻訳";
+        break;
+      case 'summary':
+        // 動的にUIを生成して文字数を聞く
+        const lastLen = await this.store.get<number>('aiSummaryLength') || 200;
+        const length = await this.showDynamicInput("Summary Length (Chars)", lastLen);
+
+        if (length === null) return; // キャンセル
+
+        // 次回用に保存
+        await this.store.set('aiSummaryLength', length);
+        await this.store.save();
+
+        systemPrompt = `あなたは優秀な編集者です。以下のテキストを**日本語で、およそ${length}文字以内**で要約してください。重要なポイントを逃さず、かつ簡潔にまとめてください。要約結果のみを出力してください。`;
+        label = `■ 要約 (${length}文字以内)`;
+        break;
+      case 'rewrite':
+        systemPrompt = "あなたは文章のプロです。以下のテキストを、より分かりやすく、読みやすい文章にリライト（推敲）してください。元の意味を保ったまま、表現を洗練させてください。リライト結果のみを出力してください。";
+        label = "■ リライト";
+        break;
+    }
+
+    // ローディング表示
+    this.setAiLoading(true);
+
+    try {
+      let resultText = "";
+      // 長文対応のため、トークン制限を無視（多めに設定: 例 8192）
+      const tempMaxTokens = 8192;
+
+      if (this.mainAiApi === 'gemini') {
+        const apiKey = await this.store.get<string>('geminiApiKey');
+        if (!apiKey) throw new Error("Gemini API Key is not set.");
+        resultText = await this.requestGeminiDirect(apiKey, selectedText, systemPrompt, tempMaxTokens);
+      } else {
+        const url = await this.store.get<string>('localLlmUrl') || "http://127.0.0.1:1234/v1/chat/completions";
+        resultText = await this.requestLocalAiDirect(url, selectedText, systemPrompt, tempMaxTokens);
+      }
+
+      // 挿入処理 (選択範囲の後ろに改行を入れて追記)
+      if (resultText) {
+        const insertText = `\n\n${label}\n----------------\n${resultText}\n----------------\n`;
+
+        view.dispatch({
+          changes: { from: selection.to, insert: insertText },
+          // 挿入された部分を選択状態にするか、カーソルを移動するか
+          // ここではカーソルを挿入後の末尾に移動
+          selection: { anchor: selection.to + insertText.length }
+        });
+
+        // スクロール
+        view.dispatch({
+          effects: EditorView.scrollIntoView(selection.to + insertText.length, { y: "center" })
+        });
+      }
+
+    } catch (e) {
+      console.error(e);
+      await message(`AI Error: ${e}`, { title: 'Error', kind: 'error' });
+    } finally {
+      this.setAiLoading(false);
+      this.editorView.focus();
+    }
+  }
+
   // --- Geminiへの直接リクエスト ---
-  private async requestGeminiDirect(apiKey: string, prompt: string, systemPrompt: string): Promise<string> {
-    const model = await this.store.get<string>('geminiModel') || 'gemini-2.0-flash';
+  private async requestGeminiDirect(apiKey: string, prompt: string, systemPrompt: string, maxTokensOverride?: number): Promise<string> {
+    const model = await this.store.get<string>('geminiModel') || 'gemini-2.5-flash';
 
     // 数値として確実に取得する (Storeから文字列で返ってくる場合の対策)
-    let maxTokens = await this.store.get<number | string>('aiMaxTokens') || 2000;
-    if (typeof maxTokens === 'string') maxTokens = parseInt(maxTokens, 10);
+    // オーバーライドがあればそれを使い、なければ設定値を使う
+    let maxTokens = maxTokensOverride;
+    if (!maxTokens) {
+      const stored = await this.store.get<number | string>('aiMaxTokens') || 2000;
+      maxTokens = typeof stored === 'string' ? parseInt(stored, 10) : stored;
+    }
 
     const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
 
@@ -484,9 +655,13 @@ class App {
   }
 
   // --- Local AI (Ollama/LM Studio) への直接リクエスト ---
-  private async requestLocalAiDirect(url: string, prompt: string, systemPrompt: string): Promise<string> {
+  private async requestLocalAiDirect(url: string, prompt: string, systemPrompt: string, maxTokensOverride?: number): Promise<string> {
     const modelName = await this.store.get<string>('localLlmModel') || 'local-model';
-    const maxTokens = await this.store.get<number>('aiMaxTokens') || 2000;
+    let maxTokens = maxTokensOverride;
+    if (!maxTokens) {
+      const stored = await this.store.get<number | string>('aiMaxTokens') || 2000;
+      maxTokens = typeof stored === 'string' ? parseInt(stored, 10) : stored;
+    }
 
     try {
       const response = await fetch(url, {
@@ -1702,7 +1877,7 @@ class App {
     this.editorContainer?.addEventListener('contextmenu', async (e) => {
       e.preventDefault();
 
-      // ★ 履歴からMenuItemの配列を動的に生成
+      // 履歴からMenuItemの配列を動的に生成
       const recentFileItems = await Promise.all(this.recentFiles.map(async (filePath) => {
         // パスの最後の部分（ファイル名）をラベルにする
         const fileName = filePath.split(/[/\\]/).pop() || filePath;
@@ -1712,6 +1887,8 @@ class App {
           action: () => this.openOrSwitchTab(filePath)
         });
       }));
+
+      const hasSelection = !this.editorView.state.selection.main.empty;
 
       const menu = await Menu.new({
         items: [
@@ -1741,6 +1918,33 @@ class App {
           await PredefinedMenuItem.new({ item: 'Paste' }),
           await PredefinedMenuItem.new({ item: 'Separator' }),
           await PredefinedMenuItem.new({ item: 'SelectAll' }),
+          await MenuItem.new({
+            text: '選択範囲の文字数を数える',
+            enabled: hasSelection,
+            action: () => this.showSelectionCount()
+          }),
+
+          await PredefinedMenuItem.new({ item: 'Separator' }),
+
+          // AI機能群 (選択時のみ有効)
+          await MenuItem.new({
+            text: 'AI: 翻訳 (Translate)',
+            enabled: hasSelection,
+            action: () => this.runAiEdit('translate')
+          }),
+          await MenuItem.new({
+            text: 'AI: 要約 (Summarize)',
+            enabled: hasSelection,
+            action: () => this.runAiEdit('summary')
+          }),
+          await MenuItem.new({
+            text: 'AI: リライト (Rewrite)',
+            enabled: hasSelection,
+            action: () => this.runAiEdit('rewrite')
+          }),
+
+          await PredefinedMenuItem.new({ item: 'Separator' }),
+
           await MenuItem.new({
             text: 'Geminiログをインポート',
             action: () => this.importGeminiLog()
@@ -2357,6 +2561,7 @@ class App {
     document.body.classList.toggle('dark-mode', this.isDarkMode);
     this.updateBackground();
     this.saveSettings();
+    this.updateGlowEffect();
     emit('preview-update-data', { isDarkMode: this.isDarkMode });
     emit('app:theme-changed', { isDarkMode: this.isDarkMode });
   }
