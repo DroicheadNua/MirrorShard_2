@@ -436,6 +436,10 @@ class App {
 
   // AI補完を実行するメインロジック
   private async runAiCompletion() {
+    if (this.isCodeMode) {
+      await this.runCodeCompletion();
+      return;
+    }
     const view = this.editorView;
     const state = view.state;
     const cursor = state.selection.main.head;
@@ -504,6 +508,99 @@ class App {
       this.setAiLoading(false);
       // エディタにフォーカスを戻す
       this.editorView.focus();
+    }
+  }
+
+  // --- コード補完実行メソッド ---
+  private async runCodeCompletion() {
+    const view = this.editorView;
+    const state = view.state;
+    const cursor = state.selection.main.head;
+
+    // 前後2500文字程度
+    const limit = 2500;
+    const prefix = state.sliceDoc(Math.max(0, cursor - limit), cursor);
+    const suffix = state.sliceDoc(cursor, Math.min(state.doc.length, cursor + limit));
+
+    if (!prefix.trim()) return;
+
+    this.setAiLoading(true);
+
+    try {
+      const url = await this.store.get<string>('localLlmUrl') || "http://127.0.0.1:1234/v1/chat/completions";
+      const resultText = await this.requestCodeFim(url, prefix, suffix);
+
+      if (resultText && resultText.trim().length > 0) {
+        // 余計な装飾（```や解説）を排除
+        let cleanText = resultText
+          .replace(/<thought>[\s\S]*?<\/thought>/gi, '') // 思考タグ除去
+          .replace(/```[a-z]*\n/gi, '')                   // コードブロック開始除去
+          .replace(/```/g, '')                             // 閉じ除去
+          .trimEnd(); // 行頭の空白は維持したいので trimEnd
+
+        if (cleanText) {
+          view.dispatch({
+            changes: { from: cursor, insert: cleanText },
+            selection: { anchor: cursor + cleanText.length }
+          });
+        }
+      }
+    } catch (e) {
+      console.error(e);
+      await message(`Code Completion Error: ${e}`, { title: 'Error', kind: 'error' });
+    } finally {
+      this.setAiLoading(false);
+      this.editorView.focus();
+    }
+  }
+
+  // --- FIMリクエスト用ヘルパー ---
+  private async requestCodeFim(url: string, prefix: string, suffix: string): Promise<string> {
+    const modelName = await this.store.get<string>('localLlmModel') || 'qwen2.5-coder:1.5b';
+    const prompt = `<|fim_prefix|>${prefix}<|fim_suffix|>${suffix}<|fim_middle|>`;
+
+    let targetUrl = "";
+    let body: any = {};
+
+    if (url.includes('/api/') || url.includes('11434')) {
+      const baseUrl = url.split('/v1/')[0].split('/api/')[0].replace(/\/$/, "");
+      targetUrl = `${baseUrl}/api/generate`;
+      body = {
+        model: modelName,
+        prompt: prompt,
+        stream: false,
+        raw: true,
+        options: {
+          stop: ["<|file_separator|>", "<|endoftext|>", "<|fim_prefix|>", "<|fim_suffix|>"],
+          temperature: 0.1, // 0.0だと稀に固まるモデルがあるため 0.1
+          num_predict: 256
+        }
+      };
+    } else {
+      const baseUrl = url.split('/v1/')[0].replace(/\/$/, "");
+      targetUrl = `${baseUrl}/v1/completions`;
+      body = {
+        model: modelName,
+        prompt: prompt,
+        stream: false,
+        max_tokens: 256,
+        temperature: 0.1,
+        // HTMLタグなどをストップトークンに入れない
+        stop: ["<|file_separator|>", "<|endoftext|>", "<|fim_prefix|>", "<|fim_suffix|>"]
+      };
+    }
+
+    try {
+      const response = await fetch(targetUrl, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body)
+      });
+      if (!response.ok) throw new Error(`Status ${response.status}`);
+      const data = await response.json();
+      return data.response || (data.choices && data.choices[0]?.text) || "";
+    } catch (e) {
+      throw e;
     }
   }
 
@@ -747,6 +844,7 @@ class App {
               return true;
             }
           },
+          { key: 'Alt-Enter', run: () => { this.runAiCompletion(); return true; } },
         ]),
       );
     }
