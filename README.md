@@ -5,7 +5,7 @@
 アイデアプロセッサ機能は未搭載ですが、代わりにマークダウン／HTMLプレビュー機能とコードエディタモードを追加、より汎用性の高いエディタとして生まれ変わりました。  
 創作用エディタとして、また巨大テキストファイルを扱えるアウトラインプロセッサやマークダウンエディタとして、幅広く運用できると思います。  
 
-![MirrorShard_2 Key Visual](screenshots/ScreenShot04.jpg)
+![MirrorShard_2 Key Visual](screenshots/ScreenShot01.jpg)
 
 ## ダウンロード  
 

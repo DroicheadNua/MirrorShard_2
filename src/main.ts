@@ -125,6 +125,8 @@ class App {
   private isTypeSoundEnabled = false;
   private audioContext: AudioContext | null = null;
   private typeSoundBuffer: AudioBuffer | null = null;
+  private isSnowing = false;
+  private stopSnowing: (() => void) | null = null;
 
   private recentFiles: string[] = [];
   private editorMaxWidth = '80';
@@ -219,6 +221,28 @@ class App {
     return app;
   }
 
+  // --- 降雪エフェクトの切り替え ---
+  private async toggleSnowEffect() {
+    this.isSnowing = !this.isSnowing;
+
+    if (this.isSnowing) {
+      // ★ 動的インポート: Ctrl+Shift+Eを押したときだけロードされる
+      const { startSnowing } = await import('./scripts/snow');
+
+      // 雪を降らせる対象要素。#app-container が画面全体を覆っているので最適
+      const container = document.getElementById('app-container');
+      if (container) {
+        this.stopSnowing = startSnowing(container);
+        console.log("Snow started.");
+      }
+    } else {
+      if (this.stopSnowing) {
+        this.stopSnowing();
+        this.stopSnowing = null;
+        console.log("Snow stopped.");
+      }
+    }
+  }
 
   private createEditorExtensions(): Extension[] {
 
@@ -283,7 +307,7 @@ class App {
         justify-content: center; z-index: 10000; backdrop-filter: blur(2px);
       `;
 
-      // 2. コンテンツ容器の作成 (Cyberpunk-Tokyo風)
+      // 2. コンテンツ容器の作成
       const container = document.createElement('div');
       container.style.cssText = `
         background: var(--window-bg-color, #1a1b26);
@@ -889,6 +913,7 @@ class App {
       case 'ts': case 'js': case 'json': return 'typescript'; // JS/JSONもTSパーサーでOK
       case 'md': case 'txt': return 'markdown';
       case 'html': case 'htm': return 'html';
+      case 'astro': return 'html';// とりあえずhtml扱い
       case 'css': return 'css';
       default: return null; // 判別不能
     }
@@ -2340,6 +2365,11 @@ class App {
     if (isCtrlOrCmd && key === 'l') {
       e.preventDefault();
       this.toggleSpotlightMode();
+    }
+    // 降雪エフェクト (Ctrl + Shift + E)
+    if (isCtrlOrCmd && isShift && key === 'e') {
+      e.preventDefault();
+      this.toggleSnowEffect();
     }
     // ショートカット (F1)
     if (e.key === 'F1') {

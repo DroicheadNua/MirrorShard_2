@@ -14,6 +14,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - カラーピッカーを実装、テキスト色や背景色を自由に設定可能に   
 - Ctrl+@でターミナルを開けるように  
 - 選択範囲の文字数カウント機能を追加  
+- 降雪エフェクトを追加(Ctrl + Shift + E)  
 
 ### Changed (変更点)    
 

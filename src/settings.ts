@@ -2,7 +2,7 @@
 import { Store } from '@tauri-apps/plugin-store';
 import { emit } from '@tauri-apps/api/event';
 import { getCurrentWindow } from '@tauri-apps/api/window';
-import { open } from '@tauri-apps/plugin-dialog';
+import { open, ask } from '@tauri-apps/plugin-dialog';
 import { type } from '@tauri-apps/plugin-os';
 import { invoke } from '@tauri-apps/api/core';
 import Picker from 'vanilla-picker';
@@ -179,118 +179,233 @@ async function setupSettings() {
             });
         };
 
-        // --- テーマ適用ヘルパー ---
-        const applyThemeData = async (data: any) => {
-            // 1. UIへの反映
-            if (data.textColor) {
-                inputTextColor.value = data.textColor;
-                pickerTextColor.style.backgroundColor = data.textColor;
-            }
-            if (data.uiColor) {
-                inputUiTextColor.value = data.uiColor;
-                pickerUiTextColor.style.backgroundColor = data.uiColor;
-            }
-            if (data.editorBg) {
-                inputEditorBg.value = data.editorBg;
-                pickerEditorBg.style.backgroundColor = data.editorBg;
-            }
-            if (data.windowBg) {
-                inputWindowBg.value = data.windowBg;
-                pickerWindowBg.style.backgroundColor = data.windowBg;
-            }
-            if (data.selection) {
-                inputSelectionColor.value = data.selection;
-                pickerSelectionColor.style.backgroundColor = data.selection;
-            }
-            if (data.scrollbar) {
-                inputScrollbarColor.value = data.scrollbar;
-                pickerScrollbarColor.style.backgroundColor = data.scrollbar;
-            }
-            if (data.heading) {
-                inputHeadingColor.value = data.heading;
-                pickerHeadingColor.style.backgroundColor = data.heading;
-            }
-
-            await store.set('customTextColor', inputTextColor.value);
-            await store.set('customUiTextColor', inputUiTextColor.value);
-            await store.set('customEditorBg', inputEditorBg.value);
-            await store.set('customWindowBg', inputWindowBg.value);
-            await store.set('customSelectionColor', inputSelectionColor.value);
-            await store.set('customScrollbarColor', inputScrollbarColor.value);
-            await store.set('customHeadingColor', inputHeadingColor.value);
-
-            await store.save();
-
-            await emit('settings-changed', {
-                customTextColor: inputTextColor.value,
-                customUiTextColor: inputUiTextColor.value,
-                customEditorBg: inputEditorBg.value,
-                customWindowBg: inputWindowBg.value,
-                customSelectionColor: inputSelectionColor.value,
-                customScrollbarColor: inputScrollbarColor.value,
-                customHeadingColor: inputHeadingColor.value,
+        // --- 汎用的なテキスト入力UI（promptの代わり） ---
+        const showDynamicTextInput = (title: string, defaultValue: string): Promise<string | null> => {
+            return new Promise((resolve) => {
+                const overlay = document.createElement('div');
+                overlay.style.cssText = `position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.7);display:flex;align-items:center;justify-content:center;z-index:10000;backdrop-filter:blur(2px);`;
+                const container = document.createElement('div');
+                container.style.cssText = `background:#1a1b26;border:1px solid #7aa2f7;padding:20px;border-radius:8px;width:280px;box-shadow:0 0 20px rgba(0,0,0,0.5);color:#eee;font-family:sans-serif;`;
+                container.innerHTML = `
+            <div style="margin-bottom:15px;font-weight:bold;border-bottom:1px solid #555;padding-bottom:5px;">${title}</div>
+            <input type="text" id="dyn-text-input" value="${defaultValue}" style="width:100%;background:rgba(0,0,0,0.3);color:inherit;border:1px solid #555;padding:5px;margin-bottom:20px;box-sizing:border-box;">
+            <div style="display:flex;justify-content:flex-end;gap:10px;">
+                <button id="dyn-btn-cancel" style="padding:5px 12px;cursor:pointer;background:transparent;border:1px solid #888;color:#888;">Cancel</button>
+                <button id="dyn-btn-ok" style="padding:5px 12px;cursor:pointer;background:transparent;border:1px solid #7aa2f7;color:#7aa2f7;">Save</button>
+            </div>
+        `;
+                overlay.appendChild(container);
+                document.body.appendChild(overlay);
+                const input = overlay.querySelector('#dyn-text-input') as HTMLInputElement;
+                input.focus();
+                input.select();
+                const done = (val: string | null) => {
+                    document.body.removeChild(overlay);
+                    resolve(val);
+                };
+                overlay.querySelector('#dyn-btn-ok')?.addEventListener('click', () => done(input.value.trim()));
+                overlay.querySelector('#dyn-btn-cancel')?.addEventListener('click', () => done(null));
+                input.addEventListener('keydown', (e) => {
+                    if (e.key === 'Enter') done(input.value.trim());
+                    if (e.key === 'Escape') done(null);
+                });
             });
         };
 
-        // --- プリセット定義 ---
-        const presets: Record<string, any> = {
-            default: {
-                textColor: '#1e1e1e',
-                uiColor: '#1e1e1e',
-                editorBg: 'rgba(255, 255, 255, 0)',
-                windowBg: '#ffffff',
-                selection: 'rgba(100, 150, 250, 0.3)',
-                heading: '#005cc5',
-                scrollbar: 'rgba(0, 0, 0, 0.2)'
+        // --- テーマ統合管理のメインロジック ---
+        async function setupUnifiedThemes(mainStore: any) {
+            const themeSelect = document.getElementById('unified-theme-select') as HTMLSelectElement;
+            const userGroup = document.getElementById('user-themes-group') as HTMLOptGroupElement;
+            const saveBtn = document.getElementById('btn-save-user-theme');
+            const deleteBtn = document.getElementById('btn-delete-user-theme');
+            const resetBtn = document.getElementById('btn-reset-custom');
+
+            if (!themeSelect || !userGroup) {
+                console.error("Theme elements not found! Check HTML IDs.");
+                return;
+            }
+
+            const themeStore = await Store.load('.themes.dat');
+
+            // --- 設定を一括適用・保存・通知する内部関数 ---
+            const applyAndSaveTheme = async (data: any) => {
+                // 1. DOM要素（入力欄）の更新
+                // 左側の列など、既存の変数（inputTextColor等）がスコープ外の場合は
+                // ここで再度取得するか、値をセットする共通ロジックを書く
+                const setters: Record<string, string> = {
+                    'input-text-color': data.textColor || '#1e1e1e',
+                    'input-ui-text-color': data.uiColor || '#1e1e1e',
+                    'input-editor-bg': data.editorBg || 'rgba(0,0,0,0)',
+                    'input-window-bg': data.windowBg || '#ffffff',
+                    'input-selection-color': data.selection || 'rgba(100,150,250,0.3)',
+                    'input-heading-color': data.heading || '#005cc5',
+                    'input-scrollbar-color': data.scrollbar || 'rgba(0,0,0,0.2)',
+                    'input-glow-color': data.glowColor || 'rgba(0, 255, 65, 0.5)',
+                    'input-glow-radius': (data.glowRadius ?? 5).toString()
+                };
+
+                for (const [id, val] of Object.entries(setters)) {
+                    const el = document.getElementById(id) as HTMLInputElement;
+                    if (el) {
+                        el.value = val;
+                        // 隣接するカラーピッカー（preview）の色も更新
+                        const preview = el.previousElementSibling as HTMLElement;
+                        if (preview && preview.classList.contains('color-preview')) {
+                            preview.style.backgroundColor = val;
+                        }
+                    }
+                }
+
+                const glowCheck = document.getElementById('check-enable-glow') as HTMLInputElement;
+                if (glowCheck) glowCheck.checked = data.enableGlow ?? false;
+
+                // 2. .settings.dat (mainStore) への保存
+                // ここで渡された mainStore を使う
+                await mainStore.set('customTextColor', setters['input-text-color']);
+                await mainStore.set('customUiTextColor', setters['input-ui-text-color']);
+                await mainStore.set('customEditorBg', setters['input-editor-bg']);
+                await mainStore.set('customWindowBg', setters['input-window-bg']);
+                await mainStore.set('customSelectionColor', setters['input-selection-color']);
+                await mainStore.set('customHeadingColor', setters['input-heading-color']);
+                await mainStore.set('customScrollbarColor', setters['input-scrollbar-color']);
+                await mainStore.set('enableGlow', glowCheck?.checked ?? false);
+                await mainStore.set('glowColor', setters['input-glow-color']);
+                await mainStore.set('glowRadius', parseInt(setters['input-glow-radius']));
+
+                await mainStore.save();
+
+                // 3. メインプロセスへ通知 (emit)
+                // これでエディタの見た目が即座に変わる
+                await emit('settings-changed', {
+                    customTextColor: setters['input-text-color'],
+                    customUiTextColor: setters['input-ui-text-color'],
+                    customEditorBg: setters['input-editor-bg'],
+                    customWindowBg: setters['input-window-bg'],
+                    customSelectionColor: setters['input-selection-color'],
+                    customHeadingColor: setters['input-heading-color'],
+                    customScrollbarColor: setters['input-scrollbar-color'],
+                    enableGlow: glowCheck?.checked ?? false,
+                    glowColor: setters['input-glow-color'],
+                    glowRadius: parseInt(setters['input-glow-radius'])
+                });
+            };
+
+            // --- リスト更新ロジック ---
+            const refreshList = async () => {
+                userGroup.innerHTML = '';
+                const keys = await themeStore.keys();
+                keys.forEach(key => {
+                    const opt = document.createElement('option');
+                    opt.value = `user:${key}`;
+                    opt.textContent = key;
+                    userGroup.appendChild(opt);
+                });
+                if (keys.length === 0) {
+                    const opt = document.createElement('option');
+                    opt.textContent = "(No user themes)";
+                    opt.disabled = true;
+                    userGroup.appendChild(opt);
+                }
+            };
+
+            // 保存処理
+            saveBtn?.addEventListener('click', async () => {
+                const themeName = await showDynamicTextInput("Theme Name", "My Theme");
+                if (!themeName) return;
+
+                // 現在の値を収集（ID指定で取得）
+                const themeData = {
+                    textColor: (document.getElementById('input-text-color') as HTMLInputElement).value,
+                    uiColor: (document.getElementById('input-ui-text-color') as HTMLInputElement).value,
+                    editorBg: (document.getElementById('input-editor-bg') as HTMLInputElement).value,
+                    windowBg: (document.getElementById('input-window-bg') as HTMLInputElement).value,
+                    selection: (document.getElementById('input-selection-color') as HTMLInputElement).value,
+                    heading: (document.getElementById('input-heading-color') as HTMLInputElement).value,
+                    scrollbar: (document.getElementById('input-scrollbar-color') as HTMLInputElement).value,
+                    enableGlow: (document.getElementById('check-enable-glow') as HTMLInputElement).checked,
+                    glowColor: (document.getElementById('input-glow-color') as HTMLInputElement).value,
+                    glowRadius: parseInt((document.getElementById('input-glow-radius') as HTMLInputElement).value, 10)
+                };
+
+                await themeStore.set(themeName, themeData);
+                await themeStore.save();
+                await refreshList();
+                themeSelect.value = `user:${themeName}`;
+                alert(`Theme "${themeName}" saved.`);
+            });
+
+            // 削除処理
+            deleteBtn?.addEventListener('click', async () => {
+                const val = themeSelect.value;
+                if (!val.startsWith('user:')) {
+                    alert("システムテーマは削除できません。");
+                    return;
+                }
+                const themeName = val.replace('user:', '');
+                const confirmed = await ask(`テーマ "${themeName}" を削除してもよろしいですか？`, {
+                    title: 'Confirm Delete',
+                    kind: 'warning', // 警告アイコンを出す
+                    okLabel: '削除',
+                    cancelLabel: 'キャンセル'
+                });
+                if (!confirmed) return;
+                console.log(`Deleting theme: ${themeName}`);
+                await themeStore.delete(themeName);
+                await themeStore.save();
+                await refreshList();
+                themeSelect.value = 'sys:default';
+                await applyAndSaveTheme(SYSTEM_PRESETS['sys:default']);
+            });
+
+            // リセットボタン（デフォルトに戻す）
+            resetBtn?.addEventListener('click', async () => {
+                themeSelect.value = 'sys:default';
+                await applyAndSaveTheme(SYSTEM_PRESETS['sys:default']);
+            });
+
+            // 選択変更
+            themeSelect.addEventListener('change', async () => {
+                const val = themeSelect.value;
+                if (!val) return;
+                if (val.startsWith('sys:')) {
+                    await applyAndSaveTheme(SYSTEM_PRESETS[val]);
+                } else if (val.startsWith('user:')) {
+                    const data = await themeStore.get<any>(val.replace('user:', ''));
+                    if (data) await applyAndSaveTheme(data);
+                }
+            });
+
+            await refreshList();
+        }
+
+        // --- システムプリセットの定義 ---
+        const SYSTEM_PRESETS: Record<string, any> = {
+            'sys:default': {
+                textColor: '#1e1e1e', uiColor: '#1e1e1e', editorBg: 'rgba(0,0,0,0)',
+                windowBg: '#ffffff', selection: 'rgba(100, 150, 250, 0.3)',
+                heading: '#005cc5', scrollbar: 'rgba(0, 0, 0, 0.2)',
+                enableGlow: false, glowColor: 'rgba(0, 255, 65, 0.5)', glowRadius: 5
             },
-            paper: {
-                textColor: '#3b3b3b',
-                uiColor: '#5a4632',
-                editorBg: 'rgba(255, 255, 255, 0)',
-                windowBg: '#f4ecd8',
-                selection: 'rgba(140, 100, 50, 0.2)',
-                heading: '#8b4513',
-                scrollbar: 'rgba(90, 70, 50, 0.2)'
+            'sys:paper': {
+                textColor: '#3b3b3b', uiColor: '#5a4632', editorBg: 'rgba(0,0,0,0)',
+                windowBg: '#f4ecd8', selection: 'rgba(140, 100, 50, 0.2)',
+                heading: '#8b4513', scrollbar: 'rgba(90, 70, 50, 0.2)',
+                enableGlow: false, glowColor: 'rgba(0, 255, 65, 0.5)', glowRadius: 5
             },
-            cyber: {
-                textColor: '#00ff41',
-                uiColor: '#00ff41',
-                editorBg: 'rgba(0, 0, 0, 0)',
-                windowBg: 'rgba(0, 0, 0, 0.8)',
-                selection: 'rgba(0, 255, 65, 0.3)',
-                heading: '#00ff41',
-                scrollbar: 'rgba(0, 255, 65, 0.2)'
+            'sys:cyber': {
+                textColor: '#eeeeee', uiColor: '#00ff41', editorBg: 'rgba(0, 0, 0, 0)',
+                windowBg: 'rgba(0, 0, 0, 0.8)', selection: 'rgba(0, 255, 65, 0.3)',
+                heading: '#00ff41', scrollbar: 'rgba(0, 255, 65, 0.2)',
+                enableGlow: true, glowColor: 'rgba(0, 255, 65, 0.5)', glowRadius: 5
             },
-            'cyber-tokyo': {
-                textColor: '#a9b1d6',
-                uiColor: '#7aa2f7',
-                editorBg: 'rgba(0, 0, 0, 0)',
-                windowBg: 'rgba(26, 27, 38, 0.95)',
-                selection: 'rgba(81, 92, 126, 0.4)', // Selection
-                heading: '#bb9af7',   // Purple
-                scrollbar: 'rgba(122, 162, 247, 0.3)'
+            'sys:cyber-tokyo': {
+                textColor: '#a9b1d6', uiColor: '#7aa2f7', editorBg: 'rgba(0, 0, 0, 0)',
+                windowBg: 'rgba(26, 27, 38, 0.95)', selection: 'rgba(81, 92, 126, 0.4)',
+                heading: '#bb9af7', scrollbar: 'rgba(122, 162, 247, 0.3)',
+                enableGlow: true, glowColor: 'rgba(0, 50, 255, 0.5)', glowRadius: 5
             }
         };
 
-        // --- プルダウンのイベント ---
-        const themeSelect = document.querySelector('#theme-select') as HTMLSelectElement;
-
-        themeSelect?.addEventListener('change', () => {
-            const selected = themeSelect.value;
-            const data = presets[selected];
-
-            if (data) {
-                // 定義済みのヘルパー関数を使って、ピッカー更新・保存・Emitを一括で行う
-                applyThemeData(data);
-            }
-        });
-
-        // リセットボタン（デフォルトに戻す）
-        const resetThemeBtn = document.querySelector('#btn-reset-custom');
-        resetThemeBtn?.addEventListener('click', () => {
-            themeSelect.value = 'default';
-            applyThemeData(presets['default']);
-        });
 
         // --- ピッカー適用 ---
         setupPicker(pickerTextColor, inputTextColor, valTextColor, 'bottom');
@@ -705,6 +820,8 @@ async function setupSettings() {
                 hideWindow();
             }
         });
+
+        await setupUnifiedThemes(store);
 
         // --- 右クリックメニューの無効化 ---
         document.addEventListener('contextmenu', (e) => {
