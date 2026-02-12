@@ -167,6 +167,9 @@ class App {
   private languageCompartment = new Compartment();
 
   private mainAiApi: 'gemini' | 'local' = 'gemini';
+  private showAiThinkingOverlay = true;
+  private isAiProcessing = false; // AI動作中フラグ
+  private aiAbortController: AbortController | null = null;// 通信中断用
 
   private isCodeMode = false;
   private currentCodeLanguage = 'html';
@@ -424,21 +427,46 @@ class App {
   }
 
   // オーバーレイ制御用メソッド
-  private setAiLoading(isLoading: boolean) {
-    if (isLoading) {
-      // 生成
-      const overlay = document.createElement('div');
-      overlay.id = 'ai-loading-overlay';
-      overlay.className = 'loading-overlay'; // スタイルはCSSに
-      overlay.innerHTML = `
-        <div class="spinner"></div>
-        <div class="loading-text">AI is writing...</div>
-      `;
-      document.body.appendChild(overlay);
+  private updateAiThinkingStyle() {
+    const root = document.documentElement.style;
+
+    if (this.showAiThinkingOverlay) {
+      // ONのときの色とブラー
+      root.setProperty('--ai-thinking-bg', 'rgba(0, 0, 0, 0.5)');
+      root.setProperty('--ai-thinking-blur', 'blur(2px)');
     } else {
-      // 削除
-      const overlay = document.getElementById('ai-loading-overlay');
-      if (overlay) document.body.removeChild(overlay);
+      // OFFのときは透明化
+      root.setProperty('--ai-thinking-bg', 'transparent');
+      root.setProperty('--ai-thinking-blur', 'none');
+    }
+  }
+
+  private setAiLoading(isLoading: boolean) {
+    const overlayId = 'ai-loading-overlay';
+
+    // 既存のオーバーレイをすべて削除
+    const existingOverlays = document.querySelectorAll(`#${overlayId}`);
+    existingOverlays.forEach(el => el.remove());
+
+    if (isLoading) {
+      // 事前にCSS変数を最新の状態にしておく
+      this.updateAiThinkingStyle();
+
+      const overlay = document.createElement('div');
+      overlay.id = overlayId;
+      overlay.className = 'loading-overlay';
+
+      // 演出設定がONのときだけ中身（スピナーと文字）を生成する
+      if (this.showAiThinkingOverlay) {
+        overlay.innerHTML = `
+          <div class="spinner"></div>
+          <div class="loading-text">AI is writing...</div>
+        `;
+      } else {
+        overlay.innerHTML = ''; // 透明ガードのみ
+      }
+
+      document.body.appendChild(overlay);
     }
   }
 
@@ -458,8 +486,18 @@ class App {
     });
   }
 
+  // AI通信を中止する
+  private abortAiProcessing() {
+    if (this.aiAbortController) {
+      console.log("Sending abort signal...");
+      this.aiAbortController.abort();
+      // ここでフラグやUIをいじらない（finallyブロックに任せる）
+    }
+  }
+
   // AI補完を実行するメインロジック
   private async runAiCompletion() {
+    if (this.isAiProcessing) return; // 二重起動防止
     if (this.isCodeMode) {
       await this.runCodeCompletion();
       return;
@@ -474,10 +512,13 @@ class App {
     const textContext = state.doc.sliceString(from, cursor);
 
     if (!textContext.trim()) return;
-    this.setAiLoading(true);
 
     // 2. UIのフィードバック
     console.log("AI Completion requested...");
+
+    this.isAiProcessing = true;
+    this.aiAbortController = new AbortController(); // 新しい中断用コントローラーを作成
+    this.setAiLoading(true);
 
     try {
       let resultText = "";
@@ -488,11 +529,11 @@ class App {
 
         // AiChatで実装した通信ロジックを流用 (簡略化)
         // ※ ここでは stream は使わず、一括で受け取るのが挿入しやすくて楽
-        const response = await this.requestGeminiDirect(apiKey, textContext, systemPrompt);
+        const response = await this.requestGeminiDirect(apiKey!, textContext, systemPrompt, undefined, this.aiAbortController.signal);
         resultText = response;
       } else {
         const url = await this.store.get<string>('localLlmUrl') || "http://127.0.0.1:1234/v1/chat/completions";
-        const response = await this.requestLocalAiDirect(url, textContext, systemPrompt);
+        const response = await this.requestLocalAiDirect(url, textContext, systemPrompt, undefined, this.aiAbortController.signal);
         resultText = response;
       }
 
@@ -524,19 +565,16 @@ class App {
         });
       }
 
-    } catch (e) {
-      console.error(e);
-      await message(`AI Error: ${e}`, { title: 'Error', kind: 'error' });
+    } catch (e: any) {
+      this.handleAiError(e);
     } finally {
-      // 必ずローディングを消す
-      this.setAiLoading(false);
-      // エディタにフォーカスを戻す
-      this.editorView.focus();
+      this.clearAiProcessingState();
     }
   }
 
   // --- コード補完実行メソッド ---
   private async runCodeCompletion() {
+    if (this.isAiProcessing) return;
     const view = this.editorView;
     const state = view.state;
     const cursor = state.selection.main.head;
@@ -548,11 +586,13 @@ class App {
 
     if (!prefix.trim()) return;
 
+    this.isAiProcessing = true;
+    this.aiAbortController = new AbortController();
     this.setAiLoading(true);
 
     try {
       const url = await this.store.get<string>('localLlmUrl') || "http://127.0.0.1:1234/v1/chat/completions";
-      const resultText = await this.requestCodeFim(url, prefix, suffix);
+      const resultText = await this.requestCodeFim(url, prefix, suffix, this.aiAbortController.signal);
 
       if (resultText && resultText.trim().length > 0) {
         // 余計な装飾（```や解説）を排除
@@ -569,17 +609,15 @@ class App {
           });
         }
       }
-    } catch (e) {
-      console.error(e);
-      await message(`Code Completion Error: ${e}`, { title: 'Error', kind: 'error' });
+    } catch (e: any) {
+      this.handleAiError(e);
     } finally {
-      this.setAiLoading(false);
-      this.editorView.focus();
+      this.clearAiProcessingState();
     }
   }
 
   // --- FIMリクエスト用ヘルパー ---
-  private async requestCodeFim(url: string, prefix: string, suffix: string): Promise<string> {
+  private async requestCodeFim(url: string, prefix: string, suffix: string, signal: AbortSignal): Promise<string> {
     const modelName = await this.store.get<string>('localLlmModel') || 'qwen2.5-coder:1.5b';
     const prompt = `<|fim_prefix|>${prefix}<|fim_suffix|>${suffix}<|fim_middle|>`;
 
@@ -618,7 +656,8 @@ class App {
       const response = await fetch(targetUrl, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(body)
+        body: JSON.stringify(body),
+        signal: signal
       });
       if (!response.ok) throw new Error(`Status ${response.status}`);
       const data = await response.json();
@@ -630,6 +669,7 @@ class App {
 
   // AIによる編集・加工実行メソッド
   private async runAiEdit(mode: 'translate' | 'summary' | 'rewrite') {
+    if (this.isAiProcessing) return;
     const view = this.editorView;
     const state = view.state;
     const selection = state.selection.main;
@@ -670,7 +710,8 @@ class App {
         label = "■ リライト";
         break;
     }
-
+    this.isAiProcessing = true;
+    this.aiAbortController = new AbortController();
     // ローディング表示
     this.setAiLoading(true);
 
@@ -682,10 +723,10 @@ class App {
       if (this.mainAiApi === 'gemini') {
         const apiKey = await this.store.get<string>('geminiApiKey');
         if (!apiKey) throw new Error("Gemini API Key is not set.");
-        resultText = await this.requestGeminiDirect(apiKey, selectedText, systemPrompt, tempMaxTokens);
+        resultText = await this.requestGeminiDirect(apiKey, selectedText, systemPrompt, tempMaxTokens, this.aiAbortController?.signal);
       } else {
         const url = await this.store.get<string>('localLlmUrl') || "http://127.0.0.1:1234/v1/chat/completions";
-        resultText = await this.requestLocalAiDirect(url, selectedText, systemPrompt, tempMaxTokens);
+        resultText = await this.requestLocalAiDirect(url, selectedText, systemPrompt, tempMaxTokens, this.aiAbortController?.signal);
       }
 
       // 挿入処理 (選択範囲の後ろに改行を入れて追記)
@@ -705,17 +746,33 @@ class App {
         });
       }
 
-    } catch (e) {
-      console.error(e);
-      await message(`AI Error: ${e}`, { title: 'Error', kind: 'error' });
+    } catch (e: any) {
+      this.handleAiError(e);
     } finally {
-      this.setAiLoading(false);
-      this.editorView.focus();
+      this.clearAiProcessingState();
     }
   }
 
+  // 共通のエラーハンドラ
+  private handleAiError(e: any) {
+    if (e.name === 'AbortError') {
+      console.log("AI Task was aborted by user.");
+      return; // 中断時は何も表示しない
+    }
+    console.error(e);
+    message(`AI Error: ${e}`, { title: 'Error', kind: 'error' });
+  }
+
+  // 共通のクリーンアップ
+  private clearAiProcessingState() {
+    this.isAiProcessing = false;
+    this.aiAbortController = null;
+    this.setAiLoading(false);
+    this.editorView.focus();
+  }
+
   // --- Geminiへの直接リクエスト ---
-  private async requestGeminiDirect(apiKey: string, prompt: string, systemPrompt: string, maxTokensOverride?: number): Promise<string> {
+  private async requestGeminiDirect(apiKey: string, prompt: string, systemPrompt: string, maxTokensOverride?: number, signal?: AbortSignal): Promise<string> {
     const model = await this.store.get<string>('geminiModel') || 'gemini-2.5-flash';
 
     // 数値として確実に取得する (Storeから文字列で返ってくる場合の対策)
@@ -746,7 +803,8 @@ class App {
             maxOutputTokens: maxTokens,
             temperature: 0.8 // 少し創造性を上げる (0.7 -> 0.8)
           }
-        })
+        }),
+        signal: signal
       });
 
       if (!response.ok) {
@@ -776,7 +834,7 @@ class App {
   }
 
   // --- Local AI (Ollama/LM Studio) への直接リクエスト ---
-  private async requestLocalAiDirect(url: string, prompt: string, systemPrompt: string, maxTokensOverride?: number): Promise<string> {
+  private async requestLocalAiDirect(url: string, prompt: string, systemPrompt: string, maxTokensOverride?: number, signal?: AbortSignal): Promise<string> {
     const modelName = await this.store.get<string>('localLlmModel') || 'local-model';
     let maxTokens = maxTokensOverride;
     if (!maxTokens) {
@@ -797,7 +855,8 @@ class App {
           stream: false, // 一括取得
           max_tokens: maxTokens,
           temperature: 0.7
-        })
+        }),
+        signal: signal
       });
 
       if (!response.ok) {
@@ -1147,6 +1206,10 @@ class App {
         this.useUiBg = s.useUiBg;
         this.updateUiBg();
       }
+      if (s.showAiThinkingOverlay !== undefined) {
+        this.showAiThinkingOverlay = s.showAiThinkingOverlay;
+        this.updateAiThinkingStyle();
+      }
 
       // コードブロックの言語設定
       if (s.codeLanguage) {
@@ -1270,6 +1333,10 @@ class App {
 
     const savedSpotlight = await this.store.get<boolean>('isSpotlightMode');
     this.isSpotlightMode = savedSpotlight ?? false;
+
+    const savedAiThinkingOverlay = await this.store.get<boolean>('showAiThinkingOverlay');
+    this.showAiThinkingOverlay = savedAiThinkingOverlay ?? true;
+    this.updateAiThinkingStyle();
 
     // --- エディタ設定 (ヘルパーがあるものはヘルパーに任せる) ---
 
@@ -2317,6 +2384,18 @@ class App {
     const isShift = e.shiftKey;
     const key = e.key.toLowerCase();
     const isCtrlOrCmd = e.ctrlKey || e.metaKey;
+
+    // AI動作中のガード
+    if (this.isAiProcessing) {
+      // Escapeキーが押されたら中断を実行
+      if (e.key === 'Escape') {
+        this.abortAiProcessing();
+      }
+      // 他のすべてのキー操作（ショートカット含む）を無視して終了
+      e.preventDefault();
+      e.stopPropagation();
+      return;
+    }
 
     if (isCtrlOrCmd && key === 's') { e.preventDefault(); this.saveActiveFile(); }
     if (isCtrlOrCmd && key === 't' && !isShift) { e.preventDefault(); this.toggleDarkMode(); }

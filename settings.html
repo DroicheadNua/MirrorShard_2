@@ -175,7 +175,6 @@
                         <input type="password" id="gemini-api-key" placeholder="AIzaSy..."
                             style="flex-grow: 1;margin: auto;" />
                     </label>
-                    <br />
                     <label style="display: flex; gap: 5px;">
                         Model
                         <input type="text" id="gemini-model" placeholder="<モデル名を入力>"
@@ -214,10 +213,14 @@
                 <div class="ai-setting-group">
                     <h4>Behavior</h4>
                     <label>
-                        Max Output Tokens (最大応答長):
+                        最大応答長:
                         <input type="number" id="ai-max-tokens" placeholder="2000" min="100" max="100000"
                             style="width: 80px;" />
                         <span style="font-size: 0.8em; color: #111;">(Gemini/Local共通)</span>
+                    </label>
+                    <label>
+                        <input type="checkbox" id="check-ai-thinking-overlay" checked />
+                        AI思考時の演出を有効にする
                     </label>
                     <br />
                     <label>

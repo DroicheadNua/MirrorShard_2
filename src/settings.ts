@@ -97,6 +97,7 @@ async function setupSettings() {
         const modelPresetSelect = document.querySelector('#gemini-model-preset') as HTMLSelectElement;
         const localLlmModelInput = document.querySelector('#local-llm-model') as HTMLInputElement;
         const urlPresetSelect = document.querySelector('#local-llm-url-preset') as HTMLSelectElement;
+        const aiThinkingOverlayCheck = document.querySelector('#check-ai-thinking-overlay') as HTMLInputElement;
 
         // --- 3.2. Code Editor UI要素の取得 ---
         const codeLanguageSelect = document.querySelector('#code-language-select') as HTMLSelectElement;
@@ -468,6 +469,7 @@ async function setupSettings() {
         localLlmUrlInput.value = await store.get<string>('localLlmUrl') || 'http://127.0.0.1:1234/v1/chat/completions';
         aiSystemPromptInput.value = await store.get<string>('aiSystemPrompt') || '';
         aiMaxTokensInput.value = (await store.get<number>('aiMaxTokens') || 2000).toString();
+        aiThinkingOverlayCheck.checked = await store.get<boolean>('showAiThinkingOverlay') ?? true;
         userNameInput.value = await store.get<string>('aiChatUserName') || 'User';
         localLlmModelInput.value = await store.get<string>('localLlmModel') || 'local-model';
         if (pendingUserIcon) userIconDisplay.textContent = pendingUserIcon.split(/[/\\]/).pop() || '';
@@ -702,6 +704,7 @@ async function setupSettings() {
                 const newSystemPrompt = aiSystemPromptInput.value;
                 const newAiMaxTokens = parseInt(aiMaxTokensInput.value, 10) || 2000;
                 const newLocalModel = localLlmModelInput.value.trim();
+                const newAiThinkingOverlay = aiThinkingOverlayCheck.checked;
 
                 // Storeに保存
                 await store.set('editorMaxWidth', numValue.toString());
@@ -740,6 +743,7 @@ async function setupSettings() {
                     await store.set('selectedApiType', 'gemini');
                 }
                 await store.set('aiMaxTokens', newAiMaxTokens);
+                await store.set('showAiThinkingOverlay', newAiThinkingOverlay);
                 // User Profile
                 await store.set('aiChatUserName', userNameInput.value || 'User');
                 if (pendingUserIcon) await store.set('aiChatUserIconPath', pendingUserIcon);
@@ -800,6 +804,7 @@ async function setupSettings() {
                     enableGlow: checkEnableGlow.checked,
                     glowColor: inputGlowColor.value,
                     glowRadius: parseInt(inputGlowRadius.value),
+                    showAiThinkingOverlay: newAiThinkingOverlay,
                 });
 
             } catch (err) {

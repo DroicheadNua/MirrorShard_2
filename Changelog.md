@@ -20,6 +20,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed (修正点)  
 - コードエディタモードのオートインデントを修正  
+- 検索パネルの配色を改善  
 
 
 ## [1.0.0] - 2026-2-7 (正式リリース)   
