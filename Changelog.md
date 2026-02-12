@@ -17,10 +17,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - 降雪エフェクトを追加(Ctrl + Shift + E)  
 
 ### Changed (変更点)    
+- HTML/Markdownプレビュー: ローカル画像の表示に対応  
+- AIチャット: 起動時に前回のセッションを自動的に読み込むように仕様を変更  
 
 ### Fixed (修正点)  
 - コードエディタモードのオートインデントを修正  
-- 検索パネルの配色を改善  
+- 検索パネルの配色を改善、背景色と調和するように    
 
 
 ## [1.0.0] - 2026-2-7 (正式リリース)   

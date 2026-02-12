@@ -2,7 +2,7 @@
 import { AiChat, ChatSettings } from "./ai_chat";
 import { Store } from "@tauri-apps/plugin-store";
 import { save, open, ask } from "@tauri-apps/plugin-dialog";
-import { writeTextFile, readTextFile } from "@tauri-apps/plugin-fs";
+import { writeTextFile } from "@tauri-apps/plugin-fs";
 import { writeText } from "@tauri-apps/plugin-clipboard-manager";
 import { getCurrentWindow } from "@tauri-apps/api/window";
 import { marked } from "marked";
@@ -108,12 +108,12 @@ async function init() {
         setupSettingsListener();
         setupThemeListener();
 
-        // 前回セッションのロード（※Mac版で動作しないので一旦コメントアウト）
-        // const lastSessionPath = await store.get<string>('lastAiChatSessionPath');
-        // if (lastSessionPath) {
-        //     console.log("Auto-loading session:", lastSessionPath);
-        //     await loadLogFile(lastSessionPath);
-        // }
+        // 前回セッションのロード
+        const lastSessionPath = await store.get<string>('lastAiChatSessionPath');
+        if (lastSessionPath) {
+            console.log("Auto-loading session:", lastSessionPath);
+            await loadLogFile(lastSessionPath);
+        }
 
     } catch (e) {
         console.error("Init Error:", e);
@@ -480,7 +480,14 @@ function convertToPastelLog(history: ChatMessage[]): PastelLog {
  */
 async function loadLogFile(path: string) {
     try {
-        const text = await readTextFile(path);
+        const assetUrl = convertFileSrc(path);
+        const response = await fetch(assetUrl);
+
+        if (!response.ok) {
+            throw new Error(`Failed to fetch log file: ${response.statusText}`);
+        }
+
+        const text = await response.text();
         const parsed = JSON.parse(text);
 
         let loadedHistory: ChatMessage[] = [];

@@ -1,7 +1,7 @@
 import { listen, emit } from '@tauri-apps/api/event';
 import { marked } from 'marked';
 import { type } from '@tauri-apps/plugin-os';
-import { invoke } from '@tauri-apps/api/core';
+import { invoke, convertFileSrc } from '@tauri-apps/api/core';
 import { getCurrentWindow } from '@tauri-apps/api/window';
 import { writeText } from '@tauri-apps/plugin-clipboard-manager';
 import updateArticle from './scripts/ruby';
@@ -43,23 +43,116 @@ let zoomLevel = 100;
 
 async function renderContent() {
     if (!contentDiv) return;
+    let rawHtml = "";
 
+    // 1. モードごとの前処理
     if (currentMode === 'markdown') {
         // --- Markdownモード ---
-        // 1. Markedパース
-        const rawHtml = await marked.parse(currentText);
-        contentDiv.innerHTML = rawHtml;
+        // クラス付与（スタイル適用）
+        contentDiv.classList.add('markdown-body');
 
-        // 2. ルビ変換 (DOM操作)
-        updateArticle(contentDiv);
+        rawHtml = await marked.parse(currentText);
+
+        // ※Markdownのルビ変換はDOM挿入後に行う（updateArticle）
+    } else {
+        // --- HTML/Astroモード ---
+        // クラス除去（スタイル干渉回避）
+        contentDiv.classList.remove('markdown-body');
+
+        rawHtml = currentText;
+
+        // Astro Frontmatter削除
+        if (rawHtml.startsWith('---')) {
+            const endMatch = rawHtml.indexOf('---', 3);
+            if (endMatch !== -1) {
+                rawHtml = rawHtml.substring(endMatch + 3).trim();
+            }
+        }
+    }
+
+    // Astro構文の置換
+    if (rawHtml.includes('import.meta.env.BASE_URL')) {
+        rawHtml = rawHtml.replace(/src=\{`?\$\{import\.meta\.env\.BASE_URL\}(.*?)`?\}/g, 'src="$1"');
+    }
+
+    // DOMパースを行う条件を拡張
+    // 「画像処理が必要」 または 「HTMLモード（スタイル救出が必要）」 の場合
+    const needsDomParsing = (currentFilePath && currentFilePath !== "Untitled" && rawHtml.includes('<img')) || currentMode !== 'markdown';
+
+    if (needsDomParsing) {
+        // A. 文字列をDOMオブジェクトにパース
+        const parser = new DOMParser();
+        const doc = parser.parseFromString(rawHtml, 'text/html');
+
+        // B. 画像パスの解決 (ファイルパスがあり、かつ画像がある場合のみ)
+        if (currentFilePath && currentFilePath !== "Untitled") {
+            const separator = currentFilePath.includes('\\') ? '\\' : '/';
+            const baseDir = currentFilePath.substring(0, currentFilePath.lastIndexOf(separator));
+
+            const images = doc.querySelectorAll('img');
+            images.forEach(img => {
+                let src = img.getAttribute('src');
+                if (!src) return;
+                if (src.startsWith('http') || src.startsWith('data:')) return;
+
+                try {
+                    // パス解決ロジック
+                    let absolutePath = src;
+                    const separator = currentFilePath.includes('\\') ? '\\' : '/';
+
+                    // パターンA: スラッシュで始まるパス ( /img/hero.jpg )
+                    // フレームワークの「public」フォルダ運用と推測する
+                    if (src.startsWith('/')) {
+                        // パスの中に /src/ (または \src\) があるか探す
+                        const srcMatch = currentFilePath.lastIndexOf(`${separator}src${separator}`);
+
+                        if (srcMatch !== -1) {
+                            // .../Project/src/pages/index.astro -> .../Project
+                            const projectRoot = currentFilePath.substring(0, srcMatch);
+                            // -> .../Project/public/img/hero.jpg
+                            // (注: Windowsの場合 src内の / を \ に直す必要がある)
+                            const normalizedSrc = src.replace(/\//g, separator);
+                            absolutePath = `${projectRoot}${separator}public${normalizedSrc}`;
+                        } else {
+                            // srcフォルダ外ならドライブ直下とみなす（既存挙動）
+                            absolutePath = src;
+                        }
+                    }
+                    // パターンB: 相対パス ( ./img/hero.jpg )
+                    else {
+                        const cleanSrc = src.replace(/^\.?\//, '');
+                        absolutePath = `${baseDir}${separator}${cleanSrc}`;
+                    }
+                    img.src = convertFileSrc(absolutePath);
+                } catch (e) {
+                    console.error("Image path conversion failed:", e);
+                }
+            });
+        }
+
+        // C. スタイルの救出とHTML生成
+        if (currentMode !== 'markdown') {
+            // HTMLモード: <head>内の<style>を救出してbodyと結合
+            const styles = doc.querySelectorAll('head style');
+            let styleString = "";
+            styles.forEach(s => styleString += s.outerHTML);
+
+            // スタイル + ボディの中身 を表示
+            contentDiv.innerHTML = styleString + doc.body.innerHTML;
+        } else {
+            // Markdownモード: ボディの中身だけ（スタイルタグは通常含まれないため）
+            contentDiv.innerHTML = doc.body.innerHTML;
+        }
 
     } else {
-        // --- HTMLモード ---
-        // テキストをそのままHTMLとして解釈
-        contentDiv.innerHTML = currentText;
+        // パース不要（画像なしのMarkdownなど）ならそのまま表示
+        contentDiv.innerHTML = rawHtml;
+    }
 
-        // HTMLモードでもルビ記法を使いたい場合はここで updateArticle(contentDiv) を呼んでも良いが
-        // 純粋なHTMLプレビューとしては「書いたタグ通り」に出るのが正解
+    // 2. ルビ変換 (DOM操作) - Markdownモードのみ
+    // (HTMLモードではタグ構造を壊す可能性があるため行わないのが基本だが、必要ならここで行う)
+    if (currentMode === 'markdown') {
+        updateArticle(contentDiv);
     }
 }
 
