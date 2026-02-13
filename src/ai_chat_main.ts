@@ -39,7 +39,9 @@ const chatLog = document.getElementById('chat-log')!;
 const chatForm = document.getElementById('chat-form') as HTMLFormElement;
 const messageInput = document.getElementById('message-input') as HTMLTextAreaElement;
 const sendBtn = document.getElementById('send-btn') as HTMLButtonElement;
-const apiSelector = document.getElementById('api-selector') as HTMLSelectElement;
+const apiTrigger = document.getElementById('api-selector-trigger');
+const apiOptions = document.getElementById('api-selector-options');
+const apiItems = document.querySelectorAll('.custom-option');
 const TRANSPARENT_ICON = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII=';
 
 // --- State ---
@@ -100,13 +102,17 @@ async function init() {
             maxTokens: maxTokens
         };
 
-        apiSelector.value = savedApiType;
+        if (apiTrigger) {
+            apiTrigger.textContent = savedApiType === 'gemini' ? 'Gemini' : 'Local LLM';
+        }
         await aiChat.updateSettings(aiSettings);
         await loadProfileSettings();
+        await applyAppearanceSettings();
 
         setupEventListeners();
         setupSettingsListener();
         setupThemeListener();
+        await applyGlowEffect();
 
         // 前回セッションのロード
         const lastSessionPath = await store.get<string>('lastAiChatSessionPath');
@@ -133,6 +139,112 @@ async function loadProfileSettings() {
     aiIconSrc = aPath ? convertFileSrc(aPath) : TRANSPARENT_ICON;
 }
 
+async function applyAppearanceSettings() {
+    if (!store) return;
+    const root = document.documentElement.style;
+
+    // 1. 背景色 (customWindowBg)
+    const bg = await store.get<string>('customWindowBg');
+    if (bg) {
+        root.setProperty('--window-bg-color', bg);
+    } else {
+        // 設定がない場合はデフォルト(CSSのフォールバック)に戻すため削除
+        root.removeProperty('--window-bg-color');
+    }
+
+    // 2. フォント (userFontFamily)
+    const font = await store.get<string>('userFontFamily');
+    if (font && font !== 'default') {
+        root.setProperty('--user-font-family', `"${font}"`);
+    } else {
+        root.removeProperty('--user-font-family');
+    }
+
+    // 3. チャットバルーンの背景色 (chatBubbleBg)
+    const bubbleBg = await store.get<string>('customEditorBg');
+    if (bubbleBg) {
+        root.setProperty('--editor-bg-color', bubbleBg);
+    } else {
+        root.removeProperty('--editor-bg-color');
+    }
+
+    // 4. テキスト色 (customTextColor)
+    const textColor = await store.get<string>('customTextColor');
+    if (textColor) {
+        root.setProperty('--editor-text-color', textColor);
+    } else {
+        root.removeProperty('--editor-text-color');
+    }
+
+    // 5. 選択色 (customSelectionColor)
+    const selectionColor = await store.get<string>('customSelectionColor');
+    if (selectionColor) {
+        root.setProperty('--selection-color', selectionColor);
+    } else {
+        root.removeProperty('--selection-color');
+    }
+    // 6. UIテキスト色 (customUiTextColor)
+    const uiTextColor = await store.get<string>('customUiTextColor');
+    if (uiTextColor) {
+        root.setProperty('--ui-text-color', uiTextColor);
+    } else {
+        root.removeProperty('--ui-text-color');
+    }
+}
+
+// --- グロー適用ロジック (堅牢化版) ---
+async function applyGlowEffect() {
+    if (!store) return;
+    // ストアから取得 (型を明示)
+    const enableGlow = await store.get<boolean>('enableGlow') ?? false;
+    const glowColor = await store.get<string>('glowColor') || 'rgba(0, 255, 65, 0.5)';
+    const glowRadius = await store.get<number>('glowRadius') || 5;
+
+    const root = document.documentElement.style;
+    const body = document.body;
+
+    // 現在がダークモードかどうかチェック
+    const isDark = body.classList.contains('dark-mode');
+
+    // 「ライトモード(カスタムモード)」かつ「グロー有効」のときだけ発動
+    if (!isDark && enableGlow) {
+        body.classList.add('custom-glow');
+
+        // 計算後のシャドウ文字列を入れる変数
+        let shadowVal = "";
+
+        // RGBAの解析
+        const match = glowColor.match(/rgba?\((\d+),\s*(\d+),\s*(\d+)(?:,\s*([0-9.]+))?\)/);
+
+        if (match) {
+            const r = match[1];
+            const g = match[2];
+            const b = match[3];
+            const a = parseFloat(match[4] || '1');
+
+            // 3段階の影を作成
+            const shadow1 = `0 0 ${glowRadius}px rgba(${r}, ${g}, ${b}, ${a})`;
+            const shadow2 = `0 0 ${glowRadius * 2}px rgba(${r}, ${g}, ${b}, ${Math.max(0, a - 0.1)})`;
+            const shadow3 = `0 0 ${glowRadius * 4}px rgba(${r}, ${g}, ${b}, ${Math.max(0, a - 0.2)})`;
+
+            shadowVal = `${shadow1}, ${shadow2}, ${shadow3}`;
+        } else {
+            // パース失敗時（HEXなどの場合）は単純な影にする
+            console.warn("Glow color parse failed, using simple shadow:", glowColor);
+            shadowVal = `0 0 ${glowRadius}px ${glowColor}, 0 0 ${glowRadius * 2}px ${glowColor}`;
+        }
+
+        // 変数をセット
+        console.log("Applying Glow:", shadowVal); // デバッグ用
+        root.setProperty('--custom-text-shadow', shadowVal);
+
+    } else {
+        // 無効化
+        body.classList.remove('custom-glow');
+        root.removeProperty('--custom-text-shadow');
+    }
+}
+
 function setupSettingsListener() {
     listen('settings-changed', async (event: any) => {
         const p = event.payload;
@@ -143,6 +255,35 @@ function setupSettingsListener() {
         aiSettings.systemPrompt = p.aiSystemPrompt ?? aiSettings.systemPrompt;
         aiSettings.maxTokens = p.aiMaxTokens ?? aiSettings.maxTokens;
         await aiChat.updateSettings(aiSettings);
+        // 外観設定のリアルタイム反映
+        const root = document.documentElement.style;
+        if (p.customWindowBg !== undefined) {
+            if (p.customWindowBg) root.setProperty('--window-bg-color', p.customWindowBg);
+            else root.removeProperty('--window-bg-color');
+        }
+        if (p.userFontFamily !== undefined) {
+            if (p.userFontFamily && p.userFontFamily !== 'default') {
+                root.setProperty('--user-font-family', `"${p.userFontFamily}"`);
+            } else {
+                root.removeProperty('--user-font-family');
+            }
+        }
+        if (p.customEditorBg !== undefined) {
+            if (p.customEditorBg) root.setProperty('--editor-bg-color', p.customEditorBg);
+            else root.removeProperty('--editor-bg-color');
+        }
+        if (p.customTextColor !== undefined) {
+            if (p.customTextColor) root.setProperty('--editor-text-color', p.customTextColor);
+            else root.removeProperty('--editor-text-color');
+        }
+        if (p.customSelectionColor !== undefined) {
+            if (p.customSelectionColor) root.setProperty('--selection-color', p.customSelectionColor);
+            else root.removeProperty('--selection-color');
+        }
+        if (p.customUiTextColor !== undefined) {
+            if (p.customUiTextColor) root.setProperty('--ui-text-color', p.customUiTextColor);
+            else root.removeProperty('--ui-text-color');
+        }
         // プロフィールの更新
         if (p.aiChatUserName !== undefined) userName = p.aiChatUserName;
         if (p.aiChatAiName !== undefined) aiName = p.aiChatAiName;
@@ -153,6 +294,9 @@ function setupSettingsListener() {
         if (p.aiChatAiIconPath !== undefined) {
             aiIconSrc = p.aiChatAiIconPath ? convertFileSrc(p.aiChatAiIconPath) : TRANSPARENT_ICON;
         }
+        if (p.enableGlow !== undefined || p.glowColor !== undefined || p.glowRadius !== undefined) {
+            await applyGlowEffect();
+        }
         // ログを再描画して新しい名前/アイコンを反映
         redrawLog();
     });
@@ -162,20 +306,50 @@ function setupSettingsListener() {
 function setupThemeListener() {
     listen('app:theme-changed', (event: any) => {
         const isDark = event.payload.isDarkMode;
-        document.body.classList.toggle('dark-mode', isDark);
+        if (isDark) {
+            document.body.classList.add('dark-mode');
+        } else {
+            document.body.classList.remove('dark-mode');
+        }
+        applyGlowEffect();
     });
 }
 
 function setupEventListeners() {
-    apiSelector.addEventListener('change', async () => {
-        const newType = apiSelector.value as 'gemini' | 'local';
-        aiSettings.apiType = newType;
-        await aiChat.updateSettings(aiSettings);
-        if (store) {
-            await store.set('selectedApiType', newType);
-            await store.save();
-        }
-        showNotification(`Switched to ${newType === 'gemini' ? 'Gemini' : 'Local LLM'}`);
+    // ドロップダウンの開閉
+    apiTrigger?.addEventListener('click', (e) => {
+        e.stopPropagation();
+        apiOptions?.classList.toggle('open');
+    });
+
+    // 画面クリックで閉じる
+    document.addEventListener('click', () => {
+        apiOptions?.classList.remove('open');
+    });
+
+    // 各項目のクリックイベントを設定
+    apiItems.forEach(item => {
+        item.addEventListener('click', async () => {
+            const newType = item.getAttribute('data-value') as 'gemini' | 'local';
+            const newText = item.textContent;
+
+            if (newType) {
+                // 1. ロジックの実行 (既存コードの流用)
+                aiSettings.apiType = newType;
+                await aiChat.updateSettings(aiSettings);
+                if (store) {
+                    await store.set('selectedApiType', newType);
+                    await store.save();
+                }
+                showNotification(`Switched to ${newText}`);
+
+                // 2. UIの更新
+                if (apiTrigger) apiTrigger.textContent = newText;
+
+                // 3. メニューを閉じる
+                apiOptions?.classList.remove('open');
+            }
+        });
     });
 
     chatForm.addEventListener('submit', async (e) => {

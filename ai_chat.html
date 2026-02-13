@@ -12,12 +12,15 @@
         <!-- タイトルバー -->
         <div data-tauri-drag-region id="title-bar">
             <!-- 左側にモデル選択を追加 (ドラッグ除外領域にする) -->
-            <div class="top-left-controls">
-                <select id="api-selector">
-                    <option value="gemini">Gemini</option>
-                    <option value="local">Local LLM</option>
-                </select>
+
+            <div class="custom-select-wrapper">
+                <button id="api-selector-trigger" class="custom-select-trigger">Gemini</button>
+                <div id="api-selector-options" class="custom-options">
+                    <div class="custom-option" data-value="gemini">Gemini</div>
+                    <div class="custom-option" data-value="local">Local LLM</div>
+                </div>
             </div>
+
 
             <div class="top-right-buttons">
                 <button id="ai-clear-log-btn" title="Clear Log (Ctrl+Shift+C)"></button>

@@ -19,16 +19,15 @@ body {
   width: 100%;
   height: 100%;
   overflow: hidden;
-  font-family: serif, monospace;
+  font-family: var(--user-font-family, serif, monospace);
   line-height: 1.5;
-  background-color: #EAE3D2;
-  color: black;
+  background-color: var(--window-bg-color, #EAE3D2);
+  color: var(--editor-text-color, black);
 }
 
 body.dark-mode #ai-wrapper {
   background-color: #000000CC;
   color: #00ff00;
-  font-family: sans-serif, monospace;
   border-radius: 6px;
   text-shadow:
     0 0 5px rgba(0, 255, 0, 0.5),
@@ -57,7 +56,7 @@ body.dark-mode #ai-wrapper {
 }
 
 .top-right-buttons button {
-  background: rgba(0, 0, 0, 0.2);
+  background-color: var(--editor-text-color, rgba(0, 0, 0, 0.2));
   border: 1px solid rgba(255, 255, 255, 0.2);
   color: white;
   border-radius: 30%;
@@ -85,17 +84,116 @@ body.dark-mode #ai-wrapper {
   -webkit-app-region: no-drag;
 }
 
-#api-selector {
-  background: rgba(0, 0, 0, 0.2);
-  border: 1px solid rgba(255, 255, 255, 0.2);
-  color: white;
-  border-radius: 4px;
-  font-size: 11px;
-  padding: 2px;
+/* カスタムドロップダウン */
+.custom-select-wrapper {
+  position: absolute;
+  top: 4px;
+  left: 8px;
+  z-index: 200;
+  -webkit-app-region: no-drag;
+  width: 100px;
 }
 
-body.dark-mode .top-right-buttons button,
-body.dark-mode #api-selector {
+.custom-select-trigger {
+  width: 100%;
+  padding: 2px 5px;
+  font-size: 11px;
+  color: var(--ui-text-color, #eee);
+  background: transparent;
+  border: 1px solid var(--ui-text-color, #888);
+  border-radius: 4px;
+  cursor: pointer;
+  text-align: left;
+  position: relative;
+}
+
+body.dark-mode .custom-select-trigger {
+  color: var(--outline-text-color);
+  border: 1px solid var(--outline-text-color);
+}
+
+body.code-mode .custom-select-trigger {
+  color: #7aa2f7;
+  border: 1px solid #7aa2f7;
+}
+
+/* 矢印アイコン（CSSで描画） */
+.custom-select-trigger::after {
+  content: "▼";
+  font-size: 8px;
+  position: absolute;
+  right: 8px;
+  top: 50%;
+  transform: translateY(-50%);
+  opacity: 0.7;
+}
+
+/* 展開されるリスト */
+.custom-options {
+  display: none;
+  /* デフォルト非表示 */
+  position: absolute;
+  top: 100%;
+  left: 0;
+  right: 0;
+  background-color: var(--window-bg-color, #1e1e1e);
+  /* テーマ色に合わせる */
+  border: 1px solid var(--ui-text-color, #888);
+  border-top: none;
+  border-radius: 0 0 4px 4px;
+  z-index: 1000;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.5);
+  overflow: hidden;
+}
+
+body.dark-mode .custom-options {
+  background-color: #333;
+  border: 1px solid var(--outline-text-color);
+  border-top: none;
+}
+
+body.code-mode .custom-options {
+  background-color: rgba(26, 27, 38, 0.95);
+  border: 1px solid #7aa2f7;
+  border-top: none;
+}
+
+.custom-options.open {
+  display: block;
+}
+
+.custom-option {
+  padding: 5px 10px;
+  font-size: 11px;
+  color: var(--ui-text-color, #eee);
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+body.dark-mode .custom-option {
+  color: var(--outline-text-color);
+}
+
+body.code-mode .custom-option {
+  color: #7aa2f7;
+}
+
+.custom-option:hover {
+  background-color: var(--selection-color, rgba(0, 255, 65, 0.2));
+  color: #fff;
+}
+
+body.dark-mode .custom-option:hover {
+  background-color: var(--sidebar-hover-bg);
+  color: var(--outline-text-color);
+}
+
+body.code-mode .custom-option:hover {
+  background-color: rgba(81, 92, 126, 0.4);
+  color: #fff;
+}
+
+body.dark-mode .top-right-buttons button {
   color: #3e3;
   border: 1px solid rgba(55, 255, 55, 0.3);
   font-family: monospace, sans-serif;
@@ -108,6 +206,8 @@ body.dark-mode #api-selector {
 body.dark-mode .top-right-buttons button {
   background-color: #3e3;
 }
+
+
 
 /* --- チャットコンテナ --- */
 #chat-container {
@@ -150,6 +250,19 @@ body.dark-mode #chat-form {
   font-size: 14px;
   max-height: 240px;
   box-sizing: border-box;
+  background-color: var(--editor-bg-color, ivory);
+  border: 1px solid var(--editor-text-color, #ccc);
+  color: var(--editor-text-color, #ccc);
+}
+
+#message-input::placeholder {
+  color: var(--editor-text-color, #ccc);
+  opacity: 0.5;
+}
+
+#message-input:focus {
+  outline: none;
+  border: 1px solid var(--editor-text-color, #ccc);
 }
 
 body.dark-mode #message-input {
@@ -166,8 +279,8 @@ body.dark-mode #message-input {
   margin-bottom: 5px;
   padding: 8px 16px;
   border: none;
-  background: linear-gradient(to bottom, #4CAF50, #45a049);
-  color: white;
+  background: var(--selection-color, linear-gradient(to bottom, #4CAF50, #45a049));
+  color: var(--editor-text-color, white);
   font-weight: bold;
   border-radius: 12px;
   cursor: pointer;
@@ -272,7 +385,7 @@ body.dark-mode #message-input::placeholder {
 
 .message-sender {
   font-size: 0.8em;
-  color: #333;
+  color: var(--editor-text-color, #333);
   margin-bottom: 4px;
 }
 
@@ -285,9 +398,9 @@ body.dark-mode .message-sender {
 /* --- チャットバルーン  --- */
 .message-bubble {
   /* background-color: #FAF9F5;  */
-  background-color: ivory;
+  background-color: var(--editor-bg-color, ivory);
   padding: 2%;
-  border: 1px solid rgba(0, 0, 0, 0.3);
+  border: 1px solid var(--editor-text-color, rgba(0, 0, 0, 0.3));
   border-radius: 12px;
   margin-bottom: 10px;
   max-width: 80%;
@@ -313,14 +426,22 @@ body.dark-mode .message-bubble {
 .action-btn {
   width: 24px;
   height: 24px;
-  background-color: transparent;
+  background-color: var(--ui-text-color, transparent);
   border: 0px;
   cursor: pointer;
-  background-size: 14px 14px;
-  background-repeat: no-repeat;
-  background-position: center;
+  -webkit-mask-repeat: no-repeat;
+  -webkit-mask-position: center;
+  -webkit-mask-size: 14px;
+  /* アイコンの実サイズを少し小さくして繊細さを出す */
+  mask-repeat: no-repeat;
+  mask-position: center;
+  mask-size: 14px;
   opacity: 0.5;
   transition: opacity 0.2s;
+}
+
+body.dark-mode .action-btn {
+  background-color: #0f0;
 }
 
 .action-btn:hover {
@@ -329,7 +450,8 @@ body.dark-mode .message-bubble {
 
 .cyber-button {
   background-color: transparent;
-  border-color: #0005;
+  border-color: var(--editor-text-color, #0005);
+  color: var(--editor-text-color, #0005);
   border-width: 1px;
   border-radius: 10px;
   padding: 5px 10px;
@@ -356,6 +478,9 @@ body.dark-mode .cyber-button:hover {
   font-family: monospace;
   font-style: oblique;
   resize: none;
+  background-color: var(--editor-bg-color, ivory);
+  color: var(--editor-text-color, #333);
+  border: 1px solid var(--editor-text-color, rgba(0, 0, 0, 0.3));
 }
 
 body.dark-mode .cyber-text {
@@ -392,37 +517,48 @@ body.dark-mode .cyber-text {
   transform: translateY(0);
 }
 
-/* 各ボタンのアイコンを、SVGデータとしてCSSに埋め込む */
-.btn-edit {
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23333' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z'%3E%3C/path%3E%3C/svg%3E");
+/* カスタムグローエフェクト */
+body.custom-glow,
+body.custom-glow #ai-wrapper,
+/* これを追加 */
+body.custom-glow .message-sender,
+body.custom-glow .action-btn,
+body.custom-glow button,
+body.custom-glow input,
+body.custom-glow textarea {
+  text-shadow: var(--custom-text-shadow) !important;
 }
 
-body.dark-mode .btn-edit {
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%2300ff00' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z'%3E%3C/path%3E%3C/svg%3E");
+/* ついでにドロップダウンも */
+body.custom-glow .message-bubble,
+body.custom-glow .custom-select-trigger,
+body.custom-glow .custom-option,
+body.custom-glow .cyber-button,
+body.custom-glow .top-right-buttons button,
+body.custom-glow #message-input:focus {
+  text-shadow: var(--custom-text-shadow) !important;
+  box-shadow: var(--custom-text-shadow) !important;
+}
+
+/* 各ボタンのアイコンを、SVGデータとしてCSSに埋め込む */
+.btn-edit {
+  -webkit-mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23333' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z'%3E%3C/path%3E%3C/svg%3E");
+  mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23333' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z'%3E%3C/path%3E%3C/svg%3E");
 }
 
 .btn-delete {
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23333' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='3 6 5 6 21 6'%3E%3C/polyline%3E%3Cpath d='M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2'%3E%3C/path%3E%3C/svg%3E");
-}
-
-body.dark-mode .btn-delete {
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%2300ff00' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='3 6 5 6 21 6'%3E%3C/polyline%3E%3Cpath d='M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2'%3E%3C/path%3E%3C/svg%3E");
+  -webkit-mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23333' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='3 6 5 6 21 6'%3E%3C/polyline%3E%3Cpath d='M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2'%3E%3C/path%3E%3C/svg%3E");
+  mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23333' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='3 6 5 6 21 6'%3E%3C/polyline%3E%3Cpath d='M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2'%3E%3C/path%3E%3C/svg%3E");
 }
 
 .btn-regenerate {
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23333' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='23 4 23 10 17 10'%3E%3C/polyline%3E%3Cpath d='M20.49 15a9 9 0 1 1-2.12-9.36L23 10'%3E%3C/path%3E%3C/svg%3E");
-}
-
-body.dark-mode .btn-regenerate {
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%2300ff00' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='23 4 23 10 17 10'%3E%3C/polyline%3E%3Cpath d='M20.49 15a9 9 0 1 1-2.12-9.36L23 10'%3E%3C/path%3E%3C/svg%3E");
+  -webkit-mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23333' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='23 4 23 10 17 10'%3E%3C/polyline%3E%3Cpath d='M20.49 15a9 9 0 1 1-2.12-9.36L23 10'%3E%3C/path%3E%3C/svg%3E");
+  mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23333' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='23 4 23 10 17 10'%3E%3C/polyline%3E%3Cpath d='M20.49 15a9 9 0 1 1-2.12-9.36L23 10'%3E%3C/path%3E%3C/svg%3E");
 }
 
 .btn-copy {
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23333' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Crect x='9' y='9' width='13' height='13' rx='2' ry='2'%3E%3C/rect%3E%3Cpath d='M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1'%3E%3C/path%3E%3C/svg%3E");
-}
-
-body.dark-mode .btn-copy {
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%2300ff00' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'%3E%3Crect x='9' y='9' width='13' height='13' rx='2' ry='2'%3E%3C/rect%3E%3Cpath d='M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1'%3E%3C/path%3E%3C/svg%3E");
+  -webkit-mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23333' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Crect x='9' y='9' width='13' height='13' rx='2' ry='2'%3E%3C/rect%3E%3Cpath d='M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1'%3E%3C/path%3E%3C/svg%3E");
+  mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23333' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Crect x='9' y='9' width='13' height='13' rx='2' ry='2'%3E%3C/rect%3E%3Cpath d='M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1'%3E%3C/path%3E%3C/svg%3E");
 }
 
 /* UIボタンのSVGデータ */

@@ -144,7 +144,7 @@ async function setupSettings() {
         const valTextColor = await store.get<string>('customTextColor') || '#1e1e1e';
         const valUiTextColor = await store.get<string>('customUiTextColor') || '#1e1e1e';
         const valEditorBg = await store.get<string>('customEditorBg') || 'rgba(255, 255, 255, 0)';
-        const valWindowBg = await store.get<string>('customWindowBg') || '#ffffff';
+        const valWindowBg = await store.get<string>('customWindowBg') || '#eeeeee';
         const valSelectionColor = await store.get<string>('customSelectionColor') || 'rgba(100, 150, 250, 0.3)';
         const valScrollbarColor = await store.get<string>('customScrollbarColor') || 'rgba(0, 0, 0, 0.2)';
         const valHeadingColor = await store.get<string>('customHeadingColor') || '#0550AE';
@@ -237,7 +237,7 @@ async function setupSettings() {
                     'input-text-color': data.textColor || '#1e1e1e',
                     'input-ui-text-color': data.uiColor || '#1e1e1e',
                     'input-editor-bg': data.editorBg || 'rgba(0,0,0,0)',
-                    'input-window-bg': data.windowBg || '#ffffff',
+                    'input-window-bg': data.windowBg || '#eeeeee',
                     'input-selection-color': data.selection || 'rgba(100,150,250,0.3)',
                     'input-heading-color': data.heading || '#005cc5',
                     'input-scrollbar-color': data.scrollbar || 'rgba(0,0,0,0.2)',
@@ -383,7 +383,7 @@ async function setupSettings() {
         const SYSTEM_PRESETS: Record<string, any> = {
             'sys:default': {
                 textColor: '#1e1e1e', uiColor: '#1e1e1e', editorBg: 'rgba(0,0,0,0)',
-                windowBg: '#ffffff', selection: 'rgba(100, 150, 250, 0.3)',
+                windowBg: '#eeeeee', selection: 'rgba(100, 150, 250, 0.3)',
                 heading: '#005cc5', scrollbar: 'rgba(0, 0, 0, 0.2)',
                 enableGlow: false, glowColor: 'rgba(0, 255, 65, 0.5)', glowRadius: 5
             },

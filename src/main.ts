@@ -900,6 +900,12 @@ class App {
     if (this.isCodeExtrasLoaded && this.codeExtras) {
       const { lang, auto } = this.codeExtras;
       extensions.push(
+        search({
+          top: true,
+          scrollToMatch: (range: SelectionRange, _view: EditorView): StateEffect<unknown> => {
+            return EditorView.scrollIntoView(range.from, { y: 'center' });
+          }
+        }),
         lang.foldGutter(),      // 折りたたみ
         lang.indentOnInput(),   // オートインデント
         auto.closeBrackets(),   // 括弧の自動補完

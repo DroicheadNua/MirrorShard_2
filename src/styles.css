@@ -283,11 +283,23 @@ body.dark-mode .window-controls button {
 }
 
 .file-entry.active {
+  background-color: var(--selection-color, --active-file-bg);
+}
+
+body.dark-mode .file-entry.active {
   background-color: var(--active-file-bg);
 }
 
 .file-entry:hover {
+  background-color: var(--selection-color, --sidebar-hover-bg);
+}
+
+body.dark-mode .file-entry:hover {
   background-color: var(--sidebar-hover-bg);
+}
+
+body.code-mode .file-entry:hover {
+  background-color: rgba(81, 92, 126, 0.4);
 }
 
 .file-entry-title {
@@ -320,7 +332,7 @@ body.dark-mode .window-controls button {
   background-size: 60%;
 }
 
-/* ★.file-entryにホバーした時だけ、閉じるボタンを表示 */
+/* .file-entryにホバーした時だけ、閉じるボタンを表示 */
 .file-entry:hover .close-tab-btn {
   visibility: visible;
   opacity: 0.7;
@@ -370,7 +382,15 @@ body.dark-mode .window-controls button {
 }
 
 .outline-text:hover {
+  background-color: var(--selection-color, --sidebar-hover-bg);
+}
+
+body.dark-mode .outline-text:hover {
   background-color: var(--sidebar-hover-bg);
+}
+
+body.code-mode .outline-text:hover {
+  background-color: rgba(81, 92, 126, 0.4);
 }
 
 /* アウトラインのインデント（ボタンとテキスト両方に適用） */
@@ -875,6 +895,11 @@ body.dark-mode .custom-select-trigger {
   border: 1px solid var(--outline-text-color);
 }
 
+body.code-mode .custom-select-trigger {
+  color: #7aa2f7;
+  border: 1px solid #7aa2f7;
+}
+
 /* 矢印アイコン（CSSで描画） */
 .custom-select-trigger::after {
   content: "▼";
@@ -910,6 +935,12 @@ body.dark-mode .custom-options {
   border-top: none;
 }
 
+body.code-mode .custom-options {
+  background-color: rgba(26, 27, 38, 0.95);
+  border: 1px solid #7aa2f7;
+  border-top: none;
+}
+
 .custom-options.open {
   display: block;
 }
@@ -926,14 +957,23 @@ body.dark-mode .custom-option {
   color: var(--outline-text-color);
 }
 
+body.code-mode .custom-option {
+  color: #7aa2f7;
+}
+
 .custom-option:hover {
   background-color: var(--selection-color, rgba(0, 255, 65, 0.2));
-  color: #fff;
+  color: #eee;
 }
 
 body.dark-mode .custom-option:hover {
   background-color: var(--sidebar-hover-bg);
   color: var(--outline-text-color);
+}
+
+body.code-mode .custom-option:hover {
+  background-color: rgba(81, 92, 126, 0.4);
+  color: #eee;
 }
 
 /* 選択済みアイテムのスタイル（必要なら） */
@@ -1007,7 +1047,7 @@ body.dark-mode .custom-option:hover {
 /* Search Panel */
 
 .cm-panels.cm-panels-top {
-  background: var(--window-bg-color);
+  background: var(--window-bg-color, rgba(26, 27, 38, 0.95));
   border: 1px solid var(--ui-text-color, #888);
 }
 
@@ -1016,12 +1056,21 @@ body.dark-mode .cm-panels.cm-panels-top {
   border: 1px solid var(--text-color);
 }
 
+body.code-mode .cm-panels.cm-panels-top {
+  background: rgba(26, 27, 38, 0.95);
+  border: 1px solid #7aa2f7;
+}
+
 .cm-panel label {
   color: var(--ui-text-color, #eee);
 }
 
 body.dark-mode .cm-panel label {
   color: var(--text-color);
+}
+
+body.code-mode .cm-panel label {
+  color: #a9b1d6;
 }
 
 .cm-panel button.cm-button {
@@ -1036,6 +1085,12 @@ body.dark-mode .cm-panel button.cm-button {
   border: 1px solid var(--text-color);
 }
 
+body.code-mode .cm-panel button.cm-button {
+  background: rgba(26, 27, 38, 0.95);
+  color: #7aa2f7;
+  border: 1px solid #7aa2f7;
+}
+
 .cm-panel button {
   color: var(--ui-text-color, #eee);
 }
@@ -1044,12 +1099,20 @@ body.dark-mode .cm-panel button {
   color: var(--text-color);
 }
 
+body.code-mode .cm-panel button {
+  color: #7aa2f7;
+}
+
 input[type="checkbox"] {
   opacity: 0.5;
 }
 
 body.dark-mode input[type="checkbox"] {
   opacity: 1;
+}
+
+body.code-mode input[type="checkbox"] {
+  opacity: 0.5;
 }
 
 .cm-panel input.cm-textfield {
@@ -1066,6 +1129,14 @@ body.dark-mode .cm-panel input.cm-textfield {
   border: 1px solid var(--text-color);
 }
 
+body.code-mode .cm-panel input.cm-textfield {
+  background: rgba(26, 27, 38, 0.95);
+  color: #7aa2f7;
+  border: 1px solid #7aa2f7;
+  outline: none;
+  border-radius: 5px;
+}
+
 .cm-panel input.cm-textfield::placeholder {
   color: var(--ui-text-color, #888);
   opacity: 0.5;
@@ -1073,6 +1144,10 @@ body.dark-mode .cm-panel input.cm-textfield {
 
 body.dark-mode .cm-panel input.cm-textfield::placeholder {
   color: var(--text-color);
+}
+
+body.code-mode .cm-panel input.cm-textfield::placeholder {
+  color: #7aa2f7;
 }
 
 .cm-panels-top {
@@ -1085,6 +1160,12 @@ body.dark-mode .cm-panels-top {
   background: transparent;
   border-radius: 5px;
   border: 1px solid var(--text-color);
+}
+
+body.code-mode .cm-panels-top {
+  background: transparent;
+  border-radius: 5px;
+  border: 1px solid #7aa2f7;
 }
 
 

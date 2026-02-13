@@ -143,7 +143,7 @@ fn init_pty(
         cmd_builder.env("TERM", "xterm-256color");
     }
 
-    let _child = pair
+    let mut child = pair
         .slave
         .spawn_command(cmd_builder)
         .map_err(|e| e.to_string())?;
@@ -178,6 +178,20 @@ fn init_pty(
                     break;
                 }
             }
+        }
+    });
+
+    // プロセス終了監視スレッド
+    let app_clone_exit = app.clone();
+    thread::spawn(move || {
+        // child.wait() はプロセスが終了するまでここでブロック（待機）する
+        let _ = child.wait();
+
+        println!("Shell process exited!");
+
+        // 終了したらフロントエンドに通知してウィンドウを閉じさせる
+        if let Some(window) = app_clone_exit.get_webview_window("terminal") {
+            let _ = window.emit("terminal-exit", ());
         }
     });
 

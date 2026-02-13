@@ -21,12 +21,12 @@ body {
     overflow: hidden;
     display: flex;
     flex-direction: column;
-    background-color: #ffffff;
-    color: #333;
+    background-color: #eeeeee;
+    color: #1e1e1e;
 }
 
 body.dark-mode #md-wrapper {
-    background-color: #0A0A0A;
+    background-color: #1e1e1e;
     color: #ddd;
 }
 
