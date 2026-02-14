@@ -5,14 +5,16 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [1.1.0] - 2026-2-XX  
+## [1.1.0] - 2026-2-15  
 
 ### Added (新機能)  
 - メインエディタにAI執筆機能を追加。Alt+Enterで、カーソル位置から文章の続きを生成可能に  
 - 選択範囲を右クリックメニューからAIに送信して、要約、リライト、翻訳が可能に  
 - AIによるコード補完機能を実装。コードエディタモード中にAlt+Enterで、カーソル位置に続くコードをAIが推測して自動入力  
-- カラーピッカーを実装、テキスト色や背景色を自由に設定可能に   
+- カラーピッカーを実装、テキスト色や背景色を自由に設定可能に。また背景画像を「なし」にできるようになった  
+- テーマプリセット（ユーザー定義テーマ）の保存・読込・削除機能を追加  
 - Ctrl+@でターミナルを開けるように  
+- メインエディタの右クリックメニューに「この場所でターミナルを開く (Open Terminal Here)」を追加。現在編集中のファイルがある位置でターミナルを開くことが可能に  
 - 選択範囲の文字数カウント機能を追加  
 - 降雪エフェクトを追加(Ctrl + Shift + E)  
 

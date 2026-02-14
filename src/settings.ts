@@ -385,25 +385,31 @@ async function setupSettings() {
                 textColor: '#1e1e1e', uiColor: '#1e1e1e', editorBg: 'rgba(0,0,0,0)',
                 windowBg: '#eeeeee', selection: 'rgba(100, 150, 250, 0.3)',
                 heading: '#005cc5', scrollbar: 'rgba(0, 0, 0, 0.2)',
-                enableGlow: false, glowColor: 'rgba(0, 255, 65, 0.5)', glowRadius: 5
+                enableGlow: false, glowColor: 'rgba(0, 255, 65, 0.5)', glowRadius: 1
             },
             'sys:paper': {
                 textColor: '#3b3b3b', uiColor: '#5a4632', editorBg: 'rgba(0,0,0,0)',
                 windowBg: '#f4ecd8', selection: 'rgba(140, 100, 50, 0.2)',
                 heading: '#8b4513', scrollbar: 'rgba(90, 70, 50, 0.2)',
-                enableGlow: false, glowColor: 'rgba(0, 255, 65, 0.5)', glowRadius: 5
+                enableGlow: false, glowColor: 'rgba(0, 255, 65, 0.5)', glowRadius: 1
             },
             'sys:cyber': {
-                textColor: '#eeeeee', uiColor: '#00ff41', editorBg: 'rgba(0, 0, 0, 0)',
+                textColor: '#00ff41', uiColor: '#00ff41', editorBg: 'rgba(0, 0, 0, 0)',
                 windowBg: 'rgba(0, 0, 0, 0.8)', selection: 'rgba(0, 255, 65, 0.3)',
                 heading: '#00ff41', scrollbar: 'rgba(0, 255, 65, 0.2)',
-                enableGlow: true, glowColor: 'rgba(0, 255, 65, 0.5)', glowRadius: 5
+                enableGlow: true, glowColor: 'rgba(0, 255, 0, 0.5)', glowRadius: 2
             },
-            'sys:cyber-tokyo': {
+            'sys:tokyo': {
                 textColor: '#a9b1d6', uiColor: '#7aa2f7', editorBg: 'rgba(0, 0, 0, 0)',
-                windowBg: 'rgba(26, 27, 38, 0.95)', selection: 'rgba(81, 92, 126, 0.4)',
+                windowBg: 'rgba(26, 27, 38, 1)', selection: 'rgba(81, 92, 126, 0.4)',
                 heading: '#bb9af7', scrollbar: 'rgba(122, 162, 247, 0.3)',
-                enableGlow: true, glowColor: 'rgba(0, 50, 255, 0.5)', glowRadius: 5
+                enableGlow: false, glowColor: 'rgba(0, 50, 255, 0.5)', glowRadius: 5
+            },
+            'sys:depth': {
+                textColor: '#8ab2f8', uiColor: '#7aa2f7', editorBg: 'rgba(0, 0, 0, 0)',
+                windowBg: 'rgba(16, 17, 28, 0.85)', selection: 'rgba(81, 92, 126, 0.4)',
+                heading: 'rgba(247,144,246,1)', scrollbar: 'rgba(122, 162, 247, 0.3)',
+                enableGlow: true, glowColor: 'rgba(50, 100, 255, 0.8)', glowRadius: 5
             }
         };
 

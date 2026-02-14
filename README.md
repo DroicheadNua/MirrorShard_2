@@ -108,7 +108,8 @@ Linux版はグラフィック環境由来（特にNvidia製グラフィックボ
 　Pixabay https://pixabay.com より  
 　・ambient piano "Candrika" -Moonlight-（leela_takaki様）  
 
-　また、コードエディタモードの配色は[Tokyo Night](https://github.com/enkia/tokyo-night-vscode-theme) テーマをベースにしています。  
+・Tokyo Night  Color Scheme（Enkia様）(https://github.com/enkia/tokyo-night-vscode-theme)  
+　システムテーマの一つとしてお借りした他、コードエディターモードの配色もこちらをベースに調整しました。  
 
 ## ご利用にあたっての注意（免責事項）  
 このソフトウェアはフリーウェアであり、無保証（AS IS）で提供されます。  
