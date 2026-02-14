@@ -466,6 +466,29 @@ class App {
         overlay.innerHTML = ''; // 透明ガードのみ
       }
 
+      // 1. 右クリックメニュー (Context Menu) を禁止
+      overlay.addEventListener('contextmenu', (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+      });
+
+      // 2. マウスボタン（クリック、戻る/進むボタン等）を禁止
+      // mousedown, mouseup, click すべてを止めることで、
+      // サイドボタンによるタブ切り替えやリンククリック等を防ぐ
+      const blockEvent = (e: Event) => {
+        e.preventDefault();
+        e.stopPropagation();
+      };
+
+      overlay.addEventListener('mousedown', blockEvent);
+      overlay.addEventListener('mouseup', blockEvent);
+      overlay.addEventListener('click', blockEvent);
+      overlay.addEventListener('dblclick', blockEvent);
+      overlay.addEventListener('auxclick', blockEvent); // ホイールクリック等
+
+      // 3. ホイールスクロールも止める
+      overlay.addEventListener('wheel', blockEvent, { passive: false });
+
       document.body.appendChild(overlay);
     }
   }
@@ -3448,8 +3471,8 @@ class App {
           path: filePath,
           state,
           isDirty: false,
-          encoding: fileData.encoding, // ★エンコーディングを保存
-          lineEnding: fileData.lineEnding, // ★改行コードを保存
+          encoding: fileData.encoding, // エンコーディングを保存
+          lineEnding: fileData.lineEnding, // 改行コードを保存
           headings: [],
         };
         this.openTabs.push(tab);
@@ -3500,7 +3523,14 @@ class App {
     // 4. 最新設定が適用されたStateをビューにセット
     this.editorView.setState(stateToSet);
 
-    // 現在のグローバルなモードに合わせて、このタブの拡張機能を再構成する
+    // モードに関わらず、拡張子から言語を判定して「予約」しておく
+    const detectedLang = this.detectLanguageFromExtension(filePath);
+    if (detectedLang) {
+      this.currentCodeLanguage = detectedLang;
+      // console.log(`Auto-detected language: ${detectedLang}`);
+    }
+
+    // モードの同期処理
     this.editorView.dispatch({
       effects: this.mainCompartment.reconfigure(
         this.isCodeMode ? this.createCodeExtensions() : this.createEditorExtensions()

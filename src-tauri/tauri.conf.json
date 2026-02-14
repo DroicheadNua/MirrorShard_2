@@ -26,7 +26,8 @@
         "transparent": true,
         "closable": true,
         "maximizable": true,
-        "minimizable": true
+        "minimizable": true,
+        "devtools": false
       }
     ],
     "security": {

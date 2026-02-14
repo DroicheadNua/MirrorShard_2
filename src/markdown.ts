@@ -27,6 +27,7 @@ const copyHtmlBtn = document.getElementById('btn-copy-html');
 const saveHtmlBtn = document.getElementById('btn-save-html');
 const openBrowserBtn = document.getElementById('btn-open-browser');
 const pinBtn = document.getElementById('btn-pin');
+const devToolsBtn = document.getElementById('btn-devtools');
 const modeSelect = document.getElementById('preview-mode-select') as HTMLSelectElement;
 const osType = await type();
 if (osType === 'macos') document.body.classList.add('is-mac');
@@ -321,6 +322,11 @@ async function init() {
         } else {
             alert("ファイルを保存してから実行してください。");
         }
+    });
+
+    // DevToolsを開くボタン
+    devToolsBtn?.addEventListener('click', async () => {
+        await invoke('toggle_devtools');
     });
 
     // --- 右クリックメニューの無効化 ---

@@ -77,7 +77,7 @@
                     <label style="display: flex; gap: 5px;">Pandoc Path(縦書きエクスポートに必要):
                         <input type="text" id="pandoc-path" style="flex-grow: 1;margin: auto;"
                             placeholder="例：C:\Program Files\Pandoc\pandoc.exe"></input>
-                        <button id="btn-select-pandoc">参照...</button>
+                        <button id="btn-select-pandoc" style="margin: auto;">参照...</button>
                     </label>
                 </div>
 
@@ -277,7 +277,7 @@
                         </select>
                     </label>
                     <label style="display: flex; gap: 5px;">Font:
-                        <select id="code-font-family-select" style="flex-grow: 1;"></select>
+                        <select id="code-font-family-select" style="flex-grow: 1;margin: auto;"></select>
                     </label>
                     <br>
                     <label style="display: flex; gap: 5px;">Font Size:
@@ -294,19 +294,15 @@
 
                 <div class="setting-group">
                     <h4>Terminal Settings</h4>
-                    <label>
-                        <div style="display: flex; gap: 5px;">Shell Path:
-                            <input type="text" id="shell-path" style="flex-grow: 1;margin: auto;"
-                                placeholder="(Auto Detect)" /></input>
-                            <button id="btn-select-shell">参照...</button>
-                        </div>
+                    <label style="display: flex; gap: 5px;">Shell Path:
+                        <input type="text" id="shell-path" style="flex-grow: 1;margin: auto;"
+                            placeholder="(Auto Detect)" />
+                        <button id="btn-select-shell" style="margin: auto;">参照...</button>
                     </label>
-                    <label>
-                        <div style="display: flex; gap: 5px;">Startup Directory:
-                            <input type="text" id="terminal-cwd" style="flex-grow: 1;margin: auto;"
-                                placeholder="(User Home)" />
-                            <button id="btn-select-cwd">参照...</button>
-                        </div>
+                    <label style="display: flex; gap: 5px;">Startup Directory:
+                        <input type="text" id="terminal-cwd" style="flex-grow: 1;margin: auto;"
+                            placeholder="(User Home)" />
+                        <button id="btn-select-cwd" style="margin: auto;">参照...</button>
                     </label>
                 </div>
 

@@ -49,6 +49,18 @@ struct SecondInstanceFile(Mutex<Option<String>>);
 struct MacFileBuffer(Mutex<Option<String>>);
 // --- Tauriコマンドの定義 ---
 
+#[tauri::command]
+fn toggle_devtools(window: tauri::WebviewWindow) {
+    if window.label() != "markdown" {
+        return;
+    }
+    if window.is_devtools_open() {
+        window.close_devtools();
+    } else {
+        window.open_devtools();
+    }
+}
+
 // 1. Terminalを開くコマンド
 #[tauri::command]
 async fn open_terminal_window(app: AppHandle) {
@@ -69,7 +81,8 @@ async fn open_terminal_window(app: AppHandle) {
         .resizable(true)
         .decorations(false)
         .transparent(true)
-        .visible(false);
+        .visible(false)
+        .devtools(false);
 
         #[cfg(any(windows, target_os = "macos"))]
         let builder = builder.effects(tauri::utils::config::WindowEffectsConfig {
@@ -255,7 +268,8 @@ async fn open_markdown_preview(app: AppHandle) {
     .resizable(true)
     .decorations(false)
     .transparent(true)
-    .visible(false);
+    .visible(false)
+    .devtools(true);
     #[cfg(target_os = "macos")]
     let builder = builder.title_bar_style(tauri::TitleBarStyle::Transparent);
     #[cfg(any(windows, target_os = "macos"))]
@@ -577,7 +591,8 @@ async fn open_shortcut(app: AppHandle) {
     .resizable(false)
     .decorations(false)
     .transparent(true)
-    .visible(false);
+    .visible(false)
+    .devtools(false);
     #[cfg(target_os = "macos")]
     let builder = builder.title_bar_style(tauri::TitleBarStyle::Transparent);
     #[cfg(any(windows, target_os = "macos"))]
@@ -618,7 +633,8 @@ async fn open_ai_chat(app: AppHandle) {
     .resizable(true)
     .decorations(false)
     .transparent(true)
-    .visible(false);
+    .visible(false)
+    .devtools(false);
     #[cfg(target_os = "macos")]
     let builder = builder.title_bar_style(tauri::TitleBarStyle::Transparent);
     #[cfg(any(windows, target_os = "macos"))]
@@ -656,7 +672,8 @@ async fn open_settings_window(app: AppHandle) {
     .inner_size(640.0, 820.0)
     .resizable(false)
     .decorations(false)
-    .visible(false);
+    .visible(false)
+    .devtools(false);
     #[cfg(target_os = "macos")]
     let builder = builder.title_bar_style(tauri::TitleBarStyle::Transparent);
     #[cfg(any(windows, target_os = "macos"))]
@@ -696,7 +713,8 @@ async fn open_export_window(app: AppHandle) {
     .resizable(false)
     .decorations(false)
     .transparent(true)
-    .visible(false);
+    .visible(false)
+    .devtools(false);
     #[cfg(target_os = "macos")]
     let builder = builder.title_bar_style(tauri::TitleBarStyle::Transparent);
     #[cfg(any(windows, target_os = "macos"))]
@@ -737,7 +755,8 @@ async fn open_preview_window(app: AppHandle) {
     .min_inner_size(600.0, 480.0)
     .resizable(true)
     .decorations(false)
-    .visible(false);
+    .visible(false)
+    .devtools(false);
     #[cfg(target_os = "macos")]
     let builder = builder.title_bar_style(tauri::TitleBarStyle::Transparent);
     #[cfg(any(windows, target_os = "macos"))]
@@ -977,7 +996,8 @@ pub fn run() {
             open_terminal_window, // ウィンドウを開く
             init_pty,             // PTYを開始する
             write_pty,            // 入力を送る
-            resize_pty            // サイズ変更
+            resize_pty,           // サイズ変更
+            toggle_devtools,
         ])
         .build(tauri::generate_context!())
         .expect("error while building tauri application")

@@ -460,6 +460,7 @@ function setupEventListeners() {
             await emit('open-settings');
             return;
         }
+
     });
 
     messageInput.addEventListener('keydown', (e) => {
@@ -526,10 +527,10 @@ function addMessageToLog(role: string, content: string, index: number) {
             <img class="message-icon" src="${currentIcon}">
             <div class="message-actions">
                 ${role === 'user'
-            ? `<button class="action-btn btn-edit" onclick="window.editMsg(${index})"></button>
-                       <button class="action-btn btn-delete" onclick="window.deleteMsg(${index})"></button>`
-            : `<button class="action-btn btn-regenerate" onclick="window.regenMsg(${index})"></button>
-                       <button class="action-btn btn-copy" onclick="window.copyMsg(${index})"></button>`
+            ? `<button class="action-btn btn-edit" onclick="window.editMsg(${index})" title="編集"></button>
+                       <button class="action-btn btn-delete" onclick="window.deleteMsg(${index})" title="削除"></button>`
+            : `<button class="action-btn btn-regenerate" onclick="window.regenMsg(${index})" title="再生成"></button>
+                       <button class="action-btn btn-copy" onclick="window.copyMsg(${index})" title="コピー"></button>`
         }
             </div>
         </div>

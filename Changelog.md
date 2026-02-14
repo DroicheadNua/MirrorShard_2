@@ -18,8 +18,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed (変更点)    
 - HTML/Markdownプレビュー: ローカル画像の表示に対応  
+- HTML/Markdownプレビューのみデベロッパーツールを有効化  
 - AIチャット: 起動時に前回のセッションを自動的に読み込むように仕様を変更  
-- AIチャット: 配色をメインエディタと統一　　
+- AIチャット: 配色をメインエディタと統一  
 
 ### Fixed (修正点)  
 - コードエディタモードのオートインデントを修正  

@@ -81,10 +81,23 @@ async function init() {
     const fitAddon = new FitAddon();
     term.loadAddon(fitAddon);
 
-    const container = document.getElementById('terminal-container');
+    const container = document.getElementById('terminal-host');
     if (container) term.open(container);
 
-    fitAddon.fit();
+    const fitAndResize = () => {
+        try {
+            fitAddon.fit();
+            // xtermが計算した行・列をPTYに同期させる
+            // これをしないと、xtermは狭くてもPTYが広いと思って文字を送り続け、表示が崩れます
+            if (term.cols > 0 && term.rows > 0) {
+                invoke('resize_pty', { rows: term.rows, cols: term.cols });
+            }
+        } catch (e) {
+            console.error("Fit error:", e);
+        }
+    };
+
+    // fitAddon.fit();
 
     // 2. PTY初期化 (Rustへ)
     try {
@@ -106,14 +119,18 @@ async function init() {
     await listen('settings-changed', (event: any) => {
         const s = event.payload;
         if (s.codeFontSize) {
-            term.options.fontSize = Math.round(s.codeFontSize * 1.35);
-            fitAddon.fit(); // サイズが変わるので再計算
+            setTimeout(() => {
+                term.options.fontSize = Math.round(s.codeFontSize * 1.35);
+                fitAndResize();// サイズが変わるので再計算
+            }, 50);
         }
         if (s.codeFontFamily) {
-            term.options.fontFamily = s.codeFontFamily === 'default'
-                ? '"PlemolJP", "Consolas", monospace'
-                : `"${s.codeFontFamily}", "PlemolJP", "Consolas", monospace`;
-            fitAddon.fit();
+            setTimeout(() => {
+                term.options.fontFamily = s.codeFontFamily === 'default'
+                    ? '"PlemolJP", "Consolas", monospace'
+                    : `"${s.codeFontFamily}", "PlemolJP", "Consolas", monospace`;
+                fitAndResize();
+            }, 50);
         }
     });
 
@@ -130,8 +147,9 @@ async function init() {
 
     // 5. リサイズ同期
     window.addEventListener('resize', () => {
-        fitAddon.fit();
-        invoke('resize_pty', { rows: term.rows, cols: term.cols });
+        setTimeout(() => {
+            fitAndResize();
+        }, 50);
     });
 
     document.getElementById('btn-close')?.addEventListener('click', () => {
@@ -177,6 +195,14 @@ async function init() {
     const win = getCurrentWindow();
     await win.show();
     term.focus();
+    // フォントのロードを待ち、その後に fit を実行する
+    // (これをしないと、文字幅の計算がズレてレイアウトが崩れる)
+    await document.fonts.ready;
+
+    // 少し待ってからフィットさせる (レンダリングの完了待ち)
+    setTimeout(() => {
+        fitAndResize();
+    }, 100);
 }
 
 init();
