@@ -1851,7 +1851,8 @@ class App {
     this.lightTheme = EditorView.theme({
       '&': {
         color: 'var(--editor-text-color, #1e1e1e)',
-        backgroundColor: 'var(--editor-bg-color, transparent)'
+        backgroundColor: 'var(--editor-bg-color, transparent)',
+        outline: 'none !important'
       },
       '.cm-content': {
         lineHeight: 'var(--editor-line-height, 1.6)',

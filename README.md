@@ -1,25 +1,25 @@
-# MirrorShard 2 ver. 1.0.0  
+# MirrorShard 2 ver. 1.1.0  
 
-創作支援用テキストエディタ「MirrorShard」の第２弾です。  
-ソフトウェアフレームワークをTauriに変更することで、起動の高速化とメモリ消費量の削減に成功。ファイルサイズは前作の20分の1程度にまで減少しています。  
+創作支援用テキストエディタ「MirrorShard」の改良版です。  
+ソフトウェアフレームワークをTauriに変更することで、起動の高速化とメモリ消費量の削減に成功。さらにファイルサイズは前作の20分の1程度にまで激減しています。  
 アイデアプロセッサ機能は未搭載ですが、代わりにマークダウン／HTMLプレビュー機能とコードエディタモードを追加、より汎用性の高いエディタとして生まれ変わりました。  
 創作用エディタとして、また巨大テキストファイルを扱えるアウトラインプロセッサやマークダウンエディタとして、幅広く運用できると思います。  
 
-![MirrorShard_2 Key Visual](screenshots/ScreenShot04.jpg)
+![MirrorShard_2 Key Visual](screenshots/ScreenShot01.jpg)
 
 ## ダウンロード  
 
 [![Windows](https://img.shields.io/badge/Download-Windows-blue)]  
-(https://github.com/DroicheadNua/MirrorShard_2/releases/download/v1.0.0/MirrorShard.2_1.0.0_x64_ja-JP.msi)  
+(https://github.com/DroicheadNua/MirrorShard_2/releases/download/v1.1.0/MirrorShard.2_1.1.0_x64_ja-JP.msi)  
 [![Mac (Apple Silicon)](https://img.shields.io/badge/Download-Mac_(Apple_Silicon)-green)]  
-(https://github.com/DroicheadNua/MirrorShard_2/releases/download/v1.0.0/MirrorShard.2_1.0.0_aarch64.dmg)  
+(https://github.com/DroicheadNua/MirrorShard_2/releases/download/v1.1.0/MirrorShard.2_1.1.0_aarch64.dmg)  
 
 または、[最新のリリース一覧ページ](https://github.com/DroicheadNua/MirrorShard_2/releases/latest)からダウンロードできます。  
 最下段の「Assets」の項目が折りたたまれている場合は、▶マークを押して展開してください。    
 
 ## 既知の問題 (Known Issues)  
 
-現在、v1.0.0において以下の問題が確認されています。  
+現在、v1.1.0において以下の問題が確認されています。  
 
 ### Windows版  
 - ATOK 2017などの旧バージョンのATOKを使用している環境において、変換中のアンダーラインや文節区切りが表示されない現象が確認されています。  
@@ -41,26 +41,31 @@ mirrorshard.dev@gmail.com
 ・数十万行に及ぶ巨大サイズのテキストにも対応  
 ・マークダウン記法によるアウトライン機能を搭載。アウトラインプロセッサとしても運用可能  
 ・AIチャット機能を搭載。Google Gemini（API使用）のほか、LM StudioやOllamaなどを介してローカルLLMとの連携も可能  
-・マークダウン／HTMLプレビュー機能を搭載。  
-・コードエディタモードを搭載。  
-![MirrorShard_2 AI_Chat](screenshots/ScreenShot05.jpg)
+![MirrorShard_2 AI_Chat](screenshots/ScreenShot03.jpg)
+・メインエディタにもAI機能を搭載。カーソル位置からAIに文章の続きを書かせたり、選択範囲をAIに要約/翻訳/リライトさせたりすることも可能  
+・マークダウン／HTMLプレビュー機能を搭載。マークダウンエディタ・HTMLエディタとしても運用可能に  
+・コードエディタモードを搭載、AIによる簡易的なコード補完機能も実装。また、ターミナルを開く機能を搭載  
+![MirrorShard_2 AI_Chat](screenshots/ScreenShot04.jpg)
 ・安全なファイル保存機能（アトミックセーブ）を採用。停電やPCクラッシュなど、不測の事態にも強い設計  
 　※ただし仕様上、「ファイル作成日＝ファイル更新日」になります。詳しくはFAQを御覧ください。  
-・背景画像を活かせる半透明ウィンドウを実装。お好みで痛エディタも作成可能  
+・配色やエディタの配置を自在にカスタマイズ。編集したカラーテーマはプリセットとして保存可能  
+・背景画像を活かせる半透明ウィンドウを実装。お好みで痛エディタも  
 ![MirrorShard_2 Background_Image](screenshots/ScreenShot02.png)
 ・UIを非表示にし、没入感を高める「ZEN」モードを搭載  
 ・縦書きプレビューウィンドウを実装。青空文庫形式のルビにも対応  
-・PDF・HTML・EPUBでの出力、及びプリンタでの印刷に対応（※すべて横書きのみ）。  
+・PDF・HTML・EPUBでの出力、及びプリンタでの印刷に対応（※PDF・印刷は横書きのみ）。  
 ・Geminiのログを読み込み可能。Geminiの膨大なログから必要な情報を検索・抽出するのに役立ちます  
 
 ## 前作（Electron版）からの変更点  
 ・フレームワークの変更により軽量化と高速化に成功。メモリ消費量も減少  
 ・ファイルサイズも大幅削減、前作のほぼ20分の1程度に  
+・AI機能が大幅強化。メインウィンドウにもAI機能が搭載され、カーソル位置からの執筆、コード補完、選択範囲の要約/リライト/翻訳が可能に  
 ・アイコンをSVG画像に変更、よりミニマルなデザインに  
 ・禁則処理やワードラップなど、ワープロとしての設定項目を強化  
-・テキストエリアの幅や右寄せ・左寄せの設定が可能になり、半透明ウィンドウがより強力に  
+・画面のカスタマイズ性が大幅に向上。カラーピッカーによる配色のカスタマイズとプリセットへの保存が可能になり、テキストエリアの幅や右寄せ・左寄せの設定も可能に  
 ・マークダウン／HTMLプレビュー機能を搭載  
 ・コードエディタモードを搭載  
+・内蔵ターミナルを搭載  
 ・ファイル一覧とアウトラインペインを分離  
 ・軽量化のため添付音源と画像を各1種ずつに  
 ・フォントの同梱をやめ、フォントサイクルはシステムフォント（serif・sans-serif・monospace）を使用するように変更  
@@ -69,7 +74,9 @@ mirrorshard.dev@gmail.com
 ・プリンタでの印刷が可能に（横書きのみ）  
 ・縦書きのPDF出力を廃止（HTML、EPUBのみ）  
 ・ZENモード時、ツールバーへのマウスオーバーでUIボタンが表示される仕様に  
-・AIチャット機能がOllamaにも対応  
+・選択範囲の文字数カウント機能を追加  
+・AIチャット機能がOllamaにも対応。またLAN接続にも対応  
+
 ・アイデアプロセッサには未対応。最終的には既存の全機能を移植する予定  
 
 ## 操作方法  

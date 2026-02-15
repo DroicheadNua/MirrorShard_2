@@ -866,6 +866,10 @@ body.custom-glow .file-entry {
   text-shadow: var(--custom-text-shadow) !important;
 }
 
+body.custom-glow .cm-panels.cm-panels-top {
+  box-shadow: var(--custom-text-shadow) !important;
+}
+
 #main-ai-selector-container {
   padding: 5px 10px;
   background-color: transparent;
