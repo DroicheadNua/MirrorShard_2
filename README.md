@@ -50,7 +50,7 @@ mirrorshard.dev@gmail.com
 　※ただし仕様上、「ファイル作成日＝ファイル更新日」になります。詳しくはFAQを御覧ください。  
 ・配色やエディタの配置を自在にカスタマイズ。編集したカラーテーマはプリセットとして保存可能  
 ・背景画像を活かせる半透明ウィンドウを実装。お好みで痛エディタも  
-![MirrorShard_2 Background_Image](screenshots/ScreenShot02.png)
+![MirrorShard_2 Background_Image](screenshots/ScreenShot02.jpg)
 ・UIを非表示にし、没入感を高める「ZEN」モードを搭載  
 ・縦書きプレビューウィンドウを実装。青空文庫形式のルビにも対応  
 ・PDF・HTML・EPUBでの出力、及びプリンタでの印刷に対応（※PDF・印刷は横書きのみ）。  
