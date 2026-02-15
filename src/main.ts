@@ -1,9 +1,9 @@
 import './styles.css';
 import { invoke } from '@tauri-apps/api/core';
 import { Store } from '@tauri-apps/plugin-store';
-import { EditorState, Compartment, RangeSetBuilder, Transaction, EditorSelection } from '@codemirror/state';
-import { EditorView, keymap, ViewUpdate, scrollPastEnd, Decoration, DecorationSet, ViewPlugin, lineNumbers } from '@codemirror/view';
-import { history, historyKeymap, undo, redo, insertTab, cursorDocEnd, cursorDocStart, insertNewline, defaultKeymap, insertNewlineAndIndent } from '@codemirror/commands';
+import { EditorState, Compartment, RangeSetBuilder, Transaction } from '@codemirror/state';
+import { EditorView, keymap, ViewUpdate, scrollPastEnd, Decoration, DecorationSet, ViewPlugin, lineNumbers, drawSelection, } from '@codemirror/view';
+import { history, historyKeymap, undo, redo, insertTab, cursorDocEnd, cursorDocStart, insertNewline, defaultKeymap, insertNewlineAndIndent, selectAll } from '@codemirror/commands';
 import { markdown, markdownLanguage } from '@codemirror/lang-markdown';
 import { search, searchKeymap } from '@codemirror/search';
 import type { Extension, SelectionRange, StateEffect } from '@codemirror/state';
@@ -242,6 +242,7 @@ class App {
   }
 
   private createEditorExtensions(): Extension[] {
+    const isMac = this.currentOs === 'macos';
 
     // カーソル位置を補正するフィルタ 
     const preventCursorBeyondDocEndFilter = EditorState.transactionFilter.of(tr => {
@@ -256,7 +257,7 @@ class App {
     });
 
     // --- 拡張機能の配列を定義 ---
-    return [
+    const extensions: Extension[] = [
       history(),
       keymap.of([
         ...historyKeymap,
@@ -291,6 +292,16 @@ class App {
       [],
       [],
     ];
+    // Mac限定のハックを追加
+    if (isMac) {
+      // 1. スクロール時の色剥げ対策
+      extensions.push(drawSelection());
+
+      // 2. 全選択コマンドの明示的な割り当て
+      // selectAll を import { selectAll } from "@codemirror/commands" しておく
+      extensions.push(keymap.of([{ key: 'Mod-a', run: selectAll }]));
+    }
+    return extensions;
   }
 
   // 必要な時だけDOMを生成して入力を受け取る関数
@@ -898,6 +909,7 @@ class App {
 
   // コード用の拡張機能セットを返すヘルパー
   private createCodeExtensions(): Extension[] {
+    const isMac = this.currentOs === 'macos';
     // 基本セット
     const extensions: Extension[] = [
       this.tokyoNightCustomTheme,
@@ -912,6 +924,11 @@ class App {
       this.languageCompartment.of([]),
       this.codeFontCompartment.of(this.createCodeFontTheme()),
     ];
+
+    if (isMac) {
+      extensions.push(drawSelection());
+      // Mod-a は keymap.of 内で処理
+    }
 
     // モジュールがロード済みなら、高度な機能を追加する
     if (this.isCodeExtrasLoaded && this.codeExtras) {
@@ -1831,10 +1848,12 @@ class App {
         lineHeight: 'var(--editor-line-height, 1.6)',
         lineBreak: 'var(--editor-line-break, strict)',
         wordBreak: 'var(--editor-word-break, break-all)',
-        caretColor: 'var(--editor-text-color, #1e1e1e)'
+        caretColor: 'var(--editor-text-color, #1e1e1e) !important',
+        caretWidth: '2px !important',
       },
       '.cm-cursor, .cm-dropCursor': {
-        borderLeftColor: 'var(--editor-text-color, #1e1e1e)'
+        borderLeftColor: 'var(--editor-text-color, #1e1e1e) !important',
+        borderLeftWidth: '2px !important',
       },
       '&.cm-focused .cm-selectionBackground, .cm-selectionBackground, .cm-content ::selection': {
         backgroundColor: 'var(--editor-selection-color, rgba(100, 150, 250, 0.3)) !important'
@@ -1900,6 +1919,12 @@ class App {
       },
       '& ::-webkit-scrollbar-thumb:hover': {
         backgroundColor: 'rgba(255, 255, 255, 0.4)',
+      },
+      '.cm-selectionBackground, ::selection': {
+        backgroundColor: 'rgba(100, 100, 100, 0.4) !important',
+      },
+      '&.cm-focused .cm-selectionBackground': {
+        backgroundColor: 'rgba(100, 100, 100, 0.4) !important',
       },
     }, { dark: true });
     this.dynamicFontTheme = EditorView.theme({
@@ -2172,131 +2197,133 @@ class App {
       }
     }, true);
 
-    const isMac = navigator.userAgent.includes('Mac');
+    //　Mac専用範囲選択処理だが不具合が多いので一旦封印
+    //　使用時にはEditorSelectionをインポート
+    // const isMac = navigator.userAgent.includes('Mac');
 
-    if (isMac && this.editorContainer) {
-      this.editorContainer.addEventListener('mousedown', (e) => {
-        // 左クリック以外は無視
-        if (e.button !== 0) {
-          e.preventDefault();
-          e.stopPropagation();
-          return;
-        }
-        if (!this.editorView) return;
+    // if (isMac && this.editorContainer) {
+    //   this.editorContainer.addEventListener('mousedown', (e) => {
+    //     // 左クリック以外は無視
+    //     if (e.button !== 0) {
+    //       e.preventDefault();
+    //       e.stopPropagation();
+    //       return;
+    //     }
+    //     if (!this.editorView) return;
 
-        // 1. スクロールバー判定
-        const scroller = this.editorView.scrollDOM;
-        const rect = scroller.getBoundingClientRect();
-        const scrollbarWidth = 18;
+    //     // 1. スクロールバー判定
+    //     const scroller = this.editorView.scrollDOM;
+    //     const rect = scroller.getBoundingClientRect();
+    //     const scrollbarWidth = 18;
 
-        const isOnVerticalScrollbar = e.clientX >= rect.right - scrollbarWidth;
-        const isOnHorizontalScrollbar = e.clientY >= rect.bottom - scrollbarWidth;
+    //     const isOnVerticalScrollbar = e.clientX >= rect.right - scrollbarWidth;
+    //     const isOnHorizontalScrollbar = e.clientY >= rect.bottom - scrollbarWidth;
 
-        if (isOnVerticalScrollbar || isOnHorizontalScrollbar) {
-          e.stopPropagation();
-          return;
-        }
+    //     if (isOnVerticalScrollbar || isOnHorizontalScrollbar) {
+    //       e.stopPropagation();
+    //       return;
+    //     }
 
-        // 2. ネイティブ機能でクリック位置（DOMノードとオフセット）を特定
-        let range: Range | null = null;
-        if (document.caretRangeFromPoint) {
-          range = document.caretRangeFromPoint(e.clientX, e.clientY);
-        }
+    //     // 2. ネイティブ機能でクリック位置（DOMノードとオフセット）を特定
+    //     let range: Range | null = null;
+    //     if (document.caretRangeFromPoint) {
+    //       range = document.caretRangeFromPoint(e.clientX, e.clientY);
+    //     }
 
-        // 範囲が取得でき、かつエディタ内部であることを確認
-        if (range && this.editorView.contentDOM.contains(range.startContainer)) {
-          // コンテナ自体（余白など）をクリックしてしまった場合の除外処理
-          const container = range.startContainer;
-          const isGenericContainer = container === this.editorView.contentDOM ||
-            (container.nodeType === 1 && (container as HTMLElement).classList.contains('cm-content'));
+    //     // 範囲が取得でき、かつエディタ内部であることを確認
+    //     if (range && this.editorView.contentDOM.contains(range.startContainer)) {
+    //       // コンテナ自体（余白など）をクリックしてしまった場合の除外処理
+    //       const container = range.startContainer;
+    //       const isGenericContainer = container === this.editorView.contentDOM ||
+    //         (container.nodeType === 1 && (container as HTMLElement).classList.contains('cm-content'));
 
-          if (!isGenericContainer) {
+    //       if (!isGenericContainer) {
 
-            // ★★★ CodeMirrorの座標(数値)も計算しておく ★★★
-            const clickPos = this.editorView.posAtDOM(range.startContainer, range.startOffset);
+    //         // ★★★ CodeMirrorの座標(数値)も計算しておく ★★★
+    //         const clickPos = this.editorView.posAtDOM(range.startContainer, range.startOffset);
 
-            const sel = window.getSelection();
-            if (sel && clickPos !== null) { // clickPosチェックを追加
+    //         const sel = window.getSelection();
+    //         if (sel && clickPos !== null) { // clickPosチェックを追加
 
-              // --- Shiftキーの処理 (範囲選択) ---
-              if (e.shiftKey && sel.rangeCount > 0) {
-                // 1. ネイティブ側で範囲を拡張
-                sel.extend(range.startContainer, range.startOffset);
+    //           // --- Shiftキーの処理 (範囲選択) ---
+    //           if (e.shiftKey && sel.rangeCount > 0) {
+    //             // 1. ネイティブ側で範囲を拡張
+    //             sel.extend(range.startContainer, range.startOffset);
 
-                // 2. ★★★ CodeMirror側にも即座に同期 (これで色がつく) ★★★
-                // 現在のアンカー（開始点）を取得
-                const currentAnchor = this.editorView.state.selection.main.anchor;
-                // EditorSelection.range は自動で前後関係を処理して範囲を作ってくれる
-                this.editorView.dispatch({
-                  selection: EditorSelection.range(currentAnchor, clickPos),
-                  scrollIntoView: false, // 勝手なスクロールはさせない
-                  userEvent: "select.pointer" // マウス操作であることを明示
-                });
+    //             // 2. ★★★ CodeMirror側にも即座に同期 (これで色がつく) ★★★
+    //             // 現在のアンカー（開始点）を取得
+    //             const currentAnchor = this.editorView.state.selection.main.anchor;
+    //             // EditorSelection.range は自動で前後関係を処理して範囲を作ってくれる
+    //             this.editorView.dispatch({
+    //               selection: EditorSelection.range(currentAnchor, clickPos),
+    //               scrollIntoView: false, // 勝手なスクロールはさせない
+    //               userEvent: "select.pointer" // マウス操作であることを明示
+    //             });
 
-              } else {
-                // --- 通常クリック ---
-                // 1. ネイティブ側でカーソルを置く
-                sel.removeAllRanges();
-                sel.addRange(range);
+    //           } else {
+    //             // --- 通常クリック ---
+    //             // 1. ネイティブ側でカーソルを置く
+    //             sel.removeAllRanges();
+    //             sel.addRange(range);
 
-                // 2. ★★★ CodeMirror側にも同期 ★★★
-                this.editorView.dispatch({
-                  selection: { anchor: clickPos, head: clickPos },
-                  scrollIntoView: false,
-                  userEvent: "select.pointer"
-                });
-              }
-            }
+    //             // 2. ★★★ CodeMirror側にも同期 ★★★
+    //             this.editorView.dispatch({
+    //               selection: { anchor: clickPos, head: clickPos },
+    //               scrollIntoView: false,
+    //               userEvent: "select.pointer"
+    //             });
+    //           }
+    //         }
 
-            // 標準ハンドラを止める
-            e.preventDefault();
-            e.stopPropagation();
+    //         // 標準ハンドラを止める
+    //         e.preventDefault();
+    //         e.stopPropagation();
 
-            this.editorView.contentDOM.focus();
+    //         this.editorView.contentDOM.focus();
 
-            // --- ドラッグ操作の監視 ---
-            const onMouseMove = (moveEvent: MouseEvent) => {
-              if (document.caretRangeFromPoint) {
-                const newRange = document.caretRangeFromPoint(moveEvent.clientX, moveEvent.clientY);
+    //         // --- ドラッグ操作の監視 ---
+    //         const onMouseMove = (moveEvent: MouseEvent) => {
+    //           if (document.caretRangeFromPoint) {
+    //             const newRange = document.caretRangeFromPoint(moveEvent.clientX, moveEvent.clientY);
 
-                if (newRange && window.getSelection()) {
-                  // 1. ネイティブ側更新
-                  window.getSelection()?.extend(newRange.startContainer, newRange.startOffset);
+    //             if (newRange && window.getSelection()) {
+    //               // 1. ネイティブ側更新
+    //               window.getSelection()?.extend(newRange.startContainer, newRange.startOffset);
 
-                  // 2. ★★★ CodeMirror側更新 (ドラッグ中も色をつける) ★★★
-                  // ドラッグ中の新しい位置を計算
-                  const dragPos = this.editorView.posAtDOM(newRange.startContainer, newRange.startOffset);
-                  // 現在のアンカー（開始時に固定されているはず）
-                  const currentAnchor = this.editorView.state.selection.main.anchor;
+    //               // 2. ★★★ CodeMirror側更新 (ドラッグ中も色をつける) ★★★
+    //               // ドラッグ中の新しい位置を計算
+    //               const dragPos = this.editorView.posAtDOM(newRange.startContainer, newRange.startOffset);
+    //               // 現在のアンカー（開始時に固定されているはず）
+    //               const currentAnchor = this.editorView.state.selection.main.anchor;
 
-                  if (dragPos !== null) {
-                    this.editorView.dispatch({
-                      selection: EditorSelection.range(currentAnchor, dragPos),
-                      scrollIntoView: true, // ドラッグ中は端に行ったらスクロールしてほしいので true
-                      userEvent: "select.pointer"
-                    });
-                  }
-                }
-              }
-            };
+    //               if (dragPos !== null) {
+    //                 this.editorView.dispatch({
+    //                   selection: EditorSelection.range(currentAnchor, dragPos),
+    //                   scrollIntoView: true, // ドラッグ中は端に行ったらスクロールしてほしいので true
+    //                   userEvent: "select.pointer"
+    //                 });
+    //               }
+    //             }
+    //           }
+    //         };
 
-            const onMouseUp = () => {
-              window.removeEventListener('mousemove', onMouseMove);
-              window.removeEventListener('mouseup', onMouseUp);
-            };
+    //         const onMouseUp = () => {
+    //           window.removeEventListener('mousemove', onMouseMove);
+    //           window.removeEventListener('mouseup', onMouseUp);
+    //         };
 
-            window.addEventListener('mousemove', onMouseMove);
-            window.addEventListener('mouseup', onMouseUp);
+    //         window.addEventListener('mousemove', onMouseMove);
+    //         window.addEventListener('mouseup', onMouseUp);
 
-            return;
-          }
-        }
+    //         return;
+    //       }
+    //     }
 
-        // フォールバック：もしネイティブ取得に失敗した場合（余白クリックなど）は
-        // 諦めて標準動作に任せる（暴発するかもしれないが、操作不能よりはマシ）
+    //     // フォールバック：もしネイティブ取得に失敗した場合（余白クリックなど）は
+    //     // 諦めて標準動作に任せる（暴発するかもしれないが、操作不能よりはマシ）
 
-      }, true); // キャプチャフェーズ
-    }
+    //   }, true); // キャプチャフェーズ
+    // }
   }
 
   // --- イベントハンドラ ---
@@ -2398,7 +2425,7 @@ class App {
     if (isCtrlOrCmd && isShift && key === 'f') {
       e.preventDefault();
       this.cycleEditorFont();
-      return; // ★処理が重複しないように、ここで関数を抜ける
+      return; // 処理が重複しないように、ここで関数を抜ける
     }
     if (isCtrlOrCmd && (e.code === 'Equal' || e.code === 'NumpadAdd')) { e.preventDefault(); this.changeFontSize(this.currentFontSize + 1); }
     if (isCtrlOrCmd && (e.code === 'Minus' || e.code === 'NumpadSubtract')) { e.preventDefault(); this.changeFontSize(this.currentFontSize - 1); }

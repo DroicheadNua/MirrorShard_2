@@ -10,9 +10,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added (新機能)  
 
 ### Changed (変更点)    
+- Tauriのバージョンを2.9.3から2.10.2にアップデート  
 
 ### Fixed (修正点)  
 - スポットライトモードの不具合を修正  
+- Macの範囲選択時の挙動を改善  
 
 
 ## [1.1.0] - 2026-2-15  

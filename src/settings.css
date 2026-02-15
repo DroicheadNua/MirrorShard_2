@@ -45,7 +45,7 @@ body {
 #settings-container {
     display: flex;
     flex-direction: column;
-    height: calc(100%-40px);
+    height: calc(100% - 40px);
     width: 90vw;
     background-color: transparent;
     overflow: hidden;
