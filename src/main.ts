@@ -107,13 +107,8 @@ class App {
   private isZenMode = false;
   private currentFontIndex = 1;
   private currentFontSize = 15;
-  private themeCompartment = new Compartment();
-  private fontFamilyCompartment = new Compartment();
-  private fontSizeCompartment = new Compartment();
-  private highlightingCompartment = new Compartment();
   private lightTheme!: any;
   private darkTheme!: any;
-  private fontThemes: any[] = []; // ★初期化子を追加
   private fontClassNames = ['font-serif', 'font-sans-serif', 'font-monospace'];
   private fileListContainer = document.querySelector<HTMLElement>('#file-list-container');
   private outlineControls = document.querySelector<HTMLElement>('.outline-controls');
@@ -121,7 +116,6 @@ class App {
   private editorContainer = document.querySelector<HTMLElement>('#editor-container');
   private statusBar = document.querySelector<HTMLElement>('#status-bar');
   private isSpotlightMode = false;
-  private spotlightCompartment = new Compartment();
   private isTypeSoundEnabled = false;
   private audioContext: AudioContext | null = null;
   private typeSoundBuffer: AudioBuffer | null = null;
@@ -278,7 +272,7 @@ class App {
       search({
         top: true, // 検索パネルを上部に
 
-        // ★ 公式ドキュメントにある、スクロール挙動をカスタマイズするオプション
+        // 公式ドキュメントにある、スクロール挙動をカスタマイズするオプション
         scrollToMatch: (range: SelectionRange, _view: EditorView): StateEffect<unknown> => {
           // EditorView.scrollIntoViewを使って、中央揃えのスクロールエフェクトを生成して返す
           return EditorView.scrollIntoView(range.from, { y: 'center' });
@@ -1062,11 +1056,7 @@ class App {
     //  読み込んだ設定をUIに完全に反映
     this.editorView.dispatch({
       effects: [
-        this.themeCompartment.reconfigure(this.isDarkMode ? this.darkTheme : this.lightTheme),
-        this.fontSizeCompartment.reconfigure(this.createFontSizeTheme(this.currentFontSize)),
-        this.highlightingCompartment.reconfigure(syntaxHighlighting(this.isDarkMode ? this.darkHighlightStyle : this.lightHighlightStyle)),
-        //  スポットライトの初期状態も反映
-        this.spotlightCompartment.reconfigure(this.createSpotlightPlugin(this.isSpotlightMode))
+        this.mainCompartment.reconfigure(this.createEditorExtensions())
       ]
     });
     this.updateFontSettings();
@@ -1624,13 +1614,7 @@ class App {
   private applyAppearance() {
     this.editorView.dispatch({
       effects: [
-        this.themeCompartment.reconfigure(this.getCurrentTheme()),
-        this.highlightingCompartment.reconfigure(
-          syntaxHighlighting((this.isDarkMode) ? this.darkHighlightStyle : this.lightHighlightStyle)
-        ),
-        this.fontFamilyCompartment.reconfigure(this.fontThemes[this.currentFontIndex]),
-        this.fontSizeCompartment.reconfigure(this.createFontSizeTheme(this.currentFontSize)),
-        this.spotlightCompartment.reconfigure(this.createSpotlightPlugin(this.isSpotlightMode))
+        this.mainCompartment.reconfigure(this.createEditorExtensions())
       ]
     });
 
@@ -1642,16 +1626,6 @@ class App {
 
     // グローエフェクトの更新
     this.updateGlowEffect();
-  }
-
-  /** 現在の設定に基づいたフォントテーマを取得するヘルパー */
-  private getCurrentFontTheme() {
-    // ユーザー指定があればそれを使う
-    if (this.userFontFamily && this.userFontFamily !== 'default') {
-      return this.createFontTheme(this.userFontFamily);
-    }
-    // 指定がなければ、現在のサイクルインデックスのフォントを使う
-    return this.fontThemes[this.currentFontIndex];
   }
 
   private toggleZenMode() {
@@ -1798,7 +1772,7 @@ class App {
         }
       }
       getDecorations(view: EditorView) {
-        if (!isActive || view.state.doc.length === 0) { // ★空のドキュメントなら何もしない
+        if (!isActive || view.state.doc.length === 0) { // 空のドキュメントなら何もしない
           return Decoration.none;
         }
 
@@ -1830,7 +1804,6 @@ class App {
           }
         }
 
-        // ★★★ renderer.ts と同じロジック ★★★
         // 計算した範囲の「外側」をぼかす Decoration を作成
         if (startPos > 0) {
           builder.add(0, startPos - 1, Decoration.mark({ class: "cm-unfocused" }));
@@ -1931,16 +1904,9 @@ class App {
     }, { dark: true });
     this.dynamicFontTheme = EditorView.theme({
       '.cm-content': {
-        // ★ CSS変数を参照させる (!importantで強制)
+        // CSS変数を参照させる (!importantで強制)
         fontFamily: 'var(--dynamic-editor-font) !important'
       }
-    });
-  }
-
-  private createFontTheme(fontFamilyValue: string) {
-    return EditorView.theme({
-      '&': { fontFamily: fontFamilyValue },
-      '.cm-content': { fontFamily: `${fontFamilyValue} !important` }
     });
   }
 
@@ -2903,12 +2869,13 @@ class App {
 
   // トグル関数
   private toggleSpotlightMode() {
+    if (this.isCodeMode) return;
     if (this.isSpotlightMode) {
       this.isSpotlightMode = false;
     } else {
       this.isSpotlightMode = true;
     }
-    // ボタンの見た目を変える処理 (id="btn-spotlight"と仮定)
+    // ボタンの見た目を変える処理
     const btn = document.querySelector('#btn-spotlight') as HTMLElement;
     if (this.isSpotlightMode) {
       btn.classList.add('enabled');
@@ -2917,7 +2884,9 @@ class App {
     }
 
     this.editorView.dispatch({
-      effects: this.spotlightCompartment.reconfigure(this.createSpotlightPlugin(this.isSpotlightMode))
+      effects: this.mainCompartment.reconfigure(
+        this.createEditorExtensions()
+      )
     });
     this.saveSettings();
   }
@@ -2953,7 +2922,7 @@ class App {
       this.isBgmPlaying = false;
       if (bgmButton) bgmButton.classList.remove('playing');
     } else {
-      // ★ まだデータがない場合のみ、ここで初めてロードする (遅延ロード)
+      // まだデータがない場合のみ、ここで初めてロードする (遅延ロード)
       // Linuxならbuffer, Win/Macならelementをチェック
       const isLoaded = (this.currentOs === 'linux') ? !!this.bgmBuffer : !!this.bgmElement;
 
@@ -3499,30 +3468,8 @@ class App {
     // 3. 状態を更新
     this.activeTabPath = filePath;
 
-    // 現在のStateを取得
-    let stateToSet = tab.state;
-
-    // Stateに対してトランザクションを作成し、設定系Compartmentをすべて現在の値で上書きする
-    const transaction = stateToSet.update({
-      effects: [
-        this.themeCompartment.reconfigure(this.getCurrentTheme()),
-        this.fontFamilyCompartment.reconfigure(this.getCurrentFontTheme()),
-        this.fontSizeCompartment.reconfigure(this.createFontSizeTheme(this.currentFontSize)),
-        this.highlightingCompartment.reconfigure(
-          syntaxHighlighting(
-            (this.isDarkMode) ? this.darkHighlightStyle : this.lightHighlightStyle
-          )
-        ),
-        this.spotlightCompartment.reconfigure(this.createSpotlightPlugin(this.isSpotlightMode))
-      ]
-    });
-
-    // 更新されたStateをタブと変数にセット
-    stateToSet = transaction.state;
-    tab.state = stateToSet;
-
     // 4. 最新設定が適用されたStateをビューにセット
-    this.editorView.setState(stateToSet);
+    this.editorView.setState(tab.state);
 
     // モードに関わらず、拡張子から言語を判定して「予約」しておく
     const detectedLang = this.detectLanguageFromExtension(filePath);
