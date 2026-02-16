@@ -4,7 +4,8 @@ import { invoke } from '@tauri-apps/api/core';
 import { save, open } from '@tauri-apps/plugin-dialog';
 import { Store } from '@tauri-apps/plugin-store';
 import updateArticle from './scripts/ruby';
-import { backgroundImage } from './assets/images.ts';
+import { resolveResource } from '@tauri-apps/api/path';
+import { convertFileSrc } from '@tauri-apps/api/core';
 import { type } from '@tauri-apps/plugin-os';
 
 interface PreviewPayload {
@@ -60,7 +61,15 @@ async function initPreview() {
                 if (isDarkMode) {
                     wrapper.style.backgroundImage = 'none';
                 } else {
-                    wrapper.style.backgroundImage = `url(${backgroundImage})`;
+                    try {
+                        const resourcePath = await resolveResource('resources/img/default_bg.jpg');
+                        const url = convertFileSrc(resourcePath);
+                        wrapper.style.backgroundImage = `url(${url})`;
+                    } catch (e) {
+                        console.error(e);
+                    }
+                    // ユーザーが設定したカスタム背景をプレビューにも反映させたい場合は
+                    // メインウィンドウから imageUrl を payload で送る
                 }
             }
         }

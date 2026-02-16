@@ -17,6 +17,7 @@ import { Menu, MenuItem, PredefinedMenuItem, Submenu } from '@tauri-apps/api/men
 import { convertFileSrc } from '@tauri-apps/api/core';
 import { type } from '@tauri-apps/plugin-os';
 import { readTextFile } from '@tauri-apps/plugin-fs';
+import { resolveResource } from '@tauri-apps/api/path';
 
 // --- 型定義 ---
 interface Heading { level: number; text: string; pos: number; isCollapsed: boolean; }
@@ -1946,53 +1947,46 @@ class App {
   private createFontSizeTheme = (size: number) => EditorView.theme({ '&': { fontSize: `${size}pt` }, '.cm-gutters': { fontSize: `${size}pt` } });
 
   /**
-   * BGMデータを読み込む（再生はしない）
-   */
+     * BGMデータを読み込む（再生はしない）
+     */
   private async loadBGMData() {
-    // 念のため既存を停止・破棄
-    this.stopBGM();
+    this.stopBGM(); // 既存停止
 
     try {
+      // 1. 再生すべきファイルのパスを決定する
+      let targetPath = '';
+
+      if (this.userBgmPath && this.userBgmPath.trim() !== '') {
+        // ユーザー指定がある場合
+        targetPath = this.userBgmPath;
+      } else {
+        // デフォルトの場合：リソースパスを解決する
+        targetPath = await resolveResource('resources/bgm/marine_snow.ogg');
+      }
+
       if (this.currentOs === 'linux') {
         // --- Linux (Web Audio API / メモリ展開) ---
         if (!this.bgmContext) {
           this.bgmContext = new (window.AudioContext || (window as any).webkitAudioContext)();
         }
 
-        let buffer: ArrayBuffer;
-        if (this.userBgmPath && this.userBgmPath.trim() !== '') {
-          // ユーザー指定ファイル
-          const data = await invoke<number[]>('read_binary_file', { path: this.userBgmPath });
-          const uint8Array = new Uint8Array(data);
-          buffer = uint8Array.buffer;
-        } else {
-          // デフォルト (Dynamic Import)
-          const { backgroundMusic } = await import('./assets/audio');
-          const base64Data = backgroundMusic.split(',')[1] || backgroundMusic;
-          const binaryString = window.atob(base64Data);
-          const len = binaryString.length;
-          const bytes = new Uint8Array(len);
-          for (let i = 0; i < len; i++) bytes[i] = binaryString.charCodeAt(i);
-          buffer = bytes.buffer;
-        }
+        // (read_binary_file は絶対パスを受け取れるはずなのでそのまま渡す)
+        const data = await invoke<number[]>('read_binary_file', { path: targetPath });
+        const uint8Array = new Uint8Array(data);
+
         // デコード
-        this.bgmBuffer = await this.bgmContext.decodeAudioData(buffer);
+        this.bgmBuffer = await this.bgmContext.decodeAudioData(uint8Array.buffer);
 
       } else {
         // --- Win/Mac (HTML5 Audio / ストリーミング) ---
-        let audioUrl = '';
-        if (this.userBgmPath && this.userBgmPath.trim() !== '') {
-          audioUrl = convertFileSrc(this.userBgmPath);
-        } else {
-          // デフォルト (Dynamic Import)
-          const { backgroundMusic } = await import('./assets/audio');
-          audioUrl = backgroundMusic;
-        }
+        // assetプロトコルURLに変換
+        const audioUrl = convertFileSrc(targetPath);
+
         this.bgmElement = new Audio(audioUrl);
         this.bgmElement.loop = true;
       }
 
-      console.log("BGM Data loaded.");
+      console.log("BGM Data loaded:", targetPath);
 
     } catch (e) {
       console.error("Failed to load BGM data", e);
@@ -2612,15 +2606,17 @@ class App {
         rootStyle.setProperty('--app-bg-image', 'none');
         return;
       } else {
-        // ★ユーザー指定パスがあるなら convertFileSrc でURL化
+        // ユーザー指定パスがあるなら convertFileSrc でURL化
         imageUrl = convertFileSrc(this.userBackgroundImagePath);
         console.log('User background image path:', this.userBackgroundImagePath);
       }
     } else {
-      const { backgroundImage } = await import('./assets/images');
-      // ★なければデフォルトのBase64文字列を使用
-      imageUrl = backgroundImage;
-      console.log('Default background image path:', backgroundImage);
+      try {
+        const resourcePath = await resolveResource('resources/img/default_bg.jpg');
+        imageUrl = convertFileSrc(resourcePath);
+      } catch (e) {
+        console.error("Failed to load default background:", e);
+      }
     }
 
     // CSS変数を更新

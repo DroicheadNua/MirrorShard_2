@@ -91,7 +91,7 @@
       "../docs/*",
       "../README.md",
       "../Changelog.md",
-      "resources/styles/*"
+      "resources/**/*"
     ],
     "windows": {
       "wix": {
