@@ -18,6 +18,7 @@ interface PreviewPayload {
 
 // 現在のテキストを保持する変数（印刷用）
 let currentRawText = "";
+let isSimpleFullscreen = false;
 
 async function initPreview() {
     const contentDiv = document.getElementById('content');
@@ -346,20 +347,16 @@ async function initPreview() {
         }, { passive: false }); // preventDefaultするために passive: false が必要
     }
 
-    // --- フルスクリーン切り替え ---
     async function previewToggleFullscreen() {
-        const window = getCurrentWindow();
-        const isFullscreen = await window.isFullscreen();
-        if (isFullscreen) {
-            await window.setFullscreen(false);
-            if (osType !== 'macos' && wrapper) {
-                wrapper.style.borderRadius = '6px';
-            }
-        } else {
-            await window.setFullscreen(true);
-            if (osType !== 'macos' && wrapper) {
-                wrapper.style.borderRadius = '0px';
-            }
+        // 反転
+        isSimpleFullscreen = !isSimpleFullscreen;
+
+        // Rustコマンドを呼び出し
+        await invoke('set_simple_fullscreen', { enable: isSimpleFullscreen });
+
+        // 必要ならCSS調整 (角丸など)
+        if (osType !== 'macos' && wrapper) {
+            wrapper.style.borderRadius = isSimpleFullscreen ? '0px' : '6px';
         }
     }
 

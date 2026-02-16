@@ -121,6 +121,7 @@ class App {
   private typeSoundBuffer: AudioBuffer | null = null;
   private isSnowing = false;
   private stopSnowing: (() => void) | null = null;
+  private isSimpleFullscreen = false;
 
   private recentFiles: string[] = [];
   private editorMaxWidth = '80';
@@ -3084,20 +3085,11 @@ class App {
   }
 
   private async toggleFullscreen() {
-    const window = getCurrentWindow();
-    const isFullscreen = await window.isFullscreen();
     const appcontainer = document.querySelector('#app-container') as HTMLElement;
-    const osType = await type();
-    if (isFullscreen) {
-      await window.setFullscreen(false);
-      if (osType !== 'macos' && appcontainer) {
-        appcontainer.style.borderRadius = '6px';
-      }
-    } else {
-      await window.setFullscreen(true);
-      if (osType !== 'macos' && appcontainer) {
-        appcontainer.style.borderRadius = '0px';
-      }
+    this.isSimpleFullscreen = !this.isSimpleFullscreen;
+    await invoke('set_simple_fullscreen', { enable: this.isSimpleFullscreen });
+    if (this.currentOs !== 'macos' && appcontainer) {
+      appcontainer.style.borderRadius = this.isSimpleFullscreen ? '0px' : '6px';
     }
   }
 

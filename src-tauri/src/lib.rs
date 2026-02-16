@@ -50,6 +50,12 @@ struct MacFileBuffer(Mutex<Option<String>>);
 // --- Tauriコマンドの定義 ---
 
 #[tauri::command]
+fn set_simple_fullscreen(window: tauri::WebviewWindow, enable: bool) {
+    // macOSではSimple Fullscreen、他では通常のFullscreenとして振る舞う
+    let _ = window.set_simple_fullscreen(enable);
+}
+
+#[tauri::command]
 fn toggle_devtools(window: tauri::WebviewWindow) {
     if window.label() != "markdown" {
         return;
@@ -998,6 +1004,7 @@ pub fn run() {
             write_pty,            // 入力を送る
             resize_pty,           // サイズ変更
             toggle_devtools,
+            set_simple_fullscreen,
         ])
         .build(tauri::generate_context!())
         .expect("error while building tauri application")
