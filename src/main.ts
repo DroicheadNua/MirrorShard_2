@@ -11,13 +11,9 @@ import { HighlightStyle, syntaxHighlighting, bracketMatching, indentUnit } from 
 
 import { tags } from '@lezer/highlight';
 import { getCurrentWindow } from '@tauri-apps/api/window';
-import { open, ask, message, save } from '@tauri-apps/plugin-dialog';
+import { message, save } from '@tauri-apps/plugin-dialog';
 import { listen, emit } from '@tauri-apps/api/event';
-import { Menu, MenuItem, PredefinedMenuItem, Submenu } from '@tauri-apps/api/menu';
-import { convertFileSrc } from '@tauri-apps/api/core';
 import { type } from '@tauri-apps/plugin-os';
-import { readTextFile } from '@tauri-apps/plugin-fs';
-import { resolveResource } from '@tauri-apps/api/path';
 
 // --- 型定義 ---
 interface Heading { level: number; text: string; pos: number; isCollapsed: boolean; }
@@ -182,7 +178,11 @@ class App {
     EditorView.theme({
       // エディタ全体の背景を透明にして、#app-container の背景が見えるようにする
       '&': {
-        backgroundColor: 'transparent !important'
+        backgroundColor: 'transparent !important',
+        cursor: 'text !important'
+      },
+      '.cm-content': {
+        cursor: 'text !important'
       },
       '.cm-gutters': {
         backgroundColor: 'transparent',
@@ -225,7 +225,7 @@ class App {
     this.isSnowing = !this.isSnowing;
 
     if (this.isSnowing) {
-      // ★ 動的インポート: Ctrl+Shift+Eを押したときだけロードされる
+      // 動的インポート: Ctrl+Shift+Eを押したときだけロードされる
       const { startSnowing } = await import('./scripts/snow');
 
       // 雪を降らせる対象要素。#app-container が画面全体を覆っているので最適
@@ -1096,9 +1096,10 @@ class App {
       btnSpotlight.classList.remove('enabled');
     }
 
-    //  背景画像、BGM、タイプ音の初期化
+    //  背景画像、タイプ音の初期化（BGMは重いのでここでは呼ばない）
+    // settings-changedイベント、あるいはtoggleBGMイベントでloadBGMDataが
+    // 呼ばれた時に初めてインポートされる
     await this.updateBackground();
-    // await this.initializeBGM();
     if (this.isTypeSoundEnabled) {
       await this.initializeTypeSound();
     }
@@ -1844,7 +1845,8 @@ class App {
       '&': {
         color: 'var(--editor-text-color, #1e1e1e)',
         backgroundColor: 'var(--editor-bg-color, transparent)',
-        outline: 'none !important'
+        outline: 'none !important',
+        cursor: 'text !important'
       },
       '.cm-content': {
         lineHeight: 'var(--editor-line-height, 1.6)',
@@ -1852,6 +1854,7 @@ class App {
         wordBreak: 'var(--editor-word-break, break-all)',
         caretColor: 'var(--editor-text-color, #1e1e1e) !important',
         caretWidth: '2px !important',
+        cursor: 'text !important'
       },
       '.cm-cursor, .cm-dropCursor': {
         borderLeftColor: 'var(--editor-text-color, #1e1e1e) !important',
@@ -1889,13 +1892,15 @@ class App {
     this.darkTheme = EditorView.theme({
       '&': {
         color: lightText,
-        backgroundColor: dark
+        backgroundColor: dark,
+        cursor: 'text !important'
       },
       '.cm-content': {
         lineHeight: 'var(--editor-line-height, 1.6)',
         lineBreak: 'var(--editor-line-break, strict)',
         wordBreak: 'var(--editor-word-break, break-all)',
         caretColor: lightText,
+        cursor: 'text !important'
       },
       '.cm-cursor, .cm-dropCursor': {
         borderLeftColor: lightText
@@ -1961,6 +1966,7 @@ class App {
         targetPath = this.userBgmPath;
       } else {
         // デフォルトの場合：リソースパスを解決する
+        const { resolveResource } = await import('@tauri-apps/api/path');
         targetPath = await resolveResource('resources/bgm/marine_snow.ogg');
       }
 
@@ -1980,6 +1986,7 @@ class App {
       } else {
         // --- Win/Mac (HTML5 Audio / ストリーミング) ---
         // assetプロトコルURLに変換
+        const { convertFileSrc } = await import('@tauri-apps/api/core');
         const audioUrl = convertFileSrc(targetPath);
 
         this.bgmElement = new Audio(audioUrl);
@@ -2082,6 +2089,7 @@ class App {
 
     this.editorContainer?.addEventListener('contextmenu', async (e) => {
       e.preventDefault();
+      const { Menu, MenuItem, PredefinedMenuItem, Submenu } = await import('@tauri-apps/api/menu');
 
       // 履歴からMenuItemの配列を動的に生成
       const recentFileItems = await Promise.all(this.recentFiles.map(async (filePath) => {
@@ -2601,6 +2609,7 @@ class App {
     }
 
     let imageUrl = '';
+    const { convertFileSrc } = await import('@tauri-apps/api/core');
     if (this.userBackgroundImagePath) {
       if (this.userBackgroundImagePath === 'nothing') {
         rootStyle.setProperty('--app-bg-image', 'none');
@@ -2612,6 +2621,7 @@ class App {
       }
     } else {
       try {
+        const { resolveResource } = await import('@tauri-apps/api/path');
         const resourcePath = await resolveResource('resources/img/default_bg.jpg');
         imageUrl = convertFileSrc(resourcePath);
       } catch (e) {
@@ -2833,6 +2843,7 @@ class App {
 
     // 巨大ファイルチェック
     if (textLength > limit) {
+      const { ask } = await import('@tauri-apps/plugin-dialog');
       const confirmed = await ask(
         `テキストが非常に長いため（${textLength}文字）、プレビューの生成に時間がかかる可能性があります。\n\n先頭の ${limit} 文字だけをプレビューしますか？\n（「キャンセル」を押すと処理を中止します）`,
         { title: 'プレビューの確認', kind: 'warning', okLabel: '制限して表示', cancelLabel: 'キャンセル' }
@@ -2857,6 +2868,7 @@ class App {
 
     // 巨大ファイルチェック
     if (textLength > limit) {
+      const { ask } = await import('@tauri-apps/plugin-dialog');
       const confirmed = await ask(
         `テキストが非常に長いため（${textLength}文字）、プレビューの生成に時間がかかる可能性があります。\n\n先頭の ${limit} 文字だけをプレビューしますか？\n（「キャンセル」を押すと処理を中止します）`,
         { title: 'Markdownプレビューの確認', kind: 'warning', okLabel: '制限して表示', cancelLabel: 'キャンセル' }
@@ -3099,6 +3111,7 @@ class App {
     let shouldClose = true;
 
     if (dirtyTabs.length > 0) {
+      const { ask } = await import('@tauri-apps/plugin-dialog');
       shouldClose = await ask(
         `未保存のファイルが ${dirtyTabs.length} 件あります。本当に終了しますか？`,
         { title: 'アプリケーションを終了', kind: 'warning' }
@@ -3202,6 +3215,7 @@ class App {
   }
 
   private async openNewFile() {
+    const { open } = await import('@tauri-apps/plugin-dialog');
     const filePath = await open({
       multiple: false,
       // filters: [{
@@ -3263,11 +3277,13 @@ class App {
   // Geminiログのインポート機能
   private async importGeminiLog() {
     try {
+      const { open } = await import('@tauri-apps/plugin-dialog');
       const selected = await open({
         title: 'Import Gemini Log'
       });
 
       if (!selected || typeof selected !== 'string') return;
+      const { readTextFile } = await import('@tauri-apps/plugin-fs');
 
       const fileContent = await readTextFile(selected);
       const history = this.parseGeminiLog(fileContent);
@@ -3312,6 +3328,7 @@ class App {
 
     // もしファイルが未保存なら、確認ダイアログを出す
     if (tabToClose.isDirty) {
+      const { ask } = await import('@tauri-apps/plugin-dialog');
       const confirmed = await ask(`'${tabToClose.path.split(/[/\\]/).pop()}' は保存されていません。変更を破棄しますか？`, {
         title: 'タブを閉じる',
         kind: 'warning'

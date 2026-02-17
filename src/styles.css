@@ -870,6 +870,13 @@ body.custom-glow .cm-panels.cm-panels-top {
   box-shadow: var(--custom-text-shadow) !important;
 }
 
+#editor-container,
+.cm-editor,
+.cm-content {
+  -webkit-app-region: no-drag !important;
+  cursor: text !important;
+}
+
 #main-ai-selector-container {
   padding: 5px 10px;
   background-color: transparent;

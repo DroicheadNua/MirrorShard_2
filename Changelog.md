@@ -13,6 +13,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Tauriのバージョンを2.9.3から2.10.2にアップデート  
 - Macのフルスクリーンモードの挙動を変更（Simple Fullscreen）  
 - 軽量化のため添付BGMを自作楽曲（ACE-stepで作成）に差し替え  
+- 起動の高速化  
 
 ### Fixed (修正点)  
 - スポットライトモードの不具合を修正  
