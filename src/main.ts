@@ -3,7 +3,7 @@ import { invoke } from '@tauri-apps/api/core';
 import { Store } from '@tauri-apps/plugin-store';
 import { EditorState, Compartment, RangeSetBuilder, Transaction } from '@codemirror/state';
 import { EditorView, keymap, ViewUpdate, scrollPastEnd, Decoration, DecorationSet, ViewPlugin, lineNumbers, drawSelection, } from '@codemirror/view';
-import { history, historyKeymap, undo, redo, insertTab, cursorDocEnd, cursorDocStart, insertNewline, defaultKeymap, insertNewlineAndIndent, selectAll } from '@codemirror/commands';
+import { history, historyKeymap, undo, redo, insertTab, cursorDocEnd, cursorDocStart, insertNewline, defaultKeymap, insertNewlineAndIndent, selectAll, indentSelection } from '@codemirror/commands';
 import { markdown, markdownLanguage } from '@codemirror/lang-markdown';
 import { search, searchKeymap } from '@codemirror/search';
 import type { Extension, SelectionRange, StateEffect } from '@codemirror/state';
@@ -168,6 +168,7 @@ class App {
   private wasLightModeBeforeCode = false;
   private codeFontFamily = 'default';
   private codeFontSize = 10;
+  private codeLineWrap = false;
   private codeExtras: any = null;
   private isCodeExtrasLoaded = false;
   // 全ての拡張機能を管理する区画
@@ -179,14 +180,16 @@ class App {
       // エディタ全体の背景を透明にして、#app-container の背景が見えるようにする
       '&': {
         backgroundColor: 'transparent !important',
-        cursor: 'text !important'
+        cursor: 'text !important',
+        outline: 'none !important'
       },
       '.cm-content': {
         cursor: 'text !important'
       },
       '.cm-gutters': {
-        backgroundColor: 'transparent',
-        borderRight: 'none'
+        backgroundColor: 'rgba(26, 27, 38, 1) !important',
+        border: 'none',
+        color: '#565f89'
       },
       '.cm-activeLineGutter': {
         backgroundColor: 'transparent'
@@ -920,7 +923,7 @@ class App {
       bracketMatching(),
       history(),
       keymap.of([...historyKeymap, ...searchKeymap]),
-      EditorView.lineWrapping,
+      // EditorView.lineWrapping,
       scrollPastEnd(),
       EditorView.updateListener.of((update: ViewUpdate) => this.onEditorUpdate(update)),
       this.languageCompartment.of([]),
@@ -970,8 +973,26 @@ class App {
             }
           },
           { key: 'Alt-Enter', run: () => { this.runAiCompletion(); return true; } },
+          // ドキュメント全体のインデントを整形 (Alt + Shift + F)
+          {
+            key: 'Alt-Shift-f',
+            run: (view) => {
+              // 全選択 -> インデント -> 選択解除（カーソル位置復元は難しいので文頭か文末へ）
+              const originalSel = view.state.selection;
+              // 全体を対象にするため、全範囲を選択してから indentSelection を呼ぶ手もあるが、
+              // コマンドの仕様上、選択範囲に対して動作する。
+              // ユーザーが全選択(Ctrl+A)してから Tab を押すのと同じ挙動
+              view.dispatch({ selection: { anchor: 0, head: view.state.doc.length } });
+              indentSelection(view);
+              view.dispatch({ selection: originalSel }); // 選択範囲を戻す
+              return true;
+            }
+          },
         ]),
       );
+      if (this.codeLineWrap) {
+        extensions.push(EditorView.lineWrapping);
+      }
     }
 
     return extensions;
@@ -1263,6 +1284,15 @@ class App {
       }
       if (s.codeFontFamily !== undefined) this.codeFontFamily = s.codeFontFamily;
       if (s.codeFontSize !== undefined) this.codeFontSize = s.codeFontSize;
+      if (s.codeLineWrap !== undefined) {
+        this.codeLineWrap = s.codeLineWrap;
+        // コードモード中なら即座に反映
+        if (this.isCodeMode) {
+          this.editorView.dispatch({
+            effects: this.mainCompartment.reconfigure(this.createCodeExtensions())
+          });
+        }
+      }
 
       if (this.isCodeMode) {
         this.editorView.dispatch({
@@ -1405,6 +1435,7 @@ class App {
     // コードエディタ設定の読み込み 
     this.codeFontFamily = await this.store.get<string>('codeFontFamily') ?? 'default';
     this.codeFontSize = await this.store.get<number>('codeFontSize') ?? 10; // 初期値は10に合わせておく
+    this.codeLineWrap = await this.store.get<boolean>('codeLineWrap') ?? false;
     this.currentCodeLanguage = await this.store.get<string>('codeLanguage') ?? 'html';
 
     const align = await this.store.get<string>('editorAlign') ?? 'center';
@@ -1700,12 +1731,6 @@ class App {
       });
       // UIのフォントを更新
       this.updateCodeFontCss();
-
-      // 言語設定を確実にロード
-      const savedLang = await this.store.get<string>('codeLanguage');
-      if (savedLang) {
-        this.currentCodeLanguage = savedLang;
-      }
 
       // 2. 言語サポート適用
       await this.getLanguageSupport();
@@ -3123,6 +3148,9 @@ class App {
       const window = getCurrentWindow();
       if (await window.isFullscreen()) {
         await window.setFullscreen(false);
+      }
+      if (this.wasLightModeBeforeCode) {
+        this.isDarkMode = false;
       }
       await this.saveSettings();
       await invoke('force_close_app');

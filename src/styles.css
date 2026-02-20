@@ -249,6 +249,10 @@ body.dark-mode .window-controls button {
   background-color: transparent !important;
 }
 
+::-webkit-scrollbar-corner {
+  background-color: transparent !important;
+}
+
 /* CodeMirror自体がコンテナいっぱいに広がるように */
 .cm-editor {
   height: 100%;
@@ -770,7 +774,7 @@ body.zen-mode .titlebar:hover .titlebar-buttons #btn-spotlight {
 /* コードモード有効時のスタイル */
 body.code-mode #app-container {
   background-image: none !important;
-  background-color: rgba(26, 27, 38, 0.95) !important;
+  background-color: rgba(26, 27, 38, 1) !important;
 }
 
 body.code-mode #editor-container {
