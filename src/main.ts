@@ -2212,6 +2212,23 @@ class App {
               }
             }
           }),
+
+          // この場所でフォルダを開く
+          await MenuItem.new({
+            text: 'Open Folder Here',
+            enabled: !!this.activeTabPath, // ファイルを開いている時だけ有効
+            action: async () => {
+              if (this.activeTabPath) {
+                // ディレクトリパスの抽出
+                // (Windowsの \ と Macの / 両対応)
+                const sep = this.activeTabPath.includes('\\') ? '\\' : '/';
+                const dirPath = this.activeTabPath.substring(0, this.activeTabPath.lastIndexOf(sep));
+
+                // Rustコマンドを再利用 (opener::open はフォルダも開ける)
+                await invoke('open_in_browser', { path: dirPath });
+              }
+            }
+          }),
         ]
       });
 

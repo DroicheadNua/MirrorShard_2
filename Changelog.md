@@ -10,6 +10,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added (新機能)  
 - コードエディタモードの行折り返し設定を実装  
 - 簡易フォーマッタを実装（Alt+Shift+F、コードエディタモードのみ）  
+- メインエディタの右クリックメニューに「この場所でフォルダを開く (Open Folder Here)」を追加  
 
 ### Changed (変更点)    
 - Tauriのバージョンを2.9.3から2.10.2にアップデート  
