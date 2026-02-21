@@ -1,7 +1,7 @@
-# MirrorShard 2 ver. 1.1.0  
+# MirrorShard 2 ver. 1.2.0  
 
 創作支援用テキストエディタ「MirrorShard」の改良版です。  
-ソフトウェアフレームワークをTauriに変更することで、起動の高速化とメモリ消費量の削減に成功。さらにファイルサイズは前作の20分の1程度にまで激減しています。  
+ソフトウェアフレームワークをTauriに変更することで、起動の高速化とメモリ消費量の削減に成功。さらに配布バイナリのファイルサイズは前作の30分の1程度にまで大幅に削減されています。  
 アイデアプロセッサ機能は未搭載ですが、代わりにAI機能を大幅に強化。メインウィンドウにもAI機能が搭載され、カーソル位置からの執筆、コード補完、選択範囲の要約/リライト/翻訳が可能に。  
 加えてマークダウン／HTMLプレビュー機能とコードエディタモードを追加、より汎用性の高いエディタとして生まれ変わりました。  
 
@@ -12,16 +12,16 @@
 ## ダウンロード  
 
 [![Windows](https://img.shields.io/badge/Download-Windows-blue)]  
-(https://github.com/DroicheadNua/MirrorShard_2/releases/download/v1.1.0/MirrorShard.2_1.1.0_x64_ja-JP.msi)  
+(https://github.com/DroicheadNua/MirrorShard_2/releases/download/v1.2.0/MirrorShard.2_1.2.0_x64_ja-JP.msi)  
 [![Mac (Apple Silicon)](https://img.shields.io/badge/Download-Mac_(Apple_Silicon)-green)]  
-(https://github.com/DroicheadNua/MirrorShard_2/releases/download/v1.1.0/MirrorShard.2_1.1.0_aarch64.dmg)  
+(https://github.com/DroicheadNua/MirrorShard_2/releases/download/v1.2.0/MirrorShard.2_1.2.0_aarch64.dmg)  
 
 または、[最新のリリース一覧ページ](https://github.com/DroicheadNua/MirrorShard_2/releases/latest)からダウンロードできます。  
 最下段の「Assets」の項目が折りたたまれている場合は、▶マークを押して展開してください。    
 
 ## 既知の問題 (Known Issues)  
 
-現在、v1.1.0において以下の問題が確認されています。  
+現在、v1.2.0において以下の問題が確認されています。  
 
 ### Windows版  
 - ATOK 2017などの旧バージョンのATOKを使用している環境において、変換中のアンダーラインや文節区切りが表示されない現象が確認されています。  
@@ -29,7 +29,7 @@
   （※最新のATOKサブスクリプション版での動作は未検証です）  
 
 ### Mac版  
-- 広範囲を範囲選択したとき、選択範囲の表示が若干不自然になることがあります。また、Ctrl+Aでファイル全体が正しく選択できない場合があります。  
+- スクロールバーを使用して広範囲を範囲選択すると、挙動がおかしくなります。  
 
 ## トラブルの際には  
 　インストールやご使用などにつきまして、何か疑問の点等ございましたら「FAQ.md」を御覧ください。  
@@ -79,6 +79,7 @@ mirrorshard.dev@gmail.com
 ・選択範囲の文字数カウント機能を追加  
 ・AIチャット機能がOllamaにも対応。またLAN接続にも対応  
 ・降雪エフェクトがメインエディタに適用されるようになった  
+・右クリックメニューから、選択中のファイルのあるフォルダを開けるように  
 
 ・アイデアプロセッサには未対応。最終的には既存の全機能を移植する予定  
 
@@ -105,7 +106,6 @@ Linux版はグラフィック環境由来（特にNvidia製グラフィックボ
 
 *   **Windows / macOS:**  
     *   設定画面から任意の音楽ファイル（mp3/wav/ogg）を指定して再生する場合、ストリーミング再生となるため**メモリ消費は最小限**に抑えられます。  
-    *   デフォルトのBGMはアプリ内に埋め込まれているため、読み込み時に若干のCPU負荷がかかります。  
 *   **Linux (Raspberry Pi含む):**  
     *   OSの制限により、音楽データをすべてメモリ上に展開して再生します。そのため、**BGM使用時はメモリ消費量が増加します。**  
     *   特にRaspberry Pi等の低スペック環境でメモリ不足を感じる場合は、BGMをオフにすることをお勧めします。  
@@ -115,11 +115,10 @@ Linux版はグラフィック環境由来（特にNvidia製グラフィックボ
 　Imagen 4 による生成  
 
 ・BGM  
-　Pixabay https://pixabay.com より  
-　・ambient piano "Candrika" -Moonlight-（leela_takaki様）  
+　ACE-Stepによる生成  
 
 ・Tokyo Night  Color Scheme（Enkia様）(https://github.com/enkia/tokyo-night-vscode-theme)  
-　システムテーマの一つとしてお借りした他、コードエディターモードの配色もこちらをベースに調整しました。  
+　システムテーマの一つとしてお借りした他、コードエディターモードの配色もこちらをベースにしています。  
 
 ## ご利用にあたっての注意（免責事項）  
 このソフトウェアはフリーウェアであり、無保証（AS IS）で提供されます。  
@@ -134,7 +133,7 @@ Linux版はグラフィック環境由来（特にNvidia製グラフィックボ
 https://github.com/hundredrabbits/Left  
 から多くの影響を受けています。特にアウトライン機能はLeftのソースコードを参考にしています。  
 
-　なお、本ソフトウェアのコードの大半はGemini（2.5 proおよび3 pro preview）君が書いてくれました。ありがとうGemini君。  
+　なお、本ソフトウェアのコードの大半はGemini君が書いてくれました。開発当初2.5 proだったGemini君も3 pro preview、3.1 pro previewと進化していき、開発も少しずつ楽になっていった気がします。ありがとうGemini君。  
 
 　Copyright (c) 2025-2026 [DroicheadNua]  
 　mirrorshard.dev@gmail.com  

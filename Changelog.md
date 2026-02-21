@@ -5,12 +5,13 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [1.2.0] - 2026-2-XX  
+## [1.2.0] - 2026-2-22  
 
 ### Added (新機能)  
 - コードエディタモードの行折り返し設定を実装  
 - 簡易フォーマッタを実装（Alt+Shift+F、コードエディタモードのみ）  
-- メインエディタの右クリックメニューに「この場所でフォルダを開く (Open Folder Here)」を追加  
+- メインエディタの右クリックメニューに「この場所でフォルダを開く (Open Folder Here)」を追加（Ctrl + Shift + O）  
+- 「この場所でターミナルを開く (Open Terminal Here)」がショートカットに対応（Ctrl + Shift + @）  
 
 ### Changed (変更点)    
 - Tauriのバージョンを2.9.3から2.10.2にアップデート  

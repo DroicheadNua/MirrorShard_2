@@ -2249,6 +2249,47 @@ class App {
         e.stopPropagation();
       }
     }, true);
+
+    // --- 3. Safari用：スクロールバー使用時のバグ対策 ---
+    const isMac = this.currentOs === 'macos';
+    if (isMac && this.editorContainer) {
+      // キャプチャフェーズ (true) で、CodeMirrorが処理するより先に介入する
+      this.editorContainer.addEventListener('mousedown', (e) => {
+        // 左クリック以外、または Shiftキー押し(意図的な範囲選択) なら何もしない
+        if (e.button !== 0 || e.shiftKey) return;
+        if (!this.editorView) return;
+
+        // 1. スクロールバー領域のクリックなら無視
+        const scroller = this.editorView.scrollDOM;
+        const rect = scroller.getBoundingClientRect();
+        const scrollbarWidth = 18;
+        const isOnVerticalScrollbar = e.clientX >= rect.right - scrollbarWidth;
+        const isOnHorizontalScrollbar = e.clientY >= rect.bottom - scrollbarWidth;
+        if (isOnVerticalScrollbar || isOnHorizontalScrollbar) return;
+
+        // 2. ネイティブ機能でクリック位置を特定
+        if (document.caretRangeFromPoint) {
+          const range = document.caretRangeFromPoint(e.clientX, e.clientY);
+
+          if (range && this.editorView.contentDOM.contains(range.startContainer)) {
+            const clickPos = this.editorView.posAtDOM(range.startContainer, range.startOffset);
+
+            if (clickPos !== null) {
+              // Safariがバグる前に、CodeMirrorに正しいカーソル位置を強制セットする
+              this.editorView.dispatch({
+                selection: { anchor: clickPos, head: clickPos },
+                scrollIntoView: false, // 勝手なスクロールを防ぐ
+                userEvent: "select.pointer"
+              });
+
+              // Safariが保持している「古い選択状態」を念のためクリア
+              window.getSelection()?.removeAllRanges();
+            }
+          }
+        }
+      }, true);
+    }
+
   }
 
   // --- イベントハンドラ ---
@@ -2446,7 +2487,7 @@ class App {
       e.preventDefault();
       invoke('open_terminal_window');
     }
-    if (isCtrlOrCmd && key === '@' && isShift) {
+    if ((isCtrlOrCmd && key === '`' && isShift) || (isCtrlOrCmd && key === '@' && isShift)) {
       e.preventDefault();
       this.openTerminalHere();
     }
