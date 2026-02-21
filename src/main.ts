@@ -519,6 +519,52 @@ class App {
     });
   }
 
+  // ここでターミナルを開く
+  private async openTerminalHere() {
+    if (this.activeTabPath) {
+      // ファイルパスからディレクトリパスを取得
+      // (簡易実装: 最後のセパレータまでを切り取る)
+      const sep = this.activeTabPath.includes('\\') ? '\\' : '/';
+      const dir = this.activeTabPath.substring(0, this.activeTabPath.lastIndexOf(sep));
+
+      // ストアに一時的なCWDとして保存
+      await this.store.set('terminalTempCwd', dir);
+      await this.store.save();
+
+      // ターミナルを開く
+      await invoke('open_terminal_window');
+    } else {
+      // 未保存ファイルなどの場合、単に開くか、アラート
+      await invoke('open_terminal_window');
+    }
+  }
+
+  // ここでフォルダを開く
+  private async openFolderHere() {
+    if (!this.activeTabPath) return;
+    if (this.activeTabPath) {
+      // ディレクトリパスの抽出
+      // (Windowsの \ と Macの / 両対応)
+      const sep = this.activeTabPath.includes('\\') ? '\\' : '/';
+      const dirPath = this.activeTabPath.substring(0, this.activeTabPath.lastIndexOf(sep));
+
+      // Rustコマンドを再利用 (opener::open はフォルダも開ける)
+      await invoke('open_in_browser', { path: dirPath });
+    }
+  }
+
+  // --- コードの簡易フォーマット ---
+  private formatCode() {
+    if (!this.isCodeMode) return;
+    const view = this.editorView;
+    const originalSel = view.state.selection;
+
+    // 全選択してインデント整形し、選択範囲を元に戻す
+    view.dispatch({ selection: { anchor: 0, head: view.state.doc.length } });
+    indentSelection(view);
+    view.dispatch({ selection: originalSel });
+  }
+
   // AI通信を中止する
   private abortAiProcessing() {
     if (this.aiAbortController) {
@@ -973,21 +1019,6 @@ class App {
             }
           },
           { key: 'Alt-Enter', run: () => { this.runAiCompletion(); return true; } },
-          // ドキュメント全体のインデントを整形 (Alt + Shift + F)
-          {
-            key: 'Alt-Shift-f',
-            run: (view) => {
-              // 全選択 -> インデント -> 選択解除（カーソル位置復元は難しいので文頭か文末へ）
-              const originalSel = view.state.selection;
-              // 全体を対象にするため、全範囲を選択してから indentSelection を呼ぶ手もあるが、
-              // コマンドの仕様上、選択範囲に対して動作する。
-              // ユーザーが全選択(Ctrl+A)してから Tab を押すのと同じ挙動
-              view.dispatch({ selection: { anchor: 0, head: view.state.doc.length } });
-              indentSelection(view);
-              view.dispatch({ selection: originalSel }); // 選択範囲を戻す
-              return true;
-            }
-          },
         ]),
       );
       if (this.codeLineWrap) {
@@ -2192,41 +2223,18 @@ class App {
 
           // この場所でターミナルを開く
           await MenuItem.new({
-            text: 'Open Terminal Here',
+            text: 'Open Terminal Here (Ctrl+Shift+@)',
             action: async () => {
-              if (this.activeTabPath) {
-                // ファイルパスからディレクトリパスを取得
-                // (簡易実装: 最後のセパレータまでを切り取る)
-                const sep = this.activeTabPath.includes('\\') ? '\\' : '/';
-                const dir = this.activeTabPath.substring(0, this.activeTabPath.lastIndexOf(sep));
-
-                // ストアに一時的なCWDとして保存
-                await this.store.set('terminalTempCwd', dir);
-                await this.store.save();
-
-                // ターミナルを開く
-                await invoke('open_terminal_window');
-              } else {
-                // 未保存ファイルなどの場合、単に開くか、アラート
-                await invoke('open_terminal_window');
-              }
+              this.openTerminalHere();
             }
           }),
 
           // この場所でフォルダを開く
           await MenuItem.new({
-            text: 'Open Folder Here',
+            text: 'Open Folder Here (Ctrl+Shift+O)',
             enabled: !!this.activeTabPath, // ファイルを開いている時だけ有効
             action: async () => {
-              if (this.activeTabPath) {
-                // ディレクトリパスの抽出
-                // (Windowsの \ と Macの / 両対応)
-                const sep = this.activeTabPath.includes('\\') ? '\\' : '/';
-                const dirPath = this.activeTabPath.substring(0, this.activeTabPath.lastIndexOf(sep));
-
-                // Rustコマンドを再利用 (opener::open はフォルダも開ける)
-                await invoke('open_in_browser', { path: dirPath });
-              }
+              this.openFolderHere();
             }
           }),
         ]
@@ -2241,134 +2249,6 @@ class App {
         e.stopPropagation();
       }
     }, true);
-
-    //　Mac専用範囲選択処理だが不具合が多いので一旦封印
-    //　使用時にはEditorSelectionをインポート
-    // const isMac = navigator.userAgent.includes('Mac');
-
-    // if (isMac && this.editorContainer) {
-    //   this.editorContainer.addEventListener('mousedown', (e) => {
-    //     // 左クリック以外は無視
-    //     if (e.button !== 0) {
-    //       e.preventDefault();
-    //       e.stopPropagation();
-    //       return;
-    //     }
-    //     if (!this.editorView) return;
-
-    //     // 1. スクロールバー判定
-    //     const scroller = this.editorView.scrollDOM;
-    //     const rect = scroller.getBoundingClientRect();
-    //     const scrollbarWidth = 18;
-
-    //     const isOnVerticalScrollbar = e.clientX >= rect.right - scrollbarWidth;
-    //     const isOnHorizontalScrollbar = e.clientY >= rect.bottom - scrollbarWidth;
-
-    //     if (isOnVerticalScrollbar || isOnHorizontalScrollbar) {
-    //       e.stopPropagation();
-    //       return;
-    //     }
-
-    //     // 2. ネイティブ機能でクリック位置（DOMノードとオフセット）を特定
-    //     let range: Range | null = null;
-    //     if (document.caretRangeFromPoint) {
-    //       range = document.caretRangeFromPoint(e.clientX, e.clientY);
-    //     }
-
-    //     // 範囲が取得でき、かつエディタ内部であることを確認
-    //     if (range && this.editorView.contentDOM.contains(range.startContainer)) {
-    //       // コンテナ自体（余白など）をクリックしてしまった場合の除外処理
-    //       const container = range.startContainer;
-    //       const isGenericContainer = container === this.editorView.contentDOM ||
-    //         (container.nodeType === 1 && (container as HTMLElement).classList.contains('cm-content'));
-
-    //       if (!isGenericContainer) {
-
-    //         // ★★★ CodeMirrorの座標(数値)も計算しておく ★★★
-    //         const clickPos = this.editorView.posAtDOM(range.startContainer, range.startOffset);
-
-    //         const sel = window.getSelection();
-    //         if (sel && clickPos !== null) { // clickPosチェックを追加
-
-    //           // --- Shiftキーの処理 (範囲選択) ---
-    //           if (e.shiftKey && sel.rangeCount > 0) {
-    //             // 1. ネイティブ側で範囲を拡張
-    //             sel.extend(range.startContainer, range.startOffset);
-
-    //             // 2. ★★★ CodeMirror側にも即座に同期 (これで色がつく) ★★★
-    //             // 現在のアンカー（開始点）を取得
-    //             const currentAnchor = this.editorView.state.selection.main.anchor;
-    //             // EditorSelection.range は自動で前後関係を処理して範囲を作ってくれる
-    //             this.editorView.dispatch({
-    //               selection: EditorSelection.range(currentAnchor, clickPos),
-    //               scrollIntoView: false, // 勝手なスクロールはさせない
-    //               userEvent: "select.pointer" // マウス操作であることを明示
-    //             });
-
-    //           } else {
-    //             // --- 通常クリック ---
-    //             // 1. ネイティブ側でカーソルを置く
-    //             sel.removeAllRanges();
-    //             sel.addRange(range);
-
-    //             // 2. ★★★ CodeMirror側にも同期 ★★★
-    //             this.editorView.dispatch({
-    //               selection: { anchor: clickPos, head: clickPos },
-    //               scrollIntoView: false,
-    //               userEvent: "select.pointer"
-    //             });
-    //           }
-    //         }
-
-    //         // 標準ハンドラを止める
-    //         e.preventDefault();
-    //         e.stopPropagation();
-
-    //         this.editorView.contentDOM.focus();
-
-    //         // --- ドラッグ操作の監視 ---
-    //         const onMouseMove = (moveEvent: MouseEvent) => {
-    //           if (document.caretRangeFromPoint) {
-    //             const newRange = document.caretRangeFromPoint(moveEvent.clientX, moveEvent.clientY);
-
-    //             if (newRange && window.getSelection()) {
-    //               // 1. ネイティブ側更新
-    //               window.getSelection()?.extend(newRange.startContainer, newRange.startOffset);
-
-    //               // 2. ★★★ CodeMirror側更新 (ドラッグ中も色をつける) ★★★
-    //               // ドラッグ中の新しい位置を計算
-    //               const dragPos = this.editorView.posAtDOM(newRange.startContainer, newRange.startOffset);
-    //               // 現在のアンカー（開始時に固定されているはず）
-    //               const currentAnchor = this.editorView.state.selection.main.anchor;
-
-    //               if (dragPos !== null) {
-    //                 this.editorView.dispatch({
-    //                   selection: EditorSelection.range(currentAnchor, dragPos),
-    //                   scrollIntoView: true, // ドラッグ中は端に行ったらスクロールしてほしいので true
-    //                   userEvent: "select.pointer"
-    //                 });
-    //               }
-    //             }
-    //           }
-    //         };
-
-    //         const onMouseUp = () => {
-    //           window.removeEventListener('mousemove', onMouseMove);
-    //           window.removeEventListener('mouseup', onMouseUp);
-    //         };
-
-    //         window.addEventListener('mousemove', onMouseMove);
-    //         window.addEventListener('mouseup', onMouseUp);
-
-    //         return;
-    //       }
-    //     }
-
-    //     // フォールバック：もしネイティブ取得に失敗した場合（余白クリックなど）は
-    //     // 諦めて標準動作に任せる（暴発するかもしれないが、操作不能よりはマシ）
-
-    //   }, true); // キャプチャフェーズ
-    // }
   }
 
   // --- イベントハンドラ ---
@@ -2479,7 +2359,12 @@ class App {
       e.preventDefault();
       this.handleCloseRequest();
     }
-    if (isCtrlOrCmd && key === 'o') { e.preventDefault(); this.openNewFile(); }
+    if (isCtrlOrCmd && key === 'o' && !isShift) {
+      e.preventDefault(); this.openNewFile();
+    }
+    if (isCtrlOrCmd && key === 'o' && isShift) {
+      e.preventDefault(); this.openFolderHere();
+    }
     if (isCtrlOrCmd && key === 'n') { e.preventDefault(); this.createNewTab(); }
     if (isCtrlOrCmd && e.key === 'Tab') { e.preventDefault(); this.cycleTab(e.shiftKey ? 'prev' : 'next'); }
 
@@ -2561,6 +2446,16 @@ class App {
       e.preventDefault();
       invoke('open_terminal_window');
     }
+    if (isCtrlOrCmd && key === '@' && isShift) {
+      e.preventDefault();
+      this.openTerminalHere();
+    }
+    if (e.altKey && e.shiftKey && e.code === 'KeyF') {
+      if (!this.isCodeMode) return;
+      e.preventDefault();
+      this.formatCode();
+      return;
+    }
   }
 
   private onEditorUpdate(update: ViewUpdate) {
@@ -2573,7 +2468,7 @@ class App {
       }
     }
 
-    // 2. ★★★ タイプ音の再生 (Electron版の移植) ★★★
+    // 2. タイプ音の再生 (Electron版の移植) 
     // トランザクションがあり、かつユーザー操作(userEvent)による変更である場合
     if (this.isTypeSoundEnabled && update.transactions.some(tr => tr.annotation(Transaction.userEvent))) {
       // ドキュメント変更(入力/削除) または 選択範囲変更(カーソル移動) で鳴る
@@ -3087,7 +2982,7 @@ class App {
   private playTypeSound() {
     if (!this.isTypeSoundEnabled || !this.audioContext || !this.typeSoundBuffer) return;
 
-    // ★重要：コンテキストがサスペンド状態なら、再開させる
+    // コンテキストがサスペンド状態なら、再開させる
     if (this.audioContext.state === 'suspended') {
       this.audioContext.resume();
     }
