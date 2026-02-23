@@ -2072,7 +2072,7 @@ class App {
     this.outlineControls?.addEventListener('click', (e) => this.handleSidebarClick(e));
     this.outlineContainer?.addEventListener('click', (e) => this.handleSidebarClick(e));
 
-    document.addEventListener('keydown', (e) => this.handleKeyDown(e));
+    document.addEventListener('keydown', (e) => this.handleKeyDown(e), { capture: true });
     // ボタンのイベントリスナー
     document.querySelector('#btn-save')?.addEventListener('click', () => this.saveActiveFile());
     document.querySelector('#btn-save-as')?.addEventListener('click', () => this.saveActiveFileAs());
@@ -2483,9 +2483,11 @@ class App {
       e.preventDefault();
       this.toggleCodeMode();
     }
-    if (isCtrlOrCmd && key === '@' && !isShift) {
+    if ((isCtrlOrCmd && key === '`' && !isShift) || (isCtrlOrCmd && key === '@' && !isShift)) {
       e.preventDefault();
+      e.stopPropagation();
       invoke('open_terminal_window');
+      return;
     }
     if ((isCtrlOrCmd && key === '`' && isShift) || (isCtrlOrCmd && key === '@' && isShift)) {
       e.preventDefault();

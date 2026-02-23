@@ -5,6 +5,20 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.3.0] - 2026-2-XX  
+
+### Added (新機能)  
+
+
+### Changed (変更点)    
+- 設定ウィンドウの大きさを可変に  
+
+### Fixed (修正点)  
+- Ctrl+@でターミナルを開いたときにインデント操作が暴発していた不具合を修正  
+- AIチャットウィンドウでスクロールバーのつまみの色が設定色と一致しない不具合を修正  
+
+
+
 ## [1.2.0] - 2026-2-22  
 
 ### Added (新機能)  

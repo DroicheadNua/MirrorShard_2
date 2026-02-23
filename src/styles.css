@@ -646,6 +646,7 @@ body:not(.dark-mode) #editor-container .cm-scroller {
   padding-top: 10px;
   padding-bottom: 10px;
   border-radius: 16px;
+  outline: none;
 
   /* 4. 文字色 (強制上書き) */
   /* これが設定されていれば、テーマの色よりも優先される */
@@ -658,7 +659,7 @@ body.ui-bg-enabled:not(.dark-mode) #editor-container .cm-scroller {
 }
 
 
-/* ★ UI要素の文字色制御 ★ */
+/* UI要素の文字色制御 */
 body:not(.dark-mode) #sidebar-pane,
 body:not(.dark-mode) #status-bar,
 body:not(.dark-mode) .file-entry,

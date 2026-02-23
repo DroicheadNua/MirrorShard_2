@@ -190,6 +190,13 @@ async function applyAppearanceSettings() {
     } else {
         root.removeProperty('--ui-text-color');
     }
+    // 7. スクロールバーの色 (customScrollbarColor)
+    const scrollbarColor = await store.get<string>('customScrollbarColor');
+    if (scrollbarColor) {
+        root.setProperty('--scrollbar-color', scrollbarColor);
+    } else {
+        root.removeProperty('--scrollbar-color');
+    }
 }
 
 // --- グロー適用ロジック (堅牢化版) ---
@@ -283,6 +290,10 @@ function setupSettingsListener() {
         if (p.customUiTextColor !== undefined) {
             if (p.customUiTextColor) root.setProperty('--ui-text-color', p.customUiTextColor);
             else root.removeProperty('--ui-text-color');
+        }
+        if (p.customScrollbarColor !== undefined) {
+            if (p.customScrollbarColor) root.setProperty('--scrollbar-color', p.customScrollbarColor);
+            else root.removeProperty('--scrollbar-color');
         }
         // プロフィールの更新
         if (p.aiChatUserName !== undefined) userName = p.aiChatUserName;

@@ -676,7 +676,8 @@ async fn open_settings_window(app: AppHandle) {
     .title("設定")
     .transparent(true)
     .inner_size(640.0, 820.0)
-    .resizable(false)
+    .min_inner_size(400.0, 400.0)
+    .resizable(true)
     .decorations(false)
     .visible(false)
     .devtools(false);
