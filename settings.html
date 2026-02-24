@@ -291,8 +291,13 @@
 
                 <div class="setting-group">
                     <h4>Markdown Preview</h4>
-                    <!-- 将来的に GFMのオンオフとかを入れる場所 -->
-                    <p style="color: #888; font-size: 0.9em;">(Future settings will appear here)</p>
+                    <label>
+                        <input type="checkbox" id="check-md-hard-breaks" />
+                        Hard Breaks (Enter1回で改行する)
+                    </label>
+                    <p style="font-size: 0.8em; color: #333; margin-top: 5px;">
+                        ※オフの場合、公式Markdown仕様通り「末尾に半角スペース2つ」か「空行」で改行されます（Astro等でのプレビュー時はオフ推奨）。
+                    </p>
                 </div>
 
                 <div class="setting-group">

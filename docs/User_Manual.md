@@ -223,6 +223,8 @@ by word (チェックボックス): チェックを入れると、単語単位�
 ◯Font……コードエディタモードでのフォントを指定します。  
 ◯Font Size……コードエディタモードでのフォントサイズを指定します。  
 ◯Word Wrap（折り返し）……エディタ幅で折り返すかどうかを指定します。  
+・Markdown Preview  
+◯Hard Breaks……Markdownのハードブレイク設定を指定します。  
 ・Terminal Settings  
 ◯Shell Path……使用するシェルを指定します。空欄の場合、Windowsでは PowerShell (または Git Bash)、Mac/Linuxではデフォルトのシェルが起動します。  
 	※Git Bashを使用する場合は `bin\bash.exe` を指定してください。  

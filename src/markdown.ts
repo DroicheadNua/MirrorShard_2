@@ -9,16 +9,11 @@ import { save } from '@tauri-apps/plugin-dialog';
 import { writeTextFile } from '@tauri-apps/plugin-fs';
 import { Store } from '@tauri-apps/plugin-store';
 
-// GFMと改行の有効化
-marked.use({
-    gfm: true,
-    breaks: true // 改行を<br>にする
-});
-
 interface MarkdownPayload {
     text: string;
     isDarkMode: boolean;
     filePath: string;
+    mdHardBreaks: boolean;
 }
 
 const refreshBtn = document.getElementById('btn-refresh');
@@ -39,6 +34,7 @@ const scrollHistory = new Map<string, number>();
 let currentFilePath = "";
 let currentText = "";
 let currentMode = "markdown"; // 'markdown' | 'html'
+let useHardBreaks = false;
 let isPinned = false;
 let zoomLevel = 100;
 
@@ -51,8 +47,17 @@ async function renderContent() {
         // --- Markdownモード ---
         // クラス付与（スタイル適用）
         contentDiv.classList.add('markdown-body');
+        let processedText = currentText;
 
-        rawHtml = await marked.parse(currentText);
+        // 文字列の先頭が --- で始まり、次の --- で終わるブロックを削除
+        if (processedText.startsWith('---\n')) {
+            processedText = processedText.replace(/^---\n[\s\S]*?\n---\n/, '');
+        }
+
+        rawHtml = await marked.parse(processedText, {
+            gfm: true,
+            breaks: useHardBreaks
+        });
 
         // ※Markdownのルビ変換はDOM挿入後に行う（updateArticle）
     } else {
@@ -159,6 +164,7 @@ async function renderContent() {
 
 async function init() {
     const store = await Store.load('.settings.dat');
+    useHardBreaks = await store.get<boolean>('mdHardBreaks') ?? false;
 
     // モードの復元
     const savedMode = await store.get<string>('lastPreviewMode') || 'markdown';
@@ -175,9 +181,16 @@ async function init() {
 
     // データ受信リスナー
     await listen<MarkdownPayload>('markdown-update', async (event) => {
-        const { text, isDarkMode, filePath } = event.payload;
+        const { text, isDarkMode, filePath, mdHardBreaks } = event.payload;
         if (!contentDiv || !wrapper) return;
         currentText = text;
+
+        // Hard Breaks 設定の更新
+        if (mdHardBreaks !== undefined) {
+            useHardBreaks = mdHardBreaks;
+            // 設定が変わったら即座に再描画
+            await renderContent();
+        }
 
         // 1. 直前のファイルのスクロール位置を保存
         // (初回起動時など currentFilePath が空の場合はスキップ)

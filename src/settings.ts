@@ -105,6 +105,9 @@ async function setupSettings() {
         const codeFontSizeInput = document.querySelector('#code-font-size-input') as HTMLInputElement;
         const checkCodeWrap = document.querySelector('#code-line-wrapping') as HTMLInputElement;
 
+        // --- 3.3. Markdown Preview UI要素の取得 ---
+        const checkMdHardBreaks = document.querySelector('#check-md-hard-breaks') as HTMLInputElement;
+
         if (!applyBtn || !closeBtn) {
             console.error("Critical UI elements not found");
             return;
@@ -481,6 +484,9 @@ async function setupSettings() {
         const initCodeWrap = await store.get<boolean>('codeLineWrap') || false;
         if (checkCodeWrap) checkCodeWrap.checked = initCodeWrap;
 
+        const initMdHardBreaks = await store.get<boolean>('mdHardBreaks') || false;
+        if (checkMdHardBreaks) checkMdHardBreaks.checked = initMdHardBreaks;
+
         const isUiBg = await store.get<boolean>('useUiBg') ?? false;
         useUiBgCheck.checked = isUiBg;
 
@@ -717,6 +723,7 @@ async function setupSettings() {
                 const newCodeFont = codeFontSelect.value;
                 console.log('Applying Code Font:', newCodeFont);
                 const newCodeWrap = checkCodeWrap.checked;
+                const newMdHardBreaks = checkMdHardBreaks.checked;
                 const newCodeSize = parseInt(codeFontSizeInput.value, 10) || 10;
                 const newBlur = parseInt(blurRange.value, 10);
 
@@ -755,6 +762,7 @@ async function setupSettings() {
                 await store.set('codeFontFamily', newCodeFont);
                 await store.set('codeFontSize', newCodeSize);
                 await store.set('codeLineWrap', newCodeWrap);
+                await store.set('mdHardBreaks', newMdHardBreaks);
                 await store.set('customTextColor', newTextColor);
                 await store.set('customUiTextColor', newUiTextColor);
                 await store.set('customEditorBg', newEditorBg);
@@ -829,6 +837,7 @@ async function setupSettings() {
                     codeFontFamily: newCodeFont,
                     codeFontSize: newCodeSize,
                     codeLineWrap: newCodeWrap,
+                    mdHardBreaks: newMdHardBreaks,
                     customTextColor: newTextColor,
                     customUiTextColor: newUiTextColor,
                     customEditorBg: newEditorBg,

@@ -169,6 +169,7 @@ class App {
   private codeFontFamily = 'default';
   private codeFontSize = 10;
   private codeLineWrap = false;
+  private mdHardBreaks = false;
   private codeExtras: any = null;
   private isCodeExtrasLoaded = false;
   // 全ての拡張機能を管理する区画
@@ -1331,6 +1332,9 @@ class App {
         });
         this.updateCodeFontCss();
       }
+      if (s.mdHardBreaks !== undefined) {
+        this.mdHardBreaks = s.mdHardBreaks;
+      }
     });
 
     // プレビューからの更新要求に応える
@@ -1468,6 +1472,8 @@ class App {
     this.codeFontSize = await this.store.get<number>('codeFontSize') ?? 10; // 初期値は10に合わせておく
     this.codeLineWrap = await this.store.get<boolean>('codeLineWrap') ?? false;
     this.currentCodeLanguage = await this.store.get<string>('codeLanguage') ?? 'html';
+
+    this.mdHardBreaks = await this.store.get<boolean>('mdHardBreaks') ?? false;
 
     const align = await this.store.get<string>('editorAlign') ?? 'center';
     this.updateEditorAlign(align);
@@ -2734,6 +2740,7 @@ class App {
     await this.store.set('enableGlow', this.enableGlow);
     await this.store.set('glowColor', this.glowColor);
     await this.store.set('glowRadius', this.glowRadius);
+    await this.store.set('mdHardBreaks', this.mdHardBreaks);
 
 
     // 画像と音楽のパス (存在する場合のみ保存、あるいは空文字で保存)
@@ -2879,7 +2886,8 @@ class App {
     await emit('markdown-update', {
       text: text,
       isDarkMode: this.isDarkMode,
-      filePath: filePath
+      filePath: filePath,
+      mdHardBreaks: this.mdHardBreaks
     });
   }
 
@@ -3134,6 +3142,7 @@ class App {
       activeTab.isDirty = false;
       this.renderSidebar(); // isDirty表示(*)を消すために再描画
       console.log(`File saved: ${activeTab.path}`);
+      this.updatePreviewsOnSave();
     } catch (error) {
       console.error(`Failed to save file: ${activeTab.path}`, error);
     }
@@ -3190,11 +3199,25 @@ class App {
       await this.saveSettings(); // 状態保存
 
       console.log(`File saved as: ${newPath}`);
+      this.updatePreviewsOnSave();
 
     } catch (error) {
       console.error(`Failed to save file as:`, error);
       await message(`保存に失敗しました。\n${error}`, { kind: 'error' });
     }
+  }
+
+  // プレビュー更新用のヘルパーメソッド
+  private updatePreviewsOnSave() {
+    const textLength = this.editorView.state.doc.length;
+    const limit = 50000;
+    const shouldTruncate = textLength > limit;
+
+    // マークダウンプレビューへ送信（開いていなければ無視される）
+    this.sendDataToMarkdownPreview(shouldTruncate);
+
+    // 縦書きプレビューへ送信（開いていなければ無視される）
+    this.sendDataToPreview(shouldTruncate);
   }
 
   private async openNewFile() {

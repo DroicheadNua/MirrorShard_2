@@ -12,6 +12,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed (変更点)    
 - 設定ウィンドウの大きさを可変に  
+- MarkdownのHard Breaks設定を切り替えられるように変更  
+- MarkdownのFrontmatterを自動的に非表示に  
+- 保存時にプレビュー(HTML/Markdown/縦書き)を更新するようにした  
 
 ### Fixed (修正点)  
 - Ctrl+@でターミナルを開いたときにインデント操作が暴発していた不具合を修正  
