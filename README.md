@@ -7,6 +7,9 @@
 
 創作用エディタとして、また巨大テキストファイルを扱えるアウトラインプロセッサやマークダウンエディタとして、幅広く運用できると思います。  
 
+公式サイトを作成しました  
+https://droicheadnua.github.io/MirrorShard-Official/
+
 ![MirrorShard_2 Key Visual](screenshots/ScreenShot01.jpg)
 
 ## ダウンロード  
