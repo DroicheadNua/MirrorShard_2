@@ -24,21 +24,25 @@ body {
     overflow-y: hidden;
 }
 
-#settings-wrapper::-webkit-scrollbar {
+#settings-wrapper::-webkit-scrollbar,
+#settings-container::-webkit-scrollbar {
     width: 8px;
 }
 
-#settings-wrapper::-webkit-scrollbar-track {
+#settings-wrapper::-webkit-scrollbar-track,
+#settings-container::-webkit-scrollbar-track {
     background: transparent;
 }
 
-#settings-wrapper::-webkit-scrollbar-thumb {
+#settings-wrapper::-webkit-scrollbar-thumb,
+#settings-container::-webkit-scrollbar-thumb {
     background: rgba(0, 0, 0, 0.15);
     border-radius: 4px;
     min-height: '40px';
 }
 
-#settings-wrapper::-webkit-scrollbar-thumb:hover {
+#settings-wrapper::-webkit-scrollbar-thumb:hover,
+#settings-container::-webkit-scrollbar-thumb:hover {
     background: rgba(0, 0, 0, 0.25);
 }
 
