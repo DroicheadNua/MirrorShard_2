@@ -5,7 +5,7 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [1.3.0] - 2026-2-XX  
+## [1.3.0] - 2026-3-2  
 
 ### Added (新機能)  
 
@@ -14,7 +14,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - 設定ウィンドウの大きさを可変に  
 - MarkdownのHard Breaks設定を切り替えられるように変更  
 - MarkdownのFrontmatterを自動的に非表示に  
-- 保存時にプレビュー(HTML/Markdown/縦書き)を更新するようにした  
+- 保存時にプレビュー(HTML/Markdown/縦書き)を更新するようにした
+- docsフォルダのドキュメント類のファイル名を英語に（アップロード時に文字化けが発生したため）    
 
 ### Fixed (修正点)  
 - Ctrl+@でターミナルを開いたときにインデント操作が暴発していた不具合を修正  

@@ -974,7 +974,8 @@ pub fn run() {
                                       // StateFlags::FULLSCREEN, // フルスクリーン状態は保存しない
                                       // VISIBLE を除外することで、表示状態は保存・復元されなくなる
                 )
-                .with_denylist(&["settings"])
+                // .with_denylist(&["settings"])
+                // 設定ウィンドウも可変にしたのでサイズを保存
                 .build(),
         )
         .plugin(tauri_plugin_store::Builder::new().build())
