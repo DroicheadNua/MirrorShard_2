@@ -1,27 +1,4 @@
 // @ts-nocheck
-// --- TypeScriptコンパイラを黙らせるための型定義とモック ---
-// declare global {
-//   interface Window {
-//     electronAPI: any;
-//   }
-// }
-
-// window.electronAPI = {
-//   on: (channel: string, callback: Function) => { console.log(`[Mock] on: ${channel}`); },
-//   send: (channel: string, data: any) => { console.log(`[Mock] send: ${channel}`, data); },
-//   historyPush: (state: string) => { console.log(`[Mock] historyPush`); },
-//   getHistoryCount: () => Promise.resolve(0),
-//   getHistoryIndex: () => Promise.resolve(0),
-//   undo: () => Promise.resolve(null),
-//   redo: () => Promise.resolve(null),
-//   clearHistory: () => { },
-//   showContextMenu: () => { },
-//   toggleIPWindow: () => { },
-//   checkTheme: () => Promise.resolve('dark'),
-//   invoke: async (channel: string, ...args: any[]) => { console.log(`[Mock] invoke: ${channel}`, args); return null; },
-//   // ※もし他にも「プロパティ〇〇がありません」とエラーが出る場合は、ここに適当な空関数を追加してください
-// };
-
 import { listen, emit } from '@tauri-apps/api/event';
 import { getCurrentWindow } from '@tauri-apps/api/window';
 import { invoke } from '@tauri-apps/api/core';
@@ -29,18 +6,67 @@ import { type } from '@tauri-apps/plugin-os';
 import { resolveResource } from '@tauri-apps/api/path';
 import { convertFileSrc } from '@tauri-apps/api/core';
 import Konva from 'konva';
+
+// --- グローバル変数（トップレベルに移動） ---
+let stage: Konva.Stage;
+let layer: Konva.Layer;
+let transformer: Konva.Transformer;
+let selectionRect: Konva.Rect;
+
+// 履歴管理
 let history: string[] = [];
 let historyIndex: number = -1;
 const MAX_HISTORY = 50;
-let stage: Konva.Stage;
-let layer: Konva.Layer;
+let isHistoryEnabled = true;
+
+// 状態フラグ
 let isInitialized = false;
 let isPinned = false;
 let isSimpleFullscreen = false;
+let isTextEditing = false;
+let isContentEditing = false;
+let contentEditorJustClosed = false;
+let currentlyEditingNodeId: string | null = null;
+let isPanning = false;
+let didPan = false;
+let lastPointerPosition: { x: number; y: number } = { x: 0, y: 0 };
+let selectionJustFinished = false;
+let selectedShape: Konva.Group | null = null;
+let selectedNodes: Konva.Group[] = [];
+let currentFilePath: string | null = null;
+let isDirty = false;
+
+const outlinePane = document.getElementById('ip-outline-content')!;
+// ファイルごとではなく、単一の折りたたみ状態を管理
+const outlineCollapsedState = new Map<string, boolean>(); // key: groupId, value: isCollapsed
 const pinBtn = document.getElementById('ip-toggle-on-top-btn');
 const closeBtn = document.getElementById('ip-close-btn');
 const wrapper = document.getElementById('ip-wrapper');
 const osType = await type();
+
+// --- ★ テーマ情報をJavaScriptで一元管理 ---
+const themes = {
+  light: {
+    text: '#111111',
+    link: '#333333',
+    selection: '#cb0707ff',
+    nodeBg: 'transparent',
+    labelBackground: '#cccccc',
+    //    pairedBorder: '#888888',
+    pairedBg: 'rgba(120, 120, 120, 0.2)',
+    templateBg: 'rgba(229, 174, 24, 0.3)'
+  },
+  dark: {
+    text: '#cccccc',
+    link: '#cccccc',
+    selection: '#d31010ff',
+    nodeBg: 'transparent',
+    labelBackground: '#444444',
+    //    pairedBorder: '#cccccc', 
+    pairedBg: 'rgba(155, 155, 155, 0.3)',
+    templateBg: 'rgba(43, 136, 216, 0.3)'
+  }
+};
 
 // リンクの種類を定義
 enum LinkType {
@@ -62,24 +88,28 @@ interface ChatMessage {
 
 export function initializeIdeaProcessor() {
   if (isInitialized) {
-    console.warn("initializeIdeaProcessor was called more than once. Aborting subsequent calls.");
+    console.warn("Already initialized.");
     return;
   }
   isInitialized = true;
   console.log("--- initializeIdeaProcessor Started ---");
 
-  // --- 初期設定 ---
+
+  // 1. ステージ作成
   stage = new Konva.Stage({
     container: 'ip-container',
     width: window.innerWidth,
     height: window.innerHeight,
   });
+
+  // 2. レイヤー作成
   layer = new Konva.Layer();
   stage.add(layer);
 
   const editorPane = document.getElementById('ip-editor-pane')!;
   const contentEditor = document.getElementById('ip-content-editor') as HTMLTextAreaElement;
   const konvaContainer = document.getElementById('ip-container')!;
+
 
   //  Konvaコンテナのサイズを監視し、ステージサイズを追従させる 
   const resizeObserver = new ResizeObserver(entries => {
@@ -104,866 +134,8 @@ export function initializeIdeaProcessor() {
   // ★ イベントリスナーには、デバウンス化した関数を登録する
   window.addEventListener('resize', debouncedResize);
 
-  // --- グローバルな状態管理 ---
-  let selectedShape: Konva.Group | null = null;
-  let currentFilePath: string | null = null;
-  let isDirty = false;
-  let isHistoryEnabled = true;
-  let isTextEditing: boolean = false;
-  let isContentEditing: boolean = false;
-  let contentEditorJustClosed = false;
-  let currentlyEditingNodeId: string | null = null;
-  let isPanning = false;
-  let didPan = false; // ドラッグが発生したかを記録するフラグ
-  let lastPointerPosition: { x: number; y: number };
-  let selectionJustFinished = false;
-  const outlinePane = document.getElementById('ip-outline-content')!;
-  // ファイルごとではなく、単一の折りたたみ状態を管理
-  const outlineCollapsedState = new Map<string, boolean>(); // key: groupId, value: isCollapsed
 
-  // =================================================================
-  // ★ 主要な関数（リファクタリング済み）
-  // =================================================================
 
-  /**
-   * 1. 新規ノード作成のエントリーポイント (ダブルクリックで呼ばれる)
-   * @param pos 作成位置 (ローカル座標)
-   * @param target Konvaのイベントターゲット
-   */
-  function createNewNode(pos: Vector2d, target: Konva.Node) {
-    const nodeData = {
-      id: `node_${Date.now()}${Math.random()}`,
-      x: pos.x,
-      y: pos.y,
-      text: 'New Text',
-      width: 200, // 初期幅
-      height: new Konva.Text({ text: 'New Text', fontSize: 16, padding: 8, width: 200 }).height(), // 初期高さ
-    };
-    const nodeGroup = buildNode(nodeData);
-
-    // ダブルクリックされたのがグループノードの背景か、その子孫か？
-    const parentGroup = target.findAncestor('.background-shape');
-    if (parentGroup && !parentGroup.getAttr('isTemplateRoot')) {
-      nodeGroup.moveTo(parentGroup);
-      nodeGroup.setAttr('parentId', parentGroup.id());
-      updateNodeVisuals(nodeGroup, false);
-      // グループ内に作成されたので、位置を再調整
-      // createNewNode に渡される pos は既にローカル座標なので、
-      // グループの座標を引く必要はない。
-    }
-
-    enterEditMode(nodeGroup, true);
-  }
-
-  /**
-   * 2. データからノードを復元するエントリーポイント (ロード時に呼ばれる)
-   */
-  function createNodeFromData(nodeData: any) {
-    // `buildNode`を呼び出す際に、`text`プロパティとして`nodeData.title`を渡す
-    const nodeGroup = buildNode({
-      id: nodeData.id,
-      x: nodeData.x,
-      y: nodeData.y,
-      text: nodeData.title, // ★ 表示するのはtitle
-      width: nodeData.width,
-      height: nodeData.height
-    });
-    return nodeGroup;
-  }
-
-  // ■ 履歴を記録する関数 (操作が行われたときに呼ぶ)
-  function recordHistory(message: string = '') {
-    // アンドゥ/リドゥ中の変更は記録しない
-    if (!isHistoryEnabled) return;
-
-    const stateJson = stage.toJSON(); // 現在の盤面を文字列化
-
-    // 過去に戻った状態で新しく操作したら、それ以降の未来（Redo分）は消去
-    if (historyIndex < history.length - 1) {
-      history = history.slice(0, historyIndex + 1);
-    }
-
-    history.push(stateJson);
-
-    // 最大数を超えたら古いものを捨てる
-    if (history.length > MAX_HISTORY) {
-      history.shift();
-    } else {
-      historyIndex++;
-    }
-
-    console.log(`[History] Recorded: ${message} (Index: ${historyIndex})`);
-  }
-
-  // ★ テキストの変更に応じてノードサイズを調整する、再利用可能な関数を作成
-  function adjustNodeSize(textNode: Konva.Text) {
-    const maxWidth = 200; // 折り返しの最大幅
-    const padding = 8 * 2; // 左右のパディング合計
-
-    // 一時的に幅の制限をなくして、テキスト本来の幅を計算
-    textNode.width(undefined);
-    const textWidth = textNode.width();
-
-    if (textWidth + padding > maxWidth) {
-      // 最大幅を超える場合は、折り返しを有効にする
-      textNode.width(maxWidth - padding);
-    } else {
-      // 超えない場合は、幅の制限は不要
-      // （width(undefined)のまま）
-    }
-
-    const parentGroup = textNode.getParent();
-
-    // ★ `parentGroup`がnullでないことを確認してから、次の処理に進む
-    if (parentGroup) {
-      const backgroundRect = parentGroup.findOne<Konva.Rect>('.background');
-      if (backgroundRect) {
-        backgroundRect.width(textNode.width() + padding);
-        backgroundRect.height(textNode.height() + padding);
-
-        const links = (parentGroup as Konva.Group).getAttr('links') || [];
-        links.forEach(linkGroup => {
-          // ★ ここはもう、linkGroupが直接手元にあるので、そのまま渡すだけ
-          updateLinkPoints(linkGroup as Konva.Group);
-        });
-      }
-    }
-  }
-
-
-  /**
-   * 3. 実際のノードオブジェクトを構築する共通ヘルパー関数
-   */
-  function buildNode(nodeData: { id: string, x: number, y: number, text: string, width: number, height?: number }): Konva.Group {
-    const isDarkMode = document.body.classList.contains('dark-mode');
-    const colors = isDarkMode ? themes.dark : themes.light;
-    const nodeGroup = new Konva.Group({
-      id: nodeData.id,
-      x: nodeData.x,
-      y: nodeData.y,
-      draggable: true,
-    });
-    nodeGroup.name('node-group');
-    nodeGroup.setAttr('links', []);
-
-    const textNode = new Konva.Text({
-      name: 'text',
-      text: nodeData.text,
-      fontSize: 16,
-      fontFamily: "'Klee Custom', serif-ja, serif",
-      fill: colors.text,
-      padding: 8,
-      width: nodeData.width,
-      lineHeight: 1.2,
-    });
-
-    const backgroundRect = new Konva.Rect({
-      name: 'background',
-      x: 0,
-      y: 0,
-      width: nodeData.width,
-      height: textNode.height(),
-      fill: colors.nodeBg,
-      cornerRadius: 10,
-    });
-
-    // 動的なクリッピング領域を設定
-    nodeGroup.clipFunc((ctx) => {
-      ctx.beginPath();
-      ctx.rect(0, 0, backgroundRect.width(), backgroundRect.height());
-      ctx.closePath();
-    });
-
-    nodeGroup.add(backgroundRect, textNode);
-
-    // --- イベントハンドラ ---
-
-    // ノード自体のドラッグ移動
-    nodeGroup.on('dragmove', () => {
-      // ★ `nodeGroup`が、まさに親グループそのもの
-      const links = nodeGroup.getAttr('links') as Konva.Group[];
-      links.forEach(linkGroup => {
-        updateLinkPoints(linkGroup);
-      });
-      layer.batchDraw();
-    });
-
-    nodeGroup.on('dragend', () => {
-      if (transformer.nodes().length > 1) {
-        return;
-      }
-      recordHistory('Node moved');
-    });
-
-    layer.add(nodeGroup);
-    // handle.hide();
-    adjustNodeSize(textNode);
-    return nodeGroup;
-  }
-
-  /**
-   * テキスト編集を開始する関数
-   * @param nodeGroup 対象のノード
-   * @param isNew 新規作成ノードかどうかのフラグ
-   */
-  function enterEditMode(nodeGroup: Konva.Group, isNew = false) {
-    isTextEditing = true;
-    updateButtonInteractivity(true);
-    const textNode = nodeGroup.findOne<Konva.Text>('.text')!;
-    const backgroundRect = nodeGroup.findOne<Konva.Rect>('.background')!;
-    const textEditor = document.getElementById('ip-text-editor') as HTMLTextAreaElement;
-
-    textNode.opacity(0);
-    backgroundRect.opacity(0);
-
-    layer.draw();
-
-    textEditor.value = textNode.text();
-    textEditor.style.display = 'block';
-    textEditor.style.position = 'absolute';
-
-
-    textEditor.focus();
-
-    // ★ 新規作成の場合のみ、テキストを全選択する
-    if (isNew) {
-      textEditor.select();
-    } else {
-      // 既存ノードの編集時はカーソルを末尾に
-      textEditor.setSelectionRange(textEditor.value.length, textEditor.value.length);
-    }
-
-    const adjustHeight = () => {
-      textEditor.style.height = 'auto';
-      textEditor.style.height = textEditor.scrollHeight + 'px';
-    };
-    textEditor.addEventListener('input', adjustHeight);
-    adjustHeight();
-
-    // ★ 1. 現在のステージのスケールと位置を取得
-    const scale = stage.scaleX();
-
-    // 2. ノードの「見た目上」の矩形を取得
-    const clientRect = backgroundRect.getClientRect();
-
-    // ★ 3. テキストエリアの位置とサイズを、スケールを考慮して設定
-    textEditor.style.top = clientRect.y + 24 + 'px';
-
-    const Pane = document.getElementById('ip-outline-pane')!;
-    if (!Pane.classList.contains('hidden')) {
-      textEditor.style.left = clientRect.x + 165 + 'px';
-    } else {
-      textEditor.style.left = clientRect.x + 'px';
-    }
-    textEditor.style.width = clientRect.width / scale + 'px';
-    textEditor.style.height = clientRect.height / scale + 'px';
-
-    // ★ 4. CSSのtransformを使って、テキストエリア自体を拡大する
-    //    これにより、paddingなども含めて綺麗にスケールされる
-    textEditor.style.transform = `scale(${scale})`;
-    textEditor.style.transformOrigin = 'top left'; // 拡大の基点を左上にする  
-
-    // キーボードショートカット用のイベントハンドラ
-    const handleKeyDown = (e: KeyboardEvent) => {
-      // テキスト編集中は、グローバルなショートカット（削除など）が暴発しないように、
-      // イベントの伝播をここで止める。
-      if (e.key === 'Delete' || e.key === 'Backspace') {
-        e.stopPropagation();
-      }
-
-      // Ctrl+Enter または Cmd+Enter で入力を確定
-      if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
-        e.preventDefault();
-        e.stopPropagation(); // 念のため、ここでも止める
-        textEditor.blur();
-      }
-      // Escapeキーでも入力を確定
-      if (e.key === 'Escape') {
-        e.preventDefault();
-        e.stopPropagation();
-        textEditor.blur();
-      }
-    };
-    textEditor.addEventListener('keydown', handleKeyDown);
-
-    // 編集完了時の処理（blurイベント）
-    textEditor.addEventListener('blur', () => {
-      isTextEditing = false;
-      updateButtonInteractivity(false);
-      const oldText = textNode.text();
-      const newText = textEditor.value;
-
-      // a) 「新規作成」ノードの場合
-      if (isNew) {
-        textNode.text(newText);
-        adjustNodeSize(textNode);
-        recordHistory('Node created');
-      }
-      // b) 既存ノードの編集の場合、テキストに変更があった場合のみ記録
-      else if (oldText !== newText) {
-        textNode.text(newText);
-        adjustNodeSize(textNode);
-        recordHistory('Node text changed');
-      }
-      // ★ Listenerを両方とも削除する
-      textEditor.removeEventListener('input', adjustHeight);
-      textEditor.removeEventListener('keydown', handleKeyDown);
-
-      textNode.text(textEditor.value);
-      adjustNodeSize(textNode);
-
-      textEditor.style.transform = 'scale(1)';
-      textEditor.style.display = 'none';
-      textNode.opacity(1);
-      backgroundRect.opacity(1);
-
-      renderIpOutline();
-      layer.draw();
-    }, { once: true });
-  }
-
-  // ★ デバウンス用のヘルパー関数
-  function debounce<F extends (...args: any[]) => any>(func: F, waitFor: number) {
-    let timeout: ReturnType<typeof setTimeout> | null = null;
-
-    return (...args: Parameters<F>): void => {
-      if (timeout) {
-        clearTimeout(timeout);
-      }
-      timeout = setTimeout(() => func(...args), waitFor);
-    };
-  }
-
-  // ★★★ オートセーブを実行するための関数 ★★★
-  const autoSaveChanges = debounce(() => {
-    // 1. ファイルパスが存在し、かつ変更がある(`isDirty`)場合のみ実行
-    if (currentFilePath && isDirty) {
-      console.log('Auto-saving changes...');
-
-      // 2. `saveToFile`を「上書き保存」モードで呼び出す
-      //    `saveToFile`は、内部でIPC通信を行う非同期関数
-      saveToFile(false).then(result => {
-        if (result && result.success) {
-          console.log('Auto-save successful.');
-          // isDirtyフラグは、saveToFileの中で`markAsClean()`によってfalseにされる
-        } else {
-          console.error('Auto-save failed.');
-        }
-      });
-    }
-  }, 2000); // 最後の操作から2秒後に実行
-
-
-  /**
-   * isTextEditingフラグの状態に応じて、UIボタンの操作可否を更新する
-   * @param isEditing テキスト編集中かどうか
-   */
-  function updateButtonInteractivity(isEditing: boolean) {
-    const buttonContainer = document.querySelector('.top-right-buttons');
-    if (buttonContainer) {
-      buttonContainer.classList.toggle('disabled', isEditing);
-    }
-  }
-
-  /**
-   * 指定されたノードと、それに接続されているすべてのリンクを安全に削除する
-   * @param nodeToDelete 削除するノード
-   */
-  function deleteNodeAndConnectedLinks(nodeToDelete: Konva.Group) {
-    // 1. ノードに接続されているリンクの「コピー」を取得
-    const links = [...(nodeToDelete.getAttr('links') as Konva.Group[] || [])];
-
-    // 2. 各リンクを、安全なdeleteLink関数で削除
-    links.forEach(link => {
-      deleteLink(link); // (あなたが以前に完成させた、完璧なリンク削除関数)
-    });
-
-    // 3. すべてのリンクが消えた後、ノード自身を破棄
-    nodeToDelete.destroy();
-  }
-
-  //　コンテンツエディタ用
-
-  /**
-   * コンテンツエディタを開き、指定されたノードの内容を表示する
-   * @param nodeGroup 編集対象のノード
-   */
-  function openContentEditor(nodeGroup: Konva.Group) {
-    isContentEditing = true;
-    isTextEditing = true;
-    updateButtonInteractivity(true);
-    stage.listening(false);
-    // 既に何か編集中であれば、先に保存処理を行う
-    if (currentlyEditingNodeId && currentlyEditingNodeId !== nodeGroup.id()) {
-      saveContentChanges();
-    }
-    currentlyEditingNodeId = nodeGroup.id();
-    let content = nodeGroup.getAttr('contentText') || '';
-    const placeholder = nodeGroup.getAttr('placeholder') || '';
-    let isInitialContent = false;
-    contentEditor.placeholder = placeholder;
-    if (!content.trim() && !placeholder) {
-      content = 'New Content';
-      isInitialContent = true;
-    }
-    contentEditor.value = content;
-
-    editorPane.classList.remove('hidden');
-    contentEditor.focus();
-    if (isInitialContent) {
-      contentEditor.select();
-    }
-
-    // イベントリスナー
-    contentEditor.addEventListener('keydown', handleContentEditorKeyDown);
-    //  blurイベントでは保存・終了処理を行わない
-    //contentEditor.addEventListener('blur', closeContentEditor, { once: true });
-  }
-
-  /**
-   * コンテンツエディタのキーボードイベントを処理する
-   */
-  const handleContentEditorKeyDown = (e: KeyboardEvent) => {
-    // DeleteキーやBackspaceキーが、ノード削除を暴発させないようにする
-    if (e.key === 'Delete' || e.key === 'Backspace') {
-      e.stopPropagation();
-    }
-
-    // Escapeキーで編集を終了する
-    if (e.key === 'Escape') {
-      e.preventDefault();
-      e.stopPropagation();
-      closeContentEditor();
-    }
-  };
-
-  /**
-   * コンテンツエディタの変更を保存し、エディタを閉じる
-   */
-  function saveContentChanges() {
-    if (!currentlyEditingNodeId) return;
-
-    const node = stage.findOne<Konva.Group>('#' + currentlyEditingNodeId);
-    if (node) {
-      const oldText = node.getAttr('contentText') || '';
-      const newText = contentEditor.value;
-
-      if (oldText !== newText) {
-        node.setAttr('contentText', newText);
-        recordHistory('Node content changed');
-        renderIpOutline();
-      }
-    }
-  }
-
-  /**
-   * 変更を保存してエディタを閉じる
-   */
-  function closeContentEditor() {
-    saveContentChanges();
-    editorPane.classList.add('hidden');
-    currentlyEditingNodeId = null;
-    isContentEditing = false;
-    isTextEditing = false;
-    updateButtonInteractivity(false);
-    stage.listening(true);
-    contentEditorJustClosed = true;
-    stage.container().focus();
-    contentEditor.removeEventListener('keydown', handleContentEditorKeyDown);
-  }
-
-  // マークダウン変換関連
-
-  /**
-   * 現在のキャンバスの状態をMarkdown文字列に変換する
-   */
-  function generateMarkdownContent(): string {
-    const groups = stage.find<Konva.Group>('.background-shape');
-    const nodes = stage.find<Konva.Group>('.node-group');
-
-    let markdown = '';
-    const orphanNodes: Konva.Group[] = []; // 親がいないノードを格納
-
-    // 1. まず、親がいないノードを特定する
-    nodes.forEach(node => {
-      if (!node.getAttr('parentId')) {
-        orphanNodes.push(node);
-      }
-    });
-
-    // 2. 各グループを処理
-    groups.forEach(group => {
-      const groupLabel = group.findOne<Konva.Text>('Text')?.text() || 'Untitled Group';
-      markdown += `# ${groupLabel}\n\n`;
-
-      // このグループに所属する子ノードを探して処理
-      const childNodes = nodes.filter(n => n.getAttr('parentId') === group.id());
-
-      childNodes.forEach(node => {
-        markdown += convertNodeToMarkdown(node);
-      });
-    });
-
-    // 3. 親がいないノードを "# Others" として処理
-    if (orphanNodes.length > 0) {
-      markdown += `# Others\n\n`;
-      orphanNodes.forEach(node => {
-        markdown += convertNodeToMarkdown(node);
-      });
-    }
-
-    return markdown;
-  }
-
-  /**
-   * 1つのノードをMarkdownのセクションに変換するヘルパー関数
-   */
-  function convertNodeToMarkdown(node: Konva.Group): string {
-    let section = '';
-    const title = node.findOne<Konva.Text>('.text')?.text() || 'Untitled';
-    const content = node.getAttr('contentText') || '';
-
-    section += `## ${title}\n`;
-    if (content.trim()) {
-      section += `${content}\n`;
-    }
-
-    // リンク情報の処理
-    const links = node.getAttr('links') as Konva.Group[];
-    if (links && links.length > 0) {
-      section += '\n'; // リンク情報との間に空行を入れる
-      const uniqueLinks = new Set(links); // 重複を避ける
-
-      uniqueLinks.forEach(linkGroup => {
-        const linkNodes = linkGroup.getAttr('nodes') as Konva.Group[];
-        const linkLabel = linkGroup.findOne<Konva.Text>('.link-label')?.text().trim() || '';
-
-        // このリンクが、現在のノードから出ていくものか、入ってくるものかを判定
-        const isOutgoing = linkNodes[0] === node;
-        const otherNode = isOutgoing ? linkNodes[1] : linkNodes[0];
-        const otherNodeTitle = otherNode.findOne<Konva.Text>('.text')?.text() || '...';
-
-        let linkTypeSymbol = '';
-        const type = linkGroup.getAttr('linkType');
-        if (type === 'double_arrow') {
-          linkTypeSymbol = 'interaction';
-        } else if (type === 'arrow') {
-          linkTypeSymbol = isOutgoing ? 'to' : 'from';
-        } else {
-          linkTypeSymbol = 'relation';
-        }
-
-        section += `【${linkTypeSymbol} ${otherNodeTitle}】`;
-        if (linkLabel) {
-          section += `:${linkLabel}`;
-        }
-        section += '\n';
-      });
-    }
-
-    return section + '\n';
-  }
-
-  document.getElementById('ip-export-md-button')?.addEventListener('click', () => {
-    const markdownContent = generateMarkdownContent();
-    // ★★★ currentFilePath をそのまま渡す (nullの可能性もある) ★★★
-    // window.electronAPI.exportAsMarkdown(markdownContent, currentFilePath);
-  });
-
-  // アウトライン関連
-
-
-  document.getElementById('ip-toggle-outline-btn')?.addEventListener('click', () => {
-    const Pane = document.getElementById('ip-outline-pane')!;
-    Pane.classList.toggle('hidden');
-    // アウトラインが表示されたら、内容を再生成する
-    if (!Pane.classList.contains('hidden')) {
-      renderIpOutline();
-    }
-  });
-
-  document.getElementById('outline-expand-all')?.addEventListener('click', () => {
-    setAllIpOutlineCollapsed(false);
-  });
-  document.getElementById('outline-collapse-all')?.addEventListener('click', () => {
-    setAllIpOutlineCollapsed(true);
-  });
-
-  // アウトライン項目をクリックしたときの処理 (イベント委譲)
-  outlinePane.addEventListener('click', (e) => {
-    const target = e.target as HTMLElement;
-
-    // a) トグル（開閉）がクリックされた場合
-    if (target.classList.contains('outline-toggle')) {
-      const groupId = target.dataset.groupId;
-      if (groupId) {
-        const currentState = outlineCollapsedState.get(groupId) ?? false;
-        outlineCollapsedState.set(groupId, !currentState);
-        renderIpOutline(); // 状態を更新して再描画
-      }
-    }
-    // b) ノードのテキストがクリックされた場合
-    else if (target.closest('.outline-node')) {
-      const nodeId = (target.closest('.outline-node') as HTMLElement).dataset.id;
-      if (nodeId) {
-        jumpToNode(nodeId);
-      }
-    }
-    else if (target.closest('.outline-sub-node')) {
-      const subNodeEl = target.closest('.outline-sub-node') as HTMLElement;
-      const parentId = subNodeEl.dataset.parentId;
-      const headingText = subNodeEl.dataset.headingText;
-      if (parentId && headingText) {
-        // ★ 親ノードのIDと、ジャンプ先の「見出しテキスト」を渡す
-        jumpToNode(parentId, headingText);
-      }
-    }
-  });
-
-  /**
-   * 指定されたノードと、そのサブ階層（###, ####）を、
-   * アウトラインのリスト要素として生成し、コンテナに追加する
-   * @param node 描画するKonvaノード
-   * @param containerElement ノードが追加される親の<ul>要素
-   */
-  function renderNodeWithSubheadings(node: Konva.Group, containerElement: HTMLElement) {
-    // 1. 親「##」ノードの<li>要素を作成
-    const parentLi = document.createElement('li');
-    parentLi.appendChild(createOutlineNodeEl(node));
-    containerElement.appendChild(parentLi);
-
-    // 2. 親ノードのcontentTextを解析
-    const content = node.getAttr('contentText') || '';
-    if (content) {
-      // 3. サブ階層を持つ<ul>を作成
-      const subList = document.createElement('ul');
-      subList.className = 'outline-sub-node-list';
-
-      const lines = content.split('\n');
-      lines.forEach(line => {
-        let level = 0;
-        let text = '';
-
-        if (line.startsWith('#### ')) {
-          level = 4;
-          text = line.substring(5);
-        } else if (line.startsWith('### ')) {
-          level = 3;
-          text = line.substring(4);
-        }
-
-        if (level > 0) {
-          const subLi = document.createElement('li');
-          subLi.className = 'outline-sub-node';
-          subLi.textContent = text;
-          subLi.dataset.parentId = node.id();
-          subLi.dataset.headingText = line;
-
-          const baseIndent = 15;
-          const increment = 15;
-          subLi.style.paddingLeft = `${baseIndent + (level - 2) * increment}px`;
-
-          subList.appendChild(subLi);
-        }
-      });
-
-      // 4. もしサブ階層が一つでもあれば、それを親<li>に追加
-      if (subList.hasChildNodes()) {
-        parentLi.appendChild(subList);
-      }
-    }
-  }
-
-  /**
-   * アウトラインパネルの内容を現在のステージの状態に基づいて再描画する
-   */
-  function renderIpOutline() {
-    outlinePane.innerHTML = '';
-    const groups = [...stage.find<Konva.Group>('.background-shape')].sort((a, b) => {
-      const textA = a.findOne<Konva.Text>('Text')?.text() || '';
-      const textB = b.findOne<Konva.Text>('Text')?.text() || '';
-      return textA.localeCompare(textB, 'ja'); // 日本語ソートを明示
-    });
-
-    const nodes = [...stage.find<Konva.Group>('.node-group')].sort((a, b) => {
-      const textA = a.findOne<Konva.Text>('.text')?.text() || '';
-      const textB = b.findOne<Konva.Text>('.text')?.text() || '';
-      return textA.localeCompare(textB, 'ja');
-    });
-
-    const orphanNodes: Konva.Group[] = [];
-    nodes.forEach(n => { if (!n.getAttr('parentId')) orphanNodes.push(n); });
-
-    // --- グループ化されたノード ---
-    groups.forEach(group => {
-      const groupId = group.id();
-      const isCollapsed = outlineCollapsedState.get(groupId) ?? false; // デフォルトは展開
-
-      const groupWrapper = document.createElement('div');
-      const groupHeader = document.createElement('div');
-      groupHeader.className = 'outline-group-header';
-
-      const toggle = document.createElement('span');
-      toggle.className = 'outline-toggle';
-      toggle.classList.toggle('collapsed', isCollapsed);
-      toggle.textContent = '▼';
-      toggle.dataset.groupId = groupId; // クリックで開閉するためにIDを保持
-
-      const groupLabel = document.createElement('span');
-      groupLabel.className = 'outline-group-label';
-      groupLabel.textContent = group.findOne<Konva.Text>('Text')?.text() || '...';
-
-      groupHeader.appendChild(toggle);
-      groupHeader.appendChild(groupLabel);
-      groupWrapper.appendChild(groupHeader);
-
-      const nodeList = document.createElement('ul');
-      nodeList.className = 'outline-node-list';
-      if (isCollapsed) {
-        nodeList.style.display = 'none';
-      }
-
-      nodes.filter(n => n.getAttr('parentId') === groupId).forEach(node => {
-        renderNodeWithSubheadings(node, nodeList);
-      });
-
-      groupWrapper.appendChild(nodeList);
-      outlinePane.appendChild(groupWrapper);
-    });
-
-    // --- グループ化されていないノード ---
-    if (orphanNodes.length > 0) {
-      const groupId = 'others-group'; // 固定のID
-      const isCollapsed = outlineCollapsedState.get(groupId) ?? false;
-
-      const groupWrapper = document.createElement('div');
-      const groupHeader = document.createElement('div');
-      groupHeader.className = 'outline-group-header';
-
-      const toggle = document.createElement('span');
-      toggle.className = 'outline-toggle';
-      toggle.classList.toggle('collapsed', isCollapsed);
-      toggle.textContent = '▼';
-      toggle.dataset.groupId = groupId; // IDをセット
-
-      const groupLabel = document.createElement('span');
-      groupLabel.className = 'outline-group-label';
-      groupLabel.textContent = 'Others';
-
-      groupHeader.appendChild(toggle);
-      groupHeader.appendChild(groupLabel);
-      groupWrapper.appendChild(groupHeader);
-
-      const nodeList = document.createElement('ul');
-      nodeList.className = 'outline-node-list';
-      if (isCollapsed) {
-        nodeList.style.display = 'none';
-      }
-
-      orphanNodes.forEach(node => {
-        renderNodeWithSubheadings(node, nodeList);
-      });
-
-      groupWrapper.appendChild(nodeList);
-      outlinePane.appendChild(groupWrapper);
-    }
-  }
-
-  function createOutlineNodeEl(node: Konva.Group): HTMLElement {
-    const title = node.findOne<Konva.Text>('.text')?.text() || '...';
-    const nodeEl = document.createElement('div');
-    nodeEl.className = 'outline-node';
-    nodeEl.textContent = title;
-    nodeEl.dataset.id = node.id(); // ジャンプ用にIDを保持
-    return nodeEl;
-  }
-
-  function setActiveOutlineNode(nodeId: string) {
-    // 1. まず、すべてのアクティブクラスを削除
-    outlinePane.querySelectorAll('.is-active').forEach(el => el.classList.remove('is-active'));
-
-    // 2. 目的のノードに対応する要素を探し、クラスを追加
-    //    createOutlineNodeElが返す<div>にdata-idがあるので、その親(li)にクラスを付ける
-    const targetNodeEl = outlinePane.querySelector(`.outline-node[data-id="${nodeId}"]`);
-    targetNodeEl?.parentElement?.classList.add('is-active');
-  }
-
-  /**
-   * 指定されたIDのノードが「表示領域の中央」に来るようにステージを移動する (最終確定版)
-   * @param nodeId ジャンプ先のノードID
-   */
-  function jumpToNode(nodeId: string, targetHeading?: string) {
-    const node = stage.findOne<Konva.Group>('#' + nodeId);
-    if (!node) return;
-
-    setActiveOutlineNode(nodeId);
-
-    // 1. キャンバスのコンテナ要素を取得
-    const container = stage.container(); // '#ip-container'
-
-    // 2. 「目標地点」を計算：コンテナの画面上での中心座標
-    const containerRect = container.getBoundingClientRect();
-    const targetX = containerRect.left + containerRect.width / 2;
-    const targetY = containerRect.top + containerRect.height / 2;
-
-    // 3. 「現在地点」を計算：ノードの画面上での中心座標
-    const nodeRect = node.getClientRect();
-    const currentX = nodeRect.x + nodeRect.width / 2;
-    const currentY = nodeRect.y + nodeRect.height / 2;
-
-    // 4. 「移動量」を計算：画面上で移動すべきピクセル量
-    const deltaX = targetX - currentX;
-    const deltaY = targetY - currentY;
-
-    // 5. ステージの現在位置に、移動量を加算して、新しい位置を決定
-    const newPos = {
-      x: stage.x() + deltaX,
-      y: stage.y() + deltaY,
-    };
-
-    // 6. アニメーションで滑らかに移動
-    new Konva.Tween({
-      node: stage,
-      duration: 0.3,
-      x: newPos.x - 250,
-      y: newPos.y,
-      easing: Konva.Easings.EaseInOut,
-    }).play();
-
-    // 7. サブ階層へのジャンプ処理 
-    if (targetHeading) {
-      openContentEditor(node);
-      const editor = document.getElementById('ip-content-editor') as HTMLTextAreaElement;
-
-      // requestAnimationFrameを使い、エディタが表示されるのを待つ
-      requestAnimationFrame(() => {
-        const text = editor.value;
-        const index = text.indexOf(targetHeading);
-        if (index !== -1) {
-          editor.focus();
-          editor.setSelectionRange(index, index);
-          // scrollIntoViewは不要な場合が多いが、保険として
-          const tempEl = document.createElement('span');
-          editor.before(tempEl);
-          tempEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
-          tempEl.remove();
-        }
-      });
-    }
-  }
-
-  // すべて開く・すべて閉じる
-  function setAllIpOutlineCollapsed(isCollapsed: boolean) {
-    // すべてのグループのIDをキーとして、状態を設定
-    stage.find<Konva.Group>('.background-shape').forEach(group => {
-      outlineCollapsedState.set(group.id(), isCollapsed);
-    });
-    // 'Others'グループの状態も設定
-    outlineCollapsedState.set('others-group', isCollapsed);
-
-    // 最後に再描画
-    renderIpOutline();
-  }
 
   // =================================================================
   // ★ イベントリスナー
@@ -1314,781 +486,7 @@ export function initializeIdeaProcessor() {
     }
   });
 
-  /**
-   * 2つのノード間にリンクがあるか探し、あればそのリンクを返す
-   * (双方向矢印の場合、どちらか一方の方向のリンクがあれば見つける)
-   */
-  function findLink(node1: Konva.Group, node2: Konva.Group): Konva.Group | undefined {
-    const links1 = node1.getAttr('links') as Konva.Group[];
-    return links1.find(linkGroup => {
-      const nodes = linkGroup.getAttr('nodes') as Konva.Group[];
-      // linkGroupがnode1とnode2を結んでいるか、またはnode2とnode1を結んでいるかをチェック
-      return (nodes && nodes[0] === node1 && nodes[1] === node2) ||
-        (nodes && nodes[0] === node2 && nodes[1] === node1);
-    });
-  }
 
-  function manageLink(node1: Konva.Group, node2: Konva.Group, type: LinkType, labelText?: string) {
-
-    // 1. 既存のリンクグループを探す (双方向矢印の場合も考慮)
-    const existingLinkGroup = findLink(node1, node2);
-
-    // 2. もし既存のリンクグループがあれば、何もしない (トグル/線種変更廃止)
-    if (existingLinkGroup) {
-      console.log('manageLink: 既存のリンクがあるため、何もしません。');
-      return;
-    }
-
-    // 3. 新しいリンクを作成する
-    if (type === LinkType.DOUBLE_ARROW) {
-      const linkGroup1 = createSingleLink(node1, node2, LinkType.ARROW, labelText);
-      const linkGroup2 = createSingleLink(node2, node1, LinkType.ARROW, ''); // ラベルは片方だけ
-
-      linkGroup1.setAttr('sibling', linkGroup2);
-      linkGroup2.setAttr('sibling', linkGroup1);
-      linkGroup1.setAttr('linkType', LinkType.DOUBLE_ARROW);
-      linkGroup2.setAttr('linkType', LinkType.DOUBLE_ARROW);
-    } else {
-      createSingleLink(node1, node2, type, labelText);
-    }
-
-    layer.draw();
-    recordHistory('Link created'); // リンク作成時のみ履歴を記録
-  }
-
-  // ID生成用のヘルパー関数
-  function generateUUID() {
-    return window.crypto.randomUUID(); // ブラウザ標準のUUID生成
-  }
-
-  /**
-   * 1本のリンク（線または片方向矢印）を作成する内部関数
-   */
-  function createSingleLink(node1: Konva.Group, node2: Konva.Group, type: LinkType.LINE | LinkType.ARROW, labelText?: string): Konva.Group {
-
-    // 1. `link`変数を`let`で宣言
-    let link: Konva.Line | Konva.Arrow;
-
-    // 2. `commonAttrs`を復活させる
-    const colors = getCurrentThemeColors(); // (テーマ対応も忘れずに)
-    const commonAttrs = {
-      stroke: colors.link,
-      strokeWidth: 2,
-      name: 'link-shape', // ★ 名前を変更
-      hitStrokeWidth: 10,
-    };
-
-    const initialPoints = [0, 0, 0, 0]; // (仮の値、updateLinkPointsで更新される)
-
-    // 3. `type`に応じて、`link`変数にインスタンスを代入
-    if (type === LinkType.ARROW) {
-      link = new Konva.Arrow({
-        ...commonAttrs,
-        points: initialPoints,
-        fill: colors.link,
-        pointerLength: 10,
-        pointerWidth: 10,
-      });
-    } else { // LinkType.LINE
-      link = new Konva.Line({
-        ...commonAttrs,
-        points: initialPoints,
-      });
-    }
-
-    // 1. ラベルを作成
-    const konvaLabel = new Konva.Label({
-      name: 'link-label-container',
-    });
-
-    // 2. ラベルに、背景となる「タグ」を追加
-    konvaLabel.add(
-      new Konva.Tag({
-        lineJoin: 'round',
-        stroke: colors.text,
-        strokeWidth: 1,
-        //cornerRadius: 4,
-        fill: colors.labelBackground,
-      })
-    );
-
-    // 3. ラベルに、表示する「テキスト」を追加
-    konvaLabel.add(
-      new Konva.Text({
-        text: (labelText && labelText.trim() !== '') ? labelText : ' ',
-        name: 'link-label', // テキスト自体の名前
-        fontSize: 12,
-        fontFamily: "'Klee Custom', serif-ja, serif",
-        fill: colors.text,
-        padding: 3,
-      })
-    );
-
-    // 5. グループを作成し、`link`と`konvaLabel`を追加
-    const linkGroup = new Konva.Group({
-      name: 'link-group',
-      id: `link_${Date.now()}${Math.random()}`,
-    });
-    linkGroup.add(link, konvaLabel);
-
-    // 6. 重要な情報をグループに集約
-    linkGroup.setAttr('nodes', [node1, node2]);
-    linkGroup.setAttr('linkType', type); // ★ `type`情報も保存しておく
-
-    linkGroup.on('mouseenter', () => {
-      //  selectedShapeがリンク自身でもenterLeaveイベントが発火するため、選択中の場合は何もしないように変更 
-      if (selectedShape === linkGroup) return;
-      const linkShape = linkGroup.findOne('.link-shape') as Konva.Line;
-      linkShape.strokeWidth(4 / stage.scaleX());
-
-      const sibling = findSibling(linkGroup); // linkGroupからsiblingを探すように変更
-      if (sibling) {
-        sibling.findOne<Konva.Line | Konva.Arrow>('.link-shape')?.strokeWidth(4 / stage.scaleX()); // ★ 兄弟も太くする
-      }
-
-      stage.container().style.cursor = 'pointer';
-      layer.draw();
-    });
-    linkGroup.on('mouseleave', () => {
-      // selectedShapeがリンク自身でもenterLeaveイベントが発火するため、選択中の場合は何もしないように変更 
-      if (selectedShape === linkGroup) return;
-      const linkShape = linkGroup.findOne('.link-shape') as Konva.Line;
-      linkShape.strokeWidth(2 / stage.scaleX());
-
-      const sibling = findSibling(linkGroup); // linkGroupからsiblingを探すように変更
-      if (sibling) {
-        sibling.findOne<Konva.Line | Konva.Arrow>('.link-shape')?.strokeWidth(2 / stage.scaleX()); // ★ 兄弟も元に戻す
-      }
-
-      stage.container().style.cursor = 'default';
-      layer.draw();
-    });
-
-    // 8. レイヤーに追加し、位置を更新
-    layer.add(linkGroup);
-    linkGroup.zIndex(1);
-    updateLinkPoints(linkGroup);
-
-    // 9. ノードとの関連付け
-    node1.getAttr('links').push(linkGroup);
-    node2.getAttr('links').push(linkGroup);
-
-    // 10. ★★★ `Konva.Group`を返す ★★★
-    return linkGroup;
-  }
-
-  // リンクを完全に削除するヘルパー関数
-  /**
-   * リンクグループとその関連付けを完全に削除する
-   * @param linkGroup 削除対象のリンクグループ
-   */
-  function deleteLink(linkGroup: Konva.Group) {
-    const nodes = linkGroup.getAttr('nodes') as Konva.Group[];
-    if (nodes && nodes.length === 2) {
-      const node1 = nodes[0];
-      const node2 = nodes[1];
-
-      // ノードからリンクの参照を削除
-      if (node1 && node1.getAttr('links')) {
-        node1.setAttr('links', node1.getAttr('links').filter((l: Konva.Group) => l !== linkGroup));
-      }
-      if (node2 && node2.getAttr('links')) {
-        node2.setAttr('links', node2.getAttr('links').filter((l: Konva.Group) => l !== linkGroup));
-      }
-    }
-
-    // 双方向リンクの兄弟も削除
-    const sibling = linkGroup.getAttr('sibling');
-    if (sibling && sibling.destroy) {
-      // 兄弟からもこのリンクの参照を削除（無限ループ防止）
-      const siblingNodes = sibling.getAttr('nodes') as Konva.Group[];
-      if (siblingNodes && siblingNodes.length === 2) {
-        if (siblingNodes[0] && siblingNodes[0].getAttr('links')) {
-          siblingNodes[0].setAttr('links', siblingNodes[0].getAttr('links').filter((l: Konva.Group) => l !== sibling));
-        }
-        if (siblingNodes[1] && siblingNodes[1].getAttr('links')) {
-          siblingNodes[1].setAttr('links', siblingNodes[1].getAttr('links').filter((l: Konva.Group) => l !== sibling));
-        }
-      }
-      sibling.destroy();
-    }
-
-    linkGroup.destroy();
-    layer.draw(); // 描画更新
-  }
-
-
-  function editLinkLabel(labelContainer: Konva.Label) {
-    const labelNode = labelContainer.findOne<Konva.Text>('.link-label');
-    const tag = labelContainer.findOne<Konva.Tag>('Tag');
-    if (!labelNode) return;
-    isTextEditing = true;
-    updateButtonInteractivity(true);
-
-    // 1. HTMLの編集用input要素を取得 (これは共通)
-    const labelEditor = document.getElementById('ip-label-editor') as HTMLTextAreaElement;
-    const isDarkMode = document.body.classList.contains('dark-mode');
-    const colors = isDarkMode ? themes.dark : themes.light;
-
-    // 2. KonvaのTextノードを一時的に非表示にする
-    labelNode.opacity(0);
-    if (tag) tag.opacity(0);
-    layer.draw(); // 非表示を反映
-
-    // 3. input要素を、Textノードの真上に表示する (このロジックもほぼ共通)
-    const stageBox = stage.container().getBoundingClientRect();
-    const textPosition = labelContainer.absolutePosition();
-    const scale = stage.scaleX();
-
-    labelEditor.value = labelNode.text();
-    labelEditor.style.display = 'block';
-    labelEditor.style.position = 'absolute';
-
-    // 1. 位置 (ズームの影響を受けるabsolutePositionをそのまま使う)
-    labelEditor.style.top = (stageBox.top + textPosition.y) + 'px';
-    labelEditor.style.left = (stageBox.left + textPosition.x) + 'px';
-
-    // 2. サイズ (こちらもズームの影響を受ける)
-    //    ラベルの幅に少し余裕を持たせると、入力しやすい
-    const editorWidth = Math.max(labelNode.fontSize() * scale * 8, labelNode.width() * scale);
-    labelEditor.style.width = editorWidth + 'px';
-    const editorHeight = Math.max(labelNode.fontSize() * scale * 1.5, labelNode.height() * scale);
-    labelEditor.style.height = editorHeight + 'px';
-
-    // 3. フォント関連 (見た目をKonvaのTextと一致させる)
-    labelEditor.style.fontSize = (labelNode.fontSize() * scale) + 'px';
-    labelEditor.style.fontFamily = labelNode.fontFamily();
-    labelEditor.style.lineHeight = String(labelNode.lineHeight());
-    labelEditor.style.color = colors.text;
-
-    // 4. その他 (見た目を整える)
-    labelEditor.style.border = `1px solid ${colors.text}`;
-    labelEditor.style.padding = '2px';
-    labelEditor.style.margin = '2px';
-    labelEditor.style.background = colors.labelBackground;
-    labelEditor.style.zIndex = '9000'; // 最前面に表示
-
-    // ★ テキストエリアの高さを、内容に合わせて自動調整する
-    const adjustHeight = () => {
-      // 一度高さをリセットしないと、縮小がうまく機能しない
-      labelEditor.style.height = 'auto';
-      labelEditor.style.height = labelEditor.scrollHeight + 'px';
-    };
-    // `input`イベント（＝ユーザーが何かを入力するたび）に、この関数を紐付ける
-    labelEditor.addEventListener('input', adjustHeight);
-
-    // ★ 編集開始時に一度呼び出して、現在のテキスト量に合わせた初期の高さを設定する
-    adjustHeight();
-
-    labelEditor.focus();
-    // ★ もし、テキストが半角スペース（＝初期状態）なら、全選択する
-    if (labelNode.text().trim() === '') {
-      labelEditor.select();
-    } else {
-      labelEditor.setSelectionRange(labelEditor.value.length, labelEditor.value.length);
-    }
-
-
-    // 4. 編集完了時の処理を定義する (blurとkeydownイベント)
-    const finishEdit = () => {
-      isTextEditing = false;
-      updateButtonInteractivity(false);
-      const oldText = labelNode.text();
-      let newText = labelEditor.value;
-      // ★ 編集終了時に、もし空文字列なら、半角スペースに置き換える
-      if (newText.trim() === '') {
-        newText = ' ';
-      }
-
-      const linkGroup = labelContainer.getParent() as Konva.Group;
-      const sibling = linkGroup.getAttr('sibling') as Konva.Group | undefined;
-
-      // 最終的にテキストが設定された、本当のリンクグループを特定する
-      let targetLinkGroup: Konva.Group;
-
-      if (sibling && sibling.id() < linkGroup.id()) {
-        labelNode.text(' '); // 自分のテキストは空に
-        sibling.findOne<Konva.Text>('.link-label')?.text(newText);
-        targetLinkGroup = sibling; // テキストが設定されたのは相方
-      } else {
-        labelNode.text(newText);
-        targetLinkGroup = linkGroup; // テキストが設定されたのは自分
-      }
-
-      // テキストが「本当に」変更された場合のみ、履歴を記録
-      if (oldText !== newText) {
-        recordHistory('Link label changed');
-      }
-
-      // --- ラベルの幅に合わせてタグのサイズを調整 ---
-      const targetLabelContainer = targetLinkGroup.findOne<Konva.Label>('.link-label-container');
-      const targetLabelNode = targetLinkGroup.findOne<Konva.Text>('.link-label');
-      const targetTag = targetLabelContainer?.findOne<Konva.Tag>('Tag');
-      if (targetTag && targetLabelNode) {
-        targetTag.width(targetLabelNode.width() + targetLabelNode.padding() * 2);
-        targetTag.height(targetLabelNode.height() + targetLabelNode.padding() * 2);
-      }
-
-      // --- リンクの位置を更新 ---
-      updateLinkPoints(linkGroup);
-      if (sibling) updateLinkPoints(sibling);
-
-      // テキストが更新された方のリンクグループ全体を、レイヤーの最前面に移動させる
-      targetLinkGroup.moveToTop();
-
-      labelEditor.style.display = 'none';
-      labelNode.opacity(1);
-      if (tag) tag.opacity(1);
-      layer.draw(); // 最終的な表示を反映
-
-      // イベントリスナーを解除 (重要)
-      labelEditor.removeEventListener('blur', finishEdit);
-      labelEditor.removeEventListener('keydown', handleKeyDown);
-      labelEditor.removeEventListener('input', adjustHeight);
-    };
-
-    const handleKeyDown = (e: KeyboardEvent) => {
-      // 1. DeleteやBackspaceキーが、ノード削除などのグローバルショートカットを
-      //    誤爆させないようにする
-      if (e.key === 'Delete' || e.key === 'Backspace') {
-        e.stopPropagation();
-      }
-      // 2. Ctrl+Enter または Cmd+Enter で入力を確定
-      if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
-        e.preventDefault();
-        e.stopPropagation();
-        labelEditor.blur();
-      }
-      // 3. Escapeキーでも入力を確定
-      if (e.key === 'Escape') {
-        e.preventDefault();
-        e.stopPropagation();
-        labelEditor.blur();
-      }
-    };
-
-    labelEditor.addEventListener('blur', finishEdit);
-    labelEditor.addEventListener('keydown', handleKeyDown);
-  }
-
-  /**
-   * 指定されたリンクの端点座標を、接続されているノードに合わせて更新する（交点計算版）
-   */
-  function updateLinkPoints(linkGroup: Konva.Group) {
-    const nodes = linkGroup.getAttr('nodes') as Konva.Group[];
-    if (!nodes || nodes.length !== 2) return;
-
-    const node1 = nodes[0];
-    const node2 = nodes[1];
-
-    // 1. 各ノードの「見た目上」の絶対的な矩形を取得
-    //    これは、ステージの左上隅を(0,0)とした、ズームとパンが適用済みの矩形
-    const rect1_absolute = node1.getClientRect();
-    const rect2_absolute = node2.getClientRect();
-
-    // 2. この「見た目上」の矩形を使って、交点を計算
-    //    この計算自体は、ズームされた世界で行われるが、それで正しい
-    const intersections_absolute = getIntersections(rect1_absolute, rect2_absolute);
-
-    // 3. ★★★ ステージの変換を「逆算」するための計算機（逆行列）を取得 ★★★
-    const transform = stage.getAbsoluteTransform().copy().invert();
-
-    // 4. ★★★ 計算された「見た目上」の交点を、逆行列を使って
-    // ★★★ レイヤーの「ローカル座標」に変換する ★★★
-    const start_local = transform.point(intersections_absolute.start);
-    const end_local = transform.point(intersections_absolute.end);
-
-    // 5. 変換された「ローカル座標」を、linkとlabelに適用する
-    const link = linkGroup.findOne<Konva.Line>('.link-shape');
-    const konvaLabel = linkGroup.findOne<Konva.Label>('.link-label-container');
-    if (!link || !konvaLabel) return;
-
-    // ラベルの中から、実際のTextオブジェクトを取得
-    const labelText = konvaLabel.findOne<Konva.Text>('.link-label');
-
-    //  Textオブジェクトが存在し、かつその中身が空かスペースだけなら、
-    //    ラベルコンテナ(`Konva.Label`)全体を非表示にする
-    if (labelText && labelText.text().trim() === '') {
-      konvaLabel.opacity(0);
-    } else {
-      // そうでなければ、表示する
-      konvaLabel.opacity(1);
-      // ラベルの幅に合わせてタグのサイズを調整するロジック
-      const tag = konvaLabel.findOne<Konva.Tag>('Tag');
-      if (tag && labelText) {
-        tag.width(labelText.width() + labelText.padding() * 2);
-        tag.height(labelText.height() + labelText.padding() * 2);
-      }
-    }
-
-    // a) `link`のpointsは、親である`linkGroup`のローカル座標で指定
-    //    `linkGroup`自身の座標が(0,0)なら、これはレイヤー座標と一致
-    link.points([
-      start_local.x,
-      start_local.y,
-      end_local.x,
-      end_local.y
-    ]);
-
-    // b) `konvaLabel`の位置も、ローカル座標で指定
-    const midPoint_local = {
-      x: (start_local.x + end_local.x) / 2,
-      y: (start_local.y + end_local.y) / 2,
-    };
-    konvaLabel.position({
-      x: midPoint_local.x - konvaLabel.width() / 2,
-      y: midPoint_local.y - konvaLabel.height() / 2,
-    });
-
-    // 6. リンクの線幅は、見た目の太さを一定に保つために、スケールで補正する
-    //    (もし、ズームに合わせて太さが変わる方が自然なら、この補正は不要)
-    const scale = stage.scaleX();
-    if (selectedShape === linkGroup) {
-      link.strokeWidth(4 / scale); // 選択中は太いまま
-    } else {
-      link.strokeWidth(2 / scale); // 非選択時は通常の太さ
-    }
-
-    // batchDrawは、この関数を呼び出す側でまとめて行うのが理想
-  }
-
-  /**
-   * 現在のキャンバスの内容をHTMLファイルとして書き出す
-   */
-  function exportAsHtml() {
-    // 既存の選択状態を解除して、クリーンな画像を生成
-    if (selectedShape) resetStyle(selectedShape);
-    if (transformer.visible()) transformer.nodes([]);
-    layer.draw();
-
-    // --- 書き出し範囲の計算（修正版） ---
-    const allNodes = stage.find('.node-group');
-    // リンクとグループの矩形も範囲計算に含める
-    const allShapes = [...allNodes, ...stage.find('.background-shape'), ...stage.find('.link-group')];
-    if (allShapes.length === 0) {
-      alert('書き出すコンテンツがありません。');
-      // 何も書き出さない場合は、選択状態を元に戻す
-      if (selectedShape) {
-        const rect = selectedShape.findOne<Konva.Rect>('.background');
-        if (selectedShape.name() === 'link-group') {
-          // リンクの場合は再度選択スタイルを適用
-          const linkShape = selectedShape.findOne<Konva.Line | Konva.Arrow>('.link-shape');
-          if (linkShape) {
-            const colors = getCurrentThemeColors();
-            linkShape.stroke(colors.selection);
-            linkShape.strokeWidth(4 / stage.scaleX());
-            if (linkShape instanceof Konva.Arrow) {
-              linkShape.fill(colors.selection);
-            }
-          }
-        } else if (rect) {
-          rect.strokeEnabled(true);
-        }
-
-        layer.draw();
-      }
-      return;
-    }
-
-    // ★ 複数の矩形領域を結合するロジック
-    let box = allShapes[0].getClientRect();
-    allShapes.forEach(shape => {
-      const shapeRect = shape.getClientRect();
-      const right = Math.max(box.x + box.width, shapeRect.x + shapeRect.width);
-      const bottom = Math.max(box.y + box.height, shapeRect.y + shapeRect.height);
-      box.x = Math.min(box.x, shapeRect.x);
-      box.y = Math.min(box.y, shapeRect.y);
-      box.width = right - box.x;
-      box.height = bottom - box.y;
-    });
-
-    const padding = 20;
-    const exportArea = {
-      x: box.x - padding,
-      y: box.y - padding,
-      width: box.width + padding * 2,
-      height: box.height + padding * 2,
-    };
-
-    // 2. Konvaで、背景が「透明」な画像データを生成
-    stage.toDataURL({
-      ...exportArea,
-      pixelRatio: 2,
-      callback: (url) => {
-        if (!url) {
-          alert('画像の書き出しに失敗しました。');
-          return;
-        }
-
-        // 3. mainプロセスに、画像データとファイルパスを渡す
-        // window.electronAPI.exportAsHtml(url, currentFilePath);
-      }
-    });
-  }
-
-  /**
-  * 現在のキャンバスの内容を画像ファイルとして書き出す
-  * @param format 'png' または 'jpeg'
-  */
-  function exportAsImageAndSendToMain(format: 'png' | 'jpeg' | 'pdf') {
-    // 1.既存の選択状態を一時的に解除して、クリーンな画像を生成
-    if (selectedShape) resetStyle(selectedShape);
-    if (transformer.visible()) transformer.nodes([]);
-    layer.draw();
-
-    // 2.書き出し範囲を全要素を囲む矩形として計算
-    const allShapes = [...stage.find('.node-group'), ...stage.find('.background-shape')];
-    if (allShapes.length === 0) {
-      alert('書き出すコンテンツがありません。');
-      return;
-    }
-
-    let box = allShapes[0].getClientRect();
-    allShapes.forEach(shape => {
-      const nodeRect = shape.getClientRect();
-      const right = Math.max(box.x + box.width, nodeRect.x + nodeRect.width);
-      const bottom = Math.max(box.y + box.height, nodeRect.y + nodeRect.height);
-      box.x = Math.min(box.x, nodeRect.x);
-      box.y = Math.min(box.y, nodeRect.y);
-      box.width = right - box.x;
-      box.height = bottom - box.y;
-    });
-
-    const padding = 20;
-    const exportArea = {
-      x: box.x - padding,
-      y: box.y - padding,
-      width: box.width + padding * 2,
-      height: box.height + padding * 2,
-    };
-
-    stage.toDataURL({
-      ...exportArea,
-      pixelRatio: 2,
-      mimeType: `image/${format}`,
-      callback: (url) => {
-        if (!url) {
-          alert('画像の書き出しに失敗しました。');
-          return;
-        }
-        // 3. メモリ上に、合成用の新しい<canvas>を作成
-        const offscreenCanvas = document.createElement('canvas');
-        const ctx = offscreenCanvas.getContext('2d')!;
-
-        // pixelRatioを考慮したキャンバスサイズに設定
-        offscreenCanvas.width = exportArea.width * 2;
-        offscreenCanvas.height = exportArea.height * 2;
-
-        // 4. 背景色を決定し、キャンバスを塗りつぶす
-        const isDarkMode = document.body.classList.contains('dark-mode');
-        ctx.fillStyle = isDarkMode ? '#333333' : 'antiquewhite';
-        ctx.fillRect(0, 0, offscreenCanvas.width, offscreenCanvas.height);
-
-        // 5. Konvaが生成した透明PNG画像を、Imageオブジェクトとして読み込む
-        const konvaImage = new Image();
-        konvaImage.onload = () => {
-          // 6. 背景の上に、Konvaの画像を重ねて描画する
-          ctx.drawImage(konvaImage, 0, 0);
-
-          // 7. 合成後のキャンバスから、最終的なData URLを生成
-          const finalDataUrl = offscreenCanvas.toDataURL('image/png'); // PDFでも元画像はPNGでOK
-
-          if (format === 'pdf') {
-            // PDFの場合は、mainプロセスに画像データを送ってPDF化を依頼
-            // window.electronAPI.exportAsPdf(finalDataUrl, currentFilePath);
-          } else {
-            // PNG/JPEGの場合は、従来通り画像として保存を依頼
-            // window.electronAPI.exportAsImage(finalDataUrl, format, currentFilePath);
-          }
-        };
-        konvaImage.src = url;
-      }
-    });
-  }
-
-  /**
-   * 2つのノードを結ぶ直線と、各ノードの境界との交点を計算する（最終安定版・型安全）
-   * @param node1 始点ノード
-   * @param node2 終点ノード
-   * @returns { start: Vector2d, end: Vector2d } 交点の座標
-   */
-  function getIntersections(
-    rect1: { x: number, y: number, width: number, height: number }, // ★ 1. 引数をKonva.Groupから矩形オブジェクトに変更
-    rect2: { x: number, y: number, width: number, height: number }  // ★ 2. こちらも同様に変更
-  ): { start: Vector2d; end: Vector2d } {
-
-    const center1: Vector2d = { x: rect1.x + rect1.width / 2, y: rect1.y + rect1.height / 2 };
-    const center2: Vector2d = { x: rect2.x + rect2.width / 2, y: rect2.y + rect2.height / 2 };
-
-    // 中心点から境界までの交点を計算する、シンプルで堅牢な内部関数
-    // ★引数を単純な数値型に限定し、undefinedの可能性を排除
-    const getIntersection = (width: number, height: number, from: Vector2d, to: Vector2d): Vector2d => {
-      const dx = to.x - from.x;
-      const dy = to.y - from.y;
-
-      // 幅と高さの半分
-      const w = width / 2;
-      const h = height / 2;
-
-      // ゼロ除算を避ける
-      if (dx === 0 && dy === 0) return from;
-
-      // ★ tの計算を、dxやdyが0の場合も安全なように修正
-      let t = Infinity;
-      if (dx !== 0) t = Math.min(t, Math.abs(w / dx));
-      if (dy !== 0) t = Math.min(t, Math.abs(h / dy));
-
-      return {
-        x: from.x + dx * t,
-        y: from.y + dy * t,
-      };
-    };
-
-    // 各ノードの境界との交点を計算
-    // ★ getIntersectionに、rectオブジェクトではなく、widthとheightの値を直接渡す
-    const intersection1 = getIntersection(rect1.width, rect1.height, center1, center2);
-    const intersection2 = getIntersection(rect2.width, rect2.height, center2, center1);
-
-    return { start: intersection1, end: intersection2 };
-  }
-
-  function _updateTitle() {
-    const el = document.getElementById('ip-filename-display');
-    if (el) {
-      const fileName = currentFilePath ? currentFilePath.split(/[\\/]/).pop() : 'Untitled';
-
-      el.textContent = `${fileName}`;
-    }
-    // window.electronAPI.notifyTitleChange(currentFilePath);
-  }
-  function markAsDirty() {
-    if (!isDirty) { isDirty = true; }
-    autoSaveChanges();
-  }
-  function markAsClean() {
-    if (isDirty) { isDirty = false; }
-  }
-
-  function _getCurrentStageData() {
-    // --- 1. Nodes ---
-    const nodesData: any[] = [];
-    stage.find<Konva.Group>('.node-group').forEach(node => {
-      const rect = node.findOne<Konva.Rect>('.background');
-      const textNode = node.findOne<Konva.Text>('.text');
-
-      // 必須データがなければスキップ
-      if (!rect || !textNode) return;
-
-      nodesData.push({
-        id: node.id(),
-        x: node.x(),
-        y: node.y(),
-        width: rect.width(),
-        height: rect.height(),
-        title: textNode.text(),
-        contentText: node.getAttr('contentText') || '',
-        // ★★★ ここで parentId を確実に取得・保存します ★★★
-        parentId: node.getAttr('parentId') || null,
-        isTemplateItem: node.getAttr('isTemplateItem') || false,
-        placeholder: node.getAttr('placeholder') || undefined,
-      });
-    });
-
-    // --- 2. Groups ---
-    const groupsData: any[] = [];
-    stage.find<Konva.Group>('.background-shape').forEach(group => {
-      const rect = group.findOne<Konva.Rect>('.background');
-      const label = group.findOne<Konva.Text>('Text');
-
-      if (!rect || !label) return;
-
-      groupsData.push({
-        id: group.id(),
-        x: group.x(),
-        y: group.y(),
-        width: rect.width(),
-        height: rect.height(),
-        label: label.text(),
-        isTemplateRoot: group.getAttr('isTemplateRoot') || false
-      });
-    });
-
-    // --- 3. Links ---
-    const linksData: any[] = [];
-    stage.find<Konva.Group>('.link-group').forEach(linkGroup => {
-      const nodes = linkGroup.getAttr('nodes') as Konva.Group[];
-      const type = linkGroup.getAttr('linkType');
-      const label = linkGroup.findOne<Konva.Text>('.link-label');
-      const sibling = linkGroup.getAttr('sibling');
-
-      if (sibling && sibling.id() < linkGroup.id()) {
-        return;
-      }
-
-      if (nodes && nodes.length === 2 && type) {
-        linksData.push({
-          id: linkGroup.id(),
-          from: nodes[0].id(),
-          to: nodes[1].id(),
-          type: type,
-          label: label ? label.text() : '',
-          isTemplateItem: linkGroup.getAttr('isTemplateItem') || false
-        });
-      }
-    });
-
-    // --- 4. Final Data Object ---
-    return {
-      nodes: nodesData,
-      links: linksData,
-      groups: groupsData,
-    };
-  }
-
-  /**
-   * 現在の状態を.mrsdファイルとして保存する
-   */
-  // async function saveToFile(isSaveAs = false): Promise<any> {
-
-  //   const saveData = _getCurrentStageData();
-
-  //   // --- 3. 正しいデータオブジェクトをmainプロセスに送信する ---
-  //   const filePathToSave = isSaveAs ? null : currentFilePath;
-
-  //   try {
-  //     // ★ IPC呼び出しの結果を、そのままreturnする
-  //     const result = await window.electronAPI.saveIdeaProcessorFile(filePathToSave, saveData);
-
-  //     if (result.success && result.path) {
-  //       currentFilePath = result.path;
-  //       markAsClean(); // ★ 保存成功時にisDirtyフラグをリセット
-  //       _updateTitle();
-  //       console.log('保存成功:', currentFilePath);
-  //     } else if (result.cancelled) {
-  //       console.log('保存がキャンセルされました。');
-  //     } else {
-  //       console.error('保存に失敗しました:', result.error);
-  //     }
-
-  //     return result; // ★★★ `main`プロセスからの結果を、この関数の呼び出し元に返す
-
-  //   } catch (error) {
-  //     console.error('saveToFile関数でIPC呼び出し中にエラー:', error);
-  //     // ★ エラーが発生した場合も、失敗したことを示すオブジェクトを返す
-  //     return { success: false, error: (error instanceof Error) ? error.message : String(error) };
-  //   }
-  // }
-
-  // リセット処理を行う関数
-  // function resetWindow() {
-  //   // 1. Renderer側でズームとパンをリセット
-  //   stage.position({ x: 0, y: 0 });
-  //   stage.scale({ x: 1, y: 1 });
-  //   stage.draw();
-
-  //   // 2. Mainプロセスに、ウィンドウの位置とサイズのリセットを依頼
-  //   window.electronAPI.resetIpWindow();
-  // }
 
   // --- Save As...ボタンのイベントリスナー ---
   document.getElementById('ip-save-as-button')?.addEventListener('click', () => {
@@ -2319,420 +717,7 @@ export function initializeIdeaProcessor() {
     }
   });
 
-  /**
-   * 指定された名前のテンプレートをキャンバスに生成する
-   * @param templateName 'greimas' | 'heros-journey' など
-   */
-  function generateTemplate(templateName: string) {
-    // グレマスの行為者モデル Actantial model
-    if (templateName === 'greimas') {
-      const group = createBackgroundShape({ x: 110, y: 100 });
-      group.setAttr('isTemplateRoot', true);
-      group.findOne<Konva.Text>('Text')?.text('行為者モデル');
-      group.findOne<Konva.Rect>('.background')?.size({ width: 650, height: 350 });
 
-      const FONT_SIZE = 14; // 可読性のためのフォントサイズ調整
-
-      // --- ノードの定義 ---
-      const sujet = createTemplateNode({ x: 400, y: 320, title: '主体', placeholder: '主人公' });
-      const objet = createTemplateNode({ x: 400, y: 170, title: '対象', placeholder: '主人公の目的' });
-      const destinateur = createTemplateNode({ x: 170, y: 170, title: '送り手', placeholder: '主人公に目的を指示する存在（命令者、依頼人など）' });
-      const destinataire = createTemplateNode({ x: 630, y: 170, title: '受け手', placeholder: '主人公の行動によって利益を得る存在' });
-      const adjuvant = createTemplateNode({ x: 170, y: 320, title: '援助者', placeholder: '主人公を助ける仲間や道具' });
-      const opposant = createTemplateNode({ x: 630, y: 320, title: '敵対者', placeholder: '主人公を妨害する敵対者' });
-
-      // --- ペアリング ---
-      const nodes = [sujet, objet, destinateur, destinataire, adjuvant, opposant];
-      nodes.forEach(node => {
-        // フォントサイズを調整
-        node.findOne<Konva.Text>('.text')?.fontSize(FONT_SIZE);
-
-        const pos = node.absolutePosition();
-        node.moveTo(group);
-        node.absolutePosition(pos);
-        node.setAttr('parentId', group.id());
-        updateNodeVisuals(node, false); // 色を確定
-      });
-
-      // --- リンクの定義 ---
-      const createTemplateLink = (from: Konva.Group, to: Konva.Group) => {
-        const link = createSingleLink(from, to, LinkType.ARROW, '');
-        link.setAttr('isTemplateItem', true);
-      };
-
-      createTemplateLink(sujet, objet);
-      createTemplateLink(destinateur, objet);
-      createTemplateLink(objet, destinataire);
-      createTemplateLink(adjuvant, sujet);
-      createTemplateLink(opposant, sujet);
-
-      recordHistory('Template created: Greimas');
-    }
-    // 英雄の旅 Hero's Journey
-    else if (templateName === 'heros-journey') {
-      // 1. テンプレート全体を囲む、親グループを作成
-      const group = createBackgroundShape({ x: 50, y: 50 });
-      group.setAttr('isTemplateRoot', true);
-      group.findOne<Konva.Text>('Text')?.text("英雄の旅 (Hero's Journey)");
-      group.findOne<Konva.Rect>('.background')?.size({ width: 900, height: 700 });
-
-      // 2. 円環レイアウトのための定数を定義
-      const steps = 12;
-      const centerX = 450;
-      const centerY = 350;
-      const radiusX = 380;
-      const radiusY = 280;
-
-      // 3. 12ステップのデータを定義
-      const journeyData = [
-        { title: '1. 日常の世界', placeholder: '主人公は誰で、どんな日常を送っているか？' },
-        { title: '2. 冒険への誘い', placeholder: 'その日常を揺るがす、最初の「事件」は何か？' },
-        { title: '3. 冒険の拒絶', placeholder: '主人公はなぜ、その誘いをためらうのか？' },
-        { title: '4. 賢者との\n　 出会い', placeholder: '誰が、あるいは何が、主人公の背中を押すのか？' },
-        { title: '5. 第一関門の突破', placeholder: '主人公が、もう後戻りできないと決意する瞬間は？' },
-        { title: '6. 試練、仲間、敵', placeholder: '新しい世界で、主人公はどんな試練に直面するか？' },
-        { title: '7. 最も危険な場所へ', placeholder: '物語の核心、最大の試練が待つ場所へ。' },
-        { title: '8. 最大の試練', placeholder: '主人公が、死に直面するほどの、最も過酷な試練。' },
-        { title: '9. 報酬', placeholder: '最大の試練を乗り越え、主人公は何を手に入れたか？' },
-        { title: '10. 帰路', placeholder: '手に入れた「報酬」を持って、日常の世界へ戻る旅路。' },
-        { title: '11. 復活', placeholder: '主人公が、旅で得た力や知恵で、最後の敵を打ち破る。' },
-        { title: '12. 宝物との帰還', placeholder: '主人公が日常へ帰還し、世界を、あるいは自身をどう変えたか？' },
-      ];
-
-      const createdNodes: Konva.Group[] = [];
-
-      // 4. データを元に、円環状にノードを生成・配置
-      journeyData.forEach((data, i) => {
-        const angle = (i / steps) * 2 * Math.PI - (Math.PI / 2); // 12時方向から開始
-        const nodeX = centerX + radiusX * Math.cos(angle);
-        const nodeY = centerY + radiusY * Math.sin(angle);
-
-        const node = createTemplateNode({ x: nodeX, y: nodeY, title: data.title, placeholder: data.placeholder });
-        createdNodes.push(node);
-      });
-
-      // 5. すべてのノードを、親グループに所属させる (ペアリング)
-      createdNodes.forEach(node => {
-        const pos = node.absolutePosition();
-        node.moveTo(group);
-        node.absolutePosition(pos);
-        node.setAttr('parentId', group.id());
-        updateNodeVisuals(node, false);
-      });
-
-      // 6. ノード間に、順番に矢印リンクを作成
-      for (let i = 0; i < createdNodes.length; i++) {
-        const fromNode = createdNodes[i];
-        const toNode = createdNodes[(i + 1) % createdNodes.length]; // 最後は12→1に繋がる
-        const link = createSingleLink(fromNode, toNode, LinkType.ARROW, '');
-        link.setAttr('isTemplateItem', true);
-      }
-
-      recordHistory("Template created: Hero's Journey");
-    }
-    // エッセンシャル・ビートシート The Essential Beat Sheet
-    else if (templateName === 'beat-sheet') {
-      const group = createBackgroundShape({ x: 50, y: 50 });
-      group.setAttr('isTemplateRoot', true);
-      group.findOne<Konva.Text>('Text')?.text("エッセンシャル・ビートシート");
-      group.findOne<Konva.Rect>('.background')?.size({ width: 1050, height: 550 });
-
-      const beatData = [
-        { title: '1. オープニング', placeholder: '主人公の登場とテーマの提示' },
-        { title: '2. 事件の発生', placeholder: 'その日常を破壊し、主人公を物語へと強制的に引きずり込む「何か」が発生する' },
-        { title: '3. 決意', placeholder: '主人公は決意を固め、非日常の世界へ足を踏み入れる' },
-        { title: '4. 新しい世界', placeholder: '主人公が飛び込んだ非日常の世界。そこで出会う仲間と敵、そしてこの世界の「ルール」' },
-        { title: '5. 挫折', placeholder: '物語の中間点。主人公は壁に突き当たる。あるいは、目的を達成したかのように見えたが、それは偽りだった' },
-        { title: '6. 絶望', placeholder: '偽りの勝利は崩れ去り、主人公はすべてを失う。物語の最も暗い瞬間' },
-        { title: '7. 転機', placeholder: '主人公は絶望の底で己と向き合い、そこで何かを見出す' },
-        { title: '8. 反撃', placeholder: '新たな悟り（あるいは新たな力）を得た主人公は最後の戦いに向かう' },
-        { title: '9. クライマックス', placeholder: '最後の戦いが始まる' },
-        { title: '10. 最後の障害', placeholder: 'すべてが終わったかと思った瞬間、最後の障害、あるいは、驚くべき真実が明らかになる。' },
-        { title: '11. 決着', placeholder: '主人公が、その最後の障害をも乗り越えて勝利する' },
-        { title: '12. エンディング', placeholder: '物語の結末。主人公は何を得て、どのように変化したか' },
-      ];
-
-      const createdNodes: Konva.Group[] = [];
-      const positions = [
-        { x: 79, y: 103 }, { x: 303, y: 146 }, { x: 510, y: 107 }, { x: 711, y: 68 },
-        { x: 902, y: 156 }, { x: 798, y: 338 }, { x: 537, y: 278 }, { x: 284, y: 291 },
-        { x: 87, y: 393 }, { x: 237, y: 518 }, { x: 505, y: 472 }, { x: 815, y: 494 },
-      ];
-
-      beatData.forEach((data, i) => {
-        const node = createTemplateNode({
-          x: positions[i].x,
-          y: positions[i].y,
-          title: data.title,
-          placeholder: data.placeholder
-        });
-        node.findOne<Konva.Rect>('.background')?.width(180);
-        createdNodes.push(node);
-      });
-
-      createdNodes.forEach(node => {
-        const pos = node.absolutePosition();
-        node.moveTo(group);
-        node.absolutePosition(pos);
-        node.setAttr('parentId', group.id());
-        updateNodeVisuals(node, false);
-      });
-
-      // リンクを作成 
-      const createTemplateLink = (fromIndex: number, toIndex: number) => {
-        const link = createSingleLink(createdNodes[fromIndex], createdNodes[toIndex], LinkType.ARROW, '');
-        link.setAttr('isTemplateItem', true);
-      };
-
-      for (let i = 0; i < 11; i++) createTemplateLink(i, i + 1);
-
-      recordHistory("Template created: Beat Sheet");
-    }
-    // 三幕構成 Three Act Structure
-    else if (templateName === 'three-act-structure') {
-      const group = createBackgroundShape({ x: 100, y: 100 });
-      group.setAttr('isTemplateRoot', true);
-      group.findOne<Konva.Text>('Text')?.text("三幕構成");
-      group.findOne<Konva.Rect>('.background')?.size({ width: 800, height: 250 });
-
-      const actData = [
-        { title: '第一幕：発端 (Beginning)', placeholder: '物語の世界観と主人公を紹介し、最初の事件が起こるまでのパート。全体の約25%。' },
-        { title: '第二幕：葛藤 (Middle)', placeholder: '主人公が障害に直面し、試行錯誤し、成長（あるいは堕落）していく、物語で最も長いパート。全体の約50%。' },
-        { title: '第三幕：結末 (End)', placeholder: '物語のクライマックスと、その後の結末を描く、最後のパート。全体の約25%。' },
-      ];
-
-      const createdNodes: Konva.Group[] = [];
-      actData.forEach((data, i) => {
-        const node = createTemplateNode({
-          x: 150 + i * 250, // 横に並べる
-          y: 150,
-          title: data.title,
-          placeholder: data.placeholder,
-        });
-        node.findOne<Konva.Rect>('.background')?.size({ width: 200, height: 100 });
-        createdNodes.push(node);
-      });
-
-      createdNodes.forEach(node => {
-        const pos = node.absolutePosition();
-        node.moveTo(group);
-        node.absolutePosition(pos);
-        node.setAttr('parentId', group.id());
-        updateNodeVisuals(node, false);
-      });
-
-      createSingleLink(createdNodes[0], createdNodes[1], LinkType.ARROW, '').setAttr('isTemplateItem', true);
-      createSingleLink(createdNodes[1], createdNodes[2], LinkType.ARROW, '').setAttr('isTemplateItem', true);
-
-      recordHistory("Template created: Three-Act Structure");
-    }
-  }
-
-  /**
-   * テンプレート専用の、色と属性が設定されたノードを作成するヘルパー関数
-   */
-  function createTemplateNode(options: { x: number, y: number, title: string, placeholder: string }): Konva.Group {
-    // 1. buildNodeを流用して、基本のノードを作成
-    const nodeGroup = buildNode({
-      id: `node_${Date.now()}${Math.random()}`,
-      x: options.x,
-      y: options.y,
-      text: options.title,
-      width: 120, // テンプレート用の固定幅
-    });
-
-    // 2. 特殊な属性とスタイルを設定
-    nodeGroup.setAttr('isTemplateItem', true); // ★ 削除・ペアリング解除不可の目印
-    nodeGroup.setAttr('placeholder', options.placeholder); // ★ placeholderを保持
-
-    // ★ 特殊な色を背景に設定 (テーマに応じて)
-    const colors = getCurrentThemeColors();
-    const templateColor = colors.templateBg;
-    nodeGroup.findOne<Konva.Rect>('.background')?.fill(templateColor);
-
-    return nodeGroup;
-  }
-
-
-
-  // --- ★ テーマ情報をJavaScriptで一元管理 ---
-  const themes = {
-    light: {
-      text: '#111111',
-      link: '#333333',
-      selection: '#cb0707ff',
-      nodeBg: 'transparent',
-      labelBackground: '#cccccc',
-      //    pairedBorder: '#888888',
-      pairedBg: 'rgba(120, 120, 120, 0.2)',
-      templateBg: 'rgba(229, 174, 24, 0.3)'
-    },
-    dark: {
-      text: '#cccccc',
-      link: '#cccccc',
-      selection: '#d31010ff',
-      nodeBg: 'transparent',
-      labelBackground: '#444444',
-      //    pairedBorder: '#cccccc', 
-      pairedBg: 'rgba(155, 155, 155, 0.3)',
-      templateBg: 'rgba(43, 136, 216, 0.3)'
-    }
-  };
-
-  /**
-   * 現在のテーマ（ライトかダークか）に基づいて、色のセットを返す
-   */
-  function getCurrentThemeColors() {
-    const isDarkMode = document.body.classList.contains('dark-mode');
-    return isDarkMode ? themes.dark : themes.light;
-  }
-
-  /**
-   * ノードの視覚スタイルを、現在の状態（ペアリング、選択）に基づいて更新する
-   * @param nodeGroup 対象のノード
-   * @param isSelected 選択されているか
-   */
-  function updateNodeVisuals(nodeGroup: Konva.Group, isSelected: boolean) {
-    const backgroundRect = nodeGroup.findOne<Konva.Rect>('.background');
-    if (!backgroundRect) return;
-
-    const colors = getCurrentThemeColors();
-    const isPaired = !!nodeGroup.getAttr('parentId');
-    const isTemplateItem = !!nodeGroup.getAttr('isTemplateItem');
-
-    // 枠線は常に無効
-    backgroundRect.strokeEnabled(false);
-
-    // 背景の塗りつぶしを決定
-    if (isSelected) {
-      const selectionRgb = Konva.Util.getRGB(colors.selection);
-      backgroundRect.fill(`rgba(${selectionRgb.b}, ${selectionRgb.g}, ${selectionRgb.r}, 0.3)`);
-    } else if (isTemplateItem) {
-      backgroundRect.fill(colors.templateBg);
-    } else if (isPaired) {
-      backgroundRect.fill(colors.pairedBg);
-    } else {
-      backgroundRect.fill(colors.nodeBg);
-    }
-  }
-
-  /**
-   * 指定されたシェイプに選択状態のスタイルを適用する
-   * @param shape 対象のKonva.Group (ノード、グループ、リンク)
-   */
-  function applySelectionStyle(shape: Konva.Group) {
-    const colors = getCurrentThemeColors();
-
-    if (shape.name() === 'link-group') {
-      // リンク自身のスタイルを適用
-      const linkShape = shape.findOne<Konva.Line | Konva.Arrow>('.link-shape');
-      if (linkShape) {
-        linkShape.stroke(colors.selection);
-        linkShape.strokeWidth(4 / stage.scaleX());
-        if (linkShape instanceof Konva.Arrow) {
-          linkShape.fill(colors.selection);
-        }
-      }
-      // ジオメトリで相方を探し、スタイルを適用
-      const sibling = findSiblingByGeometry(shape);
-      if (sibling) {
-        const siblingShape = sibling.findOne<Konva.Line | Konva.Arrow>('.link-shape');
-        if (siblingShape) {
-          siblingShape.stroke(colors.selection);
-          siblingShape.strokeWidth(4 / stage.scaleX());
-          if (siblingShape instanceof Konva.Arrow) {
-            siblingShape.fill(colors.selection);
-          }
-        }
-      }
-    } else if (shape.name() === 'node-group') {
-      updateNodeVisuals(shape, true);
-    } else if (shape.name() === 'background-shape') {
-      // ノードや背景図形の場合の選択スタイル
-      const rect = shape.findOne<Konva.Rect>('.background');
-      if (rect) {
-        rect.strokeEnabled(false);
-        const selectionRgb = Konva.Util.getRGB(colors.selection);
-        rect.fill(`rgba(${selectionRgb.b}, ${selectionRgb.g}, ${selectionRgb.r}, 0.3)`);
-      }
-      shape.find('.resize-handle').forEach(h => {
-        h.show();
-        h.listening(true);
-      });
-    }
-  }
-
-  /**
-   * ステージ上の全オブジェクトの色を現在のテーマに合わせる
-   */
-  function applyThemeToStage() {
-    const isDarkMode = document.body.classList.contains('dark-mode');
-    const colors = isDarkMode ? themes.dark : themes.light;
-
-    // --- 1. グループ関連のスタイルを更新 ---
-    stage.find<Konva.Group>('.background-shape').forEach(group => {
-      const rect = group.findOne<Konva.Rect>('.background');
-      const label = group.findOne<Konva.Text>('Text');
-      // findOneに<Konva.Circle>と型引数を渡して、handleの型を正確にする
-      const handle = group.findOne<Konva.Circle>('.resize-handle');
-
-      if (rect) {
-        rect.stroke(colors.text);
-      }
-      if (label) {
-        label.fill(colors.text);
-      }
-      // handleが存在する場合のみ、fillを呼び出す
-      if (handle) {
-        handle.fill(colors.text);
-      }
-    });
-
-    // --- 2. リンク関連のスタイルを更新 ---
-    stage.find<Konva.Group>('.link-group').forEach(linkGroup => {
-      const linkShape = linkGroup.findOne<Konva.Line | Konva.Arrow>('.link-shape');
-      const labelContainer = linkGroup.findOne<Konva.Label>('.link-label-container');
-
-      if (labelContainer) {
-        const tag = labelContainer.findOne<Konva.Tag>('Tag');
-        const text = labelContainer.findOne<Konva.Text>('.link-label');
-        if (tag) {
-          tag.fill(colors.labelBackground);
-          tag.stroke(colors.text);
-        }
-        if (text) {
-          text.fill(colors.text);
-        }
-      }
-
-      if (linkShape) {
-        if (selectedShape !== linkGroup) {
-          linkShape.stroke(colors.link);
-          if (linkShape instanceof Konva.Arrow) {
-            linkShape.fill(colors.link);
-          }
-        }
-      }
-    });
-
-    // --- 3. 全てのノードのスタイルを更新 ---
-    stage.find<Konva.Group>('.node-group').forEach(nodeGroup => {
-      const text = nodeGroup.findOne<Konva.Text>('.text');
-      if (text) {
-        text.fill(colors.text);
-      }
-      const isSelected = (selectedShape === nodeGroup);
-      updateNodeVisuals(nodeGroup, isSelected);
-    });
-
-    // --- 4. 選択中のオブジェクトがあれば、選択スタイルを再適用 ---
-    if (selectedShape) {
-      applySelectionStyle(selectedShape);
-    }
-
-    // --- 5. 最後に一度だけ再描画 ---
-    layer.draw();
-  }
 
   // --- テーマ切り替えボタンのロジック ---
   const themeToggleButton = document.getElementById('ip-theme-toggle-button');
@@ -3629,7 +1614,6 @@ export function initializeIdeaProcessor() {
 
   // ■ 背景画像を設定するヘルパー関数
   async function updateBackgroundImage(isDark: boolean) {
-    const wrapper = document.getElementById('ip-wrapper');
     if (!wrapper) return;
 
     if (isDark) {
@@ -3898,11 +1882,2025 @@ export function initializeIdeaProcessor() {
 
 }
 
+// =================================================================
+// ★ 主要な関数（リファクタリング済み）
+// =================================================================
+
+/**
+ * 1. 新規ノード作成のエントリーポイント (ダブルクリックで呼ばれる)
+ * @param pos 作成位置 (ローカル座標)
+ * @param target Konvaのイベントターゲット
+ */
+function createNewNode(pos: Vector2d, target: Konva.Node) {
+  const nodeData = {
+    id: `node_${Date.now()}${Math.random()}`,
+    x: pos.x,
+    y: pos.y,
+    text: 'New Text',
+    width: 200, // 初期幅
+    height: new Konva.Text({ text: 'New Text', fontSize: 16, padding: 8, width: 200 }).height(), // 初期高さ
+  };
+  const nodeGroup = buildNode(nodeData);
+
+  // ダブルクリックされたのがグループノードの背景か、その子孫か？
+  const parentGroup = target.findAncestor('.background-shape');
+  if (parentGroup && !parentGroup.getAttr('isTemplateRoot')) {
+    nodeGroup.moveTo(parentGroup);
+    nodeGroup.setAttr('parentId', parentGroup.id());
+    updateNodeVisuals(nodeGroup, false);
+    // グループ内に作成されたので、位置を再調整
+    // createNewNode に渡される pos は既にローカル座標なので、
+    // グループの座標を引く必要はない。
+  }
+
+  enterEditMode(nodeGroup, true);
+}
+
+/**
+ * 2. データからノードを復元するエントリーポイント (ロード時に呼ばれる)
+ */
+function createNodeFromData(nodeData: any) {
+  // `buildNode`を呼び出す際に、`text`プロパティとして`nodeData.title`を渡す
+  const nodeGroup = buildNode({
+    id: nodeData.id,
+    x: nodeData.x,
+    y: nodeData.y,
+    text: nodeData.title, // ★ 表示するのはtitle
+    width: nodeData.width,
+    height: nodeData.height
+  });
+  return nodeGroup;
+}
+
+// ■ 履歴を記録する関数 (操作が行われたときに呼ぶ)
+function recordHistory(message: string = '') {
+  if (!isHistoryEnabled) return;
+
+  // JSON化して保存
+  const stateJson = stage.toJSON();
+
+  if (historyIndex < history.length - 1) {
+    history = history.slice(0, historyIndex + 1);
+  }
+  history.push(stateJson);
+  if (history.length > MAX_HISTORY) {
+    history.shift();
+  } else {
+    historyIndex++;
+  }
+  console.log(`[History] Recorded: ${message} (Index: ${historyIndex})`);
+}
+
+// ★ テキストの変更に応じてノードサイズを調整する、再利用可能な関数を作成
+function adjustNodeSize(textNode: Konva.Text) {
+  const maxWidth = 200; // 折り返しの最大幅
+  const padding = 8 * 2; // 左右のパディング合計
+
+  // 一時的に幅の制限をなくして、テキスト本来の幅を計算
+  textNode.width(undefined);
+  const textWidth = textNode.width();
+
+  if (textWidth + padding > maxWidth) {
+    // 最大幅を超える場合は、折り返しを有効にする
+    textNode.width(maxWidth - padding);
+  } else {
+    // 超えない場合は、幅の制限は不要
+    // （width(undefined)のまま）
+  }
+
+  const parentGroup = textNode.getParent();
+
+  // ★ `parentGroup`がnullでないことを確認してから、次の処理に進む
+  if (parentGroup) {
+    const backgroundRect = parentGroup.findOne<Konva.Rect>('.background');
+    if (backgroundRect) {
+      backgroundRect.width(textNode.width() + padding);
+      backgroundRect.height(textNode.height() + padding);
+
+      const links = (parentGroup as Konva.Group).getAttr('links') || [];
+      links.forEach(linkGroup => {
+        // ★ ここはもう、linkGroupが直接手元にあるので、そのまま渡すだけ
+        updateLinkPoints(linkGroup as Konva.Group);
+      });
+    }
+  }
+}
+
+
+/**
+ * 3. 実際のノードオブジェクトを構築する共通ヘルパー関数
+ */
+function buildNode(nodeData: { id: string, x: number, y: number, text: string, width: number, height?: number }): Konva.Group {
+  const isDarkMode = document.body.classList.contains('dark-mode');
+  const colors = isDarkMode ? themes.dark : themes.light;
+  const nodeGroup = new Konva.Group({
+    id: nodeData.id,
+    x: nodeData.x,
+    y: nodeData.y,
+    draggable: true,
+  });
+  nodeGroup.name('node-group');
+  nodeGroup.setAttr('links', []);
+
+  const textNode = new Konva.Text({
+    name: 'text',
+    text: nodeData.text,
+    fontSize: 16,
+    fontFamily: "'Klee Custom', serif-ja, serif",
+    fill: colors.text,
+    padding: 8,
+    width: nodeData.width,
+    lineHeight: 1.2,
+  });
+
+  const backgroundRect = new Konva.Rect({
+    name: 'background',
+    x: 0,
+    y: 0,
+    width: nodeData.width,
+    height: textNode.height(),
+    fill: colors.nodeBg,
+    cornerRadius: 10,
+  });
+
+  // 動的なクリッピング領域を設定
+  nodeGroup.clipFunc((ctx) => {
+    ctx.beginPath();
+    ctx.rect(0, 0, backgroundRect.width(), backgroundRect.height());
+    ctx.closePath();
+  });
+
+  nodeGroup.add(backgroundRect, textNode);
+
+  // --- イベントハンドラ ---
+
+  // ノード自体のドラッグ移動
+  nodeGroup.on('dragmove', () => {
+    // ★ `nodeGroup`が、まさに親グループそのもの
+    const links = nodeGroup.getAttr('links') as Konva.Group[];
+    links.forEach(linkGroup => {
+      updateLinkPoints(linkGroup);
+    });
+    layer.batchDraw();
+  });
+
+  nodeGroup.on('dragend', () => {
+    if (transformer.nodes().length > 1) {
+      return;
+    }
+    recordHistory('Node moved');
+  });
+
+  layer.add(nodeGroup);
+  // handle.hide();
+  adjustNodeSize(textNode);
+  return nodeGroup;
+}
+
+/**
+ * テキスト編集を開始する関数
+ * @param nodeGroup 対象のノード
+ * @param isNew 新規作成ノードかどうかのフラグ
+ */
+function enterEditMode(nodeGroup: Konva.Group, isNew = false) {
+  isTextEditing = true;
+  updateButtonInteractivity(true);
+  const textNode = nodeGroup.findOne<Konva.Text>('.text')!;
+  const backgroundRect = nodeGroup.findOne<Konva.Rect>('.background')!;
+  const textEditor = document.getElementById('ip-text-editor') as HTMLTextAreaElement;
+
+  textNode.opacity(0);
+  backgroundRect.opacity(0);
+
+  layer.draw();
+
+  textEditor.value = textNode.text();
+  textEditor.style.display = 'block';
+  textEditor.style.position = 'absolute';
+
+
+  textEditor.focus();
+
+  // ★ 新規作成の場合のみ、テキストを全選択する
+  if (isNew) {
+    textEditor.select();
+  } else {
+    // 既存ノードの編集時はカーソルを末尾に
+    textEditor.setSelectionRange(textEditor.value.length, textEditor.value.length);
+  }
+
+  const adjustHeight = () => {
+    textEditor.style.height = 'auto';
+    textEditor.style.height = textEditor.scrollHeight + 'px';
+  };
+  textEditor.addEventListener('input', adjustHeight);
+  adjustHeight();
+
+  // ★ 1. 現在のステージのスケールと位置を取得
+  const scale = stage.scaleX();
+
+  // 2. ノードの「見た目上」の矩形を取得
+  const clientRect = backgroundRect.getClientRect();
+
+  // ★ 3. テキストエリアの位置とサイズを、スケールを考慮して設定
+  textEditor.style.top = clientRect.y + 24 + 'px';
+
+  const Pane = document.getElementById('ip-outline-pane')!;
+  if (!Pane.classList.contains('hidden')) {
+    textEditor.style.left = clientRect.x + 165 + 'px';
+  } else {
+    textEditor.style.left = clientRect.x + 'px';
+  }
+  textEditor.style.width = clientRect.width / scale + 'px';
+  textEditor.style.height = clientRect.height / scale + 'px';
+
+  // ★ 4. CSSのtransformを使って、テキストエリア自体を拡大する
+  //    これにより、paddingなども含めて綺麗にスケールされる
+  textEditor.style.transform = `scale(${scale})`;
+  textEditor.style.transformOrigin = 'top left'; // 拡大の基点を左上にする  
+
+  // キーボードショートカット用のイベントハンドラ
+  const handleKeyDown = (e: KeyboardEvent) => {
+    // テキスト編集中は、グローバルなショートカット（削除など）が暴発しないように、
+    // イベントの伝播をここで止める。
+    if (e.key === 'Delete' || e.key === 'Backspace') {
+      e.stopPropagation();
+    }
+
+    // Ctrl+Enter または Cmd+Enter で入力を確定
+    if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
+      e.preventDefault();
+      e.stopPropagation(); // 念のため、ここでも止める
+      textEditor.blur();
+    }
+    // Escapeキーでも入力を確定
+    if (e.key === 'Escape') {
+      e.preventDefault();
+      e.stopPropagation();
+      textEditor.blur();
+    }
+  };
+  textEditor.addEventListener('keydown', handleKeyDown);
+
+  // 編集完了時の処理（blurイベント）
+  textEditor.addEventListener('blur', () => {
+    isTextEditing = false;
+    updateButtonInteractivity(false);
+    const oldText = textNode.text();
+    const newText = textEditor.value;
+
+    // a) 「新規作成」ノードの場合
+    if (isNew) {
+      textNode.text(newText);
+      adjustNodeSize(textNode);
+      recordHistory('Node created');
+    }
+    // b) 既存ノードの編集の場合、テキストに変更があった場合のみ記録
+    else if (oldText !== newText) {
+      textNode.text(newText);
+      adjustNodeSize(textNode);
+      recordHistory('Node text changed');
+    }
+    // ★ Listenerを両方とも削除する
+    textEditor.removeEventListener('input', adjustHeight);
+    textEditor.removeEventListener('keydown', handleKeyDown);
+
+    textNode.text(textEditor.value);
+    adjustNodeSize(textNode);
+
+    textEditor.style.transform = 'scale(1)';
+    textEditor.style.display = 'none';
+    textNode.opacity(1);
+    backgroundRect.opacity(1);
+
+    renderIpOutline();
+    layer.draw();
+  }, { once: true });
+}
+
+// ★ デバウンス用のヘルパー関数
+function debounce<F extends (...args: any[]) => any>(func: F, waitFor: number) {
+  let timeout: ReturnType<typeof setTimeout> | null = null;
+
+  return (...args: Parameters<F>): void => {
+    if (timeout) {
+      clearTimeout(timeout);
+    }
+    timeout = setTimeout(() => func(...args), waitFor);
+  };
+}
+
+// ★★★ オートセーブを実行するための関数 ★★★
+const autoSaveChanges = debounce(() => {
+  // 1. ファイルパスが存在し、かつ変更がある(`isDirty`)場合のみ実行
+  if (currentFilePath && isDirty) {
+    console.log('Auto-saving changes...');
+
+    // 2. `saveToFile`を「上書き保存」モードで呼び出す
+    //    `saveToFile`は、内部でIPC通信を行う非同期関数
+    saveToFile(false).then(result => {
+      if (result && result.success) {
+        console.log('Auto-save successful.');
+        // isDirtyフラグは、saveToFileの中で`markAsClean()`によってfalseにされる
+      } else {
+        console.error('Auto-save failed.');
+      }
+    });
+  }
+}, 2000); // 最後の操作から2秒後に実行
+
+
+/**
+ * isTextEditingフラグの状態に応じて、UIボタンの操作可否を更新する
+ * @param isEditing テキスト編集中かどうか
+ */
+function updateButtonInteractivity(isEditing: boolean) {
+  const buttonContainer = document.querySelector('.top-right-buttons');
+  if (buttonContainer) {
+    buttonContainer.classList.toggle('disabled', isEditing);
+  }
+}
+
+/**
+ * 指定されたノードと、それに接続されているすべてのリンクを安全に削除する
+ * @param nodeToDelete 削除するノード
+ */
+function deleteNodeAndConnectedLinks(nodeToDelete: Konva.Group) {
+  // 1. ノードに接続されているリンクの「コピー」を取得
+  const links = [...(nodeToDelete.getAttr('links') as Konva.Group[] || [])];
+
+  // 2. 各リンクを、安全なdeleteLink関数で削除
+  links.forEach(link => {
+    deleteLink(link); // (あなたが以前に完成させた、完璧なリンク削除関数)
+  });
+
+  // 3. すべてのリンクが消えた後、ノード自身を破棄
+  nodeToDelete.destroy();
+}
+
+//　コンテンツエディタ用
+
+/**
+ * コンテンツエディタを開き、指定されたノードの内容を表示する
+ * @param nodeGroup 編集対象のノード
+ */
+function openContentEditor(nodeGroup: Konva.Group) {
+  isContentEditing = true;
+  isTextEditing = true;
+  updateButtonInteractivity(true);
+  stage.listening(false);
+  // 既に何か編集中であれば、先に保存処理を行う
+  if (currentlyEditingNodeId && currentlyEditingNodeId !== nodeGroup.id()) {
+    saveContentChanges();
+  }
+  currentlyEditingNodeId = nodeGroup.id();
+  let content = nodeGroup.getAttr('contentText') || '';
+  const placeholder = nodeGroup.getAttr('placeholder') || '';
+  let isInitialContent = false;
+  contentEditor.placeholder = placeholder;
+  if (!content.trim() && !placeholder) {
+    content = 'New Content';
+    isInitialContent = true;
+  }
+  contentEditor.value = content;
+
+  editorPane.classList.remove('hidden');
+  contentEditor.focus();
+  if (isInitialContent) {
+    contentEditor.select();
+  }
+
+  // イベントリスナー
+  contentEditor.addEventListener('keydown', handleContentEditorKeyDown);
+  //  blurイベントでは保存・終了処理を行わない
+  //contentEditor.addEventListener('blur', closeContentEditor, { once: true });
+}
+
+/**
+ * コンテンツエディタのキーボードイベントを処理する
+ */
+const handleContentEditorKeyDown = (e: KeyboardEvent) => {
+  // DeleteキーやBackspaceキーが、ノード削除を暴発させないようにする
+  if (e.key === 'Delete' || e.key === 'Backspace') {
+    e.stopPropagation();
+  }
+
+  // Escapeキーで編集を終了する
+  if (e.key === 'Escape') {
+    e.preventDefault();
+    e.stopPropagation();
+    closeContentEditor();
+  }
+};
+
+/**
+ * コンテンツエディタの変更を保存し、エディタを閉じる
+ */
+function saveContentChanges() {
+  if (!currentlyEditingNodeId) return;
+
+  const node = stage.findOne<Konva.Group>('#' + currentlyEditingNodeId);
+  if (node) {
+    const oldText = node.getAttr('contentText') || '';
+    const newText = contentEditor.value;
+
+    if (oldText !== newText) {
+      node.setAttr('contentText', newText);
+      recordHistory('Node content changed');
+      renderIpOutline();
+    }
+  }
+}
+
+/**
+ * 変更を保存してエディタを閉じる
+ */
+function closeContentEditor() {
+  saveContentChanges();
+  editorPane.classList.add('hidden');
+  currentlyEditingNodeId = null;
+  isContentEditing = false;
+  isTextEditing = false;
+  updateButtonInteractivity(false);
+  stage.listening(true);
+  contentEditorJustClosed = true;
+  stage.container().focus();
+  contentEditor.removeEventListener('keydown', handleContentEditorKeyDown);
+}
+
+// マークダウン変換関連
+
+/**
+ * 現在のキャンバスの状態をMarkdown文字列に変換する
+ */
+function generateMarkdownContent(): string {
+  const groups = stage.find<Konva.Group>('.background-shape');
+  const nodes = stage.find<Konva.Group>('.node-group');
+
+  let markdown = '';
+  const orphanNodes: Konva.Group[] = []; // 親がいないノードを格納
+
+  // 1. まず、親がいないノードを特定する
+  nodes.forEach(node => {
+    if (!node.getAttr('parentId')) {
+      orphanNodes.push(node);
+    }
+  });
+
+  // 2. 各グループを処理
+  groups.forEach(group => {
+    const groupLabel = group.findOne<Konva.Text>('Text')?.text() || 'Untitled Group';
+    markdown += `# ${groupLabel}\n\n`;
+
+    // このグループに所属する子ノードを探して処理
+    const childNodes = nodes.filter(n => n.getAttr('parentId') === group.id());
+
+    childNodes.forEach(node => {
+      markdown += convertNodeToMarkdown(node);
+    });
+  });
+
+  // 3. 親がいないノードを "# Others" として処理
+  if (orphanNodes.length > 0) {
+    markdown += `# Others\n\n`;
+    orphanNodes.forEach(node => {
+      markdown += convertNodeToMarkdown(node);
+    });
+  }
+
+  return markdown;
+}
+
+/**
+ * 1つのノードをMarkdownのセクションに変換するヘルパー関数
+ */
+function convertNodeToMarkdown(node: Konva.Group): string {
+  let section = '';
+  const title = node.findOne<Konva.Text>('.text')?.text() || 'Untitled';
+  const content = node.getAttr('contentText') || '';
+
+  section += `## ${title}\n`;
+  if (content.trim()) {
+    section += `${content}\n`;
+  }
+
+  // リンク情報の処理
+  const links = node.getAttr('links') as Konva.Group[];
+  if (links && links.length > 0) {
+    section += '\n'; // リンク情報との間に空行を入れる
+    const uniqueLinks = new Set(links); // 重複を避ける
+
+    uniqueLinks.forEach(linkGroup => {
+      const linkNodes = linkGroup.getAttr('nodes') as Konva.Group[];
+      const linkLabel = linkGroup.findOne<Konva.Text>('.link-label')?.text().trim() || '';
+
+      // このリンクが、現在のノードから出ていくものか、入ってくるものかを判定
+      const isOutgoing = linkNodes[0] === node;
+      const otherNode = isOutgoing ? linkNodes[1] : linkNodes[0];
+      const otherNodeTitle = otherNode.findOne<Konva.Text>('.text')?.text() || '...';
+
+      let linkTypeSymbol = '';
+      const type = linkGroup.getAttr('linkType');
+      if (type === 'double_arrow') {
+        linkTypeSymbol = 'interaction';
+      } else if (type === 'arrow') {
+        linkTypeSymbol = isOutgoing ? 'to' : 'from';
+      } else {
+        linkTypeSymbol = 'relation';
+      }
+
+      section += `【${linkTypeSymbol} ${otherNodeTitle}】`;
+      if (linkLabel) {
+        section += `:${linkLabel}`;
+      }
+      section += '\n';
+    });
+  }
+
+  return section + '\n';
+}
+
+document.getElementById('ip-export-md-button')?.addEventListener('click', () => {
+  const markdownContent = generateMarkdownContent();
+  // ★★★ currentFilePath をそのまま渡す (nullの可能性もある) ★★★
+  // window.electronAPI.exportAsMarkdown(markdownContent, currentFilePath);
+});
+
+// アウトライン関連
+
+
+document.getElementById('ip-toggle-outline-btn')?.addEventListener('click', () => {
+  const Pane = document.getElementById('ip-outline-pane')!;
+  Pane.classList.toggle('hidden');
+  // アウトラインが表示されたら、内容を再生成する
+  if (!Pane.classList.contains('hidden')) {
+    renderIpOutline();
+  }
+});
+
+document.getElementById('outline-expand-all')?.addEventListener('click', () => {
+  setAllIpOutlineCollapsed(false);
+});
+document.getElementById('outline-collapse-all')?.addEventListener('click', () => {
+  setAllIpOutlineCollapsed(true);
+});
+
+// アウトライン項目をクリックしたときの処理 (イベント委譲)
+outlinePane.addEventListener('click', (e) => {
+  const target = e.target as HTMLElement;
+
+  // a) トグル（開閉）がクリックされた場合
+  if (target.classList.contains('outline-toggle')) {
+    const groupId = target.dataset.groupId;
+    if (groupId) {
+      const currentState = outlineCollapsedState.get(groupId) ?? false;
+      outlineCollapsedState.set(groupId, !currentState);
+      renderIpOutline(); // 状態を更新して再描画
+    }
+  }
+  // b) ノードのテキストがクリックされた場合
+  else if (target.closest('.outline-node')) {
+    const nodeId = (target.closest('.outline-node') as HTMLElement).dataset.id;
+    if (nodeId) {
+      jumpToNode(nodeId);
+    }
+  }
+  else if (target.closest('.outline-sub-node')) {
+    const subNodeEl = target.closest('.outline-sub-node') as HTMLElement;
+    const parentId = subNodeEl.dataset.parentId;
+    const headingText = subNodeEl.dataset.headingText;
+    if (parentId && headingText) {
+      // ★ 親ノードのIDと、ジャンプ先の「見出しテキスト」を渡す
+      jumpToNode(parentId, headingText);
+    }
+  }
+});
+
+/**
+ * 指定されたノードと、そのサブ階層（###, ####）を、
+ * アウトラインのリスト要素として生成し、コンテナに追加する
+ * @param node 描画するKonvaノード
+ * @param containerElement ノードが追加される親の<ul>要素
+ */
+function renderNodeWithSubheadings(node: Konva.Group, containerElement: HTMLElement) {
+  // 1. 親「##」ノードの<li>要素を作成
+  const parentLi = document.createElement('li');
+  parentLi.appendChild(createOutlineNodeEl(node));
+  containerElement.appendChild(parentLi);
+
+  // 2. 親ノードのcontentTextを解析
+  const content = node.getAttr('contentText') || '';
+  if (content) {
+    // 3. サブ階層を持つ<ul>を作成
+    const subList = document.createElement('ul');
+    subList.className = 'outline-sub-node-list';
+
+    const lines = content.split('\n');
+    lines.forEach(line => {
+      let level = 0;
+      let text = '';
+
+      if (line.startsWith('#### ')) {
+        level = 4;
+        text = line.substring(5);
+      } else if (line.startsWith('### ')) {
+        level = 3;
+        text = line.substring(4);
+      }
+
+      if (level > 0) {
+        const subLi = document.createElement('li');
+        subLi.className = 'outline-sub-node';
+        subLi.textContent = text;
+        subLi.dataset.parentId = node.id();
+        subLi.dataset.headingText = line;
+
+        const baseIndent = 15;
+        const increment = 15;
+        subLi.style.paddingLeft = `${baseIndent + (level - 2) * increment}px`;
+
+        subList.appendChild(subLi);
+      }
+    });
+
+    // 4. もしサブ階層が一つでもあれば、それを親<li>に追加
+    if (subList.hasChildNodes()) {
+      parentLi.appendChild(subList);
+    }
+  }
+}
+
+/**
+ * アウトラインパネルの内容を現在のステージの状態に基づいて再描画する
+ */
+function renderIpOutline() {
+  outlinePane.innerHTML = '';
+  const groups = [...stage.find<Konva.Group>('.background-shape')].sort((a, b) => {
+    const textA = a.findOne<Konva.Text>('Text')?.text() || '';
+    const textB = b.findOne<Konva.Text>('Text')?.text() || '';
+    return textA.localeCompare(textB, 'ja'); // 日本語ソートを明示
+  });
+
+  const nodes = [...stage.find<Konva.Group>('.node-group')].sort((a, b) => {
+    const textA = a.findOne<Konva.Text>('.text')?.text() || '';
+    const textB = b.findOne<Konva.Text>('.text')?.text() || '';
+    return textA.localeCompare(textB, 'ja');
+  });
+
+  const orphanNodes: Konva.Group[] = [];
+  nodes.forEach(n => { if (!n.getAttr('parentId')) orphanNodes.push(n); });
+
+  // --- グループ化されたノード ---
+  groups.forEach(group => {
+    const groupId = group.id();
+    const isCollapsed = outlineCollapsedState.get(groupId) ?? false; // デフォルトは展開
+
+    const groupWrapper = document.createElement('div');
+    const groupHeader = document.createElement('div');
+    groupHeader.className = 'outline-group-header';
+
+    const toggle = document.createElement('span');
+    toggle.className = 'outline-toggle';
+    toggle.classList.toggle('collapsed', isCollapsed);
+    toggle.textContent = '▼';
+    toggle.dataset.groupId = groupId; // クリックで開閉するためにIDを保持
+
+    const groupLabel = document.createElement('span');
+    groupLabel.className = 'outline-group-label';
+    groupLabel.textContent = group.findOne<Konva.Text>('Text')?.text() || '...';
+
+    groupHeader.appendChild(toggle);
+    groupHeader.appendChild(groupLabel);
+    groupWrapper.appendChild(groupHeader);
+
+    const nodeList = document.createElement('ul');
+    nodeList.className = 'outline-node-list';
+    if (isCollapsed) {
+      nodeList.style.display = 'none';
+    }
+
+    nodes.filter(n => n.getAttr('parentId') === groupId).forEach(node => {
+      renderNodeWithSubheadings(node, nodeList);
+    });
+
+    groupWrapper.appendChild(nodeList);
+    outlinePane.appendChild(groupWrapper);
+  });
+
+  // --- グループ化されていないノード ---
+  if (orphanNodes.length > 0) {
+    const groupId = 'others-group'; // 固定のID
+    const isCollapsed = outlineCollapsedState.get(groupId) ?? false;
+
+    const groupWrapper = document.createElement('div');
+    const groupHeader = document.createElement('div');
+    groupHeader.className = 'outline-group-header';
+
+    const toggle = document.createElement('span');
+    toggle.className = 'outline-toggle';
+    toggle.classList.toggle('collapsed', isCollapsed);
+    toggle.textContent = '▼';
+    toggle.dataset.groupId = groupId; // IDをセット
+
+    const groupLabel = document.createElement('span');
+    groupLabel.className = 'outline-group-label';
+    groupLabel.textContent = 'Others';
+
+    groupHeader.appendChild(toggle);
+    groupHeader.appendChild(groupLabel);
+    groupWrapper.appendChild(groupHeader);
+
+    const nodeList = document.createElement('ul');
+    nodeList.className = 'outline-node-list';
+    if (isCollapsed) {
+      nodeList.style.display = 'none';
+    }
+
+    orphanNodes.forEach(node => {
+      renderNodeWithSubheadings(node, nodeList);
+    });
+
+    groupWrapper.appendChild(nodeList);
+    outlinePane.appendChild(groupWrapper);
+  }
+}
+
+function createOutlineNodeEl(node: Konva.Group): HTMLElement {
+  const title = node.findOne<Konva.Text>('.text')?.text() || '...';
+  const nodeEl = document.createElement('div');
+  nodeEl.className = 'outline-node';
+  nodeEl.textContent = title;
+  nodeEl.dataset.id = node.id(); // ジャンプ用にIDを保持
+  return nodeEl;
+}
+
+function setActiveOutlineNode(nodeId: string) {
+  // 1. まず、すべてのアクティブクラスを削除
+  outlinePane.querySelectorAll('.is-active').forEach(el => el.classList.remove('is-active'));
+
+  // 2. 目的のノードに対応する要素を探し、クラスを追加
+  //    createOutlineNodeElが返す<div>にdata-idがあるので、その親(li)にクラスを付ける
+  const targetNodeEl = outlinePane.querySelector(`.outline-node[data-id="${nodeId}"]`);
+  targetNodeEl?.parentElement?.classList.add('is-active');
+}
+
+/**
+ * 指定されたIDのノードが「表示領域の中央」に来るようにステージを移動する (最終確定版)
+ * @param nodeId ジャンプ先のノードID
+ */
+function jumpToNode(nodeId: string, targetHeading?: string) {
+  const node = stage.findOne<Konva.Group>('#' + nodeId);
+  if (!node) return;
+
+  setActiveOutlineNode(nodeId);
+
+  // 1. キャンバスのコンテナ要素を取得
+  const container = stage.container(); // '#ip-container'
+
+  // 2. 「目標地点」を計算：コンテナの画面上での中心座標
+  const containerRect = container.getBoundingClientRect();
+  const targetX = containerRect.left + containerRect.width / 2;
+  const targetY = containerRect.top + containerRect.height / 2;
+
+  // 3. 「現在地点」を計算：ノードの画面上での中心座標
+  const nodeRect = node.getClientRect();
+  const currentX = nodeRect.x + nodeRect.width / 2;
+  const currentY = nodeRect.y + nodeRect.height / 2;
+
+  // 4. 「移動量」を計算：画面上で移動すべきピクセル量
+  const deltaX = targetX - currentX;
+  const deltaY = targetY - currentY;
+
+  // 5. ステージの現在位置に、移動量を加算して、新しい位置を決定
+  const newPos = {
+    x: stage.x() + deltaX,
+    y: stage.y() + deltaY,
+  };
+
+  // 6. アニメーションで滑らかに移動
+  new Konva.Tween({
+    node: stage,
+    duration: 0.3,
+    x: newPos.x - 250,
+    y: newPos.y,
+    easing: Konva.Easings.EaseInOut,
+  }).play();
+
+  // 7. サブ階層へのジャンプ処理 
+  if (targetHeading) {
+    openContentEditor(node);
+    const editor = document.getElementById('ip-content-editor') as HTMLTextAreaElement;
+
+    // requestAnimationFrameを使い、エディタが表示されるのを待つ
+    requestAnimationFrame(() => {
+      const text = editor.value;
+      const index = text.indexOf(targetHeading);
+      if (index !== -1) {
+        editor.focus();
+        editor.setSelectionRange(index, index);
+        // scrollIntoViewは不要な場合が多いが、保険として
+        const tempEl = document.createElement('span');
+        editor.before(tempEl);
+        tempEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        tempEl.remove();
+      }
+    });
+  }
+}
+
+// すべて開く・すべて閉じる
+function setAllIpOutlineCollapsed(isCollapsed: boolean) {
+  // すべてのグループのIDをキーとして、状態を設定
+  stage.find<Konva.Group>('.background-shape').forEach(group => {
+    outlineCollapsedState.set(group.id(), isCollapsed);
+  });
+  // 'Others'グループの状態も設定
+  outlineCollapsedState.set('others-group', isCollapsed);
+
+  // 最後に再描画
+  renderIpOutline();
+}
+
+/**
+ * 2つのノード間にリンクがあるか探し、あればそのリンクを返す
+ * (双方向矢印の場合、どちらか一方の方向のリンクがあれば見つける)
+ */
+function findLink(node1: Konva.Group, node2: Konva.Group): Konva.Group | undefined {
+  const links1 = node1.getAttr('links') as Konva.Group[];
+  return links1.find(linkGroup => {
+    const nodes = linkGroup.getAttr('nodes') as Konva.Group[];
+    // linkGroupがnode1とnode2を結んでいるか、またはnode2とnode1を結んでいるかをチェック
+    return (nodes && nodes[0] === node1 && nodes[1] === node2) ||
+      (nodes && nodes[0] === node2 && nodes[1] === node1);
+  });
+}
+
+function manageLink(node1: Konva.Group, node2: Konva.Group, type: LinkType, labelText?: string) {
+
+  // 1. 既存のリンクグループを探す (双方向矢印の場合も考慮)
+  const existingLinkGroup = findLink(node1, node2);
+
+  // 2. もし既存のリンクグループがあれば、何もしない (トグル/線種変更廃止)
+  if (existingLinkGroup) {
+    console.log('manageLink: 既存のリンクがあるため、何もしません。');
+    return;
+  }
+
+  // 3. 新しいリンクを作成する
+  if (type === LinkType.DOUBLE_ARROW) {
+    const linkGroup1 = createSingleLink(node1, node2, LinkType.ARROW, labelText);
+    const linkGroup2 = createSingleLink(node2, node1, LinkType.ARROW, ''); // ラベルは片方だけ
+
+    linkGroup1.setAttr('sibling', linkGroup2);
+    linkGroup2.setAttr('sibling', linkGroup1);
+    linkGroup1.setAttr('linkType', LinkType.DOUBLE_ARROW);
+    linkGroup2.setAttr('linkType', LinkType.DOUBLE_ARROW);
+  } else {
+    createSingleLink(node1, node2, type, labelText);
+  }
+
+  layer.draw();
+  recordHistory('Link created'); // リンク作成時のみ履歴を記録
+}
+
+/**
+ * 1本のリンク（線または片方向矢印）を作成する内部関数
+ */
+function createSingleLink(node1: Konva.Group, node2: Konva.Group, type: LinkType.LINE | LinkType.ARROW, labelText?: string): Konva.Group {
+
+  // 1. `link`変数を`let`で宣言
+  let link: Konva.Line | Konva.Arrow;
+
+  // 2. `commonAttrs`を復活させる
+  const colors = getCurrentThemeColors(); // (テーマ対応も忘れずに)
+  const commonAttrs = {
+    stroke: colors.link,
+    strokeWidth: 2,
+    name: 'link-shape', // ★ 名前を変更
+    hitStrokeWidth: 10,
+  };
+
+  const initialPoints = [0, 0, 0, 0]; // (仮の値、updateLinkPointsで更新される)
+
+  // 3. `type`に応じて、`link`変数にインスタンスを代入
+  if (type === LinkType.ARROW) {
+    link = new Konva.Arrow({
+      ...commonAttrs,
+      points: initialPoints,
+      fill: colors.link,
+      pointerLength: 10,
+      pointerWidth: 10,
+    });
+  } else { // LinkType.LINE
+    link = new Konva.Line({
+      ...commonAttrs,
+      points: initialPoints,
+    });
+  }
+
+  // 1. ラベルを作成
+  const konvaLabel = new Konva.Label({
+    name: 'link-label-container',
+  });
+
+  // 2. ラベルに、背景となる「タグ」を追加
+  konvaLabel.add(
+    new Konva.Tag({
+      lineJoin: 'round',
+      stroke: colors.text,
+      strokeWidth: 1,
+      //cornerRadius: 4,
+      fill: colors.labelBackground,
+    })
+  );
+
+  // 3. ラベルに、表示する「テキスト」を追加
+  konvaLabel.add(
+    new Konva.Text({
+      text: (labelText && labelText.trim() !== '') ? labelText : ' ',
+      name: 'link-label', // テキスト自体の名前
+      fontSize: 12,
+      fontFamily: "'Klee Custom', serif-ja, serif",
+      fill: colors.text,
+      padding: 3,
+    })
+  );
+  const linkId = `link_${generateUUID()}`;
+  // 5. グループを作成し、`link`と`konvaLabel`を追加
+  const linkGroup = new Konva.Group({
+    name: 'link-group',
+    id: linkId,
+    fromNodeId: node1.id(),
+    toNodeId: node2.id(),
+    linkType: type
+  });
+  linkGroup.add(link, konvaLabel);
+
+  // 6. 重要な情報をグループに集約
+  linkGroup.setAttr('nodes', [node1, node2]);
+  linkGroup.setAttr('linkType', type); // ★ `type`情報も保存しておく
+
+  linkGroup.on('mouseenter', () => {
+    //  selectedShapeがリンク自身でもenterLeaveイベントが発火するため、選択中の場合は何もしないように変更 
+    if (selectedShape === linkGroup) return;
+    const linkShape = linkGroup.findOne('.link-shape') as Konva.Line;
+    linkShape.strokeWidth(4 / stage.scaleX());
+
+    const sibling = findSibling(linkGroup); // linkGroupからsiblingを探すように変更
+    if (sibling) {
+      sibling.findOne<Konva.Line | Konva.Arrow>('.link-shape')?.strokeWidth(4 / stage.scaleX()); // ★ 兄弟も太くする
+    }
+
+    stage.container().style.cursor = 'pointer';
+    layer.draw();
+  });
+  linkGroup.on('mouseleave', () => {
+    // selectedShapeがリンク自身でもenterLeaveイベントが発火するため、選択中の場合は何もしないように変更 
+    if (selectedShape === linkGroup) return;
+    const linkShape = linkGroup.findOne('.link-shape') as Konva.Line;
+    linkShape.strokeWidth(2 / stage.scaleX());
+
+    const sibling = findSibling(linkGroup); // linkGroupからsiblingを探すように変更
+    if (sibling) {
+      sibling.findOne<Konva.Line | Konva.Arrow>('.link-shape')?.strokeWidth(2 / stage.scaleX()); // ★ 兄弟も元に戻す
+    }
+
+    stage.container().style.cursor = 'default';
+    layer.draw();
+  });
+
+  // 8. レイヤーに追加し、位置を更新
+  layer.add(linkGroup);
+  linkGroup.zIndex(1);
+  updateLinkPoints(linkGroup);
+
+  // 9. ノードとの関連付け
+  node1.getAttr('links').push(linkGroup);
+  node2.getAttr('links').push(linkGroup);
+
+  // 10. ★★★ `Konva.Group`を返す ★★★
+  return linkGroup;
+}
+
+// リンクを完全に削除するヘルパー関数
+/**
+ * リンクグループとその関連付けを完全に削除する
+ * @param linkGroup 削除対象のリンクグループ
+ */
+function deleteLink(linkGroup: Konva.Group) {
+  const nodes = linkGroup.getAttr('nodes') as Konva.Group[];
+  if (nodes && nodes.length === 2) {
+    const node1 = nodes[0];
+    const node2 = nodes[1];
+
+    // ノードからリンクの参照を削除
+    if (node1 && node1.getAttr('links')) {
+      node1.setAttr('links', node1.getAttr('links').filter((l: Konva.Group) => l !== linkGroup));
+    }
+    if (node2 && node2.getAttr('links')) {
+      node2.setAttr('links', node2.getAttr('links').filter((l: Konva.Group) => l !== linkGroup));
+    }
+  }
+
+  // 双方向リンクの兄弟も削除
+  const sibling = linkGroup.getAttr('sibling');
+  if (sibling && sibling.destroy) {
+    // 兄弟からもこのリンクの参照を削除（無限ループ防止）
+    const siblingNodes = sibling.getAttr('nodes') as Konva.Group[];
+    if (siblingNodes && siblingNodes.length === 2) {
+      if (siblingNodes[0] && siblingNodes[0].getAttr('links')) {
+        siblingNodes[0].setAttr('links', siblingNodes[0].getAttr('links').filter((l: Konva.Group) => l !== sibling));
+      }
+      if (siblingNodes[1] && siblingNodes[1].getAttr('links')) {
+        siblingNodes[1].setAttr('links', siblingNodes[1].getAttr('links').filter((l: Konva.Group) => l !== sibling));
+      }
+    }
+    sibling.destroy();
+  }
+
+  linkGroup.destroy();
+  layer.draw(); // 描画更新
+}
+
+
+function editLinkLabel(labelContainer: Konva.Label) {
+  const labelNode = labelContainer.findOne<Konva.Text>('.link-label');
+  const tag = labelContainer.findOne<Konva.Tag>('Tag');
+  if (!labelNode) return;
+  isTextEditing = true;
+  updateButtonInteractivity(true);
+
+  // 1. HTMLの編集用input要素を取得 (これは共通)
+  const labelEditor = document.getElementById('ip-label-editor') as HTMLTextAreaElement;
+  const isDarkMode = document.body.classList.contains('dark-mode');
+  const colors = isDarkMode ? themes.dark : themes.light;
+
+  // 2. KonvaのTextノードを一時的に非表示にする
+  labelNode.opacity(0);
+  if (tag) tag.opacity(0);
+  layer.draw(); // 非表示を反映
+
+  // 3. input要素を、Textノードの真上に表示する (このロジックもほぼ共通)
+  const stageBox = stage.container().getBoundingClientRect();
+  const textPosition = labelContainer.absolutePosition();
+  const scale = stage.scaleX();
+
+  labelEditor.value = labelNode.text();
+  labelEditor.style.display = 'block';
+  labelEditor.style.position = 'absolute';
+
+  // 1. 位置 (ズームの影響を受けるabsolutePositionをそのまま使う)
+  labelEditor.style.top = (stageBox.top + textPosition.y) + 'px';
+  labelEditor.style.left = (stageBox.left + textPosition.x) + 'px';
+
+  // 2. サイズ (こちらもズームの影響を受ける)
+  //    ラベルの幅に少し余裕を持たせると、入力しやすい
+  const editorWidth = Math.max(labelNode.fontSize() * scale * 8, labelNode.width() * scale);
+  labelEditor.style.width = editorWidth + 'px';
+  const editorHeight = Math.max(labelNode.fontSize() * scale * 1.5, labelNode.height() * scale);
+  labelEditor.style.height = editorHeight + 'px';
+
+  // 3. フォント関連 (見た目をKonvaのTextと一致させる)
+  labelEditor.style.fontSize = (labelNode.fontSize() * scale) + 'px';
+  labelEditor.style.fontFamily = labelNode.fontFamily();
+  labelEditor.style.lineHeight = String(labelNode.lineHeight());
+  labelEditor.style.color = colors.text;
+
+  // 4. その他 (見た目を整える)
+  labelEditor.style.border = `1px solid ${colors.text}`;
+  labelEditor.style.padding = '2px';
+  labelEditor.style.margin = '2px';
+  labelEditor.style.background = colors.labelBackground;
+  labelEditor.style.zIndex = '9000'; // 最前面に表示
+
+  // ★ テキストエリアの高さを、内容に合わせて自動調整する
+  const adjustHeight = () => {
+    // 一度高さをリセットしないと、縮小がうまく機能しない
+    labelEditor.style.height = 'auto';
+    labelEditor.style.height = labelEditor.scrollHeight + 'px';
+  };
+  // `input`イベント（＝ユーザーが何かを入力するたび）に、この関数を紐付ける
+  labelEditor.addEventListener('input', adjustHeight);
+
+  // ★ 編集開始時に一度呼び出して、現在のテキスト量に合わせた初期の高さを設定する
+  adjustHeight();
+
+  labelEditor.focus();
+  // ★ もし、テキストが半角スペース（＝初期状態）なら、全選択する
+  if (labelNode.text().trim() === '') {
+    labelEditor.select();
+  } else {
+    labelEditor.setSelectionRange(labelEditor.value.length, labelEditor.value.length);
+  }
+
+
+  // 4. 編集完了時の処理を定義する (blurとkeydownイベント)
+  const finishEdit = () => {
+    isTextEditing = false;
+    updateButtonInteractivity(false);
+    const oldText = labelNode.text();
+    let newText = labelEditor.value;
+    // ★ 編集終了時に、もし空文字列なら、半角スペースに置き換える
+    if (newText.trim() === '') {
+      newText = ' ';
+    }
+
+    const linkGroup = labelContainer.getParent() as Konva.Group;
+    const sibling = linkGroup.getAttr('sibling') as Konva.Group | undefined;
+
+    // 最終的にテキストが設定された、本当のリンクグループを特定する
+    let targetLinkGroup: Konva.Group;
+
+    if (sibling && sibling.id() < linkGroup.id()) {
+      labelNode.text(' '); // 自分のテキストは空に
+      sibling.findOne<Konva.Text>('.link-label')?.text(newText);
+      targetLinkGroup = sibling; // テキストが設定されたのは相方
+    } else {
+      labelNode.text(newText);
+      targetLinkGroup = linkGroup; // テキストが設定されたのは自分
+    }
+
+    // テキストが「本当に」変更された場合のみ、履歴を記録
+    if (oldText !== newText) {
+      recordHistory('Link label changed');
+    }
+
+    // --- ラベルの幅に合わせてタグのサイズを調整 ---
+    const targetLabelContainer = targetLinkGroup.findOne<Konva.Label>('.link-label-container');
+    const targetLabelNode = targetLinkGroup.findOne<Konva.Text>('.link-label');
+    const targetTag = targetLabelContainer?.findOne<Konva.Tag>('Tag');
+    if (targetTag && targetLabelNode) {
+      targetTag.width(targetLabelNode.width() + targetLabelNode.padding() * 2);
+      targetTag.height(targetLabelNode.height() + targetLabelNode.padding() * 2);
+    }
+
+    // --- リンクの位置を更新 ---
+    updateLinkPoints(linkGroup);
+    if (sibling) updateLinkPoints(sibling);
+
+    // テキストが更新された方のリンクグループ全体を、レイヤーの最前面に移動させる
+    targetLinkGroup.moveToTop();
+
+    labelEditor.style.display = 'none';
+    labelNode.opacity(1);
+    if (tag) tag.opacity(1);
+    layer.draw(); // 最終的な表示を反映
+
+    // イベントリスナーを解除 (重要)
+    labelEditor.removeEventListener('blur', finishEdit);
+    labelEditor.removeEventListener('keydown', handleKeyDown);
+    labelEditor.removeEventListener('input', adjustHeight);
+  };
+
+  const handleKeyDown = (e: KeyboardEvent) => {
+    // 1. DeleteやBackspaceキーが、ノード削除などのグローバルショートカットを
+    //    誤爆させないようにする
+    if (e.key === 'Delete' || e.key === 'Backspace') {
+      e.stopPropagation();
+    }
+    // 2. Ctrl+Enter または Cmd+Enter で入力を確定
+    if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
+      e.preventDefault();
+      e.stopPropagation();
+      labelEditor.blur();
+    }
+    // 3. Escapeキーでも入力を確定
+    if (e.key === 'Escape') {
+      e.preventDefault();
+      e.stopPropagation();
+      labelEditor.blur();
+    }
+  };
+
+  labelEditor.addEventListener('blur', finishEdit);
+  labelEditor.addEventListener('keydown', handleKeyDown);
+}
+
+/**
+ * 指定されたリンクの端点座標を、接続されているノードに合わせて更新する（交点計算版）
+ */
+function updateLinkPoints(linkGroup: Konva.Group) {
+  const nodes = linkGroup.getAttr('nodes') as Konva.Group[];
+  if (!nodes || nodes.length !== 2) return;
+
+  const node1 = nodes[0];
+  const node2 = nodes[1];
+
+  // 1. 各ノードの「見た目上」の絶対的な矩形を取得
+  //    これは、ステージの左上隅を(0,0)とした、ズームとパンが適用済みの矩形
+  const rect1_absolute = node1.getClientRect();
+  const rect2_absolute = node2.getClientRect();
+
+  // 2. この「見た目上」の矩形を使って、交点を計算
+  //    この計算自体は、ズームされた世界で行われるが、それで正しい
+  const intersections_absolute = getIntersections(rect1_absolute, rect2_absolute);
+
+  // 3. ★★★ ステージの変換を「逆算」するための計算機（逆行列）を取得 ★★★
+  const transform = stage.getAbsoluteTransform().copy().invert();
+
+  // 4. ★★★ 計算された「見た目上」の交点を、逆行列を使って
+  // ★★★ レイヤーの「ローカル座標」に変換する ★★★
+  const start_local = transform.point(intersections_absolute.start);
+  const end_local = transform.point(intersections_absolute.end);
+
+  // 5. 変換された「ローカル座標」を、linkとlabelに適用する
+  const link = linkGroup.findOne<Konva.Line>('.link-shape');
+  const konvaLabel = linkGroup.findOne<Konva.Label>('.link-label-container');
+  if (!link || !konvaLabel) return;
+
+  // ラベルの中から、実際のTextオブジェクトを取得
+  const labelText = konvaLabel.findOne<Konva.Text>('.link-label');
+
+  //  Textオブジェクトが存在し、かつその中身が空かスペースだけなら、
+  //    ラベルコンテナ(`Konva.Label`)全体を非表示にする
+  if (labelText && labelText.text().trim() === '') {
+    konvaLabel.opacity(0);
+  } else {
+    // そうでなければ、表示する
+    konvaLabel.opacity(1);
+    // ラベルの幅に合わせてタグのサイズを調整するロジック
+    const tag = konvaLabel.findOne<Konva.Tag>('Tag');
+    if (tag && labelText) {
+      tag.width(labelText.width() + labelText.padding() * 2);
+      tag.height(labelText.height() + labelText.padding() * 2);
+    }
+  }
+
+  // a) `link`のpointsは、親である`linkGroup`のローカル座標で指定
+  //    `linkGroup`自身の座標が(0,0)なら、これはレイヤー座標と一致
+  link.points([
+    start_local.x,
+    start_local.y,
+    end_local.x,
+    end_local.y
+  ]);
+
+  // b) `konvaLabel`の位置も、ローカル座標で指定
+  const midPoint_local = {
+    x: (start_local.x + end_local.x) / 2,
+    y: (start_local.y + end_local.y) / 2,
+  };
+  konvaLabel.position({
+    x: midPoint_local.x - konvaLabel.width() / 2,
+    y: midPoint_local.y - konvaLabel.height() / 2,
+  });
+
+  // 6. リンクの線幅は、見た目の太さを一定に保つために、スケールで補正する
+  //    (もし、ズームに合わせて太さが変わる方が自然なら、この補正は不要)
+  const scale = stage.scaleX();
+  if (selectedShape === linkGroup) {
+    link.strokeWidth(4 / scale); // 選択中は太いまま
+  } else {
+    link.strokeWidth(2 / scale); // 非選択時は通常の太さ
+  }
+
+  // batchDrawは、この関数を呼び出す側でまとめて行うのが理想
+}
+
+/**
+ * 現在のキャンバスの内容をHTMLファイルとして書き出す
+ */
+function exportAsHtml() {
+  // 既存の選択状態を解除して、クリーンな画像を生成
+  if (selectedShape) resetStyle(selectedShape);
+  if (transformer.visible()) transformer.nodes([]);
+  layer.draw();
+
+  // --- 書き出し範囲の計算（修正版） ---
+  const allNodes = stage.find('.node-group');
+  // リンクとグループの矩形も範囲計算に含める
+  const allShapes = [...allNodes, ...stage.find('.background-shape'), ...stage.find('.link-group')];
+  if (allShapes.length === 0) {
+    alert('書き出すコンテンツがありません。');
+    // 何も書き出さない場合は、選択状態を元に戻す
+    if (selectedShape) {
+      const rect = selectedShape.findOne<Konva.Rect>('.background');
+      if (selectedShape.name() === 'link-group') {
+        // リンクの場合は再度選択スタイルを適用
+        const linkShape = selectedShape.findOne<Konva.Line | Konva.Arrow>('.link-shape');
+        if (linkShape) {
+          const colors = getCurrentThemeColors();
+          linkShape.stroke(colors.selection);
+          linkShape.strokeWidth(4 / stage.scaleX());
+          if (linkShape instanceof Konva.Arrow) {
+            linkShape.fill(colors.selection);
+          }
+        }
+      } else if (rect) {
+        rect.strokeEnabled(true);
+      }
+
+      layer.draw();
+    }
+    return;
+  }
+
+  // ★ 複数の矩形領域を結合するロジック
+  let box = allShapes[0].getClientRect();
+  allShapes.forEach(shape => {
+    const shapeRect = shape.getClientRect();
+    const right = Math.max(box.x + box.width, shapeRect.x + shapeRect.width);
+    const bottom = Math.max(box.y + box.height, shapeRect.y + shapeRect.height);
+    box.x = Math.min(box.x, shapeRect.x);
+    box.y = Math.min(box.y, shapeRect.y);
+    box.width = right - box.x;
+    box.height = bottom - box.y;
+  });
+
+  const padding = 20;
+  const exportArea = {
+    x: box.x - padding,
+    y: box.y - padding,
+    width: box.width + padding * 2,
+    height: box.height + padding * 2,
+  };
+
+  // 2. Konvaで、背景が「透明」な画像データを生成
+  stage.toDataURL({
+    ...exportArea,
+    pixelRatio: 2,
+    callback: (url) => {
+      if (!url) {
+        alert('画像の書き出しに失敗しました。');
+        return;
+      }
+
+      // 3. mainプロセスに、画像データとファイルパスを渡す
+      // window.electronAPI.exportAsHtml(url, currentFilePath);
+    }
+  });
+}
+
+/**
+* 現在のキャンバスの内容を画像ファイルとして書き出す
+* @param format 'png' または 'jpeg'
+*/
+function exportAsImageAndSendToMain(format: 'png' | 'jpeg' | 'pdf') {
+  // 1.既存の選択状態を一時的に解除して、クリーンな画像を生成
+  if (selectedShape) resetStyle(selectedShape);
+  if (transformer.visible()) transformer.nodes([]);
+  layer.draw();
+
+  // 2.書き出し範囲を全要素を囲む矩形として計算
+  const allShapes = [...stage.find('.node-group'), ...stage.find('.background-shape')];
+  if (allShapes.length === 0) {
+    alert('書き出すコンテンツがありません。');
+    return;
+  }
+
+  let box = allShapes[0].getClientRect();
+  allShapes.forEach(shape => {
+    const nodeRect = shape.getClientRect();
+    const right = Math.max(box.x + box.width, nodeRect.x + nodeRect.width);
+    const bottom = Math.max(box.y + box.height, nodeRect.y + nodeRect.height);
+    box.x = Math.min(box.x, nodeRect.x);
+    box.y = Math.min(box.y, nodeRect.y);
+    box.width = right - box.x;
+    box.height = bottom - box.y;
+  });
+
+  const padding = 20;
+  const exportArea = {
+    x: box.x - padding,
+    y: box.y - padding,
+    width: box.width + padding * 2,
+    height: box.height + padding * 2,
+  };
+
+  stage.toDataURL({
+    ...exportArea,
+    pixelRatio: 2,
+    mimeType: `image/${format}`,
+    callback: (url) => {
+      if (!url) {
+        alert('画像の書き出しに失敗しました。');
+        return;
+      }
+      // 3. メモリ上に、合成用の新しい<canvas>を作成
+      const offscreenCanvas = document.createElement('canvas');
+      const ctx = offscreenCanvas.getContext('2d')!;
+
+      // pixelRatioを考慮したキャンバスサイズに設定
+      offscreenCanvas.width = exportArea.width * 2;
+      offscreenCanvas.height = exportArea.height * 2;
+
+      // 4. 背景色を決定し、キャンバスを塗りつぶす
+      const isDarkMode = document.body.classList.contains('dark-mode');
+      ctx.fillStyle = isDarkMode ? '#333333' : 'antiquewhite';
+      ctx.fillRect(0, 0, offscreenCanvas.width, offscreenCanvas.height);
+
+      // 5. Konvaが生成した透明PNG画像を、Imageオブジェクトとして読み込む
+      const konvaImage = new Image();
+      konvaImage.onload = () => {
+        // 6. 背景の上に、Konvaの画像を重ねて描画する
+        ctx.drawImage(konvaImage, 0, 0);
+
+        // 7. 合成後のキャンバスから、最終的なData URLを生成
+        const finalDataUrl = offscreenCanvas.toDataURL('image/png'); // PDFでも元画像はPNGでOK
+
+        if (format === 'pdf') {
+          // PDFの場合は、mainプロセスに画像データを送ってPDF化を依頼
+          // window.electronAPI.exportAsPdf(finalDataUrl, currentFilePath);
+        } else {
+          // PNG/JPEGの場合は、従来通り画像として保存を依頼
+          // window.electronAPI.exportAsImage(finalDataUrl, format, currentFilePath);
+        }
+      };
+      konvaImage.src = url;
+    }
+  });
+}
+
+/**
+ * 2つのノードを結ぶ直線と、各ノードの境界との交点を計算する（最終安定版・型安全）
+ * @param node1 始点ノード
+ * @param node2 終点ノード
+ * @returns { start: Vector2d, end: Vector2d } 交点の座標
+ */
+function getIntersections(
+  rect1: { x: number, y: number, width: number, height: number },
+  rect2: { x: number, y: number, width: number, height: number }
+): { start: Vector2d; end: Vector2d } {
+
+  const center1 = { x: rect1.x + rect1.width / 2, y: rect1.y + rect1.height / 2 };
+  const center2 = { x: rect2.x + rect2.width / 2, y: rect2.y + rect2.height / 2 };
+
+  // 内部関数：中心から境界までの交点
+  const getIntersection = (w: number, h: number, from: Vector2d, to: Vector2d): Vector2d => {
+    const dx = to.x - from.x;
+    const dy = to.y - from.y;
+    const halfW = w / 2;
+    const halfH = h / 2;
+
+    // ★ ゼロ除算・Infinity対策
+    // dx, dy がほぼ0の場合は、中心点を返すか、わずかにずらす
+    if (Math.abs(dx) < 0.001 && Math.abs(dy) < 0.001) {
+      return { x: from.x, y: from.y + halfH }; // デフォルトで下端などにする
+    }
+
+    let t = Infinity;
+    // 垂直線・水平線の判定を厳密に
+    if (Math.abs(dx) > 0.001) t = Math.min(t, Math.abs(halfW / dx));
+    if (Math.abs(dy) > 0.001) t = Math.min(t, Math.abs(halfH / dy));
+
+    // t が Infinity のままなら（理論上ありえないが念のため）、安全な値を返す
+    if (!isFinite(t)) return from;
+
+    return {
+      x: from.x + dx * t,
+      y: from.y + dy * t,
+    };
+  };
+
+  const start = getIntersection(rect1.width, rect1.height, center1, center2);
+  const end = getIntersection(rect2.width, rect2.height, center2, center1);
+
+  // NaNチェック（念には念を）
+  if (isNaN(start.x) || isNaN(start.y)) { console.warn("Link start is NaN"); start.x = center1.x; start.y = center1.y; }
+  if (isNaN(end.x) || isNaN(end.y)) { console.warn("Link end is NaN"); end.x = center2.x; end.y = center2.y; }
+
+  return { start, end };
+}
+
+// --- ID生成 ---
+function generateUUID() {
+  return window.crypto.randomUUID();
+}
+
+function _updateTitle() {
+  const el = document.getElementById('ip-filename-display');
+  if (el) {
+    const fileName = currentFilePath ? currentFilePath.split(/[\\/]/).pop() : 'Untitled';
+
+    el.textContent = `${fileName}`;
+  }
+  // window.electronAPI.notifyTitleChange(currentFilePath);
+}
+function markAsDirty() {
+  if (!isDirty) { isDirty = true; }
+  autoSaveChanges();
+}
+function markAsClean() {
+  if (isDirty) { isDirty = false; }
+}
+
+function _getCurrentStageData() {
+  // --- 1. Nodes ---
+  const nodesData: any[] = [];
+  stage.find<Konva.Group>('.node-group').forEach(node => {
+    const rect = node.findOne<Konva.Rect>('.background');
+    const textNode = node.findOne<Konva.Text>('.text');
+
+    // 必須データがなければスキップ
+    if (!rect || !textNode) return;
+
+    nodesData.push({
+      id: node.id(),
+      x: node.x(),
+      y: node.y(),
+      width: rect.width(),
+      height: rect.height(),
+      title: textNode.text(),
+      contentText: node.getAttr('contentText') || '',
+      // ★★★ ここで parentId を確実に取得・保存します ★★★
+      parentId: node.getAttr('parentId') || null,
+      isTemplateItem: node.getAttr('isTemplateItem') || false,
+      placeholder: node.getAttr('placeholder') || undefined,
+    });
+  });
+
+  // --- 2. Groups ---
+  const groupsData: any[] = [];
+  stage.find<Konva.Group>('.background-shape').forEach(group => {
+    const rect = group.findOne<Konva.Rect>('.background');
+    const label = group.findOne<Konva.Text>('Text');
+
+    if (!rect || !label) return;
+
+    groupsData.push({
+      id: group.id(),
+      x: group.x(),
+      y: group.y(),
+      width: rect.width(),
+      height: rect.height(),
+      label: label.text(),
+      isTemplateRoot: group.getAttr('isTemplateRoot') || false
+    });
+  });
+
+  // --- 3. Links ---
+  const linksData: any[] = [];
+  stage.find<Konva.Group>('.link-group').forEach(linkGroup => {
+    const nodes = linkGroup.getAttr('nodes') as Konva.Group[];
+    const type = linkGroup.getAttr('linkType');
+    const label = linkGroup.findOne<Konva.Text>('.link-label');
+    const sibling = linkGroup.getAttr('sibling');
+
+    if (sibling && sibling.id() < linkGroup.id()) {
+      return;
+    }
+
+    if (nodes && nodes.length === 2 && type) {
+      linksData.push({
+        id: linkGroup.id(),
+        from: nodes[0].id(),
+        to: nodes[1].id(),
+        type: type,
+        label: label ? label.text() : '',
+        isTemplateItem: linkGroup.getAttr('isTemplateItem') || false
+      });
+    }
+  });
+
+  // --- 4. Final Data Object ---
+  return {
+    nodes: nodesData,
+    links: linksData,
+    groups: groupsData,
+  };
+}
+
+/**
+ * 現在の状態を.mrsdファイルとして保存する
+ */
+// async function saveToFile(isSaveAs = false): Promise<any> {
+
+//   const saveData = _getCurrentStageData();
+
+//   // --- 3. 正しいデータオブジェクトをmainプロセスに送信する ---
+//   const filePathToSave = isSaveAs ? null : currentFilePath;
+
+//   try {
+//     // ★ IPC呼び出しの結果を、そのままreturnする
+//     const result = await window.electronAPI.saveIdeaProcessorFile(filePathToSave, saveData);
+
+//     if (result.success && result.path) {
+//       currentFilePath = result.path;
+//       markAsClean(); // ★ 保存成功時にisDirtyフラグをリセット
+//       _updateTitle();
+//       console.log('保存成功:', currentFilePath);
+//     } else if (result.cancelled) {
+//       console.log('保存がキャンセルされました。');
+//     } else {
+//       console.error('保存に失敗しました:', result.error);
+//     }
+
+//     return result; // ★★★ `main`プロセスからの結果を、この関数の呼び出し元に返す
+
+//   } catch (error) {
+//     console.error('saveToFile関数でIPC呼び出し中にエラー:', error);
+//     // ★ エラーが発生した場合も、失敗したことを示すオブジェクトを返す
+//     return { success: false, error: (error instanceof Error) ? error.message : String(error) };
+//   }
+// }
+
+// リセット処理を行う関数
+// function resetWindow() {
+//   // 1. Renderer側でズームとパンをリセット
+//   stage.position({ x: 0, y: 0 });
+//   stage.scale({ x: 1, y: 1 });
+//   stage.draw();
+
+//   // 2. Mainプロセスに、ウィンドウの位置とサイズのリセットを依頼
+//   window.electronAPI.resetIpWindow();
+// }
+
+/**
+ * 指定された名前のテンプレートをキャンバスに生成する
+ * @param templateName 'greimas' | 'heros-journey' など
+ */
+function generateTemplate(templateName: string) {
+  // グレマスの行為者モデル Actantial model
+  if (templateName === 'greimas') {
+    const group = createBackgroundShape({ x: 110, y: 100 });
+    group.setAttr('isTemplateRoot', true);
+    group.findOne<Konva.Text>('Text')?.text('行為者モデル');
+    group.findOne<Konva.Rect>('.background')?.size({ width: 650, height: 350 });
+
+    const FONT_SIZE = 14; // 可読性のためのフォントサイズ調整
+
+    // --- ノードの定義 ---
+    const sujet = createTemplateNode({ x: 400, y: 320, title: '主体', placeholder: '主人公' });
+    const objet = createTemplateNode({ x: 400, y: 170, title: '対象', placeholder: '主人公の目的' });
+    const destinateur = createTemplateNode({ x: 170, y: 170, title: '送り手', placeholder: '主人公に目的を指示する存在（命令者、依頼人など）' });
+    const destinataire = createTemplateNode({ x: 630, y: 170, title: '受け手', placeholder: '主人公の行動によって利益を得る存在' });
+    const adjuvant = createTemplateNode({ x: 170, y: 320, title: '援助者', placeholder: '主人公を助ける仲間や道具' });
+    const opposant = createTemplateNode({ x: 630, y: 320, title: '敵対者', placeholder: '主人公を妨害する敵対者' });
+
+    // --- ペアリング ---
+    const nodes = [sujet, objet, destinateur, destinataire, adjuvant, opposant];
+    nodes.forEach(node => {
+      // フォントサイズを調整
+      node.findOne<Konva.Text>('.text')?.fontSize(FONT_SIZE);
+
+      const pos = node.absolutePosition();
+      node.moveTo(group);
+      node.absolutePosition(pos);
+      node.setAttr('parentId', group.id());
+      updateNodeVisuals(node, false); // 色を確定
+    });
+
+    // --- リンクの定義 ---
+    const createTemplateLink = (from: Konva.Group, to: Konva.Group) => {
+      const link = createSingleLink(from, to, LinkType.ARROW, '');
+      link.setAttr('isTemplateItem', true);
+    };
+
+    createTemplateLink(sujet, objet);
+    createTemplateLink(destinateur, objet);
+    createTemplateLink(objet, destinataire);
+    createTemplateLink(adjuvant, sujet);
+    createTemplateLink(opposant, sujet);
+
+    recordHistory('Template created: Greimas');
+  }
+  // 英雄の旅 Hero's Journey
+  else if (templateName === 'heros-journey') {
+    // 1. テンプレート全体を囲む、親グループを作成
+    const group = createBackgroundShape({ x: 50, y: 50 });
+    group.setAttr('isTemplateRoot', true);
+    group.findOne<Konva.Text>('Text')?.text("英雄の旅 (Hero's Journey)");
+    group.findOne<Konva.Rect>('.background')?.size({ width: 900, height: 700 });
+
+    // 2. 円環レイアウトのための定数を定義
+    const steps = 12;
+    const centerX = 450;
+    const centerY = 350;
+    const radiusX = 380;
+    const radiusY = 280;
+
+    // 3. 12ステップのデータを定義
+    const journeyData = [
+      { title: '1. 日常の世界', placeholder: '主人公は誰で、どんな日常を送っているか？' },
+      { title: '2. 冒険への誘い', placeholder: 'その日常を揺るがす、最初の「事件」は何か？' },
+      { title: '3. 冒険の拒絶', placeholder: '主人公はなぜ、その誘いをためらうのか？' },
+      { title: '4. 賢者との\n　 出会い', placeholder: '誰が、あるいは何が、主人公の背中を押すのか？' },
+      { title: '5. 第一関門の突破', placeholder: '主人公が、もう後戻りできないと決意する瞬間は？' },
+      { title: '6. 試練、仲間、敵', placeholder: '新しい世界で、主人公はどんな試練に直面するか？' },
+      { title: '7. 最も危険な場所へ', placeholder: '物語の核心、最大の試練が待つ場所へ。' },
+      { title: '8. 最大の試練', placeholder: '主人公が、死に直面するほどの、最も過酷な試練。' },
+      { title: '9. 報酬', placeholder: '最大の試練を乗り越え、主人公は何を手に入れたか？' },
+      { title: '10. 帰路', placeholder: '手に入れた「報酬」を持って、日常の世界へ戻る旅路。' },
+      { title: '11. 復活', placeholder: '主人公が、旅で得た力や知恵で、最後の敵を打ち破る。' },
+      { title: '12. 宝物との帰還', placeholder: '主人公が日常へ帰還し、世界を、あるいは自身をどう変えたか？' },
+    ];
+
+    const createdNodes: Konva.Group[] = [];
+
+    // 4. データを元に、円環状にノードを生成・配置
+    journeyData.forEach((data, i) => {
+      const angle = (i / steps) * 2 * Math.PI - (Math.PI / 2); // 12時方向から開始
+      const nodeX = centerX + radiusX * Math.cos(angle);
+      const nodeY = centerY + radiusY * Math.sin(angle);
+
+      const node = createTemplateNode({ x: nodeX, y: nodeY, title: data.title, placeholder: data.placeholder });
+      createdNodes.push(node);
+    });
+
+    // 5. すべてのノードを、親グループに所属させる (ペアリング)
+    createdNodes.forEach(node => {
+      const pos = node.absolutePosition();
+      node.moveTo(group);
+      node.absolutePosition(pos);
+      node.setAttr('parentId', group.id());
+      updateNodeVisuals(node, false);
+    });
+
+    // 6. ノード間に、順番に矢印リンクを作成
+    for (let i = 0; i < createdNodes.length; i++) {
+      const fromNode = createdNodes[i];
+      const toNode = createdNodes[(i + 1) % createdNodes.length]; // 最後は12→1に繋がる
+      const link = createSingleLink(fromNode, toNode, LinkType.ARROW, '');
+      link.setAttr('isTemplateItem', true);
+    }
+
+    recordHistory("Template created: Hero's Journey");
+  }
+  // エッセンシャル・ビートシート The Essential Beat Sheet
+  else if (templateName === 'beat-sheet') {
+    const group = createBackgroundShape({ x: 50, y: 50 });
+    group.setAttr('isTemplateRoot', true);
+    group.findOne<Konva.Text>('Text')?.text("エッセンシャル・ビートシート");
+    group.findOne<Konva.Rect>('.background')?.size({ width: 1050, height: 550 });
+
+    const beatData = [
+      { title: '1. オープニング', placeholder: '主人公の登場とテーマの提示' },
+      { title: '2. 事件の発生', placeholder: 'その日常を破壊し、主人公を物語へと強制的に引きずり込む「何か」が発生する' },
+      { title: '3. 決意', placeholder: '主人公は決意を固め、非日常の世界へ足を踏み入れる' },
+      { title: '4. 新しい世界', placeholder: '主人公が飛び込んだ非日常の世界。そこで出会う仲間と敵、そしてこの世界の「ルール」' },
+      { title: '5. 挫折', placeholder: '物語の中間点。主人公は壁に突き当たる。あるいは、目的を達成したかのように見えたが、それは偽りだった' },
+      { title: '6. 絶望', placeholder: '偽りの勝利は崩れ去り、主人公はすべてを失う。物語の最も暗い瞬間' },
+      { title: '7. 転機', placeholder: '主人公は絶望の底で己と向き合い、そこで何かを見出す' },
+      { title: '8. 反撃', placeholder: '新たな悟り（あるいは新たな力）を得た主人公は最後の戦いに向かう' },
+      { title: '9. クライマックス', placeholder: '最後の戦いが始まる' },
+      { title: '10. 最後の障害', placeholder: 'すべてが終わったかと思った瞬間、最後の障害、あるいは、驚くべき真実が明らかになる。' },
+      { title: '11. 決着', placeholder: '主人公が、その最後の障害をも乗り越えて勝利する' },
+      { title: '12. エンディング', placeholder: '物語の結末。主人公は何を得て、どのように変化したか' },
+    ];
+
+    const createdNodes: Konva.Group[] = [];
+    const positions = [
+      { x: 79, y: 103 }, { x: 303, y: 146 }, { x: 510, y: 107 }, { x: 711, y: 68 },
+      { x: 902, y: 156 }, { x: 798, y: 338 }, { x: 537, y: 278 }, { x: 284, y: 291 },
+      { x: 87, y: 393 }, { x: 237, y: 518 }, { x: 505, y: 472 }, { x: 815, y: 494 },
+    ];
+
+    beatData.forEach((data, i) => {
+      const node = createTemplateNode({
+        x: positions[i].x,
+        y: positions[i].y,
+        title: data.title,
+        placeholder: data.placeholder
+      });
+      node.findOne<Konva.Rect>('.background')?.width(180);
+      createdNodes.push(node);
+    });
+
+    createdNodes.forEach(node => {
+      const pos = node.absolutePosition();
+      node.moveTo(group);
+      node.absolutePosition(pos);
+      node.setAttr('parentId', group.id());
+      updateNodeVisuals(node, false);
+    });
+
+    // リンクを作成 
+    const createTemplateLink = (fromIndex: number, toIndex: number) => {
+      const link = createSingleLink(createdNodes[fromIndex], createdNodes[toIndex], LinkType.ARROW, '');
+      link.setAttr('isTemplateItem', true);
+    };
+
+    for (let i = 0; i < 11; i++) createTemplateLink(i, i + 1);
+
+    recordHistory("Template created: Beat Sheet");
+  }
+  // 三幕構成 Three Act Structure
+  else if (templateName === 'three-act-structure') {
+    const group = createBackgroundShape({ x: 100, y: 100 });
+    group.setAttr('isTemplateRoot', true);
+    group.findOne<Konva.Text>('Text')?.text("三幕構成");
+    group.findOne<Konva.Rect>('.background')?.size({ width: 800, height: 250 });
+
+    const actData = [
+      { title: '第一幕：発端 (Beginning)', placeholder: '物語の世界観と主人公を紹介し、最初の事件が起こるまでのパート。全体の約25%。' },
+      { title: '第二幕：葛藤 (Middle)', placeholder: '主人公が障害に直面し、試行錯誤し、成長（あるいは堕落）していく、物語で最も長いパート。全体の約50%。' },
+      { title: '第三幕：結末 (End)', placeholder: '物語のクライマックスと、その後の結末を描く、最後のパート。全体の約25%。' },
+    ];
+
+    const createdNodes: Konva.Group[] = [];
+    actData.forEach((data, i) => {
+      const node = createTemplateNode({
+        x: 150 + i * 250, // 横に並べる
+        y: 150,
+        title: data.title,
+        placeholder: data.placeholder,
+      });
+      node.findOne<Konva.Rect>('.background')?.size({ width: 200, height: 100 });
+      createdNodes.push(node);
+    });
+
+    createdNodes.forEach(node => {
+      const pos = node.absolutePosition();
+      node.moveTo(group);
+      node.absolutePosition(pos);
+      node.setAttr('parentId', group.id());
+      updateNodeVisuals(node, false);
+    });
+
+    createSingleLink(createdNodes[0], createdNodes[1], LinkType.ARROW, '').setAttr('isTemplateItem', true);
+    createSingleLink(createdNodes[1], createdNodes[2], LinkType.ARROW, '').setAttr('isTemplateItem', true);
+
+    recordHistory("Template created: Three-Act Structure");
+  }
+}
+
+/**
+ * テンプレート専用の、色と属性が設定されたノードを作成するヘルパー関数
+ */
+function createTemplateNode(options: { x: number, y: number, title: string, placeholder: string }): Konva.Group {
+  // 1. buildNodeを流用して、基本のノードを作成
+  const nodeGroup = buildNode({
+    id: `node_${Date.now()}${Math.random()}`,
+    x: options.x,
+    y: options.y,
+    text: options.title,
+    width: 120, // テンプレート用の固定幅
+  });
+
+  // 2. 特殊な属性とスタイルを設定
+  nodeGroup.setAttr('isTemplateItem', true); // ★ 削除・ペアリング解除不可の目印
+  nodeGroup.setAttr('placeholder', options.placeholder); // ★ placeholderを保持
+
+  // ★ 特殊な色を背景に設定 (テーマに応じて)
+  const colors = getCurrentThemeColors();
+  const templateColor = colors.templateBg;
+  nodeGroup.findOne<Konva.Rect>('.background')?.fill(templateColor);
+
+  return nodeGroup;
+}
+
+/**
+ * 現在のテーマ（ライトかダークか）に基づいて、色のセットを返す
+ */
+function getCurrentThemeColors() {
+  const isDarkMode = document.body.classList.contains('dark-mode');
+  return isDarkMode ? themes.dark : themes.light;
+}
+
+/**
+ * ノードの視覚スタイルを、現在の状態（ペアリング、選択）に基づいて更新する
+ * @param nodeGroup 対象のノード
+ * @param isSelected 選択されているか
+ */
+function updateNodeVisuals(nodeGroup: Konva.Group, isSelected: boolean) {
+  const backgroundRect = nodeGroup.findOne<Konva.Rect>('.background');
+  if (!backgroundRect) return;
+
+  const colors = getCurrentThemeColors();
+  const isPaired = !!nodeGroup.getAttr('parentId');
+  const isTemplateItem = !!nodeGroup.getAttr('isTemplateItem');
+
+  // 枠線は常に無効
+  backgroundRect.strokeEnabled(false);
+
+  // 背景の塗りつぶしを決定
+  if (isSelected) {
+    const selectionRgb = Konva.Util.getRGB(colors.selection);
+    backgroundRect.fill(`rgba(${selectionRgb.b}, ${selectionRgb.g}, ${selectionRgb.r}, 0.3)`);
+  } else if (isTemplateItem) {
+    backgroundRect.fill(colors.templateBg);
+  } else if (isPaired) {
+    backgroundRect.fill(colors.pairedBg);
+  } else {
+    backgroundRect.fill(colors.nodeBg);
+  }
+}
+
+/**
+ * 指定されたシェイプに選択状態のスタイルを適用する
+ * @param shape 対象のKonva.Group (ノード、グループ、リンク)
+ */
+function applySelectionStyle(shape: Konva.Group) {
+  const colors = getCurrentThemeColors();
+
+  if (shape.name() === 'link-group') {
+    // リンク自身のスタイルを適用
+    const linkShape = shape.findOne<Konva.Line | Konva.Arrow>('.link-shape');
+    if (linkShape) {
+      linkShape.stroke(colors.selection);
+      linkShape.strokeWidth(4 / stage.scaleX());
+      if (linkShape instanceof Konva.Arrow) {
+        linkShape.fill(colors.selection);
+      }
+    }
+    // ジオメトリで相方を探し、スタイルを適用
+    const sibling = findSiblingByGeometry(shape);
+    if (sibling) {
+      const siblingShape = sibling.findOne<Konva.Line | Konva.Arrow>('.link-shape');
+      if (siblingShape) {
+        siblingShape.stroke(colors.selection);
+        siblingShape.strokeWidth(4 / stage.scaleX());
+        if (siblingShape instanceof Konva.Arrow) {
+          siblingShape.fill(colors.selection);
+        }
+      }
+    }
+  } else if (shape.name() === 'node-group') {
+    updateNodeVisuals(shape, true);
+  } else if (shape.name() === 'background-shape') {
+    // ノードや背景図形の場合の選択スタイル
+    const rect = shape.findOne<Konva.Rect>('.background');
+    if (rect) {
+      rect.strokeEnabled(false);
+      const selectionRgb = Konva.Util.getRGB(colors.selection);
+      rect.fill(`rgba(${selectionRgb.b}, ${selectionRgb.g}, ${selectionRgb.r}, 0.3)`);
+    }
+    shape.find('.resize-handle').forEach(h => {
+      h.show();
+      h.listening(true);
+    });
+  }
+}
+
+/**
+ * ステージ上の全オブジェクトの色を現在のテーマに合わせる
+ */
+function applyThemeToStage() {
+  const isDarkMode = document.body.classList.contains('dark-mode');
+  const colors = isDarkMode ? themes.dark : themes.light;
+
+  // --- 1. グループ関連のスタイルを更新 ---
+  stage.find<Konva.Group>('.background-shape').forEach(group => {
+    const rect = group.findOne<Konva.Rect>('.background');
+    const label = group.findOne<Konva.Text>('Text');
+    // findOneに<Konva.Circle>と型引数を渡して、handleの型を正確にする
+    const handle = group.findOne<Konva.Circle>('.resize-handle');
+
+    if (rect) {
+      rect.stroke(colors.text);
+    }
+    if (label) {
+      label.fill(colors.text);
+    }
+    // handleが存在する場合のみ、fillを呼び出す
+    if (handle) {
+      handle.fill(colors.text);
+    }
+  });
+
+  // --- 2. リンク関連のスタイルを更新 ---
+  stage.find<Konva.Group>('.link-group').forEach(linkGroup => {
+    const linkShape = linkGroup.findOne<Konva.Line | Konva.Arrow>('.link-shape');
+    const labelContainer = linkGroup.findOne<Konva.Label>('.link-label-container');
+
+    if (labelContainer) {
+      const tag = labelContainer.findOne<Konva.Tag>('Tag');
+      const text = labelContainer.findOne<Konva.Text>('.link-label');
+      if (tag) {
+        tag.fill(colors.labelBackground);
+        tag.stroke(colors.text);
+      }
+      if (text) {
+        text.fill(colors.text);
+      }
+    }
+
+    if (linkShape) {
+      if (selectedShape !== linkGroup) {
+        linkShape.stroke(colors.link);
+        if (linkShape instanceof Konva.Arrow) {
+          linkShape.fill(colors.link);
+        }
+      }
+    }
+  });
+
+  // --- 3. 全てのノードのスタイルを更新 ---
+  stage.find<Konva.Group>('.node-group').forEach(nodeGroup => {
+    const text = nodeGroup.findOne<Konva.Text>('.text');
+    if (text) {
+      text.fill(colors.text);
+    }
+    const isSelected = (selectedShape === nodeGroup);
+    updateNodeVisuals(nodeGroup, isSelected);
+  });
+
+  // --- 4. 選択中のオブジェクトがあれば、選択スタイルを再適用 ---
+  if (selectedShape) {
+    applySelectionStyle(selectedShape);
+  }
+
+  // --- 5. 最後に一度だけ再描画 ---
+  layer.draw();
+}
+
 // DOMツリーの構築が完了したら初期化処理を走らせる
 document.addEventListener('DOMContentLoaded', async () => {
   // Electron版で export していた初期化関数をここで直接呼ぶ
   initializeIdeaProcessor();
-  recordHistory('Initial Empty State');
+  setTimeout(() => {
+    recordHistory('Initial Empty State');
+  }, 0);
 
   await emit('idea-processor-ready');
 });

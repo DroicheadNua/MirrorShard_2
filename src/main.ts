@@ -3402,6 +3402,7 @@ class App {
   }
 
   private async openIdeaProcessor() {
+    console.log('openIdeaProcessor');
     await invoke('open_idea_processor');
   }
 
