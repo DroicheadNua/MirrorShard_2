@@ -39,6 +39,7 @@ export default defineConfig(async () => ({
         shortcut: resolve(__dirname, 'shortcut.html'),
         markdown: resolve(__dirname, "markdown.html"),
         terminal: resolve(__dirname, "terminal.html"),
+        idea_processor: resolve(__dirname, "idea_processor.html"),
       }
     }
   },

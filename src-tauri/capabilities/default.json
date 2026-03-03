@@ -15,7 +15,8 @@
     "ai_chat",
     "shortcut",
     "markdown",
-    "terminal"
+    "terminal",
+    "idea_processor"
   ],
   "permissions": [
     "core:default",

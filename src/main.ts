@@ -2481,6 +2481,10 @@ class App {
       e.preventDefault();
       this.openMarkdownPreviewWithCheck();
     }
+    if (isCtrlOrCmd && key === 'i' && !isShift) {
+      e.preventDefault();
+      this.openIdeaProcessor();
+    }
     if (isCtrlOrCmd && key === 'e' && !isShift) {
       e.preventDefault();
       invoke('open_export_window');
@@ -3395,6 +3399,10 @@ class App {
 
   private async openShortcut() {
     await invoke('open_shortcut');
+  }
+
+  private async openIdeaProcessor() {
+    await invoke('open_idea_processor');
   }
 
   /**

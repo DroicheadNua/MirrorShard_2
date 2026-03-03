@@ -257,6 +257,47 @@ fn open_in_browser(path: String) {
 }
 
 #[tauri::command]
+async fn open_idea_processor(app: AppHandle) {
+    if app.get_webview_window("idea_processor").is_some() {
+        app.get_webview_window("idea_processor")
+            .unwrap()
+            .close()
+            .unwrap();
+        return;
+    }
+
+    let builder = tauri::WebviewWindowBuilder::new(
+        &app,
+        "idea_processor",
+        tauri::WebviewUrl::App("idea-processor.html".into()),
+    )
+    .title("Idea Processor")
+    .inner_size(640.0, 640.0)
+    .min_inner_size(640.0, 480.0)
+    .resizable(true)
+    .decorations(false)
+    .transparent(true)
+    .visible(false)
+    .devtools(true);
+    #[cfg(target_os = "macos")]
+    let builder = builder.title_bar_style(tauri::TitleBarStyle::Transparent);
+    #[cfg(any(windows, target_os = "macos"))]
+    let builder = builder.effects(tauri::utils::config::WindowEffectsConfig {
+        effects: vec![],
+        state: None,
+        radius: Some(24.0),
+        color: None,
+    });
+
+    #[cfg(debug_assertions)]
+    let window = builder.devtools(true).build().unwrap();
+    #[cfg(not(debug_assertions))]
+    let window = builder.build().unwrap();
+    window.show().unwrap();
+    window.set_focus().unwrap();
+}
+
+#[tauri::command]
 async fn open_markdown_preview(app: AppHandle) {
     if app.get_webview_window("markdown").is_some() {
         app.get_webview_window("markdown").unwrap().close().unwrap();
@@ -1000,6 +1041,7 @@ pub fn run() {
             open_shortcut,
             export_with_pandoc,
             open_markdown_preview,
+            open_idea_processor,
             open_in_browser,
             open_terminal_window, // ウィンドウを開く
             init_pty,             // PTYを開始する
