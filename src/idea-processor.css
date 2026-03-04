@@ -67,11 +67,11 @@
    resize: none;
    /* リサイズハンドルを非表示 */
    border: none;
-   background-color: transparent;
+   background-color: var(--window-bg-color, transparent);
    opacity: 70%;
    color: #111;
    font-style: italic;
-   font-family: 'Klee Custom', serif-ja, serif;
+   font-family: var(--user-font-family, serif-ja, serif);
    font-size: 16px;
    margin-bottom: 8px;
    margin-left: 1em;
@@ -83,7 +83,7 @@
 
  #ip-content-editor:focus,
  #ip-content-editor:focus-visible {
-   outline: none;
+   outline: none !important;
  }
 
 
@@ -173,7 +173,7 @@
    display: none;
    box-sizing: border-box;
    padding: 8px;
-   font-family: 'Klee Custom', serif-ja, serif;
+   font-family: var(--user-font-family, serif-ja, serif);
    font-size: 16px;
    line-height: 1.2;
    background-color: transparent;
@@ -189,8 +189,8 @@
    z-index: 1001;
    /* textareaより手前に */
    border: 1px solid var(--selection-color, #333);
-   background-color: transparent;
-   font-family: 'Klee Custom', serif-ja, serif;
+   background-color: var(--window-bg-color, transparent);
+   font-family: var(--user-font-family, serif-ja, serif);
    color: var(--text-color, #333);
    padding: 4px;
    /* paddingを少し調整 */
@@ -217,9 +217,9 @@
  body.dark-mode .top-right-buttons button,
  body.dark-mode #outline-collapse-all,
  body.dark-mode #outline-expand-all {
-   background: rgba(100, 100, 100, 0.3);
+   background-color: #CCCCCC;
    border: 1px solid rgba(0, 0, 0, 0.2);
-   color: #CCCCCC;
+   color: #222;
  }
 
 
@@ -331,8 +331,7 @@
    flex-direction: column;
    overflow: hidden;
    background-color: var(--outline-bg-color);
-   /* エディタと共通の変数を使えると美しい */
-   font-family: 'Klee Custom', serif-ja, serif;
+   font-family: var(--user-font-family, serif-ja, serif);
    height: 100%;
    margin-left: 1em;
    overflow-y: auto;
