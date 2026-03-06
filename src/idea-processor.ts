@@ -6,6 +6,9 @@ import { type } from '@tauri-apps/plugin-os';
 // import { convertFileSrc } from '@tauri-apps/api/core';
 import { Store } from '@tauri-apps/plugin-store';
 import Konva from 'konva';
+import JSZip from 'jszip';
+import { writeFile, readFile } from '@tauri-apps/plugin-fs';
+import { save, open, ask } from '@tauri-apps/plugin-dialog';
 
 // =================================================================
 // 1. グローバル変数と状態フラグ
@@ -26,6 +29,9 @@ let isPinned = false;
 let isSimpleFullscreen = false;
 let osType = 'windows';
 let isTextEditing = false;
+let currentFilePath: string | null = null; // 現在開いているファイルのパス
+let isDirty = false; // 変更があるかどうかのフラグ
+let projectMetadata: any = null; // 読み込んだファイルのメタデータ（作成日時など）を保持
 // let isPanning = false;
 // let didPan = false;
 // let lastPointerPosition: { x: number; y: number } = { x: 0, y: 0 };
@@ -54,6 +60,51 @@ const themes = {
   }
 };
 
+// --- .mrsd (canvas.json) 用の型定義 ---
+interface MrsdNode {
+  id: string;
+  type: string;       // "file"
+  file: string;       // "files/xxx.md"
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+  title: string;      // ノード内のテキスト
+  parentId: string | null;
+  isTemplateItem: boolean;
+}
+
+interface MrsdGroup {
+  id: string;
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+  label: string;      // グループ名
+  isTemplateRoot: boolean;
+}
+
+interface MrsdEdge {
+  id: string;
+  fromNode: string;
+  toNode: string;
+  label?: string;
+  type?: string;      // "arrow", "double_arrow", "line"
+}
+
+interface MrsdMetadata {
+  createdAt: string;
+  updatedAt: string;
+}
+
+// canvas.json 全体の構造
+interface MrsdJson {
+  nodes: MrsdNode[];
+  edges: MrsdEdge[];
+  groups: MrsdGroup[];
+  metadata: MrsdMetadata;
+}
+
 enum LinkType { LINE = 'line', ARROW = 'arrow', DOUBLE_ARROW = 'double_arrow' }
 type Vector2d = { x: number; y: number; };
 
@@ -77,6 +128,7 @@ function recordHistory(message: string = '') {
   } else {
     historyIndex++;
   }
+  markAsDirty();
   console.log(`[History] Recorded: ${message} (Index: ${historyIndex})`);
 }
 
@@ -255,7 +307,7 @@ function createNodeFromData(data: any) {
     fontFamily: "serif-ja, serif",
     fill: colors.text, // テーマに合わせた文字色（ライトなら黒系）
     padding: 8,
-    width: data.width || 150,
+    width: data.width || 200,
     lineHeight: 1.2,
   });
 
@@ -263,7 +315,7 @@ function createNodeFromData(data: any) {
     name: 'background',
     x: 0,
     y: 0,
-    width: data.width || 150,
+    width: data.width || 200,
     height: textNode.height(),
     fill: colors.nodeBg, // transparent（透明）
     cornerRadius: 10,
@@ -274,8 +326,32 @@ function createNodeFromData(data: any) {
   nodeGroup.add(backgroundRect);
   nodeGroup.add(textNode);
   layer.add(nodeGroup);
+  adjustNodeSize(nodeGroup);
 
   return nodeGroup;
+}
+
+// --- ノードサイズをテキスト量に合わせて最適化する関数 ---
+function adjustNodeSize(nodeGroup: Konva.Group) {
+  const textNode = nodeGroup.findOne('.text') as Konva.Text;
+  const bg = nodeGroup.findOne('.background') as Konva.Rect;
+  if (!textNode || !bg) return;
+
+  const maxWidth = 200; // 折り返しの最大幅
+
+  // 1. 一旦幅制限を解除して、本来の１行幅を計算させる
+  // (Konvaでは width に null/undefined を入れると自動計測モードになる)
+  textNode.width(null as any);
+
+  // 2. 最大幅を超えているかチェック
+  if (textNode.width() > maxWidth) {
+    textNode.width(maxWidth); // 折り返し発生
+  }
+
+  // 3. 背景サイズを同期
+  // Konva.Textのwidth/heightはpaddingを含んでいるのでそのまま適用
+  bg.width(textNode.width());
+  bg.height(textNode.height());
 }
 
 // =================================================================
@@ -326,6 +402,10 @@ export function initializeIdeaProcessor() {
     stage.height(window.innerHeight);
     layer.batchDraw();
   });
+  setTimeout(() => {
+    recordHistory('Initial Empty State');
+    isDirty = false; // 初期化直後はダーティではない
+  }, 100);
 }
 
 function setupEventListeners() {
@@ -530,7 +610,7 @@ function startConnection(node: Konva.Group) {
 function createNewNode(x: number, y: number, textStr = 'New Node') {
   const id = `node_${generateUUID()}`;
   const node = createNodeFromData({
-    id, x, y, width: 120, height: 60, title: textStr
+    id, x, y, width: 200, height: 60, title: textStr
   });
   updateAllNodesAppearance();
   return node;
@@ -881,25 +961,33 @@ function updateLinkPoints(linkGroup: Konva.Group) {
     if (shape) shape.points([start.x, start.y, end.x, end.y]);
   }
 
-  // ラベル位置
+  // --- ラベルの位置と表示状態の更新 ---
   const labelGroup = linkGroup.findOne('.link-label-group') as Konva.Label;
-  if (labelGroup) {
-    const labelText = labelGroup.findOne('.link-label') as Konva.Text;
-    const labelRect = labelGroup.findOne('.link-label-bg') as Konva.Rect;
+  const labelText = linkGroup.findOne('.link-label') as Konva.Text;
 
-    if (labelText && labelRect) {
-      // テキストのサイズに合わせて背景のサイズを更新
-      labelRect.width(labelText.width());
-      labelRect.height(labelText.height());
+  if (labelGroup && labelText) {
+    const text = labelText.text();
 
-      // ラベル全体の位置を線の中央に
+    // 1. 空文字なら隠して終了
+    if (!text || text.trim() === '') {
+      labelGroup.hide();
+    } else {
+      // 2. 文字があるなら表示して位置合わせ
+      labelGroup.show();
+
+      // リンクの中点
+      const midX = (start.x + end.x) / 2;
+      const midY = (start.y + end.y) / 2;
+
+      // Konva.Label は Tag のサイズに合わせて自動調整されるが、
+      // 中心に配置するにはオフセットが必要
+      const width = labelGroup.width();
+      const height = labelGroup.height();
+
       labelGroup.position({
-        x: (start.x + end.x) / 2 - labelText.width() / 2,
-        y: (start.y + end.y) / 2 - labelText.height() / 2
+        x: midX - width / 2,
+        y: midY - height / 2
       });
-
-      // テキストが空ならラベル自体を非表示にする
-      labelGroup.visible(labelText.text().length > 0);
     }
   }
 }
@@ -912,19 +1000,47 @@ function startLabelEditing(labelText: Konva.Text, linkGroup: Konva.Group) {
 
   // 編集中はラベルを隠す
   labelGroup.hide();
-  layer.draw();
+  layer.batchDraw();
 
-  const absPos = labelText.getAbsolutePosition();
+  // ラベルが見えていない(空の)場合、リンクの中央を計算してそこに入力欄を出す
   const stageBox = document.getElementById('ip-container')!.getBoundingClientRect();
+  let areaLeft = 0;
+  let areaTop = 0;
+
+  // リンクの形状（矢印/線）を取得して端点を再計算
+  const arrow = linkGroup.findOne('.link-shape') || linkGroup.findOne('.link-shape-1');
+  if (arrow && (arrow as Konva.Arrow).points().length >= 4) {
+    const pts = (arrow as Konva.Arrow).points();
+    // リンクの中点 (ステージ上の相対座標)
+    const midX = (pts[0] + pts[2]) / 2;
+    const midY = (pts[1] + pts[3]) / 2;
+
+    // ステージのズームと位置（pan）を考慮して絶対座標に変換
+    const absX = midX * stage.scaleX() + stage.x();
+    const absY = midY * stage.scaleY() + stage.y();
+
+    areaLeft = stageBox.left + absX;
+    areaTop = stageBox.top + absY;
+  } else {
+    // 万が一計算できない場合はマウス位置など（基本ここには来ない）
+    areaLeft = stageBox.left + stage.getPointerPosition()!.x;
+    areaTop = stageBox.top + stage.getPointerPosition()!.y;
+  }
+
+  // 入力欄の中心を合わせるための補正（初期サイズ分ずらす）
+  areaLeft -= 20;
+  areaTop -= 10;
 
   const textarea = document.createElement('textarea');
   document.body.appendChild(textarea);
 
-  // スタイル設定（スクロールバーなし、自動サイズ）
+  // 初期値
   textarea.value = labelText.text();
+
+  // スタイル設定（スクロールバーなし、自動サイズ）
   textarea.style.position = 'absolute';
-  textarea.style.left = (stageBox.left + absPos.x) + 'px';
-  textarea.style.top = (stageBox.top + absPos.y) + 'px';
+  textarea.style.left = areaLeft + 'px';
+  textarea.style.top = areaTop + 'px';
 
   // フォントスタイル同期
   const color = getCurrentThemeColors();
@@ -944,7 +1060,7 @@ function startLabelEditing(labelText: Konva.Text, linkGroup: Konva.Group) {
   const updateSize = () => {
     textarea.style.width = '0px'; // 一旦縮める
     textarea.style.height = '0px';
-    textarea.style.width = (textarea.scrollWidth + 2) + 'px';
+    textarea.style.width = (Math.max(40, textarea.scrollWidth) + 2) + 'px';
     textarea.style.height = (textarea.scrollHeight + 2) + 'px';
   };
   updateSize(); // 初期サイズ
@@ -954,20 +1070,23 @@ function startLabelEditing(labelText: Konva.Text, linkGroup: Konva.Group) {
   const removeTextarea = () => {
     if (!textarea.parentNode) return;
     const newVal = textarea.value;
+
+    // 値を更新
     if (newVal !== labelText.text()) {
       labelText.text(newVal);
       recordHistory('Label edited');
     }
 
-    // 確定時にラベルの表示/非表示とサイズを更新
+    // ここで updateLinkPoints を呼ぶことで
+    // 「空なら非表示」「文字があれば表示＆位置調整」が自動で行われる
     updateLinkPoints(linkGroup);
-    labelGroup.show();
-    layer.batchDraw();
 
+    layer.batchDraw();
     document.body.removeChild(textarea);
     isTextEditing = false;
   };
 
+  textarea.addEventListener('input', updateSize);
   // Ctrl+Enter で確定、Esc でキャンセル
   textarea.addEventListener('keydown', (e) => {
     if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) {
@@ -1117,6 +1236,10 @@ function setupKeyboardEvents() {
       e.preventDefault();
       IPThemeToggle();
     }
+    if (isCtrl && key === 'o') {
+      e.preventDefault();
+      loadFromMrsd();
+    }
 
     // フルスクリーン切り替え
     // Mac: Cmd + Ctrl + F
@@ -1218,6 +1341,7 @@ function startTextEditing(textNode: Konva.Text, group: Konva.Group) {
         bgRect.width(textNode.width());
         bgRect.height(textNode.height());
       }
+      adjustNodeSize(group);
       updateConnectedLinks(group);
       recordHistory('Text edited');
     }
@@ -1484,6 +1608,293 @@ async function updateAllNodesAppearance() {
   layer.batchDraw();
 }
 
+// --- セーブ処理 (saveToMrsd) ---
+async function saveToMrsd(forceSaveAs = false) {
+  let savePath = currentFilePath;
+
+  if (!savePath || forceSaveAs) {
+    const selected = await save({
+      filters: [{ name: 'MirrorShard Data', extensions: ['mrsd'] }]
+    });
+    if (!selected) return;
+    savePath = selected;
+  }
+
+  try {
+    const zip = new JSZip();
+    const filesFolder = zip.folder("files");
+
+    // 1. グループ情報の抽出 & 座標マップ作成
+    const groups: MrsdGroup[] = [];
+    // ノード保存時の計算用に、グループの座標を記録しておくマップ
+    const groupPosMap = new Map<string, { x: number, y: number }>();
+    const nodeParentMap = new Map<string, string>();
+
+    stage.find<Konva.Group>('.container-group').forEach(group => {
+      const bg = group.findOne('.group-bg') as Konva.Rect;
+      const title = group.findOne('.group-title') as Konva.Text;
+      const childIds = group.getAttr('childNodeIds') || [];
+
+      // 所属マップと座標マップを更新
+      childIds.forEach((childId: string) => {
+        nodeParentMap.set(childId, group.id());
+      });
+      groupPosMap.set(group.id(), { x: group.x(), y: group.y() });
+
+      if (bg && title) {
+        groups.push({
+          id: group.id(),
+          x: group.x(),
+          y: group.y(),
+          width: bg.width(),
+          height: bg.height(),
+          label: title.text(),
+          isTemplateRoot: false
+        });
+      }
+    });
+
+    // 2. ノード情報の抽出 (相対座標変換)
+    const nodes: MrsdNode[] = [];
+
+    stage.find<Konva.Group>('.node-group').forEach(node => {
+      const bg = node.findOne('.background') as Konva.Rect;
+      const textNode = node.findOne('.text') as Konva.Text;
+      if (!bg || !textNode) return;
+
+      const content = textNode.text();
+      const safeTitle = content.split('\n')[0].substring(0, 15).replace(/[\\/:*?"<>|]/g, "_") || "Untitled";
+      const fileName = `${safeTitle}_${node.id().slice(-6)}.md`;
+
+      const parentId = nodeParentMap.get(node.id()) || null;
+      let saveX = node.x();
+      let saveY = node.y();
+
+      // グループ所属ノードは、グループ原点からの「相対座標」に変換して保存
+      if (parentId) {
+        const parentPos = groupPosMap.get(parentId);
+        if (parentPos) {
+          saveX = saveX - parentPos.x;
+          saveY = saveY - parentPos.y;
+        }
+      }
+
+      nodes.push({
+        id: node.id(),
+        type: 'file',
+        file: `files/${fileName}`,
+        x: saveX, // 相対座標または絶対座標
+        y: saveY,
+        width: bg.width(),
+        height: bg.height(),
+        title: content,
+        parentId: parentId,
+        isTemplateItem: false
+      });
+
+      if (filesFolder) {
+        filesFolder.file(fileName, content);
+      }
+    });
+
+    // 3. リンク情報の抽出 (変更なし)
+    const edges: MrsdEdge[] = [];
+    stage.find<Konva.Group>('.link-group').forEach(link => {
+      const label = link.findOne('.link-label') as Konva.Text;
+      edges.push({
+        id: link.id(),
+        fromNode: link.getAttr('fromNodeId'),
+        toNode: link.getAttr('toNodeId'),
+        label: label ? label.text() : '',
+        type: link.getAttr('linkType')
+      });
+    });
+
+    // 4. JSON構築
+    const now = new Date().toISOString();
+    const canvasData: MrsdJson = {
+      nodes: nodes,
+      edges: edges,
+      groups: groups,
+      metadata: {
+        createdAt: projectMetadata?.createdAt || now,
+        updatedAt: now
+      }
+    };
+
+    zip.file("canvas.json", JSON.stringify(canvasData, null, 2));
+
+    const content = await zip.generateAsync({ type: "uint8array" });
+    await writeFile(savePath, content);
+
+    currentFilePath = savePath;
+    isDirty = false;
+    projectMetadata = canvasData.metadata;
+
+    console.log('Saved successfully to:', savePath);
+
+  } catch (e) {
+    console.error('Save failed:', e);
+    alert('保存に失敗しました: ' + e);
+  }
+}
+
+async function saveByBtn() { await saveToMrsd(true) }
+
+// --- ロード処理 (loadFromMrsd) ---
+async function loadFromMrsd() {
+  if (isDirty) {
+    const yes = await ask('変更が保存されていません。破棄して開きますか？', { title: '確認', kind: 'warning' });
+    if (!yes) return;
+  }
+
+  const selected = await open({
+    multiple: false,
+    filters: [{ name: 'MirrorShard Data', extensions: ['mrsd'] }]
+  });
+  if (!selected) return;
+  const path = selected as string;
+
+  try {
+    const binaryData = await readFile(path);
+    const zip = await JSZip.loadAsync(binaryData);
+
+    const canvasFile = zip.file("canvas.json");
+    if (!canvasFile) throw new Error("Invalid format: canvas.json not found");
+    const jsonStr = await canvasFile.async("string");
+    const data: MrsdJson = JSON.parse(jsonStr);
+
+    // 1. ステージ初期化
+    if (transformer) transformer.destroy();
+    layer.destroyChildren();
+    transformer = new Konva.Transformer({
+      visible: false, resizeEnabled: false, rotateEnabled: false, borderEnabled: false,
+    });
+    layer.add(transformer);
+    selectedNodes = [];
+    selectedShape = null;
+
+    projectMetadata = data.metadata || { createdAt: new Date().toISOString() };
+
+    // 2. グループ復元 & 座標マップ作成
+    const groupIdMap = new Map<string, string[]>(); // GroupID -> ChildIDs
+    const groupPosMap = new Map<string, { x: number, y: number }>(); // GroupID -> {x, y}
+
+    if (data.groups) {
+      data.groups.forEach((g) => {
+        const groupNode = createGroupNode(g.x, g.y, g.label);
+        groupNode.id(g.id);
+
+        // サイズ復元
+        const bg = groupNode.findOne('.group-bg') as Konva.Rect;
+        const handle = groupNode.findOne('.resize-handle') as Konva.Circle;
+        if (bg && handle) {
+          bg.width(g.width);
+          bg.height(g.height);
+          handle.x(g.width);
+          handle.y(g.height);
+        }
+        groupIdMap.set(g.id, []);
+        // 親の座標を記録しておく
+        groupPosMap.set(g.id, { x: g.x, y: g.y });
+      });
+    }
+
+    // 3. ノード復元 (絶対座標計算)
+    for (const n of data.nodes) {
+      let content = n.title || "";
+      if (n.file) {
+        const mdFile = zip.file(n.file);
+        if (mdFile) {
+          const mdText = await mdFile.async("string");
+          if (mdText) content = mdText;
+        }
+      }
+
+      // 座標の計算
+      let finalX = n.x;
+      let finalY = n.y;
+
+      // 親グループが存在する場合、親の座標を足して「絶対座標」に戻す
+      if (n.parentId && groupPosMap.has(n.parentId)) {
+        const parentPos = groupPosMap.get(n.parentId)!;
+        finalX += parentPos.x;
+        finalY += parentPos.y;
+      }
+
+      const nodeGroup = createNewNode(finalX, finalY, content);
+      nodeGroup.id(n.id);
+
+      // サイズ自動調整
+      adjustNodeSize(nodeGroup);
+
+      // 所属マップへの登録
+      if (n.parentId && groupIdMap.has(n.parentId)) {
+        groupIdMap.get(n.parentId)?.push(n.id);
+      }
+    }
+
+    // 4. グループ所属情報の適用 (childNodeIds)
+    groupIdMap.forEach((childIds, groupId) => {
+      const groupNode = layer.findOne('#' + groupId) as Konva.Group;
+      if (groupNode) {
+        groupNode.setAttr('childNodeIds', childIds);
+      }
+    });
+
+    // 5. リンク復元
+    if (data.edges) {
+      data.edges.forEach((e) => {
+        const fromNode = layer.findOne('#' + e.fromNode) as Konva.Group;
+        const toNode = layer.findOne('#' + e.toNode) as Konva.Group;
+
+        let linkType = LinkType.ARROW;
+        if (e.type === 'double_arrow') linkType = LinkType.DOUBLE_ARROW;
+        else if (e.type === 'line') linkType = LinkType.LINE;
+
+        if (fromNode && toNode) {
+          const linkGroup = createSingleLink(fromNode, toNode, linkType);
+          if (linkGroup) {
+            linkGroup.id(e.id);
+            if (e.label) {
+              const labelText = linkGroup.findOne('.link-label') as Konva.Text;
+              if (labelText) labelText.text(e.label);
+            }
+          }
+        }
+      });
+    }
+
+    // 6. 仕上げ: リンク端点計算 & 空ラベル非表示
+    stage.find('.link-group').forEach((linkGroup: any) => {
+      updateLinkPoints(linkGroup);
+    });
+
+    await updateAllNodesAppearance();
+
+    layer.batchDraw();
+    currentFilePath = path;
+    isDirty = false;
+    history = [];
+    recordHistory('Loaded .mrsd');
+
+    console.log(`Loaded from: ${path}`);
+
+  } catch (e) {
+    console.error('Load failed:', e);
+    alert('読み込みに失敗しました: ' + e);
+  }
+}
+
+// --- 変更通知関数 ---
+function markAsDirty() {
+  if (!isDirty) {
+    isDirty = true;
+    // 必要ならタイトルバーに「*」をつけるなどの処理をここに追加
+    // updateTitle(); 
+  }
+}
+
 // =================================================================
 // 8. ウィンドウ制御とテーマ管理 (Window & Theme & Settings)
 // =================================================================
@@ -1513,6 +1924,8 @@ function setupUIButtons() {
   document.getElementById('ip-fullscreen-btn')?.addEventListener('click', IPToggleFullscreen);
   document.getElementById('ip-theme-toggle-btn')?.addEventListener('click', IPThemeToggle);
   document.getElementById('ip-create-group-button')?.addEventListener('click', createGroupNodeByButton);
+  document.getElementById('ip-save-as-button')?.addEventListener('click', saveByBtn);
+  document.getElementById('ip-load-button')?.addEventListener('click', loadFromMrsd);
 }
 
 // ■ 初期設定の適用
