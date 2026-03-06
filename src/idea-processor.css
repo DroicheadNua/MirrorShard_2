@@ -166,39 +166,6 @@
    z-index: 150;
  }
 
- #ip-text-editor {
-   border: 1px solid #33333333;
-   /* 他の共通スタイル */
-   position: absolute;
-   display: none;
-   box-sizing: border-box;
-   padding: 8px;
-   font-family: var(--user-font-family, serif-ja, serif);
-   font-size: 16px;
-   line-height: 1.2;
-   background-color: transparent;
-   resize: none;
-   outline: none;
-   z-index: 1000;
-   border-radius: 10px;
-   transition: color 0.3s ease, border-color 0.3s ease;
- }
-
- #ip-label-editor {
-   position: absolute;
-   z-index: 1001;
-   /* textareaより手前に */
-   border: 1px solid var(--selection-color, #333);
-   background-color: var(--window-bg-color, transparent);
-   font-family: var(--user-font-family, serif-ja, serif);
-   color: var(--text-color, #333);
-   padding: 4px;
-   /* paddingを少し調整 */
-   box-sizing: border-box;
-   outline: none;
-   resize: none;
- }
-
  /* ダークモード用のスタイル */
  body.dark-mode {
    background-image: none;
@@ -558,4 +525,9 @@
  #ip-theme-toggle-btn {
    -webkit-mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z'%3E%3C/path%3E%3C/svg%3E");
    mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z'%3E%3C/path%3E%3C/svg%3E");
+ }
+
+ #ip-create-group-button {
+   -webkit-mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Crect x='3' y='3' width='18' height='18' rx='2' ry='2' stroke-dasharray='4 4'/%3E%3C/svg%3E");
+   mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Crect x='3' y='3' width='18' height='18' rx='2' ry='2' stroke-dasharray='4 4'/%3E%3C/svg%3E");
  }

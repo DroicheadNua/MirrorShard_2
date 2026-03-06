@@ -102,7 +102,9 @@ body {
 .window-controls button,
 .outline-controls button,
 .font-controls button,
-.collapse-controls button {
+.collapse-controls button,
+.symbol-controls button,
+.history-controls button {
   border: none;
   width: 26px;
   height: 26px;
@@ -131,7 +133,9 @@ body {
 .window-controls button:hover,
 .outline-controls button:hover,
 .font-controls button:hover,
-.collapse-controls button:hover {
+.collapse-controls button:hover,
+.symbol-controls button:hover,
+.history-controls button:hover {
   background-color: var(--sidebar-hover-bg);
   opacity: 1;
 }
@@ -141,6 +145,8 @@ body:not(.dark-mode) .titlebar-buttons button,
 body:not(.dark-mode) .outline-controls button,
 body:not(.dark-mode) .font-controls button,
 body:not(.dark-mode) .collapse-controls button,
+body:not(.dark-mode) .symbol-controls button,
+body:not(.dark-mode) .history-controls button,
 body:not(.dark-mode) .window-controls button {
   /* UI文字色と同じ色にする */
   background-color: var(--ui-text-color) !important;
@@ -151,6 +157,8 @@ body.dark-mode .titlebar-buttons button,
 body.dark-mode .outline-controls button,
 body.dark-mode .font-controls button,
 body.dark-mode .collapse-controls button,
+body.dark-mode .symbol-controls button,
+body.dark-mode .history-controls button,
 body.dark-mode .window-controls button {
   /* 明るい色にする */
   background-color: var(--text-color) !important;
@@ -162,6 +170,8 @@ body.dark-mode .window-controls button {
 .dark-mode .window-controls button:hover,
 .dark-mode .font-controls button:hover,
 .dark-mode .collapse-controls button:hover,
+.dark-mode .symbol-controls button:hover,
+.dark-mode .history-controls button:hover,
 .dark-mode .outline-controls button:hover {
   background-color: var(--button-hover-bg);
 }
@@ -443,7 +453,9 @@ body.code-mode .outline-text:hover {
 }
 
 .font-controls button,
-.collapse-controls button {
+.collapse-controls button,
+.symbol-controls button,
+.history-controls button {
   border: none;
   background-color: transparent;
   width: 24px;
@@ -464,7 +476,9 @@ body.code-mode .outline-text:hover {
 }
 
 .font-controls button:hover,
-.collapse-controls button:hover {
+.collapse-controls button:hover,
+.history-controls button:hover,
+.symbol-controls button:hover {
   background-color: var(--sidebar-hover-bg);
   opacity: 1;
 }
@@ -800,7 +814,9 @@ body.code-mode .titlebar-buttons button,
 body.code-mode .window-controls button,
 body.code-mode .outline-controls button,
 body.code-mode .font-controls button,
-body.code-mode .collapse-controls button {
+body.code-mode .collapse-controls button,
+body.code-mode .symbol-controls button,
+body.code-mode .history-controls button {
   background-color: #7aa2f7 !important;
   text-shadow:
     0 0 5px rgba(0, 50, 255, 0.5),
@@ -812,7 +828,9 @@ body.code-mode .titlebar-buttons button:hover,
 body.code-mode .window-controls button:hover,
 body.code-mode .outline-controls button:hover,
 body.code-mode .font-controls button:hover,
-body.code-mode .collapse-controls button:hover {
+body.code-mode .collapse-controls button:hover,
+body.code-mode .symbol-controls button:hover,
+body.code-mode .history-controls button:hover {
   background-color: lavender !important;
   text-shadow:
     0 0 5px rgba(0, 50, 255, 0.5),
@@ -866,6 +884,8 @@ body.custom-glow .window-controls button,
 body.custom-glow .outline-controls button,
 body.custom-glow .font-controls button,
 body.custom-glow .collapse-controls button,
+body.custom-glow .symbol-controls button,
+body.custom-glow .history-controls button,
 body.custom-glow .outline-text,
 body.custom-glow .file-entry {
   text-shadow: var(--custom-text-shadow) !important;
@@ -1314,4 +1334,28 @@ body.code-mode .cm-panels-top {
 #btn-code {
   -webkit-mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='16 18 22 12 16 6'%3E%3C/polyline%3E%3Cpolyline points='8 6 2 12 8 18'%3E%3C/polyline%3E%3C/svg%3E");
   mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='16 18 22 12 16 6'%3E%3C/polyline%3E%3Cpolyline points='8 6 2 12 8 18'%3E%3C/polyline%3E%3C/svg%3E");
+}
+
+/* Rbアイコン */
+#btn-insert-ruby {
+  -webkit-mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M5 18V6h5a3 3 0 0 1 0 6H5m5 0 3.5 6M15 10V6h2m-2 6v6h4a3 3 0 0 0 0-6h-4'/%3E%3C/svg%3E");
+  mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M5 18V6h5a3 3 0 0 1 0 6H5m5 0 3.5 6M15 10V6h2m-2 6v6h4a3 3 0 0 0 0-6h-4'/%3E%3C/svg%3E");
+}
+
+/* ダッシュ ―― */
+#btn-insert-dash {
+  -webkit-mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'%3E%3Cline x1='4' y1='12' x2='10' y2='12'/%3E%3Cline x1='14' y1='12' x2='20' y2='12'/%3E%3C/svg%3E");
+  mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'%3E%3Cline x1='4' y1='12' x2='10' y2='12'/%3E%3Cline x1='14' y1='12' x2='20' y2='12'/%3E%3C/svg%3E");
+}
+
+/* 三点リーダ …… */
+#btn-insert-ellipsis {
+  -webkit-mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='4' stroke-linecap='round'><circle cx='4' cy='12' r='1'/><circle cx='12' cy='12' r='1'/><circle cx='20' cy='12' r='1'/></svg>");
+  mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='4' stroke-linecap='round'><circle cx='4' cy='12' r='1'/><circle cx='12' cy='12' r='1'/><circle cx='20' cy='12' r='1'/></svg>");
+}
+
+/* アイデアプロセッサ */
+#btn-idea-processor {
+  -webkit-mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Ccircle cx='6' cy='6' r='3'/><circle cx='18' cy='6' r='3'/><circle cx='12' cy='18' r='3'/><path d='M8 8l4 8M16 8l-4 8'/></svg>");
+  mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Ccircle cx='6' cy='6' r='3'/><circle cx='18' cy='6' r='3'/><circle cx='12' cy='18' r='3'/><path d='M8 8l4 8M16 8l-4 8'/></svg>");
 }

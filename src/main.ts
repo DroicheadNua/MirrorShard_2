@@ -2128,6 +2128,54 @@ class App {
     document.querySelector('#btn-markdown')?.addEventListener('click', () => {
       this.openMarkdownPreviewWithCheck();
     });
+    document.querySelector('#btn-idea-processor')?.addEventListener('click', () => {
+      this.openIdeaProcessor();
+    });
+
+    // ルビ挿入ボタン
+    document.getElementById('btn-insert-ruby')?.addEventListener('click', () => {
+      // CodeMirrorのエディタインスタンスがある前提 (this.editor)
+      if (!this.editorView) return;
+
+      const insertText = "｜《》";
+      const transaction = this.editorView.state.update({
+        changes: {
+          from: this.editorView.state.selection.main.head,
+          insert: insertText
+        },
+        selection: {
+          // カーソルを "｜" の後ろ ("《" の前) に置くなら +1
+          anchor: this.editorView.state.selection.main.head + 1
+        }
+      });
+
+      this.editorView.dispatch(transaction);
+      this.editorView.focus();
+    });
+
+    // ダッシュ挿入ボタン
+    document.getElementById('btn-insert-dash')?.addEventListener('click', () => {
+      if (!this.editorView) return;
+      const insertText = "――";
+      const transaction = this.editorView.state.update({
+        changes: { from: this.editorView.state.selection.main.head, insert: insertText },
+        selection: { anchor: this.editorView.state.selection.main.head + 2 }
+      });
+      this.editorView.dispatch(transaction);
+      this.editorView.focus();
+    });
+
+    // 三点リーダ挿入ボタン
+    document.getElementById('btn-insert-ellipsis')?.addEventListener('click', () => {
+      if (!this.editorView) return;
+      const insertText = "……";
+      const transaction = this.editorView.state.update({
+        changes: { from: this.editorView.state.selection.main.head, insert: insertText },
+        selection: { anchor: this.editorView.state.selection.main.head + 2 }
+      });
+      this.editorView.dispatch(transaction);
+      this.editorView.focus();
+    });
 
     window.addEventListener('mouseup', (e) => {
       if (e.button === 3) {

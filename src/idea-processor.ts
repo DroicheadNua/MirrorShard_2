@@ -1,10 +1,9 @@
-// @ts-nocheck
 import { listen, emit } from '@tauri-apps/api/event';
 import { getCurrentWindow } from '@tauri-apps/api/window';
 import { invoke } from '@tauri-apps/api/core';
 import { type } from '@tauri-apps/plugin-os';
-import { resolveResource } from '@tauri-apps/api/path';
-import { convertFileSrc } from '@tauri-apps/api/core';
+// import { resolveResource } from '@tauri-apps/api/path';
+// import { convertFileSrc } from '@tauri-apps/api/core';
 import { Store } from '@tauri-apps/plugin-store';
 import Konva from 'konva';
 
@@ -27,11 +26,11 @@ let isPinned = false;
 let isSimpleFullscreen = false;
 let osType = 'windows';
 let isTextEditing = false;
-let isPanning = false;
-let didPan = false;
-let lastPointerPosition: { x: number; y: number } = { x: 0, y: 0 };
-let selectionStartPos: { x: number; y: number } | null = null;
-let isDraggingSelection = false;
+// let isPanning = false;
+// let didPan = false;
+// let lastPointerPosition: { x: number; y: number } = { x: 0, y: 0 };
+// let selectionStartPos: { x: number; y: number } | null = null;
+// let isDraggingSelection = false;
 let selectedShape: Konva.Group | null = null;
 let selectedNodes: Konva.Group[] = [];
 
@@ -158,8 +157,24 @@ function _getCurrentStageData() {
     }
   });
 
-  // グループ機能は一旦空で返す（必要なら後で拡張）
-  return { nodes: nodesData, links: linksData, groups: [] };
+  const groupsData: any[] = [];
+  stage.find<Konva.Group>('.container-group').forEach(group => {
+    const bg = group.findOne('.group-bg') as Konva.Rect;
+    const title = group.findOne('.group-title') as Konva.Text;
+    if (bg && title) {
+      groupsData.push({
+        id: group.id(),
+        x: group.x(),
+        y: group.y(),
+        width: bg.width(),
+        height: bg.height(),
+        title: title.text(),
+        childNodeIds: group.getAttr('childNodeIds') || []
+      });
+    }
+  });
+
+  return { nodes: nodesData, links: linksData, groups: groupsData };
 }
 
 // =================================================================
@@ -200,13 +215,30 @@ function recreateStage(data: any) {
     });
   }
 
+  // 4. グループノードの復元
+  if (data.groups) {
+    data.groups.forEach((gData: any) => {
+      const groupNode = createGroupNode(gData.x, gData.y, gData.title);
+      groupNode.id(gData.id);
+      groupNode.setAttr('childNodeIds', gData.childNodeIds || []);
+
+      const bg = groupNode.findOne('.group-bg') as Konva.Rect;
+      const handle = groupNode.findOne('.resize-handle') as Konva.Circle;
+      if (bg && handle) {
+        bg.width(gData.width);
+        bg.height(gData.height);
+        handle.x(gData.width);
+        handle.y(gData.height);
+      }
+    });
+  }
+
   // 4. 描画更新
   layer.batchDraw();
 }
 
 function createNodeFromData(data: any) {
-  const isDarkMode = document.body.classList.contains('dark-mode');
-  const colors = isDarkMode ? themes.dark : themes.light;
+  const colors = getCurrentThemeColors();
 
   const nodeGroup = new Konva.Group({
     x: data.x,
@@ -220,7 +252,7 @@ function createNodeFromData(data: any) {
     name: 'text',
     text: data.title || 'New Node',
     fontSize: 16,
-    fontFamily: "'Klee Custom', serif-ja, serif",
+    fontFamily: "serif-ja, serif",
     fill: colors.text, // テーマに合わせた文字色（ライトなら黒系）
     padding: 8,
     width: data.width || 150,
@@ -322,20 +354,44 @@ function setupEventListeners() {
       }
     } else if (group.name() === 'link-group') {
       selectShape(group);
+    } else if (group.name() === 'container-group') {
+      // グループノードがクリックされた場合
+      if (isCtrl && selectedNodes.length > 0) {
+        // 登録: 選択中のノードをグループに追加
+        const childIds = group.getAttr('childNodeIds') || [];
+        selectedNodes.forEach(node => {
+          if (!childIds.includes(node.id())) {
+            childIds.push(node.id());
+            // 登録された証として色を変える（選択色）
+            const bg = node.findOne('.background') as Konva.Rect;
+            if (bg) bg.stroke(getCurrentThemeColors().selection);
+          }
+        });
+        group.setAttr('childNodeIds', childIds);
+        recordHistory('Nodes added to group');
+        deselectAll();
+
+      } else if (isShift && selectedNodes.length > 0) {
+        // 解除: 選択中のノードをグループから外す
+        let childIds = group.getAttr('childNodeIds') || [];
+        selectedNodes.forEach(node => {
+          childIds = childIds.filter((id: string) => id !== node.id());
+          // 色を元に戻す
+          const bg = node.findOne('.background') as Konva.Rect;
+          if (bg) bg.strokeEnabled(false);
+        });
+        group.setAttr('childNodeIds', childIds);
+        recordHistory('Nodes removed from group');
+        deselectAll();
+
+      } else {
+        selectShape(group);
+      }
     }
   });
 
   stage.on('dblclick', (e) => {
-    if (e.target === stage) {
-      const pos = stage.getPointerPosition();
-      if (pos) {
-        createNewNode(pos.x, pos.y);
-        recordHistory('Node created');
-      }
-      return;
-    }
-
-    // ノードのダブルクリック検知
+    // 1. ノードのダブルクリック（テキスト編集）
     const nodeGroup = e.target.getParent();
     if (nodeGroup && nodeGroup.name() === 'node-group') {
       const textNode = nodeGroup.findOne('.text') as Konva.Text;
@@ -343,21 +399,49 @@ function setupEventListeners() {
       return;
     }
 
-    // リンク（またはラベル）のダブルクリック検知を堅牢に
-    let current = e.target;
-    let linkGroup = null;
-    while (current) {
-      if (current.name() === 'link-group') {
-        linkGroup = current;
-        break;
+    // 2. グループタイトルのダブルクリック（タイトル編集）
+    const groupNode = e.target.getParent();
+    if (groupNode && groupNode.name() === 'container-group') {
+      const titleText = groupNode.findOne('.group-title') as Konva.Text;
+      if (titleText && e.target === titleText) {
+        startGroupTitleEditing(titleText);
+        return;
       }
-      current = current.getParent(); // 親を辿る
+      // グループ内（背景）ダブルクリックで新規ノード作成＆登録
+      const pos = stage.getPointerPosition();
+      if (pos) {
+        const newNode = createNewNode(pos.x, pos.y);
+        // グループに登録
+        const childIds = groupNode.getAttr('childNodeIds') || [];
+        childIds.push(newNode.id());
+        groupNode.setAttr('childNodeIds', childIds);
+        recordHistory('Node created in group');
+      }
+      return;
     }
 
+    // 3. リンク（またはラベル）のダブルクリック
+    let current: Konva.Node | null = e.target;
+    let linkGroup: Konva.Group | null = null;
+    while (current && !(current instanceof Konva.Stage)) {
+      if (current.name() === 'link-group') {
+        linkGroup = current as Konva.Group;
+        break;
+      }
+      current = current.getParent();
+    }
     if (linkGroup) {
       const labelText = linkGroup.findOne('.link-label') as Konva.Text;
-      if (labelText) {
-        startLabelEditing(labelText, linkGroup as Konva.Group);
+      if (labelText) startLabelEditing(labelText, linkGroup);
+      return;
+    }
+
+    // 4. 背景のダブルクリック（新規ノード作成）
+    if (e.target === stage) {
+      const pos = stage.getPointerPosition();
+      if (pos) {
+        createNewNode(pos.x, pos.y);
+        recordHistory('Node created');
       }
     }
   });
@@ -377,17 +461,6 @@ function setupEventListeners() {
     }
   });
 
-  // テキスト編集（ダブルクリック）
-  stage.on('dblclick', (e) => {
-    const group = e.target.getParent();
-    if (group && group.name() === 'node-group') {
-      const textNode = group.findOne('.text') as Konva.Text;
-      if (textNode) {
-        startTextEditing(textNode, group as Konva.Group);
-      }
-    }
-  });
-
   // リンク作成モード（Alt + ドラッグ）などの実装
   // ここではシンプルに「Altキーを押しながらドラッグでリンク作成」を実装
   stage.on('mousedown', (e) => {
@@ -401,7 +474,7 @@ function setupEventListeners() {
     }
   });
 
-  stage.on('mousemove', (e) => {
+  stage.on('mousemove', (_e) => {
     if (connectionLine) {
       const pos = stage.getRelativePointerPosition();
       if (pos) {
@@ -463,12 +536,153 @@ function createNewNode(x: number, y: number, textStr = 'New Node') {
   return node;
 }
 
+// --- グループノードの作成 ---
+function createGroupNode(x: number, y: number, titleStr = 'グループ名') {
+  const id = `group_${generateUUID()}`;
+  const colors = getCurrentThemeColors();
+
+  const groupNode = new Konva.Group({
+    id: id,
+    x: x,
+    y: y,
+    draggable: true,
+    name: 'container-group'
+  });
+
+  // 子ノードIDリスト
+  groupNode.setAttr('childNodeIds', []);
+
+  // 背景枠 (点線)
+  const bgRect = new Konva.Rect({
+    name: 'group-bg',
+    x: 0,
+    y: 0,
+    width: 300,
+    height: 200,
+    fill: 'rgba(0,0,0,0)', // 完全透明ではなく、クリック判定用にアルファ0
+    stroke: colors.text,
+    strokeWidth: 1, // 1px
+    dash: [5, 5],
+    cornerRadius: 10
+  });
+
+  // グループタイトル
+  const titleText = new Konva.Text({
+    name: 'group-title',
+    text: titleStr,
+    y: -25, // 枠の上に配置
+    fontSize: 14,
+    fontFamily: 'var(--user-font-family, serif-ja, serif)',
+    fill: colors.text,
+  });
+
+  // リサイズハンドル
+  const resizeHandle = new Konva.Circle({
+    name: 'resize-handle',
+    x: 300,
+    y: 200,
+    radius: 10, // 少し大きくして掴みやすく
+    fill: colors.selection,
+    stroke: colors.selection,
+    strokeWidth: 1,
+    draggable: true,
+    visible: false, // 初期は非表示
+    cursor: 'nwse-resize'
+  });
+
+  // 追加順序が重要（ハンドルを最後にすることで最前面へ）
+  groupNode.add(bgRect);
+  groupNode.add(titleText);
+  groupNode.add(resizeHandle);
+
+  layer.add(groupNode);
+  groupNode.moveToBottom();
+
+  // --- イベント処理 ---
+
+  let previousPos = groupNode.position();
+
+  // --- 1. ハンドルの操作ロジック ---
+
+  // ハンドルをクリック・ドラッグ開始した瞬間、親へのイベント伝播を止め、親の移動をロックする
+  resizeHandle.on('mousedown touchstart', (e) => {
+    e.cancelBubble = true; // ★親にイベントを渡さない
+    groupNode.draggable(false); // ★親のドラッグを禁止
+  });
+
+  resizeHandle.on('dragmove', (e) => {
+    e.cancelBubble = true;
+
+    // 最小サイズ制限
+    const newW = Math.max(100, resizeHandle.x());
+    const newH = Math.max(50, resizeHandle.y());
+
+    // ハンドルの位置を制限内に強制補正
+    resizeHandle.x(newW);
+    resizeHandle.y(newH);
+
+    // 枠のサイズを更新
+    bgRect.width(newW);
+    bgRect.height(newH);
+
+    layer.batchDraw();
+  });
+
+  resizeHandle.on('dragend', (e) => {
+    e.cancelBubble = true;
+    groupNode.draggable(true); // ★親のドラッグ許可を戻す
+    recordHistory('Group resized');
+  });
+
+
+  // --- 2. グループ本体のドラッグロジック ---
+
+  groupNode.on('dragstart', (e) => {
+    // 万が一ハンドルがターゲットなら何もしない（念の為のガード）
+    if (e.target.name() === 'resize-handle') {
+      e.cancelBubble = true;
+      return;
+    }
+    previousPos = groupNode.position();
+  });
+
+  groupNode.on('dragmove', (e) => {
+    if (e.target.name() === 'resize-handle') return;
+
+    const currentPos = groupNode.position();
+    const dx = currentPos.x - previousPos.x;
+    const dy = currentPos.y - previousPos.y;
+
+    // 子ノード連動移動
+    const childIds = groupNode.getAttr('childNodeIds') || [];
+    childIds.forEach((childId: string) => {
+      const child = layer.findOne('#' + childId) as Konva.Group;
+      if (child) {
+        child.x(child.x() + dx);
+        child.y(child.y() + dy);
+        updateConnectedLinks(child);
+      }
+    });
+    previousPos = currentPos;
+  });
+
+  groupNode.on('dragend', (e) => {
+    if (e.target.name() === 'resize-handle') return;
+    recordHistory('Group moved');
+  });
+
+  // タイトル編集
+  titleText.on('dblclick', (e) => {
+    e.cancelBubble = true; // 親のダブルクリック（新規作成）を防ぐ
+    startGroupTitleEditing(titleText);
+  });
+
+  return groupNode;
+}
+
 function createSingleLink(fromNode: Konva.Group, toNode: Konva.Group, type: LinkType = LinkType.ARROW) {
   const id = `link_${generateUUID()}`;
-  const isDark = document.body.classList.contains('dark-mode');
   const colors = getCurrentThemeColors();
-  const customTextColor = colors.text;
-  const theme = isDark ? themes.dark : themes.light;
   const linkColor = colors.link;
 
   const linkGroup = new Konva.Group({
@@ -489,18 +703,39 @@ function createSingleLink(fromNode: Konva.Group, toNode: Konva.Group, type: Link
     }));
   } else if (type === LinkType.ARROW) {
     linkGroup.add(new Konva.Arrow({
-      stroke: linkColor, fill: linkColor, strokeWidth: 2, pointerLength: 10, pointerWidth: 10, name: 'link-shape', hitStrokeWidth: 15
+      points: [0, 0, 10, 10], // 必須なのでとりあえずダミーを入れる
+      stroke: linkColor,
+      fill: linkColor,
+      strokeWidth: 2,
+      pointerLength: 10,
+      pointerWidth: 10,
+      name: 'link-shape',
+      hitStrokeWidth: 15
     }));
   } else if (type === LinkType.DOUBLE_ARROW) {
     linkGroup.add(new Konva.Arrow({
-      stroke: linkColor, fill: linkColor, strokeWidth: 2, pointerLength: 10, pointerWidth: 10, name: 'link-shape-1', hitStrokeWidth: 15
+      points: [0, 0, 10, 10],
+      stroke: linkColor,
+      fill: linkColor,
+      strokeWidth: 2,
+      pointerLength: 10,
+      pointerWidth: 10,
+      name: 'link-shape-1',
+      hitStrokeWidth: 15
     }));
     linkGroup.add(new Konva.Arrow({
-      stroke: linkColor, fill: linkColor, strokeWidth: 2, pointerLength: 10, pointerWidth: 10, name: 'link-shape-2', hitStrokeWidth: 15
+      points: [0, 0, 10, 10],
+      stroke: linkColor,
+      fill: linkColor,
+      strokeWidth: 2,
+      pointerLength: 10,
+      pointerWidth: 10,
+      name: 'link-shape-2',
+      hitStrokeWidth: 15
     }));
   }
 
-  // ★ ラベルオブジェクトを生成 (Konva.Labelは背景とテキストをまとめるコンテナ)
+  // ラベルオブジェクトを生成 (Konva.Labelは背景とテキストをまとめるコンテナ)
   const labelGroup = new Konva.Label({
     name: 'link-label-group',
     visible: false // 初期は非表示
@@ -508,7 +743,7 @@ function createSingleLink(fromNode: Konva.Group, toNode: Konva.Group, type: Link
 
   // TagがTextの背景として自動でリサイズされる
   labelGroup.add(new Konva.Tag({
-    fill: theme.labelBackground,
+    fill: colors.labelBackground,
     cornerRadius: 3,
     name: 'link-label-bg'
   }));
@@ -554,7 +789,7 @@ function manageLink(clickedNode: Konva.Group, type: LinkType) {
   if (selectedNodes.includes(clickedNode)) {
     selectedNodes = selectedNodes.filter(n => n !== clickedNode);
     // 選択解除されたノードの見た目を元に戻す
-    const bg = clickedNode.findOne('.background');
+    const bg = clickedNode.findOne('.background') as Konva.Rect;
     if (bg) {
       bg.fill('transparent');
     }
@@ -642,7 +877,7 @@ function updateLinkPoints(linkGroup: Konva.Group) {
     if (arrow2) arrow2.points([end.x, end.y, start.x, start.y]); // 逆向き！
   } else {
     // 通常の線または片道矢印
-    const shape = linkGroup.findOne('.link-shape') as Konva.Shape;
+    const shape = linkGroup.findOne('.link-shape') as Konva.Line;
     if (shape) shape.points([start.x, start.y, end.x, end.y]);
   }
 
@@ -669,18 +904,6 @@ function updateLinkPoints(linkGroup: Konva.Group) {
   }
 }
 
-// --- ノードの枠サイズをテキストに合わせる機能 ---
-function updateNodeSize(group: Konva.Group) {
-  const textNode = group.findOne('.text') as Konva.Text;
-  const bgRect = group.findOne('.background') as Konva.Rect;
-  if (textNode && bgRect) {
-    bgRect.width(textNode.width());
-    bgRect.height(textNode.height());
-    // 枠のサイズが変わるので、繋がっているリンクも再計算
-    updateConnectedLinks(group);
-  }
-}
-
 function startLabelEditing(labelText: Konva.Text, linkGroup: Konva.Group) {
   if (isTextEditing) return;
   isTextEditing = true;
@@ -693,27 +916,38 @@ function startLabelEditing(labelText: Konva.Text, linkGroup: Konva.Group) {
 
   const absPos = labelText.getAbsolutePosition();
   const stageBox = document.getElementById('ip-container')!.getBoundingClientRect();
-  const areaPosition = {
-    x: stageBox.left + absPos.x,
-    y: stageBox.top + absPos.y,
-  };
 
   const textarea = document.createElement('textarea');
   document.body.appendChild(textarea);
 
-  // ... (textarea のスタイル設定は startTextEditing とほぼ同じ) ...
-  const color = getCurrentThemeColors();
+  // スタイル設定（スクロールバーなし、自動サイズ）
   textarea.value = labelText.text();
   textarea.style.position = 'absolute';
-  textarea.style.top = areaPosition.y + 'px';
-  textarea.style.left = areaPosition.x + 'px';
-  textarea.style.minWidth = '50px';
-  textarea.style.background = color.labelBackground; // 背景色を合わせる
-  textarea.style.color = color.text;
-  textarea.style.border = '1px solid color.text';
-  textarea.style.outline = 'none';
+  textarea.style.left = (stageBox.left + absPos.x) + 'px';
+  textarea.style.top = (stageBox.top + absPos.y) + 'px';
+
+  // フォントスタイル同期
+  const color = getCurrentThemeColors();
+  textarea.style.fontSize = '12px';
   textarea.style.fontFamily = labelText.fontFamily();
-  textarea.style.zIndex = 500;
+  textarea.style.lineHeight = '1em';
+  textarea.style.color = color.text;
+  textarea.style.background = color.labelBackground;
+  textarea.style.border = '1px solid ' + color.text;
+  textarea.style.outline = 'none';
+  textarea.style.overflow = 'hidden';
+  textarea.style.borderRadius = '3px';
+  textarea.style.minWidth = '80px';
+  textarea.style.zIndex = '500';
+
+  // サイズ自動調整関数
+  const updateSize = () => {
+    textarea.style.width = '0px'; // 一旦縮める
+    textarea.style.height = '0px';
+    textarea.style.width = (textarea.scrollWidth + 2) + 'px';
+    textarea.style.height = (textarea.scrollHeight + 2) + 'px';
+  };
+  updateSize(); // 初期サイズ
 
   textarea.focus();
 
@@ -727,6 +961,7 @@ function startLabelEditing(labelText: Konva.Text, linkGroup: Konva.Group) {
 
     // 確定時にラベルの表示/非表示とサイズを更新
     updateLinkPoints(linkGroup);
+    labelGroup.show();
     layer.batchDraw();
 
     document.body.removeChild(textarea);
@@ -742,6 +977,70 @@ function startLabelEditing(labelText: Konva.Text, linkGroup: Konva.Group) {
     if (e.key === 'Escape') removeTextarea();
   });
 
+  textarea.addEventListener('blur', removeTextarea);
+}
+
+function startGroupTitleEditing(titleText: Konva.Text) {
+  if (isTextEditing) return;
+  isTextEditing = true;
+
+  // Konva側のテキストを隠す
+  titleText.hide();
+  layer.batchDraw();
+
+  const areaPosition = titleText.getAbsolutePosition();
+  const stageBox = document.getElementById('ip-container')!.getBoundingClientRect();
+  const textarea = document.createElement('textarea');
+  document.body.appendChild(textarea);
+
+  const color = getCurrentThemeColors();
+
+  textarea.value = titleText.text();
+  textarea.style.position = 'absolute';
+  textarea.style.left = (stageBox.left + areaPosition.x) + 'px';
+  textarea.style.top = (stageBox.top + areaPosition.y) + 'px';
+  textarea.style.background = color.labelBackground;
+  textarea.style.color = color.text;
+  textarea.style.border = '1px solid ' + color.text;
+  textarea.style.outline = 'none';
+  textarea.style.fontFamily = titleText.fontFamily();
+  textarea.style.zIndex = '500';
+  textarea.style.overflow = 'hidden';
+  textarea.focus();
+
+  // 初期サイズ計算
+  const updateSize = () => {
+    textarea.style.width = 'auto';
+    textarea.style.height = 'auto';
+    textarea.style.width = (textarea.scrollWidth + 10) + 'px';
+    textarea.style.height = (textarea.scrollHeight) + 'px';
+  };
+  updateSize();
+
+  textarea.focus();
+
+  const removeTextarea = () => {
+    if (!textarea.parentNode) return;
+    const newVal = textarea.value;
+    if (newVal !== titleText.text()) {
+      titleText.text(newVal);
+      recordHistory('Group title edited');
+    }
+    titleText.show();
+    layer.batchDraw();
+    document.body.removeChild(textarea);
+    isTextEditing = false;
+  };
+
+  textarea.addEventListener('input', updateSize); // 入力時にサイズ更新
+
+  textarea.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) {
+      e.preventDefault();
+      removeTextarea();
+    }
+    if (e.key === 'Escape') removeTextarea();
+  });
   textarea.addEventListener('blur', removeTextarea);
 }
 
@@ -797,6 +1096,8 @@ function setupKeyboardEvents() {
   document.addEventListener('keydown', (e) => {
     const isCtrl = e.ctrlKey || e.metaKey;
     const key = e.key.toLowerCase();
+    const isControl = e.ctrlKey;
+    const isCmd = e.metaKey;
 
     if (isCtrl && key === 'z' && !e.shiftKey) {
       e.preventDefault();
@@ -863,7 +1164,6 @@ function startTextEditing(textNode: Konva.Text, group: Konva.Group) {
   layer.batchDraw();
 
   const isDarkMode = document.body.classList.contains('dark-mode');
-  const colors = isDarkMode ? themes.dark : themes.light;
 
   const textPosition = textNode.getAbsolutePosition();
   const stageBox = document.getElementById('ip-container')!.getBoundingClientRect();
@@ -951,12 +1251,6 @@ function startTextEditing(textNode: Konva.Text, group: Konva.Group) {
   textarea.addEventListener('blur', removeTextarea);
 }
 
-// --- 現在のテーマを取得するヘルパー ---
-function getCurrentTheme() {
-  const isDark = document.body.classList.contains('dark-mode');
-  return themes[isDark ? 'dark' : 'light'];
-}
-
 // --- 現在のテーマカラーを動的に取得するヘルパー ---
 function getCurrentThemeColors() {
   const isDark = document.body.classList.contains('dark-mode');
@@ -991,7 +1285,7 @@ function deselectAll() {
   stage.find('.node-group').forEach((node: any) => {
     const bg = node.findOne('.background');
     if (bg) {
-      bg.fill(null);
+      bg.fill(colors.nodeBg);
       bg.strokeEnabled(false);
     }
   });
@@ -1002,6 +1296,20 @@ function deselectAll() {
       shape.stroke(colors.link);
       shape.fill(colors.link);
     });
+  });
+
+  stage.find('.container-group').forEach((group: any) => {
+    const bg = group.findOne('.group-bg') as Konva.Rect;
+    if (bg) {
+      bg.stroke(colors.text);
+      bg.fill(colors.nodeBg);
+      bg.dash([5, 5]);
+    }
+    // ハンドルを隠す
+    const handle = group.findOne('.resize-handle') as Konva.Circle;
+    if (handle) handle.visible(false);
+    // 所属ノードのハイライトも解除 (false)
+    updateGroupMembersAppearance(group, false);
   });
 
   transformer.nodes([]);
@@ -1016,10 +1324,22 @@ function highlightShape(shape: Konva.Group) {
 
   if (shape.name() === 'node-group') {
     // ノードの場合：背景を塗る
-    const bg = shape.findOne('.background');
+    const bg = shape.findOne('.background') as Konva.Rect;
     if (bg) {
       bg.strokeEnabled(false);
       bg.fill(colors.selection);
+    }
+  } else if (shape.name() === 'container-group') {
+    const bg = shape.findOne('.group-bg') as Konva.Rect;
+    if (bg) {
+      bg.stroke(colors.selection);
+      bg.fill(colors.selection);
+      bg.dash([]);
+      const handle = shape.findOne('.resize-handle') as Konva.Circle;
+      if (handle) {
+        handle.fill(colors.selection);
+        handle.visible(true); // 選択時は必ず表示
+      }
     }
   } else if (shape.name() === 'link-group') {
     // リンクの場合：線とアローヘッドを塗る
@@ -1030,7 +1350,31 @@ function highlightShape(shape: Konva.Group) {
   }
 }
 
-// --- 形状（ノードまたはリンク）の選択 ---
+function updateGroupMembersAppearance(groupNode: Konva.Group, isSelected: boolean) {
+  const colors = getCurrentThemeColors();
+  const childIds = groupNode.getAttr('childNodeIds') || [];
+
+  childIds.forEach((id: string) => {
+    const node = layer.findOne('#' + id) as Konva.Group;
+    if (node) {
+      const bg = node.findOne('.background') as Konva.Rect;
+      if (bg) {
+        if (isSelected) {
+          bg.stroke(colors.selection);
+          bg.strokeWidth(1);
+          bg.fill(colors.selection);
+          bg.strokeEnabled(true);
+        } else {
+          bg.strokeEnabled(false);
+          bg.fill(colors.nodeBg);
+        }
+      }
+    }
+  });
+  layer.batchDraw();
+}
+
+// --- 形状（ノードまたはリンク・グループ）の単一選択 ---
 function selectShape(shape: Konva.Group) {
   deselectAll();
   selectedShape = shape;
@@ -1038,13 +1382,25 @@ function selectShape(shape: Konva.Group) {
   if (shape.name() === 'node-group') {
     transformer.nodes([shape]);
     selectedNodes = [shape];
+
+  } else if (shape.name() === 'container-group') {
+    // グループノードの選択処理
+    transformer.nodes([]); // グループにはTransformerをつけない
+    selectedNodes = []; // グループ自体は複数選択の対象にしない（単独扱い）
+
+    // ハンドルを表示
+    const handle = shape.findOne('.resize-handle') as Konva.Circle;
+    if (handle) handle.visible(true);
+
+    // 登録済みノードの色を更新（メンバーであることを示す）
+    updateGroupMembersAppearance(shape, true);
+
   } else if (shape.name() === 'link-group') {
-    // リンクはTransformerを付けず、色だけ変える
     transformer.nodes([]);
     selectedNodes = [];
   }
 
-  // ハイライト適用
+  // 最後に共通のハイライト処理を呼ぶ
   highlightShape(shape);
   layer.batchDraw();
 }
@@ -1109,6 +1465,22 @@ async function updateAllNodesAppearance() {
     }
   });
 
+  stage.find('.container-group').forEach((group: any) => {
+    // もしこのグループが「選択中」なら、テーマ色で上書きせず選択色を維持する
+    const isSelected = (selectedShape === group);
+
+    const bg = group.findOne('.group-bg') as Konva.Rect;
+    if (bg) {
+      // 選択中なら selection、そうでなければ text 色
+      bg.stroke(isSelected ? colors.selection : colors.text);
+    }
+
+    const title = group.findOne('.group-title') as Konva.Text;
+    if (title) {
+      title.fill(colors.text);
+    }
+  });
+
   layer.batchDraw();
 }
 
@@ -1140,6 +1512,7 @@ function setupUIButtons() {
   document.getElementById('ip-close-btn')?.addEventListener('click', IPClose);
   document.getElementById('ip-fullscreen-btn')?.addEventListener('click', IPToggleFullscreen);
   document.getElementById('ip-theme-toggle-btn')?.addEventListener('click', IPThemeToggle);
+  document.getElementById('ip-create-group-button')?.addEventListener('click', createGroupNodeByButton);
 }
 
 // ■ 初期設定の適用
@@ -1163,7 +1536,7 @@ async function applyInitialSettings() {
   const customSelectionColor = await store.get<string>('customSelectionColor');
   if (customSelectionColor) root.setProperty('--editor-selection-color', customSelectionColor);
   const customHeadingColor = await store.get<string>('customHeadingColor');
-  if (customHeadingColor) root.setProperty('--heading-color', customSelectionColor);
+  if (customHeadingColor) root.setProperty('--heading-color', customHeadingColor);
 
   // 3. グロー（CSS）と Konva の外観更新
   await applyGlowEffect();
@@ -1316,6 +1689,15 @@ async function IPToggleOnTop() {
     pinBtn.classList.remove('active');
     pinBtn.title = "最前面に固定";
   }
+}
+
+// ■グループノード作成ボタンの処理
+async function createGroupNodeByButton() {
+  // 画面中央あたりに生成
+  const center = { x: window.innerWidth / 2 - 150, y: window.innerHeight / 2 - 100 };
+  createGroupNode(center.x, center.y);
+  recordHistory('Group created');
+  layer.batchDraw();
 }
 
 // =================================================================

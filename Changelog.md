@@ -5,6 +5,20 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.4.0] - 2026-3-XX  
+
+### Added (新機能)  
+- アイデアプロセッサを実装。まだ機能の一部しか再実装できていないが、コア機能はほぼ復旧した  
+- アウトラインペインの上部に「ルビ記号（｜《》）」「ダッシュ（――）」「三点リーダ（……）」の挿入ボタンを追加。また、アンドゥ・リドゥボタンもアウトラインペインの上部に移動    
+
+
+### Changed (変更点)    
+- アイデアプロセッサ: グループ所属ノードの背景色変更を、グループ選択時のみに  
+
+
+### Fixed (修正点)  
+
+
 ## [1.3.0] - 2026-3-2  
 
 ### Added (新機能)  
