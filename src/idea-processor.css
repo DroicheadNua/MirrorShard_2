@@ -23,6 +23,8 @@
    font-family: var(--user-font-family, serif-ja, serif);
    background-color: var(--window-bg-color, #EAE3D2);
    color: var(--editor-text-color, black);
+   user-select: none;
+   -webkit-user-select: none;
  }
 
  body.dark-mode #ip-wrapper {
@@ -42,6 +44,8 @@
    min-width: 0;
    /* flexアイテムの縮小を許可 */
    z-index: 5;
+   user-select: none;
+   -webkit-user-select: none;
  }
 
  #ip-editor-pane {
@@ -52,7 +56,7 @@
    /* padding: 8px; */
    /* border-left: 1px solid #555;  */
    background-color: transparent;
-   z-index: 10;
+   z-index: 1000;
  }
 
  #ip-editor-pane.hidden {
@@ -67,9 +71,9 @@
    resize: none;
    /* リサイズハンドルを非表示 */
    border: none;
-   background-color: var(--window-bg-color, transparent);
+   background-color: transparent;
    opacity: 70%;
-   color: #111;
+   color: var(--editor-text-color, #111);
    font-style: italic;
    font-family: var(--user-font-family, serif-ja, serif);
    font-size: 16px;
@@ -499,6 +503,11 @@
    opacity: 0.5;
    cursor: not-allowed;
    /* 操作不可であることを示すカーソル */
+ }
+
+ textarea {
+   user-select: text;
+   -webkit-user-select: text;
  }
 
  #ip-toggle-on-top-btn {

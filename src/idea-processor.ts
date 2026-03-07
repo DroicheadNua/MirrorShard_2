@@ -34,11 +34,17 @@ let isDirty = false; // 変更があるかどうかのフラグ
 let projectMetadata: any = null; // 読み込んだファイルのメタデータ（作成日時など）を保持
 let isPanning = false;
 let didPan = false;
+let contentEditorJustClosed = false;
+let currentlyEditingNodeId: string | null = null;
+let isContentEditing = false;
 let lastPointerPosition: { x: number; y: number } = { x: 0, y: 0 };
 // let selectionStartPos: { x: number; y: number } | null = null;
 // let isDraggingSelection = false;
 let selectedShape: Konva.Group | null = null;
 let selectedNodes: Konva.Group[] = [];
+
+const editorPane = document.getElementById('ip-editor-pane') as HTMLElement;
+const contentEditor = document.getElementById('ip-content-editor') as HTMLTextAreaElement;
 
 // テーマカラー定義
 const themes = {
@@ -186,7 +192,9 @@ function _getCurrentStageData() {
     if (!rect || !textNode) return;
     nodesData.push({
       id: node.id(), x: node.x(), y: node.y(), width: rect.width(), height: rect.height(),
-      title: textNode.text()
+      title: textNode.text(), // 見た目のテキスト
+      contentText: node.getAttr('contentText') || '', // 本文
+      parentId: node.getAttr('parentId') || null, // 親IDを属性から取得
     });
   });
 
@@ -299,6 +307,11 @@ function createNodeFromData(data: any) {
     draggable: true,
     name: 'node-group',
   });
+
+  // 属性の分離: タイトルは表示用、contentTextは本文用
+  nodeGroup.setAttr('contentText', data.contentText || '');
+  nodeGroup.setAttr('placeholder', data.placeholder || '');
+  nodeGroup.setAttr('isTemplateItem', data.isTemplateItem || false);
 
   const textNode = new Konva.Text({
     name: 'text',
@@ -415,6 +428,14 @@ export function initializeIdeaProcessor() {
 }
 
 function setupEventListeners() {
+  const container = document.getElementById('ip-container');
+  if (container) {
+    // Macでも確実にメニューを出さないようにする
+    container.oncontextmenu = (e) => {
+      e.preventDefault();
+      return false;
+    };
+  }
   // ステージ上のクリック（ノード作成・選択解除）
   stage.on('click tap', (e) => {
     if (e.target === stage) {
@@ -550,20 +571,28 @@ function setupEventListeners() {
   // リンク作成モード（Alt + ドラッグ）などの実装
   // ここではシンプルに「Altキーを押しながらドラッグでリンク作成」を実装
   stage.on('mousedown', (e) => {
+    if (contentEditorJustClosed) {
+      e.evt.preventDefault();
+      e.cancelBubble = true;
+      return;
+    }
     const isAlt = e.evt.altKey;
     // --- 右クリック (Pan開始) ---
     if (e.evt.button === 2) {
-      const parent = e.target.getParent();
-      // ノード上での右クリックは除外（将来のコンテキストメニュー用）
-      if (parent && parent.name() === 'node-group') return;
-
+      e.evt.preventDefault();
+      e.evt.stopPropagation();
+      // エディタが開いていたら閉じて終了 (ESCと同じ挙動)
+      if (isContentEditing) {
+        closeContentEditor();
+        return;
+      }
       isPanning = true;
       didPan = false; // パンしたかどうかのフラグをリセット
       const pos = stage.getPointerPosition();
       if (pos) lastPointerPosition = pos;
       return;
     }
-    if (isAlt) {
+    if (e.evt.button === 0 && isAlt) {
       const group = e.target.getParent();
       if (group && group.name() === 'node-group') {
         // リンク作成開始
@@ -583,14 +612,12 @@ function setupEventListeners() {
       const dy = pos.y - lastPointerPosition.y;
 
       // 少しでも動いたら「パンした」とみなす
-      if (Math.abs(dx) > 0 || Math.abs(dy) > 0) {
+      if (Math.abs(dx) > 2 || Math.abs(dy) > 2) { // 遊び(2px)を設ける
         didPan = true;
         stage.x(stage.x() + dx);
         stage.y(stage.y() + dy);
-
         const newPos = stage.getPointerPosition();
         if (newPos) lastPointerPosition = newPos;
-
         layer.batchDraw();
       }
       return;
@@ -612,8 +639,26 @@ function setupEventListeners() {
     if (e.evt.button === 2) {
       if (isPanning) {
         isPanning = false;
-        // もし didPan === false なら、ここで「背景のコンテキストメニュー」を出す処理が入る
+        if (!didPan) {
+          // ノードの上で右クリックしたか判定
+          // Konvaのイベントターゲットから親のノードグループを探す
+          let current: Konva.Node | null = e.target;
+          let clickedNode: Konva.Group | null = null;
+
+          while (current && !(current instanceof Konva.Stage)) {
+            if (current.name() === 'node-group') {
+              clickedNode = current as Konva.Group;
+              break;
+            }
+            current = current.getParent();
+          }
+
+          if (clickedNode) {
+            openContentEditor(clickedNode);
+          }
+        }
       }
+      stage.container().style.cursor = 'default';
     }
     if (connectionLine) {
       const group = e.target.getParent();
@@ -692,10 +737,11 @@ function startConnection(node: Konva.Group) {
 // 6. ノード・リンク作成ロジック (Core Logic)
 // =================================================================
 
-function createNewNode(x: number, y: number, textStr = 'New Node', isInteractive = true) {
+function createNewNode(x: number, y: number, textStr = 'New Node', contentStr = '', isInteractive = true) {
   const id = `node_${generateUUID()}`;
   const node = createNodeFromData({
-    id, x, y, width: 200, height: 60, title: textStr
+    id, x, y, width: 200, height: 60, title: textStr,
+    contentText: contentStr
   });
   adjustNodeSize(node);
   updateAllNodesAppearance();
@@ -1261,7 +1307,7 @@ function startGroupTitleEditing(titleText: Konva.Text) {
 // --- テンプレート用ノード作成ヘルパー ---
 function createTemplateNode(options: { x: number, y: number, title: string, placeholder: string }) {
   // 既存の createNewNode を利用
-  const node = createNewNode(options.x, options.y, options.title, false);
+  const node = createNewNode(options.x, options.y, options.title, undefined, false);
 
   // テンプレート属性を追加
   node.setAttr('isTemplateItem', true);
@@ -1290,7 +1336,8 @@ function generateTemplate(templateName: string) {
   if (templateName === 'greimas') {
     const group = createGroupNode(offsetX + 110, offsetY + 100, '行為者モデル');
     const bg = group.findOne('.group-bg') as Konva.Rect;
-    if (bg) { bg.width(650); bg.height(350); }
+    const handle = group.findOne('.resize-handle') as Konva.Circle;
+    if (bg) { bg.width(650); bg.height(350); handle.x(650); handle.y(350); }
 
     // ノード定義 (相対座標を考慮して配置)
     const startX = offsetX;
@@ -1309,7 +1356,6 @@ function generateTemplate(templateName: string) {
     updateGroupMembersAppearance(group, false); // 念のため色更新
 
     // リンク作成
-    const linkOpts = { type: LinkType.ARROW };
     createSingleLink(sujet, objet, LinkType.ARROW);
     createSingleLink(destinateur, objet, LinkType.ARROW);
     createSingleLink(objet, destinataire, LinkType.ARROW);
@@ -1323,7 +1369,8 @@ function generateTemplate(templateName: string) {
   else if (templateName === 'heros-journey') {
     const group = createGroupNode(offsetX + 50, offsetY + 50, "英雄の旅 (Hero's Journey)");
     const bg = group.findOne('.group-bg') as Konva.Rect;
-    if (bg) { bg.width(900); bg.height(700); }
+    const handle = group.findOne('.resize-handle') as Konva.Circle;
+    if (bg) { bg.width(900); bg.height(700); handle.x(900); handle.y(700); }
 
     const steps = 12;
     const cx = offsetX + 450;
@@ -1369,7 +1416,8 @@ function generateTemplate(templateName: string) {
   else if (templateName === 'beat-sheet') {
     const group = createGroupNode(offsetX + 50, offsetY + 50, "エッセンシャル・ビートシート");
     const bg = group.findOne('.group-bg') as Konva.Rect;
-    if (bg) { bg.width(1050); bg.height(550); }
+    const handle = group.findOne('.resize-handle') as Konva.Circle;
+    if (bg) { bg.width(1050); bg.height(550); handle.x(1050); handle.y(550); }
 
     const beatData = [
       { title: '1. オープニング', placeholder: '' }, { title: '2. 事件の発生', placeholder: '' },
@@ -1407,7 +1455,8 @@ function generateTemplate(templateName: string) {
   else if (templateName === 'three-act-structure') {
     const group = createGroupNode(offsetX + 100, offsetY + 100, "三幕構成");
     const bg = group.findOne('.group-bg') as Konva.Rect;
-    if (bg) { bg.width(800); bg.height(250); }
+    const handle = group.findOne('.resize-handle') as Konva.Circle;
+    if (bg) { bg.width(800); bg.height(250); handle.x(800); handle.y(250); }
 
     const actData = [
       { title: '第一幕：発端', placeholder: '' },
@@ -1430,6 +1479,116 @@ function generateTemplate(templateName: string) {
     recordHistory("Template created: Three-Act Structure");
   }
 
+  layer.batchDraw();
+}
+
+// =================================================================
+// コンテンツエディタ (Markdown編集)
+// =================================================================
+
+function openContentEditor(nodeGroup: Konva.Group) {
+  if (!editorPane || !contentEditor) return;
+
+  isContentEditing = true;
+  isTextEditing = true; // ショートカットキー等を無効化するため
+
+  // stage.listening(false) は、Tauri版ではパンなどが動かなくなる可能性があるため
+  // 代わりに isContentEditing フラグでイベントをガードする方針
+
+  if (currentlyEditingNodeId && currentlyEditingNodeId !== nodeGroup.id()) {
+    saveContentChanges();
+  }
+
+  currentlyEditingNodeId = nodeGroup.id();
+
+  // テキストノードから内容を取得
+  let content = nodeGroup.getAttr('contentText') || '';
+
+  // プレースホルダー処理 (テンプレートなどで設定されている場合)
+  const placeholder = nodeGroup.getAttr('placeholder') || '＜ここに本文を入力＞';
+  let isInitialContent = false;
+  contentEditor.placeholder = placeholder;
+
+  if (!content.trim() && !placeholder) {
+    // 空の場合はデフォルト文字を入れない方が使いやすいか
+    // content = 'New Content'; 
+    // isInitialContent = true; 
+  }
+  contentEditor.value = content;
+
+  editorPane.classList.remove('hidden');
+  contentEditor.focus();
+
+  // カーソル制御
+  if (isInitialContent) {
+    contentEditor.select();
+  } else {
+    // 末尾にカーソル
+    contentEditor.setSelectionRange(contentEditor.value.length, contentEditor.value.length);
+  }
+
+  // リスナー登録
+  contentEditor.addEventListener('keydown', handleContentEditorKeyDown);
+}
+
+const handleContentEditorKeyDown = (e: KeyboardEvent) => {
+  // エディタ内でのDelete等はキャンバスに伝播させない
+  e.stopPropagation();
+
+  // Escapeで閉じる
+  if (e.key === 'Escape') {
+    e.preventDefault();
+    closeContentEditor();
+  }
+};
+
+function saveContentChanges() {
+  if (!currentlyEditingNodeId) return;
+
+  const node = layer.findOne('#' + currentlyEditingNodeId) as Konva.Group;
+  if (node) {
+    const textNode = node.findOne('.text') as Konva.Text;
+    if (textNode) {
+      const oldText = node.getAttr('contentText') || '';
+      const newText = contentEditor.value;
+
+      if (oldText !== newText) {
+        node.setAttr('contentText', newText);
+
+        recordHistory('Node content changed');
+      }
+    }
+  }
+}
+
+function closeContentEditor() {
+  saveContentChanges();
+  if (editorPane) editorPane.classList.add('hidden');
+
+  // ★ ブラウザのテキスト選択状態を強制クリア
+  if (window.getSelection) {
+    window.getSelection()?.removeAllRanges();
+  }
+  // テキストエリア自体のフォーカスも外す
+  if (contentEditor) contentEditor.blur();
+
+  currentlyEditingNodeId = null;
+  isContentEditing = false;
+  isTextEditing = false;
+
+  // ガードフラグを立てる
+  contentEditorJustClosed = true;
+  setTimeout(() => {
+    contentEditorJustClosed = false;
+  }, 200);
+
+  // ステージにフォーカスを戻す
+  const container = stage.container();
+  container.focus(); // Konvaコンテナにフォーカス
+
+  if (contentEditor) {
+    contentEditor.removeEventListener('keydown', handleContentEditorKeyDown);
+  }
   layer.batchDraw();
 }
 
@@ -1562,9 +1721,8 @@ function startTextEditing(textNode: Konva.Text, group: Konva.Group, isNew = fals
   isTextEditing = true;
 
   textNode.hide();
+  deselectAll();
   layer.batchDraw();
-
-  const isDarkMode = document.body.classList.contains('dark-mode');
 
   const textPosition = textNode.getAbsolutePosition();
   const stageBox = document.getElementById('ip-container')!.getBoundingClientRect();
@@ -1580,32 +1738,59 @@ function startTextEditing(textNode: Konva.Text, group: Konva.Group, isNew = fals
   textarea.style.position = 'absolute';
   textarea.style.top = areaPosition.y + 'px';
   textarea.style.left = areaPosition.x + 'px';
-
-  const padding = textNode.padding();
-  textarea.style.width = (textNode.width() - padding * 2) + 'px';
-  textarea.style.height = (textNode.height() - padding * 2 + Math.round(textNode.fontSize() * 1.5)) + 'px';
-
-  textarea.style.fontSize = textNode.fontSize() + 'px';
+  const scale = stage.scaleX();
+  textarea.style.width = (textNode.width() * scale) + 'px';
+  textarea.style.height = (textNode.height() * scale) + 'px';
+  textarea.style.fontSize = (textNode.fontSize() * scale) + 'px';
   textarea.style.fontFamily = textNode.fontFamily();
   textarea.style.lineHeight = textNode.lineHeight().toString();
   textarea.style.textAlign = textNode.align();
 
-  // テーマの文字色を適用
-  textarea.style.color = isDarkMode ? themes.dark.text : 'var(--editor-text-color, #111111)';
+  const color = getCurrentThemeColors();
+  textarea.style.color = color.text;
   // グロー効果（CSSのtext-shadow）を適用
   if (document.body.classList.contains('custom-glow')) {
     textarea.style.textShadow = 'var(--custom-text-shadow)';
   } else {
     textarea.style.textShadow = 'none';
   }
-  textarea.style.background = 'none'; // 背景透明
-  textarea.style.border = 'none';     // 枠線なし
+  textarea.style.background = color.labelBackground;
+  textarea.style.border = '1px solid ' + color.text;
+  textarea.style.borderRadius = '6px';
   textarea.style.outline = 'none';
   textarea.style.resize = 'none';
-  textarea.style.padding = padding + 'px';
+  textarea.style.padding = (textNode.padding() * scale) + 'px';
   textarea.style.margin = '0px';
   textarea.style.overflow = 'hidden';
   textarea.style.zIndex = '500';
+  textarea.style.minWidth = (150 * scale) + 'px';
+  textarea.style.boxSizing = 'content-box';
+
+  // --- サイズ調整ロジック ---
+  const updateTextareaSize = () => {
+    // 一旦リセットしないと縮まない
+    textarea.style.height = '0px';
+    textarea.style.width = '0px';
+
+    // スクロールサイズに合わせて広げる
+    const newWidth = textarea.scrollWidth;
+    const newHeight = textarea.scrollHeight;
+
+    textarea.style.width = newWidth + 'px';
+    textarea.style.height = newHeight + 'px';
+  };
+
+  // 初期状態で一回計算を実行し、KonvaサイズではなくDOMサイズで確定させる
+  // これにより、文字を打ち始めた瞬間のガタつき（Konvaサイズ→DOMサイズのジャンプ）を防ぐ
+  // ただし、初期幅だけはKonvaに合わせないと折り返し位置が変わる可能性があるため
+  // 初期幅を設定してから高さを計算させる
+  textarea.style.width = (textNode.width() * scale) + 'px';
+  textarea.style.height = (textNode.height() * scale) + 'px';
+
+  // DOM描画待ちをしてからリサイズ計算を走らせる
+  requestAnimationFrame(() => {
+    updateTextareaSize();
+  });
 
   textarea.focus();
 
@@ -1615,6 +1800,13 @@ function startTextEditing(textNode: Konva.Text, group: Konva.Group, isNew = fals
   } else {
     textarea.setSelectionRange(textarea.value.length, textarea.value.length);
   }
+
+  // イベントリスナー
+  textarea.addEventListener('mousedown', e => e.stopPropagation());
+  textarea.addEventListener('click', e => e.stopPropagation());
+
+  // 入力時のリサイズ
+  textarea.addEventListener('input', updateTextareaSize);
 
   const removeTextarea = () => {
     if (!textarea.parentNode) return;
@@ -1629,7 +1821,6 @@ function startTextEditing(textNode: Konva.Text, group: Konva.Group, isNew = fals
       updateConnectedLinks(group);
     }
     adjustNodeSize(group);
-
     // 履歴記録の分岐
     if (isNew) {
       // 新規作成時は、テキスト確定をもって「Node created」とする
@@ -1644,16 +1835,6 @@ function startTextEditing(textNode: Konva.Text, group: Konva.Group, isNew = fals
     document.body.removeChild(textarea);
     isTextEditing = false;
   };
-
-  // --- 入力中の処理 ---
-  // ここでは textarea の見た目だけを広げる (Konvaノードはいじらない)
-  textarea.addEventListener('input', () => {
-    textarea.style.width = '0px'; // Shrink to fit
-    textarea.style.height = '0px';
-    textarea.style.width = (textarea.scrollWidth) + 'px';
-    textarea.style.height = (textarea.scrollHeight) + 'px';
-    textarea.style.minWidth = '150px';
-  });
 
   textarea.addEventListener('keydown', (e) => {
     if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) {
@@ -1953,8 +2134,9 @@ async function saveToMrsd(forceSaveAs = false) {
       const textNode = node.findOne('.text') as Konva.Text;
       if (!bg || !textNode) return;
 
-      const content = textNode.text();
-      const safeTitle = content.split('\n')[0].substring(0, 15).replace(/[\\/:*?"<>|]/g, "_") || "Untitled";
+      const title = textNode.text();
+      const content = node.getAttr('contentText') || '';
+      const safeTitle = title.split('\n')[0].substring(0, 15).replace(/[\\/:*?"<>|]/g, "_") || "Untitled";
       const fileName = `${safeTitle}_${node.id().slice(-6)}.md`;
 
       const parentId = nodeParentMap.get(node.id()) || null;
@@ -1978,13 +2160,14 @@ async function saveToMrsd(forceSaveAs = false) {
         y: saveY,
         width: bg.width(),
         height: bg.height(),
-        title: content,
+        title: title,
         parentId: parentId,
         isTemplateItem: false
       });
 
+      const fileContent = content || null;
       if (filesFolder) {
-        filesFolder.file(fileName, content);
+        filesFolder.file(fileName, fileContent);
       }
     });
 
@@ -2093,13 +2276,19 @@ async function loadFromMrsd() {
 
     // 3. ノード復元 (絶対座標計算)
     for (const n of data.nodes) {
-      let content = n.title || "";
+      const title = n.title || "New Node";
+      let content = ""; // 本文
+
+      // .mdファイルから本文を読み込む
       if (n.file) {
         const mdFile = zip.file(n.file);
         if (mdFile) {
-          const mdText = await mdFile.async("string");
-          if (mdText) content = mdText;
+          content = await mdFile.async("string");
         }
+      }
+      // もし .md がなくて JSON に contentText があればそれを使う (後方互換)
+      if (!content && (n as any).contentText) {
+        content = (n as any).contentText;
       }
 
       // 座標の計算
@@ -2113,7 +2302,12 @@ async function loadFromMrsd() {
         finalY += parentPos.y;
       }
 
-      const nodeGroup = createNewNode(finalX, finalY, content, false);
+      const nodeGroup = createNewNode(n.x, n.y, title, content, false);
+
+      // 親IDの設定 (parentId属性をセット)
+      if (n.parentId) {
+        nodeGroup.setAttr('parentId', n.parentId);
+      }
       nodeGroup.id(n.id);
 
       // サイズ自動調整

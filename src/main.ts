@@ -109,6 +109,7 @@ class App {
   private fontClassNames = ['font-serif', 'font-sans-serif', 'font-monospace'];
   private fileListContainer = document.querySelector<HTMLElement>('#file-list-container');
   private outlineControls = document.querySelector<HTMLElement>('.outline-controls');
+  private outlineControls2 = document.querySelector<HTMLElement>('.outline-controls-2');
   private outlineContainer = document.querySelector<HTMLElement>('#outline-container');
   private editorContainer = document.querySelector<HTMLElement>('#editor-container');
   private statusBar = document.querySelector<HTMLElement>('#status-bar');
@@ -1078,7 +1079,7 @@ class App {
   private async initialize() {
     this.currentOs = await type();
     // UI要素のチェック
-    if (!this.editorContainer || !this.fileListContainer || !this.outlineControls || !this.outlineContainer) {
+    if (!this.editorContainer || !this.fileListContainer || !this.outlineControls || !this.outlineControls2 || !this.outlineContainer) {
       console.error("Fatal Error: A required UI container was not found."); return;
     }
 
@@ -2076,6 +2077,7 @@ class App {
       this.handleSidebarClick(e)
     });
     this.outlineControls?.addEventListener('click', (e) => this.handleSidebarClick(e));
+    this.outlineControls2?.addEventListener('click', (e) => this.handleSidebarClick(e));
     this.outlineContainer?.addEventListener('click', (e) => this.handleSidebarClick(e));
 
     document.addEventListener('keydown', (e) => this.handleKeyDown(e), { capture: true });
@@ -2593,7 +2595,7 @@ class App {
    * この関数が、サイドバーの見た目に関する唯一の真実となる
    */
   private renderSidebar() {
-    if (!this.fileListContainer || !this.outlineContainer || !this.outlineControls) return;
+    if (!this.fileListContainer || !this.outlineContainer || !this.outlineControls || !this.outlineControls2) return;
 
     // --- 1. ファイル一覧部分のHTMLを生成 ---
     let fileListHtml = '<ul>';
@@ -2613,6 +2615,7 @@ class App {
     this.fileListContainer.innerHTML = fileListHtml;
 
     this.outlineControls.style.display = 'flex';
+    this.outlineControls2.style.display = 'flex';
 
     // --- 2. アウトライン部分のHTMLを生成 ---
     if (this.activeTabPath && this.activeFileHeadings.length > 0) {
