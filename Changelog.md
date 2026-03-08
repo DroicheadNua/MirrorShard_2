@@ -10,6 +10,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added (新機能)  
 - アイデアプロセッサを実装。まだ機能の一部しか再実装できていないが、コア機能はほぼ復旧した  
 - アウトラインペインの上部に「ルビ記号（｜《》）」「ダッシュ（――）」「三点リーダ（……）」の挿入ボタンを追加。また、アンドゥ・リドゥボタンもアウトラインペインの上部に移動    
+- メインエディタのAI機能に「Missing Link Completion」(Shift + Alt + Enter)を追加。カーソル位置の前と後ろをつなぐ文章を補完する機能  
 
 
 ### Changed (変更点)    

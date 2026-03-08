@@ -45,6 +45,8 @@ let selectedNodes: Konva.Group[] = [];
 
 const editorPane = document.getElementById('ip-editor-pane') as HTMLElement;
 const contentEditor = document.getElementById('ip-content-editor') as HTMLTextAreaElement;
+const outlinePaneContent = document.getElementById('ip-outline-content') as HTMLElement;
+const outlineCollapsedState = new Map<string, boolean>(); // key: groupId, value: isCollapsed
 
 // テーマカラー定義
 const themes = {
@@ -428,6 +430,9 @@ export function initializeIdeaProcessor() {
 }
 
 function setupEventListeners() {
+  window.addEventListener('contextmenu', async (e) => {
+    e.preventDefault();
+  });
   const container = document.getElementById('ip-container');
   if (container) {
     // Macでも確実にメニューを出さないようにする
@@ -476,6 +481,7 @@ function setupEventListeners() {
         });
         group.setAttr('childNodeIds', childIds);
         recordHistory('Nodes added to group');
+        renderIpOutline();
         deselectAll();
 
       } else if (isShift && selectedNodes.length > 0) {
@@ -489,6 +495,7 @@ function setupEventListeners() {
         });
         group.setAttr('childNodeIds', childIds);
         recordHistory('Nodes removed from group');
+        renderIpOutline();
         deselectAll();
 
       } else {
@@ -498,6 +505,7 @@ function setupEventListeners() {
   });
 
   stage.on('dblclick', (e) => {
+    if (isTextEditing) return;
     // 1. ノードのダブルクリック（テキスト編集）
     const nodeGroup = e.target.getParent();
     if (nodeGroup && nodeGroup.name() === 'node-group') {
@@ -745,6 +753,7 @@ function createNewNode(x: number, y: number, textStr = 'New Node', contentStr = 
   });
   adjustNodeSize(node);
   updateAllNodesAppearance();
+  renderIpOutline();
   // 手動作成（ダブルクリック等）の時だけ編集モードに入る
   if (isInteractive) {
     const textNode = node.findOne('.text') as Konva.Text;
@@ -965,6 +974,8 @@ function createSingleLink(fromNode: Konva.Group, toNode: Konva.Group, type: Link
   // TagがTextの背景として自動でリサイズされる
   labelGroup.add(new Konva.Tag({
     fill: colors.labelBackground,
+    stroke: colors.text,
+    strokeWidth: 1,
     cornerRadius: 3,
     name: 'link-label-bg'
   }));
@@ -1285,6 +1296,7 @@ function startGroupTitleEditing(titleText: Konva.Text) {
     if (newVal !== titleText.text()) {
       titleText.text(newVal);
       recordHistory('Group title edited');
+      renderIpOutline();
     }
     titleText.show();
     layer.batchDraw();
@@ -1480,6 +1492,7 @@ function generateTemplate(templateName: string) {
   }
 
   layer.batchDraw();
+  renderIpOutline();
 }
 
 // =================================================================
@@ -1556,6 +1569,7 @@ function saveContentChanges() {
         node.setAttr('contentText', newText);
 
         recordHistory('Node content changed');
+        renderIpOutline();
       }
     }
   }
@@ -1647,6 +1661,8 @@ function setupKeyboardEvents() {
     const isControl = e.ctrlKey;
     const isCmd = e.metaKey;
 
+    if (isTextEditing) return;
+
     if (isCtrl && key === 'z' && !e.shiftKey) {
       e.preventDefault();
       undo();
@@ -1661,21 +1677,25 @@ function setupKeyboardEvents() {
       IPClose();
     }
     // テーマ切り替え (Ctrl + T)
-    if (isCtrl && key === 't') {
+    if (isCtrl && key === 't' && !e.shiftKey) {
       e.preventDefault();
       IPThemeToggle();
     }
-    if (isCtrl && key === 'o') {
+    if (isCtrl && key === 'o' && !e.shiftKey) {
       e.preventDefault();
       loadFromMrsd();
     }
-    if (isCtrl && key === 'n') {
+    if (isCtrl && key === 'n' && !e.shiftKey) {
       e.preventDefault();
       newFile();
     }
-    if (isCtrl && key === 'r') {
+    if (isCtrl && key === 'r' && !e.shiftKey) {
       e.preventDefault();
       InitializeStage();
+    }
+    if (isCtrl && e.shiftKey && key === 'o') {
+      e.preventDefault();
+      toggleOutlinePane();
     }
 
     // フルスクリーン切り替え
@@ -1711,6 +1731,7 @@ function setupKeyboardEvents() {
         selectedShape.destroy(); // 本体を削除
         deselectAll();           // 選択状態クリア
         recordHistory('Deleted');
+        renderIpOutline();
       }
     }
   });
@@ -1825,11 +1846,12 @@ function startTextEditing(textNode: Konva.Text, group: Konva.Group, isNew = fals
     if (isNew) {
       // 新規作成時は、テキスト確定をもって「Node created」とする
       recordHistory('Node created');
+      renderIpOutline();
     } else if (newVal !== oldText) {
       // 既存編集は変更があった場合のみ
       recordHistory('Node text changed');
+      renderIpOutline();
     }
-
     textNode.show();
     layer.batchDraw();
     document.body.removeChild(textarea);
@@ -2356,7 +2378,7 @@ async function loadFromMrsd() {
     });
 
     await updateAllNodesAppearance();
-
+    renderIpOutline();
     layer.batchDraw();
     currentFilePath = path;
     isDirty = false;
@@ -2408,6 +2430,16 @@ async function InitializeStage() {
   layer.batchDraw();
 }
 
+function toggleOutlinePane() {
+  const pane = document.getElementById('ip-outline-pane');
+  if (pane) {
+    pane.classList.toggle('hidden');
+    if (!pane.classList.contains('hidden')) {
+      renderIpOutline();
+    }
+  }
+}
+
 // --- 変更通知関数 ---
 function markAsDirty() {
   if (!isDirty) {
@@ -2415,6 +2447,239 @@ function markAsDirty() {
     // 必要ならタイトルバーに「*」をつけるなどの処理をここに追加
     // updateTitle(); 
   }
+}
+
+// =================================================================
+//  アウトライン関係
+// =================================================================
+
+// --- アウトライン描画 ---
+function renderIpOutline() {
+  if (!outlinePaneContent) return;
+  outlinePaneContent.innerHTML = ''; // クリア
+
+  // 1. グループ（旧: background-shape -> 新: container-group）の収集
+  const groups = stage.find<Konva.Group>('.container-group').sort((a, b) => {
+    const textA = a.findOne<Konva.Text>('.group-title')?.text() || '';
+    const textB = b.findOne<Konva.Text>('.group-title')?.text() || '';
+    return textA.localeCompare(textB, 'ja');
+  });
+
+  // 2. ノードの収集
+  const nodes = stage.find<Konva.Group>('.node-group').sort((a, b) => {
+    const textA = a.findOne<Konva.Text>('.text')?.text() || '';
+    const textB = b.findOne<Konva.Text>('.text')?.text() || '';
+    return textA.localeCompare(textB, 'ja');
+  });
+
+  // 3. 親子関係の解決 (childNodeIds を使う方式に合わせる)
+  // ノードID -> グループID のマップを作成
+  const nodeParentMap = new Map<string, string>();
+  groups.forEach(g => {
+    const childIds = g.getAttr('childNodeIds') || [];
+    childIds.forEach((cid: string) => nodeParentMap.set(cid, g.id()));
+  });
+
+  const orphanNodes = nodes.filter(n => !nodeParentMap.has(n.id()));
+
+  // --- A. グループごとの描画 ---
+  groups.forEach(group => {
+    const groupId = group.id();
+    const isCollapsed = outlineCollapsedState.get(groupId) ?? false;
+
+    const groupWrapper = document.createElement('div');
+
+    // ヘッダー作成
+    const groupHeader = document.createElement('div');
+    groupHeader.className = 'outline-group-header';
+
+    const toggle = document.createElement('span');
+    toggle.className = 'outline-toggle';
+    if (isCollapsed) toggle.classList.add('collapsed');
+    toggle.textContent = '▼';
+    toggle.dataset.groupId = groupId;
+
+    const groupLabel = document.createElement('span');
+    groupLabel.className = 'outline-group-label';
+    groupLabel.textContent = group.findOne<Konva.Text>('.group-title')?.text() || 'Group';
+
+    groupHeader.appendChild(toggle);
+    groupHeader.appendChild(groupLabel);
+    groupWrapper.appendChild(groupHeader);
+
+    // 子ノードリスト作成
+    const nodeList = document.createElement('ul');
+    nodeList.className = 'outline-node-list';
+    if (isCollapsed) nodeList.style.display = 'none';
+
+    // 所属ノードをフィルタリングして追加
+    // childIdsの順序、または名前順で表示（ここでは名前順のnodes配列からフィルタ）
+    nodes.filter(n => nodeParentMap.get(n.id()) === groupId).forEach(node => {
+      renderNodeWithSubheadings(node, nodeList);
+    });
+
+    groupWrapper.appendChild(nodeList);
+    outlinePaneContent.appendChild(groupWrapper);
+  });
+
+  // --- B. 所属なし（Others） ---
+  if (orphanNodes.length > 0) {
+    const groupId = 'others-group';
+    const isCollapsed = outlineCollapsedState.get(groupId) ?? false;
+
+    const groupWrapper = document.createElement('div');
+    const groupHeader = document.createElement('div');
+    groupHeader.className = 'outline-group-header';
+
+    const toggle = document.createElement('span');
+    toggle.className = 'outline-toggle';
+    if (isCollapsed) toggle.classList.add('collapsed');
+    toggle.textContent = '▼';
+    toggle.dataset.groupId = groupId;
+
+    const groupLabel = document.createElement('span');
+    groupLabel.className = 'outline-group-label';
+    groupLabel.textContent = 'Others';
+
+    groupHeader.appendChild(toggle);
+    groupHeader.appendChild(groupLabel);
+    groupWrapper.appendChild(groupHeader);
+
+    const nodeList = document.createElement('ul');
+    nodeList.className = 'outline-node-list';
+    if (isCollapsed) nodeList.style.display = 'none';
+
+    orphanNodes.forEach(node => {
+      renderNodeWithSubheadings(node, nodeList);
+    });
+
+    groupWrapper.appendChild(nodeList);
+    outlinePaneContent.appendChild(groupWrapper);
+  }
+}
+
+// --- ノードとサブ見出しの描画 ---
+function renderNodeWithSubheadings(node: Konva.Group, containerElement: HTMLElement) {
+  const parentLi = document.createElement('li');
+
+  // ノード自体の要素
+  const title = node.findOne<Konva.Text>('.text')?.text() || '...';
+  const nodeEl = document.createElement('div');
+  nodeEl.className = 'outline-node';
+  nodeEl.textContent = title;
+  nodeEl.dataset.id = node.id();
+
+  parentLi.appendChild(nodeEl);
+  containerElement.appendChild(parentLi);
+
+  // サブ見出し（Markdown解析）
+  const content = node.getAttr('contentText') || '';
+  if (content) {
+    const subList = document.createElement('ul');
+    subList.className = 'outline-sub-node-list';
+
+    const lines = content.split('\n');
+    let hasSub = false;
+
+    lines.forEach((line: string) => {
+      let level = 0;
+      let text = '';
+
+      // 見出しレベル判定 (#の数)
+      // ※Electron版の実装に合わせて ### と #### のみを対象にするか、汎用的にするか
+      const match = line.match(/^(#{1,6})\s+(.*)/);
+      if (match) {
+        level = match[1].length;
+        text = match[2];
+      }
+
+      if (level >= 3) { // ### 以上を表示 (仕様に合わせて調整)
+        hasSub = true;
+        const subLi = document.createElement('li');
+        subLi.className = 'outline-sub-node';
+        subLi.textContent = text;
+        subLi.dataset.parentId = node.id();
+        subLi.dataset.headingText = line; // ジャンプ検索用
+
+        // インデント調整 (level 3 -> 0px, level 4 -> 15px ...)
+        const baseIndent = 15;
+        subLi.style.paddingLeft = `${(level - 3) * baseIndent}px`;
+
+        subList.appendChild(subLi);
+      }
+    });
+
+    if (hasSub) {
+      parentLi.appendChild(subList);
+    }
+  }
+}
+
+function jumpToNode(nodeId: string, targetHeading?: string) {
+  const node = layer.findOne('#' + nodeId) as Konva.Group;
+  if (!node) return;
+
+  // アクティブ表示の更新
+  document.querySelectorAll('.outline-node').forEach(el => el.parentElement?.classList.remove('is-active'));
+  const targetEl = document.querySelector(`.outline-node[data-id="${nodeId}"]`);
+  targetEl?.parentElement?.classList.add('is-active');
+
+  // --- ステージ移動 (アニメーション) ---
+  const container = document.getElementById('ip-container')!;
+  const containerRect = container.getBoundingClientRect();
+  const targetX = containerRect.width / 2;
+  const targetY = containerRect.height / 2;
+
+  const nodeRect = node.getClientRect();
+  // 現在のスケールを考慮して、ノード中心を計算
+  const nodeCenterX = nodeRect.x + nodeRect.width / 2;
+  const nodeCenterY = nodeRect.y + nodeRect.height / 2;
+
+  // ステージをどれだけ動かせばよいか（現在のステージ位置からの差分ではなく、絶対位置計算）
+  // stage.x() + (画面中心 - ノード中心) 
+  const newX = stage.x() + (targetX - nodeCenterX);
+  const newY = stage.y() + (targetY - nodeCenterY);
+
+  new Konva.Tween({
+    node: stage,
+    duration: 0.3,
+    x: newX,
+    y: newY,
+    easing: Konva.Easings.EaseInOut,
+  }).play();
+
+  // --- エディタ内ジャンプ ---
+  if (targetHeading) {
+    openContentEditor(node);
+
+    // エディタが表示され、値がセットされるのを待つ
+    setTimeout(() => {
+      if (contentEditor) {
+        const text = contentEditor.value;
+        const index = text.indexOf(targetHeading);
+        if (index !== -1) {
+          contentEditor.focus();
+          contentEditor.setSelectionRange(index, index + targetHeading.length);
+          // スクロール (簡易的)
+          const lineHeight = 20; // 概算
+          const lines = text.substring(0, index).split('\n').length;
+          contentEditor.scrollTop = lines * lineHeight - 50;
+        }
+      }
+    }, 100);
+  } else {
+    // ノード自体のジャンプ時は選択状態にする
+    selectShape(node);
+  }
+}
+
+function setAllIpOutlineCollapsed(isCollapsed: boolean) {
+  // すべてのグループIDを収集して状態セット
+  stage.find('.container-group').forEach(g => {
+    outlineCollapsedState.set(g.id(), isCollapsed);
+  });
+  outlineCollapsedState.set('others-group', isCollapsed);
+  renderIpOutline();
 }
 
 // =================================================================
@@ -2430,6 +2695,7 @@ async function setupWindowFeatures() {
 
   // 1. 各種ボタンのイベント登録
   setupUIButtons();
+  setupOutlineEvents();
 
   // 2. リスナーのセットアップ
   setupThemeListener();
@@ -2485,6 +2751,45 @@ function setupUIButtons() {
       }
     });
   }
+}
+
+function setupOutlineEvents() {
+  // 開閉ボタン
+  document.getElementById('ip-toggle-outline-btn')?.addEventListener('click', toggleOutlinePane);
+
+  // 全展開・全折りたたみ
+  document.getElementById('outline-expand-all')?.addEventListener('click', () => setAllIpOutlineCollapsed(false));
+  document.getElementById('outline-collapse-all')?.addEventListener('click', () => setAllIpOutlineCollapsed(true));
+
+  // アウトライン内クリックイベント (委譲)
+  outlinePaneContent?.addEventListener('click', (e) => {
+    const target = e.target as HTMLElement;
+
+    // a) トグル（開閉）
+    if (target.classList.contains('outline-toggle')) {
+      const groupId = target.dataset.groupId;
+      if (groupId) {
+        const currentState = outlineCollapsedState.get(groupId) ?? false;
+        outlineCollapsedState.set(groupId, !currentState);
+        renderIpOutline();
+      }
+    }
+    // b) ノードタイトル（ジャンプ）
+    else if (target.closest('.outline-node')) {
+      const nodeEl = target.closest('.outline-node') as HTMLElement;
+      const nodeId = nodeEl.dataset.id;
+      if (nodeId) jumpToNode(nodeId);
+    }
+    // c) サブ見出し（エディタ内ジャンプ）
+    else if (target.closest('.outline-sub-node')) {
+      const subNodeEl = target.closest('.outline-sub-node') as HTMLElement;
+      const parentId = subNodeEl.dataset.parentId;
+      const headingText = subNodeEl.dataset.headingText;
+      if (parentId && headingText) {
+        jumpToNode(parentId, headingText);
+      }
+    }
+  });
 }
 
 // ■ 初期設定の適用
@@ -2670,6 +2975,7 @@ async function createGroupNodeByButton() {
   createGroupNode(center.x, center.y);
   recordHistory('Group created');
   layer.batchDraw();
+  renderIpOutline();
 }
 
 // =================================================================
