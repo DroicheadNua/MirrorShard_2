@@ -163,6 +163,7 @@ class App {
   private showAiThinkingOverlay = true;
   private isAiProcessing = false; // AI動作中フラグ
   private aiAbortController: AbortController | null = null;// 通信中断用
+  private aiThinkingMode = "";
 
   private isCodeMode = false;
   private currentCodeLanguage = 'html';
@@ -273,6 +274,7 @@ class App {
         { key: 'Enter', run: insertNewline },
         { key: 'Mod-ArrowUp', run: (v) => { cursorDocStart(v); v.dispatch({ effects: EditorView.scrollIntoView(0, { y: "start" }) }); return true; } },
         { key: 'Mod-ArrowDown', run: (v) => { cursorDocEnd(v); v.dispatch({ effects: EditorView.scrollIntoView(v.state.selection.main.head, { y: "center" }) }); return true; } },
+        { key: 'Shift-Alt-Enter', run: () => { this.runAiMissingLink(); return true; } },
         { key: 'Alt-Enter', run: () => { this.runAiCompletion(); return true; } },
       ]),
       EditorView.lineWrapping,
@@ -473,6 +475,7 @@ class App {
         overlay.innerHTML = `
           <div class="spinner"></div>
           <div class="loading-text">AI is writing...</div>
+          <div class="loading-text">Mode: ${this.aiThinkingMode}</div>
         `;
       } else {
         overlay.innerHTML = ''; // 透明ガードのみ
@@ -599,6 +602,7 @@ class App {
 
     this.isAiProcessing = true;
     this.aiAbortController = new AbortController(); // 新しい中断用コントローラーを作成
+    this.aiThinkingMode = "Completion";
     this.setAiLoading(true);
 
     try {
@@ -649,6 +653,91 @@ class App {
     } catch (e: any) {
       this.handleAiError(e);
     } finally {
+      this.aiThinkingMode = "";
+      this.clearAiProcessingState();
+    }
+  }
+
+  // --- Missing Link Completion (Shift+Alt+Enter) ---
+  // カーソル位置の前後を読み取り、その間を繋ぐ文章を生成する
+  private async runAiMissingLink() {
+    if (this.isAiProcessing) return;
+    const view = this.editorView;
+    const state = view.state;
+    const cursor = state.selection.main.head;
+
+    // 1. コンテキストの取得 (前後2000文字程度)
+    const contextLimit = 2000;
+    const from = Math.max(0, cursor - contextLimit);
+    const to = Math.min(state.doc.length, cursor + contextLimit);
+
+    const prevContext = state.doc.sliceString(from, cursor);
+    const nextContext = state.doc.sliceString(cursor, to);
+
+    // 前後のどちらかが極端に短い場合は通常の続き書きとして扱うか、警告する
+    // ここではとりあえず実行するが、実用上はチェックしても良い
+    if (!prevContext.trim() && !nextContext.trim()) return;
+
+    console.log("AI Missing Link Completion requested...");
+
+    this.isAiProcessing = true;
+    this.aiAbortController = new AbortController();
+    this.aiThinkingMode = "Missing Link";
+    this.setAiLoading(true);
+
+    try {
+      let resultText = "";
+
+      // システムプロンプト: 繋ぎの文章を書くことに特化させる
+      const systemPrompt = `あなたは執筆アシスタントです。
+提示された「前半の文章」と「後半の文章」の間を自然に繋ぐ文章を執筆してください。
+文体やトーンは前後の文章に合わせてください。
+前半の末尾や後半の冒頭を繰り返さず、その間の出来事のみを出力してください。
+挨拶や説明は不要です。`;
+
+      // ユーザープロンプト: 前後を分かりやすく渡す
+      const userPrompt = `
+【前半の文章】
+${prevContext}
+
+【後半の文章】
+${nextContext}
+
+【指示】
+上記の間を埋める文章を執筆してください。
+`;
+
+      if (this.mainAiApi === 'gemini') {
+        const apiKey = await this.store.get<string>('geminiApiKey');
+        if (!apiKey) throw new Error("Gemini API Key is not set.");
+
+        const response = await this.requestGeminiDirect(apiKey!, userPrompt, systemPrompt, undefined, this.aiAbortController.signal);
+        resultText = response;
+      } else {
+        const url = await this.store.get<string>('localLlmUrl') || "http://127.0.0.1:1234/v1/chat/completions";
+        const response = await this.requestLocalAiDirect(url, userPrompt, systemPrompt, undefined, this.aiAbortController.signal);
+        resultText = response;
+      }
+
+      // 3. エディタに挿入
+      if (resultText) {
+        // 余計な空白や「繋ぎの文章は以下の通りです」みたいなAIの枕詞を削除する処理を入れるとより良い
+        // resultText = resultText.trim(); 
+
+        view.dispatch({
+          changes: { from: cursor, insert: resultText },
+          selection: { anchor: cursor + resultText.length } // 挿入後の末尾にカーソル
+        });
+
+        view.dispatch({
+          effects: EditorView.scrollIntoView(cursor + resultText.length, { y: "center" })
+        });
+      }
+
+    } catch (e: any) {
+      this.handleAiError(e);
+    } finally {
+      this.aiThinkingMode = "";
       this.clearAiProcessingState();
     }
   }
@@ -669,6 +758,7 @@ class App {
 
     this.isAiProcessing = true;
     this.aiAbortController = new AbortController();
+    this.aiThinkingMode = "Code Completion";
     this.setAiLoading(true);
 
     try {
@@ -693,6 +783,7 @@ class App {
     } catch (e: any) {
       this.handleAiError(e);
     } finally {
+      this.aiThinkingMode = "";
       this.clearAiProcessingState();
     }
   }
@@ -770,7 +861,7 @@ class App {
     switch (mode) {
       case 'translate':
         systemPrompt = "あなたはプロの翻訳家です。以下のテキストが日本語なら英語に、英語なら自然な日本語に翻訳してください。翻訳結果のみを出力し、解説は不要です。";
-        label = "■ 翻訳";
+        label = "[Translate]";
         break;
       case 'summary':
         // 動的にUIを生成して文字数を聞く
@@ -784,16 +875,17 @@ class App {
         await this.store.save();
 
         systemPrompt = `あなたは優秀な編集者です。以下のテキストを**日本語で、およそ${length}文字以内**で要約してください。重要なポイントを逃さず、かつ簡潔にまとめてください。要約結果のみを出力してください。`;
-        label = `■ 要約 (${length}文字以内)`;
+        label = `[Summarize] (${length} chars)`;
         break;
       case 'rewrite':
         systemPrompt = "あなたは文章のプロです。以下のテキストを、より分かりやすく、読みやすい文章にリライト（推敲）してください。元の意味を保ったまま、表現を洗練させてください。リライト結果のみを出力してください。";
-        label = "■ リライト";
+        label = "[Rewrite]";
         break;
     }
     this.isAiProcessing = true;
     this.aiAbortController = new AbortController();
     // ローディング表示
+    this.aiThinkingMode = label;
     this.setAiLoading(true);
 
     try {
@@ -830,6 +922,7 @@ class App {
     } catch (e: any) {
       this.handleAiError(e);
     } finally {
+      this.aiThinkingMode = "";
       this.clearAiProcessingState();
     }
   }
