@@ -47,6 +47,7 @@ const editorPane = document.getElementById('ip-editor-pane') as HTMLElement;
 const contentEditor = document.getElementById('ip-content-editor') as HTMLTextAreaElement;
 const outlinePaneContent = document.getElementById('ip-outline-content') as HTMLElement;
 const outlineCollapsedState = new Map<string, boolean>(); // key: groupId, value: isCollapsed
+const nodeCollapsedState = new Map<string, boolean>(); // key: nodeId, value: isCollapsed
 
 // テーマカラー定義
 const themes = {
@@ -2562,57 +2563,117 @@ function renderIpOutline() {
 function renderNodeWithSubheadings(node: Konva.Group, containerElement: HTMLElement) {
   const parentLi = document.createElement('li');
 
-  // ノード自体の要素
+  // --- Markdown解析 ---
+  const content = (node.getAttr('contentText') as string) || '';
+  const subHeadings: { level: number, text: string, original: string }[] = [];
+
+  if (content) {
+    const lines = content.split('\n');
+    lines.forEach((line: string) => {
+      const match = line.match(/^(#{3,6})\s+(.*)/);
+      if (match) {
+        subHeadings.push({
+          level: match[1].length,
+          text: match[2],
+          original: line
+        });
+      }
+    });
+  }
+
+  // 開閉状態（デフォルトは false = 開く）
+  const isCollapsed = nodeCollapsedState.get(node.id()) ?? false;
+
+  // --- ノード行（ヘッダー）の作成 ---
+  const nodeHeader = document.createElement('div');
+  nodeHeader.className = 'outline-node-header';
+  nodeHeader.style.display = 'flex';
+  nodeHeader.style.alignItems = 'center';
+  // 行全体の高さを少し確保してクリックしやすく
+  nodeHeader.style.lineHeight = '1.5';
+
+  // トグルボタンまたはスペーサー
+  const toggleWidth = '20px'; // グループのトグル幅に合わせる
+
+  if (subHeadings.length > 0) {
+    const toggle = document.createElement('span');
+    toggle.className = 'outline-toggle node-toggle';
+    if (isCollapsed) toggle.classList.add('collapsed');
+
+    toggle.textContent = '▼';
+    toggle.dataset.nodeId = node.id();
+
+    // ★スタイル調整
+    toggle.style.display = 'inline-block';
+    toggle.style.width = toggleWidth;
+    toggle.style.textAlign = 'center';
+    toggle.style.cursor = 'pointer';
+    toggle.style.fontSize = '12px'; // グループと同じくらいに
+    toggle.style.userSelect = 'none';
+    // 色を少し薄くしても良い
+    toggle.style.color = 'var(--ui-text-color, #666)';
+
+    nodeHeader.appendChild(toggle);
+  } else {
+    // インデント合わせ
+    const spacer = document.createElement('span');
+    spacer.style.display = 'inline-block';
+    spacer.style.width = toggleWidth;
+    nodeHeader.appendChild(spacer);
+  }
+
+  // ノードタイトル
   const title = node.findOne<Konva.Text>('.text')?.text() || '...';
   const nodeEl = document.createElement('div');
   nodeEl.className = 'outline-node';
   nodeEl.textContent = title;
   nodeEl.dataset.id = node.id();
+  nodeEl.style.cursor = 'pointer';
+  nodeEl.style.flex = '1'; // 残りの幅を使う
+  // 余計なマージンを消して詰める
+  nodeEl.style.padding = '2px 0';
 
-  parentLi.appendChild(nodeEl);
-  containerElement.appendChild(parentLi);
+  nodeHeader.appendChild(nodeEl);
+  parentLi.appendChild(nodeHeader);
 
-  // サブ見出し（Markdown解析）
-  const content = node.getAttr('contentText') || '';
-  if (content) {
+  // --- サブ見出しリスト ---
+  if (subHeadings.length > 0) {
     const subList = document.createElement('ul');
     subList.className = 'outline-sub-node-list';
+    // インデントの微調整 (トグルの幅分だけ下げるなど)
+    subList.style.paddingLeft = '20px';
+    subList.style.marginTop = '0';
+    subList.style.marginBottom = '0';
 
-    const lines = content.split('\n');
-    let hasSub = false;
+    if (isCollapsed) {
+      subList.style.display = 'none';
+    } else {
+      subList.style.display = 'block';
+    }
 
-    lines.forEach((line: string) => {
-      let level = 0;
-      let text = '';
+    subHeadings.forEach(h => {
+      const subLi = document.createElement('li');
+      subLi.className = 'outline-sub-node';
+      subLi.textContent = h.text;
+      subLi.dataset.parentId = node.id();
+      subLi.dataset.headingText = h.original;
 
-      // 見出しレベル判定 (#の数)
-      // ※Electron版の実装に合わせて ### と #### のみを対象にするか、汎用的にするか
-      const match = line.match(/^(#{1,6})\s+(.*)/);
-      if (match) {
-        level = match[1].length;
-        text = match[2];
-      }
+      // 階層インデント
+      const baseIndent = 5;
+      subLi.style.paddingLeft = `${(h.level - 3) * 10 + baseIndent}px`;
+      subLi.style.cursor = 'pointer';
+      subLi.style.color = 'var(--ui-text-color, #666)';
+      subLi.style.opacity = '0.9';
+      subLi.style.fontSize = '0.9em';
+      subLi.style.lineHeight = '1.4';
 
-      if (level >= 3) { // ### 以上を表示 (仕様に合わせて調整)
-        hasSub = true;
-        const subLi = document.createElement('li');
-        subLi.className = 'outline-sub-node';
-        subLi.textContent = text;
-        subLi.dataset.parentId = node.id();
-        subLi.dataset.headingText = line; // ジャンプ検索用
-
-        // インデント調整 (level 3 -> 0px, level 4 -> 15px ...)
-        const baseIndent = 15;
-        subLi.style.paddingLeft = `${(level - 3) * baseIndent}px`;
-
-        subList.appendChild(subLi);
-      }
+      subList.appendChild(subLi);
     });
 
-    if (hasSub) {
-      parentLi.appendChild(subList);
-    }
+    parentLi.appendChild(subList);
   }
+
+  containerElement.appendChild(parentLi);
 }
 
 function jumpToNode(nodeId: string, targetHeading?: string) {
@@ -2674,11 +2735,18 @@ function jumpToNode(nodeId: string, targetHeading?: string) {
 }
 
 function setAllIpOutlineCollapsed(isCollapsed: boolean) {
-  // すべてのグループIDを収集して状態セット
-  stage.find('.container-group').forEach(g => {
-    outlineCollapsedState.set(g.id(), isCollapsed);
+  // 1. グループの状態設定
+  stage.find<Konva.Group>('.container-group').forEach(group => {
+    outlineCollapsedState.set(group.id(), isCollapsed);
   });
   outlineCollapsedState.set('others-group', isCollapsed);
+
+  // 2. ノードの状態設定
+  stage.find<Konva.Group>('.node-group').forEach(node => {
+    // サブ見出しがあるかチェックして、あれば状態セット（全ノードセットしても実害はない）
+    nodeCollapsedState.set(node.id(), isCollapsed);
+  });
+
   renderIpOutline();
 }
 
@@ -2765,8 +2833,8 @@ function setupOutlineEvents() {
   outlinePaneContent?.addEventListener('click', (e) => {
     const target = e.target as HTMLElement;
 
-    // a) トグル（開閉）
-    if (target.classList.contains('outline-toggle')) {
+    // a) グループのトグル（開閉）
+    if (target.classList.contains('outline-toggle') && target.dataset.groupId) {
       const groupId = target.dataset.groupId;
       if (groupId) {
         const currentState = outlineCollapsedState.get(groupId) ?? false;
@@ -2774,13 +2842,20 @@ function setupOutlineEvents() {
         renderIpOutline();
       }
     }
-    // b) ノードタイトル（ジャンプ）
+    // b) ノードのトグル
+    else if (target.classList.contains('node-toggle') && target.dataset.nodeId) {
+      const nodeId = target.dataset.nodeId;
+      const currentState = nodeCollapsedState.get(nodeId) ?? false;
+      nodeCollapsedState.set(nodeId, !currentState);
+      renderIpOutline();
+    }
+    // c) ノードタイトル（ジャンプ）
     else if (target.closest('.outline-node')) {
       const nodeEl = target.closest('.outline-node') as HTMLElement;
       const nodeId = nodeEl.dataset.id;
       if (nodeId) jumpToNode(nodeId);
     }
-    // c) サブ見出し（エディタ内ジャンプ）
+    // d) サブ見出し（エディタ内ジャンプ）
     else if (target.closest('.outline-sub-node')) {
       const subNodeEl = target.closest('.outline-sub-node') as HTMLElement;
       const parentId = subNodeEl.dataset.parentId;

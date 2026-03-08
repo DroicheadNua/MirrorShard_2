@@ -523,6 +523,30 @@
    opacity: 1;
  }
 
+ /* ノードヘッダー（トグルとタイトルを横並びにするコンテナ） */
+ .outline-node-header {
+   padding: 2px 0;
+ }
+
+ /* ノード用トグルボタン */
+ .node-toggle {
+   display: inline-block;
+   width: 1em;
+   text-align: center;
+   transition: transform 0.2s;
+   user-select: none;
+ }
+
+ .node-toggle.collapsed {
+   transform: rotate(-90deg);
+ }
+
+ /* サブ見出し（ホバー時の演出） */
+ .outline-sub-node:hover {
+   text-decoration: underline;
+   color: var(--selection-color, #d31010);
+ }
+
  #ip-close-btn {
    -webkit-mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cline x1='18' y1='6' x2='6' y2='18'%3E%3C/line%3E%3Cline x1='6' y1='6' x2='18' y2='18'%3E%3C/line%3E%3C/svg%3E");
    mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cline x1='18' y1='6' x2='6' y2='18'%3E%3C/line%3E%3Cline x1='6' y1='6' x2='18' y2='18'%3E%3C/line%3E%3C/svg%3E");
