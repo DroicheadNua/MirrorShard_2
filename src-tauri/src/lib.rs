@@ -269,7 +269,7 @@ async fn open_idea_processor(app: AppHandle) {
     let builder = tauri::WebviewWindowBuilder::new(
         &app,
         "idea_processor",
-        tauri::WebviewUrl::App("idea-processor.html".into()),
+        tauri::WebviewUrl::App("idea_processor.html".into()),
     )
     .title("Idea Processor")
     .inner_size(640.0, 640.0)

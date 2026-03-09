@@ -3,11 +3,11 @@ import { getCurrentWindow } from '@tauri-apps/api/window';
 import { invoke } from '@tauri-apps/api/core';
 import { type } from '@tauri-apps/plugin-os';
 // import { resolveResource } from '@tauri-apps/api/path';
-// import { convertFileSrc } from '@tauri-apps/api/core';
+import { convertFileSrc } from '@tauri-apps/api/core';
 import { Store } from '@tauri-apps/plugin-store';
 import Konva from 'konva';
 import JSZip from 'jszip';
-import { writeFile, readFile } from '@tauri-apps/plugin-fs';
+import { writeFile } from '@tauri-apps/plugin-fs';
 import { save, open, ask } from '@tauri-apps/plugin-dialog';
 
 // =================================================================
@@ -1658,43 +1658,44 @@ function generateUUID() {
 function setupKeyboardEvents() {
   document.addEventListener('keydown', (e) => {
     const isCtrl = e.ctrlKey || e.metaKey;
+    const isShift = e.shiftKey;
     const key = e.key.toLowerCase();
     const isControl = e.ctrlKey;
     const isCmd = e.metaKey;
 
     if (isTextEditing) return;
 
-    if (isCtrl && key === 'z' && !e.shiftKey) {
+    if (isCtrl && key === 'z' && !isShift) {
       e.preventDefault();
       undo();
     }
-    if ((isCtrl && key === 'y') || (isCtrl && e.shiftKey && key === 'z')) {
+    if ((isCtrl && key === 'y') || (isCtrl && isShift && key === 'z')) {
       e.preventDefault();
       redo();
     }
     // 閉じる (Ctrl + I)
-    if (isCtrl && key === 'i' && !e.shiftKey) {
+    if (isCtrl && key === 'i' && !isShift) {
       e.preventDefault();
       IPClose();
     }
     // テーマ切り替え (Ctrl + T)
-    if (isCtrl && key === 't' && !e.shiftKey) {
+    if (isCtrl && key === 't' && !isShift) {
       e.preventDefault();
       IPThemeToggle();
     }
-    if (isCtrl && key === 'o' && !e.shiftKey) {
+    if (isCtrl && key === 'o' && !isShift) {
       e.preventDefault();
       loadFromMrsd();
     }
-    if (isCtrl && key === 'n' && !e.shiftKey) {
+    if (isCtrl && key === 'n' && !isShift) {
       e.preventDefault();
       newFile();
     }
-    if (isCtrl && key === 'r' && !e.shiftKey) {
+    if (isCtrl && key === 'r' && !isShift) {
       e.preventDefault();
       InitializeStage();
     }
-    if (isCtrl && e.shiftKey && key === 'o') {
+    if (isCtrl && isShift && key === 'o') {
       e.preventDefault();
       toggleOutlinePane();
     }
@@ -1713,6 +1714,67 @@ function setupKeyboardEvents() {
         IPToggleFullscreen();
       }
     }
+
+    // ★ Shift + Enter : 画面中央にノード作成
+    if (isShift && e.key === 'Enter') {
+      e.preventDefault();
+
+      const scale = stage.scaleX();
+      const stagePos = stage.position();
+
+      // 画面中央の論理座標（ズーム・パン考慮）
+      // width/height はステージサイズ（ウィンドウサイズ）
+      let targetX = (-stagePos.x + stage.width() / 2) / scale;
+      let targetY = (-stagePos.y + stage.height() / 2) / scale;
+
+      // 重なりチェック
+      // 中心から少しずつ下にずらして空いている場所を探す
+      const nodeHeight = 70; // ずらす幅
+      let existingNode: Konva.Node | null = null;
+
+      // ループ上限を設けて無限ループ防止
+      let attempts = 0;
+      const maxAttempts = 20;
+
+      do {
+        // getIntersection はスクリーン上の絶対座標(クライアント座標に近い)で判定するが、
+        // Konvaの場合は stage.getIntersection({x, y}) でステージ上の絶対座標を指定する
+        const absoluteCheckPos = {
+          x: targetX * scale + stagePos.x,
+          y: targetY * scale + stagePos.y
+        };
+
+        // その地点に何かあるか？
+        existingNode = stage.getIntersection(absoluteCheckPos);
+
+        // ノードグループの一部であれば「重なっている」と判定
+        let isOverlapping = false;
+        if (existingNode) {
+          // 親を辿って node-group か確認
+          let parent = existingNode.getParent();
+          while (parent && parent !== stage) {
+            if (parent.name() === 'node-group') {
+              isOverlapping = true;
+              break;
+            }
+            parent = parent.getParent();
+          }
+        }
+
+        if (isOverlapping) {
+          targetY += nodeHeight; // 下にずらす
+        } else {
+          break; // 空いている
+        }
+        attempts++;
+      } while (attempts < maxAttempts);
+
+      // ノード作成 (中心座標になるようにオフセット調整)
+      // createNewNode は左上座標を指定するので、幅の半分(60)と高さの半分(30)を引く
+      createNewNode(targetX - 60, targetY - 30);
+      recordHistory('Node created (Shift+Enter)');
+    }
+
     // --- 削除機能 ---
     if ((key === 'delete' || key === 'backspace') && !isTextEditing) {
       if (selectedShape) {
@@ -2228,6 +2290,14 @@ async function saveToMrsd(forceSaveAs = false) {
     isDirty = false;
     projectMetadata = canvasData.metadata;
 
+    _updateTitle(); // ファイル名表示更新
+
+    // 次回起動時のためにパスをストアに保存
+    if (store) {
+      await store.set('lastIdeaFilePath', savePath);
+      await store.save();
+    }
+
     console.log('Saved successfully to:', savePath);
 
   } catch (e) {
@@ -2239,21 +2309,39 @@ async function saveToMrsd(forceSaveAs = false) {
 async function saveByBtn() { await saveToMrsd(true) }
 
 // --- ロード処理 (loadFromMrsd) ---
-async function loadFromMrsd() {
-  if (isDirty) {
+async function loadFromMrsd(targetPath?: string) {
+  // 手動ロードで、未保存の変更がある場合のみ確認
+  if (!targetPath && isDirty) {
     const yes = await ask('変更が保存されていません。破棄して開きますか？', { title: '確認', kind: 'warning' });
     if (!yes) return;
   }
 
-  const selected = await open({
-    multiple: false,
-    filters: [{ name: 'MirrorShard Data', extensions: ['mrsd'] }]
-  });
-  if (!selected) return;
-  const path = selected as string;
+  let path = targetPath;
+
+  // パスが指定されていない（ボタンから呼ばれた）場合はダイアログを開く
+  if (!path) {
+    const selected = await open({
+      multiple: false,
+      filters: [{ name: 'MirrorShard Data', extensions: ['mrsd'] }]
+    });
+    if (!selected) return;
+    path = selected as string;
+  }
 
   try {
-    const binaryData = await readFile(path);
+    // Macの forbidden path エラー回避のため、assetプロトコル経由で取得
+    const assetUrl = convertFileSrc(path);
+    const response = await fetch(assetUrl);
+
+    if (!response.ok) {
+      throw new Error(`Failed to fetch file: ${response.statusText}`);
+    }
+
+    // バイナリデータとしてArrayBufferを取得し、JSZip用にUint8Arrayに変換
+    const arrayBuffer = await response.arrayBuffer();
+    const binaryData = new Uint8Array(arrayBuffer);
+
+    // JSZipで展開
     const zip = await JSZip.loadAsync(binaryData);
 
     const canvasFile = zip.file("canvas.json");
@@ -2385,7 +2473,11 @@ async function loadFromMrsd() {
     isDirty = false;
     history = [];
     recordHistory('Loaded .mrsd');
-
+    _updateTitle();
+    if (store) {
+      await store.set('lastIdeaFilePath', path);
+      await store.save();
+    }
     console.log(`Loaded from: ${path}`);
 
   } catch (e) {
@@ -2416,6 +2508,13 @@ async function newFile() {
   isDirty = false;
   history = [];
   recordHistory('Initial Empty State');
+  _updateTitle(); // Untitledに戻す
+
+  // ストアのパスもクリアしておく
+  if (store) {
+    await store.set('lastIdeaFilePath', null);
+    await store.save();
+  }
   console.log('New file created');
 }
 
@@ -2441,12 +2540,45 @@ function toggleOutlinePane() {
   }
 }
 
-// --- 変更通知関数 ---
+// --- オートセーブ (2秒後に実行) ---
+const autoSaveChanges = debounce(async () => {
+  // ファイルパスがあり、かつ変更がある場合のみ保存
+  if (currentFilePath && isDirty) {
+    console.log('[AutoSave] Saving changes...');
+
+    // 上書き保存 (false = ダイアログを出さない)
+    await saveToMrsd(false);
+  }
+}, 2000);
+
+// --- 変更通知とオートセーブトリガー ---
 function markAsDirty() {
   if (!isDirty) {
     isDirty = true;
-    // 必要ならタイトルバーに「*」をつけるなどの処理をここに追加
-    // updateTitle(); 
+    // タイトルに * をつけるなどの処理が必要ならここ
+  }
+  // 変更があるたびにタイマーをリセットして予約
+  autoSaveChanges();
+}
+
+// --- デバウンス関数 (連打防止) ---
+function debounce(func: Function, wait: number) {
+  let timeout: any;
+  return function (...args: any[]) {
+    // @ts-ignore
+    const context = this;
+    clearTimeout(timeout);
+    timeout = setTimeout(() => func.apply(context, args), wait);
+  };
+}
+
+// --- タイトル（ファイル名）更新 ---
+function _updateTitle() {
+  const el = document.getElementById('ip-filename-display');
+  if (el) {
+    // パス区切り文字 (Win: \, Mac/Linux: /) で分割してファイル名を取得
+    const fileName = currentFilePath ? currentFilePath.split(/[\\/]/).pop() : 'Untitled';
+    el.textContent = fileName || 'Untitled';
   }
 }
 
@@ -2781,7 +2913,7 @@ function setupUIButtons() {
   document.getElementById('ip-theme-toggle-btn')?.addEventListener('click', IPThemeToggle);
   document.getElementById('ip-create-group-button')?.addEventListener('click', createGroupNodeByButton);
   document.getElementById('ip-save-as-button')?.addEventListener('click', saveByBtn);
-  document.getElementById('ip-load-button')?.addEventListener('click', loadFromMrsd);
+  document.getElementById('ip-load-button')?.addEventListener('click', () => loadFromMrsd());
   document.getElementById('ip-new-file-button')?.addEventListener('click', newFile);
   document.getElementById('ip-zoom-reset-btn')?.addEventListener('click', zoomReset);
   document.getElementById('ip-reset-window-btn')?.addEventListener('click', InitializeStage);
@@ -2893,6 +3025,17 @@ async function applyInitialSettings() {
   // 3. グロー（CSS）と Konva の外観更新
   await applyGlowEffect();
   await updateAllNodesAppearance(); // ここでKonvaの初期色を決定
+
+  // 前回開いていたファイルをロード
+  const lastFile = await store.get<string>('lastIdeaFilePath');
+  if (lastFile) {
+    console.log('Loading last opened file:', lastFile);
+    // 引数付きで呼び出す（ダイアログを出さずに開く）
+    await loadFromMrsd(lastFile);
+  } else {
+    // ファイルがない場合は Untitled 更新だけしておく
+    _updateTitle();
+  }
 }
 
 // ■ テーマ同期リスナー (app:theme-changed)
@@ -3008,10 +3151,69 @@ async function applyGlowEffect() {
 // ■ 閉じる処理
 async function IPClose() {
   const window = getCurrentWindow();
-  if (await window.isFullscreen()) {
-    await window.setFullscreen(false);
+
+  // ズーム状態の保存などが必要ならここで（今回は省略、次回起動時に自動復元されるため）
+
+  // 状態判定
+  const isUntitled = !currentFilePath;
+  // 空かどうか判定（ノードもグループもリンクもない）
+  const isEmpty = stage.find('.node-group').length === 0
+    && stage.find('.container-group').length === 0
+    && stage.find('.link-group').length === 0;
+
+  // --- ケース1: Untitledで、中身が空ではない -> ユーザーに確認 ---
+  if (isUntitled && !isEmpty) {
+    // Tauriのダイアログは「はい/いいえ」。
+    // Yes -> 保存して閉じる / No -> 破棄して閉じる / (ダイアログ外クリック等 -> キャンセル扱いしたいがTauriでは難しい)
+    // ここでは「保存しますか？」と聞き、Yesなら保存フロー、Noなら破棄フローとする
+    const doSave = await ask('無題のファイルに変更があります。保存して閉じますか？\n（「いいえ」を選ぶと変更は破棄されます）', {
+      title: '保存確認',
+      kind: 'warning',
+      okLabel: '保存する',
+      cancelLabel: '保存しない（破棄）'
+    });
+
+    if (doSave) {
+      // 保存する
+      await saveToMrsd(true); // 名前をつけて保存
+      // キャンセルされた場合(currentFilePathがnullのまま)は閉じない
+      if (currentFilePath) {
+        if (await window.isFullscreen()) {
+          await window.setFullscreen(false);
+        }
+        window.close();
+      }
+    } else {
+      // 保存しない（破棄） -> そのまま閉じる
+      if (await window.isFullscreen()) {
+        await window.setFullscreen(false);
+      }
+      window.close();
+    }
   }
-  window.close();
+  // --- ケース2: Untitledで、中身も空 -> 何も聞かずに閉じる ---
+  else if (isUntitled && isEmpty) {
+    if (await window.isFullscreen()) {
+      await window.setFullscreen(false);
+    }
+    window.close();
+  }
+  // --- ケース3: 通常ファイルで、変更がある -> 強制保存して閉じる ---
+  else if (isDirty) {
+    // オートセーブが間に合っていない分をここで確実に保存
+    await saveToMrsd(false);
+    if (await window.isFullscreen()) {
+      await window.setFullscreen(false);
+    }
+    window.close();
+  }
+  // --- ケース4: それ以外 (変更がない) -> そのまま閉じる
+  else {
+    if (await window.isFullscreen()) {
+      await window.setFullscreen(false);
+    }
+    window.close();
+  }
 }
 
 // ■ 最大化切り替え
@@ -3071,6 +3273,6 @@ document.addEventListener('DOMContentLoaded', async () => {
   }, 100);
 
   // 4. リスナー準備完了後に、メインへ合図を送る
-  console.log('[Tauri] Sending idea-processor-ready...');
-  await emit('idea-processor-ready');
+  console.log('[Tauri] Sending idea_processor-ready...');
+  await emit('idea_processor-ready');
 });
