@@ -38,10 +38,12 @@ let contentEditorJustClosed = false;
 let currentlyEditingNodeId: string | null = null;
 let isContentEditing = false;
 let lastPointerPosition: { x: number; y: number } = { x: 0, y: 0 };
-// let selectionStartPos: { x: number; y: number } | null = null;
-// let isDraggingSelection = false;
+let selectionStartPos: { x: number; y: number } | null = null;
+let isDraggingSelection = false;
+let lastRectPos: { x: number; y: number } = { x: 0, y: 0 };
 let selectedShape: Konva.Group | null = null;
 let selectedNodes: Konva.Group[] = [];
+let selectionJustFinished = false;
 
 const editorPane = document.getElementById('ip-editor-pane') as HTMLElement;
 const contentEditor = document.getElementById('ip-content-editor') as HTMLTextAreaElement;
@@ -177,12 +179,20 @@ async function redo() {
 
 function finalizeHistoryAction() {
   isHistoryEnabled = true;
-  transformer.nodes([]);
-  selectionRect.visible(false);
+
+  if (transformer) {
+    transformer.nodes([]);
+    transformer.listening(false);
+  }
+  if (selectionRect) {
+    selectionRect.visible(false);
+    selectionRect.setAttrs({ strokeEnabled: false });
+  }
+
+  selectedNodes = [];
   selectedShape = null;
   layer.draw();
 }
-
 // =================================================================
 // 3. データ抽出とステージ再構築
 // =================================================================
@@ -247,8 +257,9 @@ function _getCurrentStageData() {
 function recreateStage(data: any) {
   // 1. レイヤーをクリア（ステージ自体は破棄しない）
   layer.destroyChildren();
-  transformer.nodes([]);
-  selectionRect.visible(false);
+  setupSelectionTools();
+  selectedNodes = [];
+  selectedShape = null;
 
   // 2. ノードの復元
   if (data.nodes) {
@@ -397,21 +408,7 @@ export function initializeIdeaProcessor() {
   stage.add(layer);
 
   // ツール初期化
-  transformer = new Konva.Transformer({
-    visible: false,
-    resizeEnabled: false,
-    rotateEnabled: false,
-    borderEnabled: false,
-  });
-  layer.add(transformer);
-
-  selectionRect = new Konva.Rect({
-    fill: 'rgba(0, 123, 255, 0.3)',
-    visible: false,
-    stroke: 'blue',
-    strokeWidth: 1,
-  });
-  layer.add(selectionRect);
+  setupSelectionTools();
 
   // イベント登録
   setupWindowFeatures();
@@ -444,6 +441,13 @@ function setupEventListeners() {
   }
   // ステージ上のクリック（ノード作成・選択解除）
   stage.on('click tap', (e) => {
+    if (isTextEditing) return;
+    // 範囲選択ドラッグが終わった直後の「クリック残響」なら無視する
+    if (selectionJustFinished) {
+      console.log('[Debug] Ignoring click event after range selection');
+      selectionJustFinished = false;
+      return;
+    }
     if (e.target === stage) {
       deselectAll();
       return;
@@ -557,13 +561,27 @@ function setupEventListeners() {
       const pos = stage.getPointerPosition();
       if (pos) {
         createNewNode(pos.x, pos.y);
-        recordHistory('Node created');
+        // recordHistory('Node created');
       }
+    }
+  });
+
+  // 編集中はすべてのドラッグ操作を強制停止
+  stage.on('dragstart', (e) => {
+    if (isTextEditing || isContentEditing) {
+      e.target.stopDrag();
+      e.cancelBubble = true;
     }
   });
 
   // ノードのドラッグ終了時（履歴記録）
   stage.on('dragend', (e) => {
+    // 複数選択中、かつドラッグされたのがその一部なら、
+    // selectionRect 側の dragend に任せるのでここでは何もしない
+    if (selectedNodes.length > 1 && selectedNodes.includes(e.target as Konva.Group)) {
+      return;
+    }
+
     if (e.target.name() === 'node-group') {
       recordHistory('Node moved');
       updateConnectedLinks(e.target as Konva.Group);
@@ -572,8 +590,35 @@ function setupEventListeners() {
 
   // ノードのドラッグ中（リンク追従）
   stage.on('dragmove', (e) => {
+    // コンテンツ編集中などのガード
+    if (isTextEditing || isContentEditing) return;
+    if (e.target.name() === 'resize-handle') return; // グループハンドルのガード
+
+    // ドラッグされているのがノードの場合
     if (e.target.name() === 'node-group') {
-      updateConnectedLinks(e.target as Konva.Group);
+      const draggedNode = e.target as Konva.Group;
+
+      // リンクの更新処理
+      // 複数選択中かどうかに関わらず、動いたノードのリンクを更新
+      // (selectedNodes に含まれていれば、他のノードも一緒に動いているはず)
+      const nodesToUpdate = selectedNodes.includes(draggedNode) ? selectedNodes : [draggedNode];
+
+      const linksToUpdate = new Set<Konva.Group>();
+      nodesToUpdate.forEach(node => {
+        const links = node.getAttr('links') as Konva.Group[]; // もし旧仕様のリンク保持が残っていれば
+        if (links) {
+          links.forEach(l => linksToUpdate.add(l));
+        }
+        // 現行仕様のグローバル検索
+        stage.find<Konva.Group>('.link-group').forEach(linkGroup => {
+          const linkNodes = linkGroup.getAttr('nodes');
+          if (linkNodes && (linkNodes[0] === node || linkNodes[1] === node)) {
+            linksToUpdate.add(linkGroup);
+          }
+        });
+      });
+
+      linksToUpdate.forEach(link => updateLinkPoints(link));
     }
   });
 
@@ -589,7 +634,6 @@ function setupEventListeners() {
     // --- 右クリック (Pan開始) ---
     if (e.evt.button === 2) {
       e.evt.preventDefault();
-      e.evt.stopPropagation();
       // エディタが開いていたら閉じて終了 (ESCと同じ挙動)
       if (isContentEditing) {
         closeContentEditor();
@@ -601,27 +645,36 @@ function setupEventListeners() {
       if (pos) lastPointerPosition = pos;
       return;
     }
+    if (isTextEditing || isContentEditing) return;
     if (e.evt.button === 0 && isAlt) {
       const group = e.target.getParent();
       if (group && group.name() === 'node-group') {
         // リンク作成開始
         startConnection(group as Konva.Group);
       }
+    } else if (e.evt.button === 0 && !isAlt) {
+      if (e.target === selectionRect || e.target.name() === 'selection-rect') {
+        return;
+      }
+      if (e.target === stage) {
+        deselectAll();
+        selectionStartPos = stage.getRelativePointerPosition();
+        isDraggingSelection = false;
+      }
     }
   });
 
   stage.on('mousemove', (e) => {
-    // --- パン処理 ---
+    if (isTextEditing || isContentEditing) return;
+
+    // --- パン処理 (右ドラッグ) ---
     if (isPanning) {
       e.evt.preventDefault();
       const pos = stage.getPointerPosition();
       if (!pos) return;
-
       const dx = pos.x - lastPointerPosition.x;
       const dy = pos.y - lastPointerPosition.y;
-
-      // 少しでも動いたら「パンした」とみなす
-      if (Math.abs(dx) > 2 || Math.abs(dy) > 2) { // 遊び(2px)を設ける
+      if (Math.abs(dx) > 2 || Math.abs(dy) > 2) {
         didPan = true;
         stage.x(stage.x() + dx);
         stage.y(stage.y() + dy);
@@ -631,6 +684,8 @@ function setupEventListeners() {
       }
       return;
     }
+
+    // --- リンク作成中 (Alt+左ドラッグ) ---
     if (connectionLine) {
       const pos = stage.getRelativePointerPosition();
       if (pos) {
@@ -640,20 +695,49 @@ function setupEventListeners() {
         connectionLine.points(points);
         layer.batchDraw();
       }
+      return;
+    }
+
+    // --- 範囲選択 (左ドラッグ) ---
+    if (selectionStartPos && e.evt.buttons === 1) {
+      e.evt.preventDefault();
+
+      // 初回の移動で可視化と初期化を行う
+      if (!isDraggingSelection) {
+        isDraggingSelection = true;
+        selectionRect.visible(true);
+        selectionRect.setAttrs({
+          strokeEnabled: false,
+          fill: 'rgba(0, 123, 255, 0.3)', // 描画中の色
+        });
+      }
+
+      const pos = stage.getRelativePointerPosition();
+      if (!pos) return;
+
+      const x1 = selectionStartPos.x;
+      const y1 = selectionStartPos.y;
+      const x2 = pos.x;
+      const y2 = pos.y;
+
+      selectionRect.setAttrs({
+        x: Math.min(x1, x2),
+        y: Math.min(y1, y2),
+        width: Math.abs(x2 - x1),
+        height: Math.abs(y2 - y1),
+      });
+      layer.batchDraw();
     }
   });
 
   stage.on('mouseup mouseleave', (e) => {
-    // 右クリック離上
+    // --- 右クリック離上 ---
     if (e.evt.button === 2) {
       if (isPanning) {
         isPanning = false;
-        if (!didPan) {
-          // ノードの上で右クリックしたか判定
-          // Konvaのイベントターゲットから親のノードグループを探す
+        if (!didPan && e.type === 'mouseup') { // mouseleave時はエディタを開かない
           let current: Konva.Node | null = e.target;
           let clickedNode: Konva.Group | null = null;
-
           while (current && !(current instanceof Konva.Stage)) {
             if (current.name() === 'node-group') {
               clickedNode = current as Konva.Group;
@@ -661,28 +745,74 @@ function setupEventListeners() {
             }
             current = current.getParent();
           }
-
-          if (clickedNode) {
-            openContentEditor(clickedNode);
-          }
+          if (clickedNode) openContentEditor(clickedNode);
         }
       }
       stage.container().style.cursor = 'default';
+      return;
     }
-    if (connectionLine) {
-      const group = e.target.getParent();
-      if (group && group.name() === 'node-group' && connectionStartNode && group !== connectionStartNode) {
-        // リンク確定
-        createSingleLink(connectionStartNode, group as Konva.Group);
-        recordHistory('Link created');
+
+    // --- 左クリック離上 ---
+    if (e.evt.button === 0) {
+      // リンク作成の確定
+      if (connectionLine) {
+        const group = e.target.getParent();
+        if (group && group.name() === 'node-group' && connectionStartNode && group !== connectionStartNode) {
+          createSingleLink(connectionStartNode, group as Konva.Group, LinkType.ARROW);
+          recordHistory('Link created');
+        }
+        connectionLine.destroy();
+        connectionLine = null;
+        connectionStartNode = null;
+        layer.draw();
+        return; // ここで終了
       }
-      // 掃除
-      connectionLine.destroy();
-      connectionLine = null;
-      connectionStartNode = null;
-      layer.draw();
+
+      // --- 範囲選択の完了処理 ---
+      if (selectionStartPos) {
+        if (isDraggingSelection) {
+          // 判定ロジックの安定化（レイヤー基準の絶対座標で比較）
+          // selectionRect と nodes は同じ Layer にいるので、この比較が一番正確です
+          const selBox = selectionRect.getClientRect();
+
+          selectedNodes = stage.find<Konva.Group>('.node-group').filter(node => {
+            // ノードがグループ内でも、getClientRect() は画面上の最終的な位置を返します
+            const nodeBox = node.getClientRect();
+            return Konva.Util.haveIntersection(selBox, nodeBox);
+          });
+
+          if (selectedNodes.length > 0) {
+            transformer.nodes(selectedNodes);
+            transformer.visible(true);
+
+            // ★ Transformerがイベントを奪わないように設定（重要！）
+            transformer.listening(false);
+
+            // 視覚効果
+            selectedNodes.forEach(node => highlightShape(node));
+
+            // selectionRect（青枠）を最前面にして、確実にドラッグを受け取る
+            selectionRect.moveToTop();
+            selectionRect.visible(true);
+            selectionRect.listening(true); // 確実にイベントを受け取る
+
+            selectionJustFinished = true;
+            console.log(`[Selection] ${selectedNodes.length} nodes paired.`);
+          } else {
+            selectionRect.visible(false);
+            transformer.nodes([]);
+            selectedNodes = [];
+          }
+        } else {
+          selectionRect.visible(false);
+        }
+        selectionStartPos = null;
+        isDraggingSelection = false;
+        layer.batchDraw();
+      }
     }
   });
+
 
   // --- マウスホイールによるズーム ---
   const scaleBy = 1.1; // 1回のホイールでの拡大率
@@ -1960,6 +2090,7 @@ function getCurrentThemeColors() {
 
 // --- 選択状態のリセット ---
 function deselectAll() {
+  console.log('[Debug] deselectAll called');
   const colors = getCurrentThemeColors();
 
   // ハイライト解除
@@ -2352,10 +2483,7 @@ async function loadFromMrsd(targetPath?: string) {
     // 1. ステージ初期化
     if (transformer) transformer.destroy();
     layer.destroyChildren();
-    transformer = new Konva.Transformer({
-      visible: false, resizeEnabled: false, rotateEnabled: false, borderEnabled: false,
-    });
-    layer.add(transformer);
+    setupSelectionTools();
     selectedNodes = [];
     selectedShape = null;
 
@@ -2494,9 +2622,9 @@ async function newFile() {
 
   // 全クリア
   layer.destroyChildren();
-  if (transformer) transformer.destroy();
-  transformer = new Konva.Transformer({ visible: false, resizeEnabled: false, rotateEnabled: false, borderEnabled: false });
-  layer.add(transformer);
+  setupSelectionTools();
+  selectedNodes = [];
+  selectedShape = null;
 
   // ステージ位置とズームをリセット
   stage.position({ x: 0, y: 0 });
@@ -2508,6 +2636,7 @@ async function newFile() {
   isDirty = false;
   history = [];
   recordHistory('Initial Empty State');
+  isDirty = false;
   _updateTitle(); // Untitledに戻す
 
   // ストアのパスもクリアしておく
@@ -2580,6 +2709,80 @@ function _updateTitle() {
     const fileName = currentFilePath ? currentFilePath.split(/[\\/]/).pop() : 'Untitled';
     el.textContent = fileName || 'Untitled';
   }
+}
+
+// --- 範囲選択ツールの初期化とイベント登録 ---
+function setupSelectionTools() {
+  if (transformer) transformer.destroy();
+  if (selectionRect) selectionRect.destroy();
+
+  transformer = new Konva.Transformer({
+    visible: false,
+    resizeEnabled: false,
+    rotateEnabled: false,
+    borderEnabled: false, // 枠線は selectionRect に任せるので隠す
+    anchorSize: 0,
+  });
+  layer.add(transformer);
+
+  selectionRect = new Konva.Rect({
+    name: 'selection-rect',
+    fill: 'rgba(0, 123, 255, 0.1)',
+    stroke: '#007bff',
+    strokeWidth: 1,
+    visible: false,
+    draggable: true,
+  });
+  layer.add(selectionRect);
+
+  selectionRect.on('dragstart', (_e) => {
+    if (!transformer.visible() || isTextEditing) {
+      selectionRect.stopDrag();
+      return;
+    }
+    lastRectPos = selectionRect.position();
+    // 複数移動開始時に履歴記録を一時停止
+    isHistoryEnabled = false;
+  });
+
+  selectionRect.on('dragmove', () => {
+    // デバッグログ: ここでselectedNodesが空だと、中身が置いていかれる
+    if (selectedNodes.length === 0) {
+      console.warn('[Selection] No nodes paired during drag!');
+      return;
+    }
+
+    const pos = selectionRect.position();
+    const dx = pos.x - lastRectPos.x;
+    const dy = pos.y - lastRectPos.y;
+
+    // 中身を動かす
+    selectedNodes.forEach(node => {
+      node.move({ x: dx, y: dy });
+    });
+
+    lastRectPos = pos;
+    transformer.forceUpdate();
+
+    // リンク更新 (Setで重複排除)
+    const linksToUpdate = new Set<Konva.Group>();
+    const nodeSet = new Set(selectedNodes);
+    stage.find('.link-group').forEach((lg: any) => {
+      const ns = lg.getAttr('nodes');
+      if (ns && (nodeSet.has(ns[0]) || nodeSet.has(ns[1]))) {
+        linksToUpdate.add(lg);
+      }
+    });
+    linksToUpdate.forEach(link => updateLinkPoints(link));
+
+    layer.batchDraw();
+  });
+
+  selectionRect.on('dragend', () => {
+    // ★重要: 移動が終わってから一度だけ記録
+    isHistoryEnabled = true;
+    recordHistory('Moved multiple nodes');
+  });
 }
 
 // =================================================================
@@ -2925,7 +3128,6 @@ function setupUIButtons() {
     // ボタンクリックでメニュー開閉
     templateBtn.addEventListener('click', (e) => {
       e.stopPropagation();
-      console.log("jsidjfsdifjsd");
       templateMenu.classList.toggle('hidden');
     });
 
