@@ -7,7 +7,7 @@ import { convertFileSrc } from '@tauri-apps/api/core';
 import { Store } from '@tauri-apps/plugin-store';
 import Konva from 'konva';
 import JSZip from 'jszip';
-import { writeFile } from '@tauri-apps/plugin-fs';
+import { writeTextFile, writeFile } from '@tauri-apps/plugin-fs';
 import { save, open, ask } from '@tauri-apps/plugin-dialog';
 
 // =================================================================
@@ -2541,7 +2541,7 @@ async function loadFromMrsd(targetPath?: string) {
         finalY += parentPos.y;
       }
 
-      const nodeGroup = createNewNode(n.x, n.y, title, content, false);
+      const nodeGroup = createNewNode(finalX, finalY, title, content, false);
 
       // 親IDの設定 (parentId属性をセット)
       if (n.parentId) {
@@ -3086,6 +3086,396 @@ function setAllIpOutlineCollapsed(isCollapsed: boolean) {
 }
 
 // =================================================================
+//  エクスポート関係
+// =================================================================
+
+/**
+ * 現在のキャンバスの状態をMarkdown文字列に変換する
+ */
+function generateMarkdownContent(): string {
+  const groups = stage.find<Konva.Group>('.container-group');
+  const nodes = stage.find<Konva.Group>('.node-group');
+
+  let markdown = '';
+
+  // 1. 親子関係のマップを作成 (NodeID -> GroupID)
+  const nodeParentMap = new Map<string, string>();
+  groups.forEach(group => {
+    const childIds = group.getAttr('childNodeIds') || [];
+    childIds.forEach((cid: string) => nodeParentMap.set(cid, group.id()));
+  });
+
+  // 親がいないノードを抽出
+  const orphanNodes = nodes.filter(n => !nodeParentMap.has(n.id()));
+
+  // 2. 各グループを処理
+  groups.forEach(group => {
+    const groupLabel = group.findOne<Konva.Text>('.group-title')?.text() || 'Untitled Group';
+    markdown += `# ${groupLabel}\n\n`;
+
+    // このグループに所属する子ノードを探して処理
+    const childNodes = nodes.filter(n => nodeParentMap.get(n.id()) === group.id());
+
+    childNodes.forEach(node => {
+      markdown += convertNodeToMarkdown(node);
+    });
+  });
+
+  // 3. 親がいないノードを "# Others" として処理
+  if (orphanNodes.length > 0) {
+    markdown += `# Others\n\n`;
+    orphanNodes.forEach(node => {
+      markdown += convertNodeToMarkdown(node);
+    });
+  }
+
+  return markdown;
+}
+
+/**
+ * 1つのノードをMarkdownのセクションに変換するヘルパー関数
+ */
+function convertNodeToMarkdown(node: Konva.Group): string {
+  let section = '';
+  const title = node.findOne<Konva.Text>('.text')?.text() || 'Untitled';
+  const content = node.getAttr('contentText') || '';
+
+  section += `## ${title}\n`;
+  if (content.trim()) {
+    section += `${content}\n`;
+  }
+
+  // --- リンク情報の処理 (現行アーキテクチャ対応) ---
+  // ステージ上の全リンクから、自身が関わっているものを抽出
+  const relatedLinks = stage.find<Konva.Group>('.link-group').filter(linkGroup => {
+    const linkNodes = linkGroup.getAttr('nodes');
+    return linkNodes && (linkNodes[0] === node || linkNodes[1] === node);
+  });
+
+  if (relatedLinks.length > 0) {
+    section += '\n'; // リンク情報との間に空行を入れる
+
+    relatedLinks.forEach(linkGroup => {
+      const linkNodes = linkGroup.getAttr('nodes') as Konva.Group[];
+      const linkLabel = linkGroup.findOne<Konva.Text>('.link-label')?.text().trim() || '';
+
+      // 送信元か送信先かを判定 (nodes[0]が起点)
+      const isOutgoing = linkNodes[0] === node;
+      const otherNode = isOutgoing ? linkNodes[1] : linkNodes[0];
+      const otherNodeTitle = otherNode.findOne<Konva.Text>('.text')?.text() || '...';
+
+      let linkTypeSymbol = '';
+      const type = linkGroup.getAttr('linkType');
+      if (type === 'double_arrow') {
+        linkTypeSymbol = 'interaction';
+      } else if (type === 'arrow') {
+        linkTypeSymbol = isOutgoing ? 'to' : 'from';
+      } else {
+        linkTypeSymbol = 'relation';
+      }
+
+      section += `【${linkTypeSymbol} ${otherNodeTitle}】`;
+      if (linkLabel) {
+        section += `:${linkLabel}`;
+      }
+      section += '\n';
+    });
+  }
+
+  return section + '\n';
+}
+
+// --- 1. Markdownファイルとして保存 ---
+async function exportAsMarkdown() {
+  const content = generateMarkdownContent(); // 既存の関数を呼び出し
+
+  const defaultName = currentFilePath ? currentFilePath.replace(/\.mrsd$/, '.md') : 'Untitled.md';
+  const savePath = await save({
+    title: 'Export as Markdown',
+    defaultPath: defaultName,
+    filters: [{ name: 'Markdown', extensions: ['md'] }]
+  });
+
+  if (savePath) {
+    try {
+      await writeTextFile(savePath, content);
+      console.log('Exported to Markdown:', savePath);
+      // 必要ならTauriのshellプラグインでフォルダを開く処理を追加
+    } catch (e) {
+      console.error(e);
+      alert('Markdownの書き出しに失敗しました。');
+    }
+  }
+}
+
+// --- 2. メインエディタに送信 ---
+async function sendToEditor() {
+  const markdownContent = generateMarkdownContent();
+  try {
+    // パスではなく、テキスト自体を送信する
+    await emit('send-content-to-editor', { content: markdownContent });
+    console.log('Sent content to editor.');
+  } catch (e) {
+    console.error(e);
+    alert('エディタへの送信に失敗しました。');
+  }
+}
+
+// --- 3. PNG画像として保存 ---
+async function exportAsPng() {
+  // 選択状態の解除
+  if (selectedShape) deselectAll();
+
+  // 書き出し範囲の計算 (Electron版のロジックを流用)
+  const allShapes = [...stage.find('.node-group'), ...stage.find('.container-group')];
+  if (allShapes.length === 0) {
+    alert('書き出すコンテンツがありません。');
+    return;
+  }
+
+  let box = allShapes[0].getClientRect({ relativeTo: layer });
+  allShapes.forEach(shape => {
+    const nodeRect = shape.getClientRect({ relativeTo: layer });
+    const right = Math.max(box.x + box.width, nodeRect.x + nodeRect.width);
+    const bottom = Math.max(box.y + box.height, nodeRect.y + nodeRect.height);
+    box.x = Math.min(box.x, nodeRect.x);
+    box.y = Math.min(box.y, nodeRect.y);
+    box.width = right - box.x;
+    box.height = bottom - box.y;
+  });
+
+  const padding = 20;
+  const exportArea = {
+    x: box.x - padding,
+    y: box.y - padding,
+    width: box.width + padding * 2,
+    height: box.height + padding * 2,
+  };
+
+  const defaultName = currentFilePath ? currentFilePath.replace(/\.mrsd$/, '.png') : 'canvas.png';
+  const savePath = await save({
+    title: 'Export as PNG',
+    defaultPath: defaultName,
+    filters: [{ name: 'PNG Image', extensions: ['png'] }]
+  });
+
+  if (!savePath) return;
+
+  stage.toDataURL({
+    ...exportArea,
+    pixelRatio: 2,
+    mimeType: 'image/png',
+    callback: async (dataUrl) => {
+      try {
+        // 背景色の合成 (Electron版と同じく、オフスクリーンキャンバスを使用)
+        const offscreenCanvas = document.createElement('canvas');
+        const ctx = offscreenCanvas.getContext('2d')!;
+        offscreenCanvas.width = exportArea.width * 2;
+        offscreenCanvas.height = exportArea.height * 2;
+
+        const isDark = document.body.classList.contains('dark-mode');
+        ctx.fillStyle = isDark ? '#333333' : 'antiquewhite';
+        ctx.fillRect(0, 0, offscreenCanvas.width, offscreenCanvas.height);
+
+        const img = new Image();
+        img.onload = async () => {
+          ctx.drawImage(img, 0, 0);
+          const finalDataUrl = offscreenCanvas.toDataURL('image/png');
+
+          // Base64からバイナリ(Uint8Array)へ変換
+          const base64Data = finalDataUrl.split(',')[1];
+          const binaryString = window.atob(base64Data);
+          const len = binaryString.length;
+          const bytes = new Uint8Array(len);
+          for (let i = 0; i < len; i++) {
+            bytes[i] = binaryString.charCodeAt(i);
+          }
+
+          // TauriのAPIで書き込み
+          await writeFile(savePath, bytes);
+          console.log('Exported to PNG:', savePath);
+        };
+        img.src = dataUrl;
+      } catch (e) {
+        console.error(e);
+        alert('画像の書き出しに失敗しました。');
+      }
+    }
+  });
+}
+
+// --- 4. HTMLとして保存 ---
+async function exportAsHtml() {
+  // 1. 選択状態の解除
+  if (selectedShape) deselectAll();
+
+  // 2. 書き出し範囲の計算
+  const allShapes = [...stage.find('.node-group'), ...stage.find('.container-group')];
+  if (allShapes.length === 0) {
+    alert('書き出すコンテンツがありません。');
+    return;
+  }
+
+  let box = allShapes[0].getClientRect({ relativeTo: layer });
+  allShapes.forEach(shape => {
+    const nodeRect = shape.getClientRect({ relativeTo: layer });
+    const right = Math.max(box.x + box.width, nodeRect.x + nodeRect.width);
+    const bottom = Math.max(box.y + box.height, nodeRect.y + nodeRect.height);
+    box.x = Math.min(box.x, nodeRect.x);
+    box.y = Math.min(box.y, nodeRect.y);
+    box.width = right - box.x;
+    box.height = bottom - box.y;
+  });
+
+  const padding = 20;
+  const exportArea = {
+    x: box.x - padding,
+    y: box.y - padding,
+    width: box.width + padding * 2,
+    height: box.height + padding * 2,
+  };
+
+  // 3. 保存ダイアログ
+  const defaultName = currentFilePath ? currentFilePath.replace(/\.mrsd$/, '.html') : 'canvas.html';
+  const savePath = await save({
+    title: 'Export as HTML',
+    defaultPath: defaultName,
+    filters: [{ name: 'HTML Document', extensions: ['html'] }]
+  });
+
+  if (!savePath) return;
+
+  // 4. 画像生成とHTML構築
+  stage.toDataURL({
+    ...exportArea,
+    pixelRatio: 2,
+    mimeType: 'image/png',
+    callback: async (dataUrl) => {
+      try {
+        // 背景色の合成
+        const offscreenCanvas = document.createElement('canvas');
+        const ctx = offscreenCanvas.getContext('2d')!;
+        offscreenCanvas.width = exportArea.width * 2;
+        offscreenCanvas.height = exportArea.height * 2;
+
+        const isDark = document.body.classList.contains('dark-mode');
+        const bgColor = isDark ? '#333333' : 'antiquewhite'; // テーマ連動
+        ctx.fillStyle = bgColor;
+        ctx.fillRect(0, 0, offscreenCanvas.width, offscreenCanvas.height);
+
+        const img = new Image();
+        img.onload = async () => {
+          ctx.drawImage(img, 0, 0);
+          const finalDataUrl = offscreenCanvas.toDataURL('image/png');
+
+          const htmlContent = `<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Exported Canvas</title>
+  <style>
+    body { margin: 0; background-color: ${bgColor}; display: flex; justify-content: center; align-items: flex-start; min-height: 100vh; padding: 20px; box-sizing: border-box; }
+    img { max-width: 100%; height: auto; display: block; box-shadow: 0 4px 8px rgba(0,0,0,0.1); border-radius: 8px; }
+  </style>
+</head>
+<body>
+  <img src="${finalDataUrl}" alt="Canvas Image">
+</body>
+</html>`;
+
+          await writeTextFile(savePath, htmlContent);
+          console.log('Exported to HTML:', savePath);
+        };
+        img.src = dataUrl;
+      } catch (e) {
+        console.error(e);
+        alert('HTMLの書き出しに失敗しました。');
+      }
+    }
+  });
+}
+
+// --- 5. PDFとして印刷 (ブラウザ標準機能) ---
+function exportAsPdf() {
+  if (selectedShape) deselectAll();
+
+  const allShapes = [...stage.find('.node-group'), ...stage.find('.container-group')];
+  if (allShapes.length === 0) {
+    alert('書き出すコンテンツがありません。');
+    return;
+  }
+
+  let box = allShapes[0].getClientRect({ relativeTo: layer });
+  allShapes.forEach(shape => {
+    const nodeRect = shape.getClientRect({ relativeTo: layer });
+    const right = Math.max(box.x + box.width, nodeRect.x + nodeRect.width);
+    const bottom = Math.max(box.y + box.height, nodeRect.y + nodeRect.height);
+    box.x = Math.min(box.x, nodeRect.x);
+    box.y = Math.min(box.y, nodeRect.y);
+    box.width = right - box.x;
+    box.height = bottom - box.y;
+  });
+
+  const padding = 20;
+  const exportArea = {
+    x: box.x - padding, y: box.y - padding,
+    width: box.width + padding * 2, height: box.height + padding * 2,
+  };
+
+  stage.toDataURL({
+    ...exportArea,
+    pixelRatio: 2,
+    mimeType: 'image/png',
+    callback: (dataUrl) => {
+      const offscreenCanvas = document.createElement('canvas');
+      const ctx = offscreenCanvas.getContext('2d')!;
+      offscreenCanvas.width = exportArea.width * 2;
+      offscreenCanvas.height = exportArea.height * 2;
+
+      const isDark = document.body.classList.contains('dark-mode');
+      const bgColor = isDark ? '#333333' : 'antiquewhite';
+      ctx.fillStyle = bgColor;
+      ctx.fillRect(0, 0, offscreenCanvas.width, offscreenCanvas.height);
+
+      const img = new Image();
+      img.onload = () => {
+        ctx.drawImage(img, 0, 0);
+        const finalDataUrl = offscreenCanvas.toDataURL('image/png');
+
+        // iframeを使って印刷ダイアログを呼び出す
+        const iframe = document.createElement('iframe');
+        iframe.style.display = 'none'; // 画面には見せない
+        document.body.appendChild(iframe);
+
+        const doc = iframe.contentWindow?.document;
+        if (doc) {
+          doc.open();
+          doc.write(`
+                      <html><head><style>
+                          @page { margin: 0; size: landscape; }
+                          body { margin: 0; display: flex; justify-content: center; align-items: center; min-height: 100vh; background-color: ${bgColor}; }
+                          img { max-width: 100%; max-height: 100%; object-fit: contain; }
+                      </style></head><body>
+                          <img src="${finalDataUrl}" onload="window.print();">
+                      </body></html>
+                  `);
+          doc.close();
+
+          // 印刷ダイアログが閉じた後、しばらくしてiframeを掃除する
+          setTimeout(() => {
+            if (document.body.contains(iframe)) {
+              document.body.removeChild(iframe);
+            }
+          }, 10000);
+        }
+      };
+      img.src = dataUrl;
+    }
+  });
+}
+
+// =================================================================
 // 8. ウィンドウ制御とテーマ管理 (Window & Theme & Settings)
 // =================================================================
 
@@ -3150,6 +3540,36 @@ function setupUIButtons() {
     window.addEventListener('click', () => {
       if (!templateMenu.classList.contains('hidden')) {
         templateMenu.classList.add('hidden');
+      }
+    });
+  }
+
+  // エクスポートメニューのクリック処理
+  const exportButton = document.getElementById('ip-export-button')!;
+  const exportMenu = document.getElementById('ip-export-menu');
+  if (exportButton && exportMenu) {
+    exportButton.addEventListener('click', (e) => {
+      e.stopPropagation();
+      exportMenu.classList.toggle('hidden');
+    });
+    exportMenu.addEventListener('click', (e) => {
+      const target = e.target as HTMLElement;
+      if (target.classList.contains('export-item')) {
+        const format = target.dataset.format;
+
+        if (format === 'html') {
+          exportAsHtml();
+        } else if (format === 'md') {
+          exportAsMarkdown();
+        } else if (format === 'png') {
+          exportAsPng();
+        } else if (format === 'pdf') {
+          exportAsPdf();
+        } else if (format === 'send-to-editor') {
+          sendToEditor();
+        }
+
+        exportMenu.classList.add('hidden');
       }
     });
   }

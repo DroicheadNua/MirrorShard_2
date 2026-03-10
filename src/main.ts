@@ -1470,6 +1470,23 @@ ${nextContext}
       this.toggleDarkMode();
     });
 
+    await listen('send-content-to-editor', async (event: any) => {
+      const content = event.payload.content;
+      if (content) {
+        // 1. 新規タブを作成
+        this.createNewTab();
+
+        // 2. タブの描画が完了するのを少し待ってからテキストを挿入
+        setTimeout(() => {
+          if (this.editorView) {
+            this.editorView.dispatch({
+              changes: { from: 0, insert: content }
+            });
+          }
+        }, 50);
+      }
+    });
+
     await listen('preview-font-size', (event: any) => {
       if (event.payload === 'up') {
         this.changeFontSize(this.currentFontSize + 1);
