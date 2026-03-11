@@ -44,6 +44,11 @@ let lastRectPos: { x: number; y: number } = { x: 0, y: 0 };
 let selectedShape: Konva.Group | null = null;
 let selectedNodes: Konva.Group[] = [];
 let selectionJustFinished = false;
+let isAiThinking = false;
+let aiAbortController: AbortController | null = null;
+let showAiThinkingOverlay = true;
+let aiThinkingMode = "";
+let ipAiApi = 'gemini';
 
 const editorPane = document.getElementById('ip-editor-pane') as HTMLElement;
 const contentEditor = document.getElementById('ip-content-editor') as HTMLTextAreaElement;
@@ -59,7 +64,8 @@ const themes = {
     selection: 'rgba(203, 7, 7, 0.4)',
     nodeBg: 'transparent',
     labelBackground: '#fafae0',
-    heading: '#cb0707ff'
+    heading: '#cb0707ff',
+    scroll: 'rgba(150, 150, 150, 0.5)'
   },
   dark: {
     text: '#cccccc',
@@ -67,7 +73,8 @@ const themes = {
     selection: 'rgba(211, 16, 16, 0.4)',
     nodeBg: 'transparent',
     labelBackground: '#4f4f4f',
-    heading: '#d31010ff'
+    heading: '#d31010ff',
+    scroll: 'rgba(120, 120, 120, 0.5)'
   }
 };
 
@@ -441,7 +448,7 @@ function setupEventListeners() {
   }
   // ステージ上のクリック（ノード作成・選択解除）
   stage.on('click tap', (e) => {
-    if (isTextEditing) return;
+    if (isAiThinking || contentEditorJustClosed || isTextEditing || isContentEditing) return;
     // 範囲選択ドラッグが終わった直後の「クリック残響」なら無視する
     if (selectionJustFinished) {
       console.log('[Debug] Ignoring click event after range selection');
@@ -510,7 +517,7 @@ function setupEventListeners() {
   });
 
   stage.on('dblclick', (e) => {
-    if (isTextEditing) return;
+    if (isAiThinking || contentEditorJustClosed || isTextEditing || isContentEditing) return;
     // 1. ノードのダブルクリック（テキスト編集）
     const nodeGroup = e.target.getParent();
     if (nodeGroup && nodeGroup.name() === 'node-group') {
@@ -568,7 +575,7 @@ function setupEventListeners() {
 
   // 編集中はすべてのドラッグ操作を強制停止
   stage.on('dragstart', (e) => {
-    if (isTextEditing || isContentEditing) {
+    if (isAiThinking || contentEditorJustClosed || isTextEditing || isContentEditing) {
       e.target.stopDrag();
       e.cancelBubble = true;
     }
@@ -576,6 +583,7 @@ function setupEventListeners() {
 
   // ノードのドラッグ終了時（履歴記録）
   stage.on('dragend', (e) => {
+    if (isAiThinking || contentEditorJustClosed || isTextEditing || isContentEditing) return;
     // 複数選択中、かつドラッグされたのがその一部なら、
     // selectionRect 側の dragend に任せるのでここでは何もしない
     if (selectedNodes.length > 1 && selectedNodes.includes(e.target as Konva.Group)) {
@@ -590,8 +598,7 @@ function setupEventListeners() {
 
   // ノードのドラッグ中（リンク追従）
   stage.on('dragmove', (e) => {
-    // コンテンツ編集中などのガード
-    if (isTextEditing || isContentEditing) return;
+    if (isAiThinking || contentEditorJustClosed || isTextEditing || isContentEditing) return;
     if (e.target.name() === 'resize-handle') return; // グループハンドルのガード
 
     // ドラッグされているのがノードの場合
@@ -645,7 +652,7 @@ function setupEventListeners() {
       if (pos) lastPointerPosition = pos;
       return;
     }
-    if (isTextEditing || isContentEditing) return;
+    if (isAiThinking || contentEditorJustClosed || isTextEditing || isContentEditing) return;
     if (e.evt.button === 0 && isAlt) {
       const group = e.target.getParent();
       if (group && group.name() === 'node-group') {
@@ -665,7 +672,7 @@ function setupEventListeners() {
   });
 
   stage.on('mousemove', (e) => {
-    if (isTextEditing || isContentEditing) return;
+    if (isAiThinking || contentEditorJustClosed || isTextEditing || isContentEditing) return;
 
     // --- パン処理 (右ドラッグ) ---
     if (isPanning) {
@@ -731,6 +738,7 @@ function setupEventListeners() {
   });
 
   stage.on('mouseup mouseleave', (e) => {
+    if (isAiThinking || contentEditorJustClosed || isTextEditing || isContentEditing) return;
     // --- 右クリック離上 ---
     if (e.evt.button === 2) {
       if (isPanning) {
@@ -1787,6 +1795,14 @@ function generateUUID() {
 
 function setupKeyboardEvents() {
   document.addEventListener('keydown', (e) => {
+    if (isAiThinking) {
+      if (e.key === 'Escape') {
+        abortAiProcessing();
+      }
+      e.preventDefault();
+      e.stopPropagation();
+      return;
+    }
     const isCtrl = e.ctrlKey || e.metaKey;
     const isShift = e.shiftKey;
     const key = e.key.toLowerCase();
@@ -1825,9 +1841,20 @@ function setupKeyboardEvents() {
       e.preventDefault();
       InitializeStage();
     }
+    if (isCtrl && key === 'r' && isShift) {
+      e.preventDefault();
+      return;
+    }
     if (isCtrl && isShift && key === 'o') {
       e.preventDefault();
       toggleOutlinePane();
+    }
+    if (isCtrl && isShift && key === 'f') {
+      e.preventDefault();
+      triggerFreeAssociation();
+    }
+    if (isCtrl && key === 'f' && !isShift) {
+      if (!isTextEditing) e.preventDefault();
     }
 
     // フルスクリーン切り替え
@@ -2075,6 +2102,7 @@ function getCurrentThemeColors() {
   const customText = inlineStyle.getPropertyValue('--editor-text-color').trim();
   const customSelection = inlineStyle.getPropertyValue('--editor-selection-color').trim();
   const customHeading = inlineStyle.getPropertyValue('--heading-color').trim();
+  const customScrollbar = inlineStyle.getPropertyValue('--scrollbar-color').trim();
   const customBg = inlineStyle.getPropertyValue('--window-bg-color').trim();
   const customEdBg = inlineStyle.getPropertyValue('--editor-bg-color').trim();
 
@@ -2084,7 +2112,8 @@ function getCurrentThemeColors() {
     selection: customSelection || themes.light.selection,
     nodeBg: customEdBg || themes.light.nodeBg,
     labelBackground: customBg || themes.light.labelBackground,
-    heading: customHeading || themes.light.heading
+    heading: customHeading || themes.light.heading,
+    scrollbar: customScrollbar || themes.light.scroll,
   };
 }
 
@@ -2222,6 +2251,8 @@ async function updateAllNodesAppearance() {
   if (!store) return;
   const isDark = document.body.classList.contains('dark-mode');
   const colors = getCurrentThemeColors();
+  const userFont = document.documentElement.style.getPropertyValue('--user-font-family').replace(/"/g, '');
+  const finalFont = userFont || "serif-ja, serif";
 
   // グロー設定の取得
   const enableGlow = (!isDark && (await store.get<boolean>('enableGlow')) === true);
@@ -2291,6 +2322,10 @@ async function updateAllNodesAppearance() {
     if (title) {
       title.fill(colors.text);
     }
+  });
+
+  stage.find('.text, .link-label, .group-title').forEach((textNode: any) => {
+    textNode.fontFamily(finalFont);
   });
 
   layer.batchDraw();
@@ -2415,7 +2450,7 @@ async function saveToMrsd(forceSaveAs = false) {
     zip.file("canvas.json", JSON.stringify(canvasData, null, 2));
 
     const content = await zip.generateAsync({ type: "uint8array" });
-    await writeFile(savePath, content);
+    await invoke('force_save_file', { path: savePath, content: Array.from(content) });
 
     currentFilePath = savePath;
     isDirty = false;
@@ -3476,6 +3511,269 @@ function exportAsPdf() {
 }
 
 // =================================================================
+// AI アシスト機能 (AI Free Association)
+// =================================================================
+
+async function triggerFreeAssociation() {
+  if (isAiThinking) return;
+
+  if (!selectedShape || selectedShape.name() !== 'node-group') {
+    alert('AIで展開したいノードを1つ選択してください。');
+    return;
+  }
+
+  const selectedNode = selectedShape as Konva.Group;
+  const textNode = selectedNode.findOne<Konva.Text>('.text');
+  if (!textNode) return;
+  const nodeTitle = textNode.text();
+
+  if (!store) return;
+
+  // 設定取得 (名前を faMaxTokens に変更)
+  const charLimit = await store.get<number>('faMaxTokens') || 30;
+
+  const systemPrompt = "あなたは創造的なブレインストーミングのアシスタントです。余計な前置きや説明、マークダウンの装飾は一切出力せず、結果のテキストのみを出力してください。";
+  const prompt = `「${nodeTitle}」という言葉から連想される、あるいはそれに続く創造的なアイデアを3つ出力してください。\n条件：\n- 1つのアイデアにつき ${charLimit}文字以内 に収めること\n- 3つのアイデアを改行で区切って出力すること（箇条書きの「・」などは不要）`;
+
+  // 状態更新とUIガード
+  isAiThinking = true;
+  aiAbortController = new AbortController();
+  aiThinkingMode = "Free Association";
+  setAiLoading(true);
+
+  try {
+    let resultText = "";
+
+    // セレクターの変数 (ipAiApi) を使用
+    if (ipAiApi === 'gemini') {
+      const apiKey = await store.get<string>('geminiApiKey');
+      const model = await store.get<string>('geminiModel') || 'gemini-2.5-flash';
+      console.log(`Loaded:${model}`);
+      if (!apiKey) throw new Error("Gemini API Key が設定されていません。");
+
+      const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          contents: [{ role: 'user', parts: [{ text: prompt }] }],
+          systemInstruction: { parts: [{ text: systemPrompt }] }
+        }),
+        signal: aiAbortController.signal // 中断シグナルを渡す
+      });
+      if (!response.ok) throw new Error(`Gemini API Error: ${response.statusText}`);
+      const data = await response.json();
+      resultText = data.candidates?.[0]?.content?.parts?.[0]?.text || '';
+    }
+    else {
+      const url = await store.get<string>('localLlmUrl') || "http://127.0.0.1:1234/v1/chat/completions";
+      const model = await store.get<string>('localLlmModel') || "local-model";
+
+      const response = await fetch(url, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          model: model,
+          messages: [
+            { role: 'system', content: systemPrompt },
+            { role: 'user', content: prompt }
+          ],
+          temperature: 0.7
+        }),
+        signal: aiAbortController.signal // 中断シグナルを渡す
+      });
+      if (!response.ok) throw new Error(`Local LLM API Error: ${response.statusText}`);
+      const data = await response.json();
+      resultText = data.choices?.[0]?.message?.content || '';
+    }
+
+    if (!resultText) throw new Error("AIから有効な応答が得られませんでした。");
+
+    // --- 結果のパースとアニメーション生成 ---
+    const ideas = resultText.split('\n')
+      .map(line => line.replace(/^[-・*1-9.\s]+/, '').trim())
+      .filter(idea => idea !== '');
+
+    if (ideas.length === 0) throw new Error("パース可能なアイデアがありませんでした。");
+    const newNodes: Konva.Group[] = [];
+    const startPos = selectedNode.position();
+    const bgRect = selectedNode.findOne<Konva.Rect>('.background');
+
+    // 元ノードの中心座標を計算
+    const centerX = startPos.x + (bgRect ? bgRect.width() / 2 : 60);
+    const centerY = startPos.y + (bgRect ? bgRect.height() / 2 : 30);
+
+    // 最大3つに制限
+    const finalIdeas = ideas.slice(0, 3);
+
+    finalIdeas.forEach((idea, i) => {
+      // 放射状に配置するための計算
+      const angleOffset = -Math.PI / 2; // 12時方向から開始
+      const angle = angleOffset + (i / finalIdeas.length) * Math.PI * 2;
+      const distance = 250; // 展開距離
+      const endPos = {
+        x: centerX + distance * Math.cos(angle) - 60,
+        y: centerY + distance * Math.sin(angle) - 30
+      };
+
+      // 元ノードの中心位置に初期ノードを作成（編集モードなし）
+      const newNode = createNewNode(centerX - 60, centerY - 30, idea, '', false);
+      newNodes.push(newNode);
+
+      // アニメーションの初期状態（小さく、透明に）
+      newNode.scale({ x: 0.1, y: 0.1 });
+      newNode.opacity(0);
+
+      // アニメーション実行
+      new Konva.Tween({
+        node: newNode,
+        duration: 0.6,
+        x: endPos.x,
+        y: endPos.y,
+        scaleX: 1,
+        scaleY: 1,
+        opacity: 1,
+        easing: Konva.Easings.EaseOut,
+        onFinish: () => {
+          // 全てのアニメーションが終わったらリンクを張る
+          if (i === finalIdeas.length - 1) {
+            newNodes.forEach(node => {
+              createSingleLink(selectedNode, node, LinkType.ARROW);
+            });
+            recordHistory('AI Free Association executed');
+            renderIpOutline();
+            layer.batchDraw();
+          }
+        }
+      }).play();
+    });
+
+  } catch (e: any) {
+    handleAiError(e);
+  } finally {
+    clearAiProcessingState();
+  }
+}
+
+// --- AIセレクターの初期化 ---
+async function initAiSelector() {
+  const displayBtn = document.getElementById('ip-ai-display');
+  const optionsContainer = document.getElementById('ip-ai-options');
+  const options = document.querySelectorAll('#ip-ai-options .custom-option');
+
+  if (!displayBtn || !optionsContainer) return;
+
+  // 開閉
+  displayBtn.addEventListener('click', (e) => {
+    if (isAiThinking) return;
+    e.stopPropagation();
+    optionsContainer.classList.toggle('open');
+  });
+
+  document.addEventListener('click', () => {
+    optionsContainer.classList.remove('open');
+  });
+
+  // 選択
+  options.forEach(opt => {
+    opt.addEventListener('click', async () => {
+      const value = opt.getAttribute('data-value');
+      if (value && store) {
+        ipAiApi = value; // グローバル変数にセット
+        await store.set('ipAiApi', value); // 独立したキーで保存
+        await store.save();
+        displayBtn.textContent = opt.textContent;
+        optionsContainer.classList.remove('open');
+      }
+    });
+  });
+
+  // 初期値ロード
+  if (store) {
+    const val = await store.get<string>('ipAiApi') || 'gemini';
+    ipAiApi = val; // グローバル変数にセット
+    const target = Array.from(options).find(o => o.getAttribute('data-value') === val);
+    if (target && target.textContent) displayBtn.textContent = target.textContent;
+  }
+}
+
+// --- AI通信の中断 ---
+function abortAiProcessing() {
+  if (aiAbortController) {
+    console.log("Sending abort signal...");
+    aiAbortController.abort();
+  }
+}
+
+// --- オーバーレイ制御 ---
+function updateAiThinkingStyle() {
+  const root = document.documentElement.style;
+  if (showAiThinkingOverlay) {
+    root.setProperty('--ai-thinking-bg', 'rgba(0, 0, 0, 0.5)');
+    root.setProperty('--ai-thinking-blur', 'blur(2px)');
+  } else {
+    root.setProperty('--ai-thinking-bg', 'transparent');
+    root.setProperty('--ai-thinking-blur', 'none');
+  }
+}
+
+function setAiLoading(isLoading: boolean) {
+  const overlayId = 'ai-loading-overlay';
+  document.querySelectorAll(`#${overlayId}`).forEach(el => el.remove());
+
+  if (isLoading) {
+    updateAiThinkingStyle();
+    const overlay = document.createElement('div');
+    overlay.id = overlayId;
+    overlay.className = 'loading-overlay';
+
+    overlay.style.pointerEvents = 'all';
+
+    if (showAiThinkingOverlay) {
+      overlay.innerHTML = `
+        <div class="spinner"></div>
+        <div class="loading-text">AI is thinking...</div>
+        <div class="loading-text">Mode: ${aiThinkingMode}</div>
+      `;
+    }
+
+    // イベント遮断
+    const blockEvent = (e: Event) => {
+      e.preventDefault();
+      e.stopPropagation();
+    };
+    ['mousedown', 'mouseup', 'click', 'dblclick', 'auxclick', 'wheel', 'contextmenu', 'dragstart'].forEach(evt => {
+      overlay.addEventListener(evt, blockEvent, { capture: true }); // captureをtrueにして先に捕まえる
+    });
+
+    document.body.appendChild(overlay);
+
+    // Konva側のドラッグも明示的に止める
+    stage.stopDrag();
+  }
+}
+
+function handleAiError(e: any) {
+  if (e.name === 'AbortError') {
+    console.log("AI Task was aborted by user.");
+    return;
+  }
+  console.error(e);
+  alert(`AI Error: ${e.message || e}`);
+}
+
+function clearAiProcessingState() {
+  isAiThinking = false;
+  aiAbortController = null;
+  setAiLoading(false);
+
+  const aiButton = document.getElementById('ip-ai-cot-btn') as HTMLButtonElement;
+  if (aiButton) aiButton.disabled = false;
+
+  stage.container().focus();
+  stage.container().style.cursor = 'default';
+}
+
+// =================================================================
 // 8. ウィンドウ制御とテーマ管理 (Window & Theme & Settings)
 // =================================================================
 
@@ -3489,6 +3787,7 @@ async function setupWindowFeatures() {
   // 1. 各種ボタンのイベント登録
   setupUIButtons();
   setupOutlineEvents();
+  await initAiSelector();
 
   // 2. リスナーのセットアップ
   setupThemeListener();
@@ -3510,6 +3809,9 @@ function setupUIButtons() {
   document.getElementById('ip-new-file-button')?.addEventListener('click', newFile);
   document.getElementById('ip-zoom-reset-btn')?.addEventListener('click', zoomReset);
   document.getElementById('ip-reset-window-btn')?.addEventListener('click', InitializeStage);
+  document.getElementById('ip-ai-btn')?.addEventListener('click', () => {
+    triggerFreeAssociation();
+  });
   // --- テンプレートメニュー制御 ---
   const templateBtn = document.getElementById('ip-template-button');
   const templateMenu = document.getElementById('ip-template-menu');
@@ -3625,12 +3927,20 @@ function setupOutlineEvents() {
 async function applyInitialSettings() {
   if (!store) return;
 
-  // 1. ストアからテーマを読み込んで適用
+  // 1.ユーザーフォントの読み込み
+  const userFont = await store.get<string>('userFontFamily');
+  if (userFont && userFont !== 'default') {
+    document.documentElement.style.setProperty('--user-font-family', `"${userFont}"`);
+  }
+
+  // 2. ストアからテーマを読み込んで適用
   const isDark = await store.get<boolean>('isDarkMode');
   if (isDark) document.body.classList.add('dark-mode');
   else document.body.classList.remove('dark-mode');
+  // AI演出設定を読み込み
+  showAiThinkingOverlay = await store.get<boolean>('showAiThinkingOverlay') ?? true;
 
-  // 2. カスタムカラーのCSS変数適用
+  // 3. カスタムカラーのCSS変数適用
   const root = document.documentElement.style;
   const customWindowBg = await store.get<string>('customWindowBg');
   if (customWindowBg) root.setProperty('--window-bg-color', customWindowBg);
@@ -3643,8 +3953,10 @@ async function applyInitialSettings() {
   if (customSelectionColor) root.setProperty('--editor-selection-color', customSelectionColor);
   const customHeadingColor = await store.get<string>('customHeadingColor');
   if (customHeadingColor) root.setProperty('--heading-color', customHeadingColor);
+  const customScrollbarColor = await store.get<string>('customScrollbarColor');
+  if (customScrollbarColor) root.setProperty('--scrollbar-color', customScrollbarColor);
 
-  // 3. グロー（CSS）と Konva の外観更新
+  // 4. グロー（CSS）と Konva の外観更新
   await applyGlowEffect();
   await updateAllNodesAppearance(); // ここでKonvaの初期色を決定
 
@@ -3715,6 +4027,18 @@ function setupSettingsListener() {
       } else {
         root.removeProperty('--heading-color');
       }
+    }
+    if (p.customScrollbarColor !== undefined) {
+      if (p.customScrollbarColor) {
+        root.setProperty('--scrollbar-color', p.customScrollbarColor);
+      } else {
+        root.removeProperty('--scrollbar-color');
+      }
+    }
+
+    // 演出設定のリアルタイム反映
+    if (p.showAiThinkingOverlay !== undefined) {
+      showAiThinkingOverlay = p.showAiThinkingOverlay;
     }
 
     // グロー効果の更新判定

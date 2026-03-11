@@ -128,9 +128,17 @@
    position: fixed;
    /* or absolute */
    top: 6px;
+   padding-top: 6px;
    right: 10px;
    -webkit-app-region: no-drag;
    z-index: 15;
+   background-color: var(--window-bg-color, transparent);
+   backdrop-filter: blur(0.5em);
+   border-radius: 6px;
+ }
+
+ body.dark-mode .top-right-buttons {
+   background-color: #333;
  }
 
  .top-right-buttons button {
@@ -358,7 +366,7 @@
  }
 
  body:not(.dark-mode) .outline-group-header {
-   color: #333;
+   color: var(--heading-color) !important;
  }
 
  /* 開閉用のトグル（▼） */
@@ -403,7 +411,7 @@
  }
 
  body:not(.dark-mode) .outline-node {
-   color: #555;
+   color: var(--editor-text-color) !important;
  }
 
  /* ホバー/アクティブ時のスタイル */
@@ -413,15 +421,16 @@
  }
 
  body:not(.dark-mode) .outline-node:hover {
-   background-color: #eeeeee99;
-   color: #111;
+   background-color: var(--editor-selection-color);
+   color: var(--editor-text-color);
  }
 
  .outline-sub-node {
    /* padding-left はJSで設定する */
    padding: 2px 8px;
+   font-family: var(--user-font-family, serif-ja, serif);
    font-size: 12px;
-   color: #aaa;
+   color: #aaa !important;
    cursor: pointer;
    white-space: nowrap;
    overflow: hidden;
@@ -431,7 +440,7 @@
  }
 
  body:not(.dark-mode) .outline-sub-node {
-   color: #555;
+   color: var(--editor-text-color) !important;
  }
 
  .outline-sub-node:hover {
@@ -441,8 +450,8 @@
  }
 
  body:not(.dark-mode) .outline-sub-node:hover {
-   background-color: #eeeeee99;
-   color: #111;
+   background-color: var(--editor-selection-color);
+   color: var(--editor-text-color);
  }
 
  /* CSS側で、デフォルトでサブ階層を非表示にする */
@@ -482,12 +491,14 @@
  }
 
  /* ライトモード用の色調整 */
- body:not(.dark-mode) #ip-content-editor::-webkit-scrollbar-thumb {
-   background-color: rgba(150, 150, 150, 0.5);
+ body:not(.dark-mode) #ip-content-editor::-webkit-scrollbar-thumb,
+ body:not(.dark-mode) #ip-outline-pane::-webkit-scrollbar-thumb {
+   background-color: var(--scrollbar-color, rgba(150, 150, 150, 0.5));
  }
 
- body:not(.dark-mode) #ip-content-editor::-webkit-scrollbar-thumb:hover {
-   background-color: rgba(120, 120, 120, 0.7);
+ body:not(.dark-mode) #ip-content-editor::-webkit-scrollbar-thumb:hover,
+ body:not(.dark-mode) #ip-outline-pane::-webkit-scrollbar-thumb:hover {
+   background-color: var(--scrollbar-color, rgba(120, 120, 120, 0.7));
  }
 
  /* ボタンコンテナが無効化されたときのスタイル */
@@ -495,16 +506,6 @@
    pointer-events: none;
    opacity: 0.5;
    transition: opacity 0.2s ease-in-out;
- }
-
- #ip-ai-cot-btn {
-   padding: 0;
- }
-
- #ip-ai-cot-btn:disabled {
-   opacity: 0.5;
-   cursor: not-allowed;
-   /* 操作不可であることを示すカーソル */
  }
 
  textarea {
@@ -541,10 +542,163 @@
    transform: rotate(-90deg);
  }
 
+ /* AIセレクターのスタイル */
+ #ip-ai-selector-container {
+   position: fixed;
+   /* or absolute */
+   top: 106px;
+   right: 10px;
+   -webkit-app-region: no-drag;
+   z-index: 15;
+   vertical-align: middle;
+   width: 120px;
+   background-color: var(--window-bg-color, transparent);
+   backdrop-filter: blur(0.5em);
+   border-radius: 6px;
+ }
+
+ body.dark-mode #ip-ai-selector-container {
+   background-color: #333;
+ }
+
+ .custom-select-wrapper {
+   position: relative;
+   width: 100%;
+ }
+
+ .custom-select-trigger {
+   width: 100%;
+   padding: 4px 8px;
+   font-size: 11px;
+   color: var(--editor-text-color, #eee);
+   background: var(--editor-bg-color, transparent);
+   border: 1px solid var(--editor-text-color, #888);
+   border-radius: 4px;
+   cursor: pointer;
+   text-align: left;
+   position: relative;
+ }
+
+ body.dark-mode .custom-select-trigger {
+   color: #eee;
+   border: 1px solid #888;
+   background: #333;
+ }
+
+ .custom-select-trigger::after {
+   content: "▼";
+   font-size: 8px;
+   position: absolute;
+   right: 8px;
+   top: 50%;
+   transform: translateY(-50%);
+ }
+
+ .custom-options {
+   display: none;
+   position: absolute;
+   top: 100%;
+   left: 0;
+   right: 0;
+   background-color: var(--window-bg-color, #222);
+   border: 1px solid var(--editor-text-color, #888);
+   border-radius: 0 0 4px 4px;
+   z-index: 2000;
+ }
+
+ body.dark-mode .custom-options {
+   background-color: #222;
+   border: 1px solid #888;
+ }
+
+ .custom-options.open {
+   display: block;
+ }
+
+ .custom-option {
+   padding: 6px 10px;
+   font-size: 11px;
+   cursor: pointer;
+ }
+
+ .custom-option:hover {
+   background-color: var(--editor-selection-color, rgba(0, 255, 65, 0.2));
+ }
+
+ body.dark-mode .custom-option:hover {
+   background-color: rgba(150, 150, 150, 0.2);
+ }
+
  /* サブ見出し（ホバー時の演出） */
  .outline-sub-node:hover {
    text-decoration: underline;
-   color: var(--selection-color, #d31010);
+   color: var(--editor-selection-color, #d31010);
+ }
+
+ body.dark-mode .outline-sub-node:hover {
+   color: rgba(150, 150, 150, 0.2);
+ }
+
+ /* AI Writing Overlay */
+
+ .loading-overlay {
+   position: fixed;
+   top: 0;
+   left: 0;
+   width: 100%;
+   height: 100%;
+   background-color: var(--ai-thinking-bg, rgba(0, 0, 0, 0.5));
+   /* 半透明の黒 */
+   z-index: 9999;
+   /* 最前面 */
+   display: flex;
+   flex-direction: column;
+   justify-content: center;
+   align-items: center;
+   backdrop-filter: var(--ai-thinking-blur, blur(2px));
+   cursor: wait;
+ }
+
+ .loading-text {
+   color: #00FF41;
+   font-family: monospace;
+   font-size: 1.5em;
+   margin-top: 15px;
+   text-shadow: 0 0 10px rgba(0, 255, 65, 0.8);
+   animation: blink 1.5s infinite;
+ }
+
+ /* 簡易スピナー (円形) */
+ .spinner {
+   width: 50px;
+   height: 50px;
+   border: 4px solid rgba(0, 255, 65, 0.3);
+   border-top: 4px solid #00FF41;
+   border-radius: 50%;
+   animation: spin 1s linear infinite;
+   box-shadow: 0 0 15px rgba(0, 255, 65, 0.5);
+ }
+
+ @keyframes spin {
+   0% {
+     transform: rotate(0deg);
+   }
+
+   100% {
+     transform: rotate(360deg);
+   }
+ }
+
+ @keyframes blink {
+
+   0%,
+   100% {
+     opacity: 1;
+   }
+
+   50% {
+     opacity: 0.5;
+   }
  }
 
  #ip-close-btn {
@@ -606,4 +760,15 @@
  #ip-export-button {
    -webkit-mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 6 2 18 2 18 9'%3E%3C/polyline%3E%3Cpath d='M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2'%3E%3C/path%3E%3Crect x='6' y='14' width='12' height='8'%3E%3C/rect%3E%3C/svg%3E");
    mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 6 2 18 2 18 9'%3E%3C/polyline%3E%3Cpath d='M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2'%3E%3C/path%3E%3Crect x='6' y='14' width='12' height='8'%3E%3C/rect%3E%3C/svg%3E");
+ }
+
+ #ip-ai-btn {
+   -webkit-mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Crect x='3' y='4' width='18' height='12' rx='2' ry='2'%3E%3C/rect%3E%3Cline x1='8' y1='20' x2='16' y2='20'%3E%3C/line%3E%3Cline x1='12' y1='16' x2='12' y2='20'%3E%3C/line%3E%3Cpath d='M19 2l1 2 2 1-2 1-1 2-1-2-2-1 2-1z' stroke-width='1.5' fill='currentColor'%3E%3C/path%3E%3C/svg%3E");
+   mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Crect x='3' y='4' width='18' height='12' rx='2' ry='2'%3E%3C/rect%3E%3Cline x1='8' y1='20' x2='16' y2='20'%3E%3C/line%3E%3Cline x1='12' y1='16' x2='12' y2='20'%3E%3C/line%3E%3Cpath d='M19 2l1 2 2 1-2 1-1 2-1-2-2-1 2-1z' stroke-width='1.5' fill='currentColor'%3E%3C/path%3E%3C/svg%3E");
+ }
+
+ #ip-ai-btn:disabled {
+   opacity: 0.5;
+   cursor: not-allowed;
+   /* 操作不可であることを示すカーソル */
  }

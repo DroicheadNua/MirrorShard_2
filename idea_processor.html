@@ -24,7 +24,7 @@
             <div class="export-item" data-format="html">Export as HTML</div>
             <div class="export-item" data-format="md">Export as Markdown</div>
             <div class="export-item" data-format="png">Export as PNG Image</div>
-            <div class="export-item" data-format="pdf">Export as PDF</div>
+            <div class="export-item" data-format="pdf">Print / Export as PDF</div>
             <div class="export-item" data-format="send-to-editor">Send to Editor</div>
           </div>
           <button id="ip-toggle-on-top-btn" title="Toggle Always on Top"></button>
@@ -34,7 +34,7 @@
         <button id="ip-save-as-button" title="Save As..."></button>
         <button id="ip-load-button" title="Load (Ctrl+O)"></button>
         <div class="template-container">
-          <button id="ip-ai-cot-btn" title="Chain of Thought (Ctrl+Shift+T)">🧠</button>
+          <button id="ip-ai-btn" title="Activate AI (Ctrl+Shift+F)"></button>
           <button id="ip-template-button" title="Story Archetype"></button>
           <div id="ip-template-menu" class="hidden">
             <div class="template-item" data-template="greimas">Actantial model</div>
@@ -42,6 +42,16 @@
             <div class="template-item" data-template="beat-sheet">Beat Sheet</div>
             <div class="template-item" data-template="three-act-structure">Three-Act Structure</div>
             <!-- 将来的には、ここに他のテンプレートを追加していく -->
+          </div>
+        </div>
+      </div>
+      <!-- AIセレクタ -->
+      <div id="ip-ai-selector-container">
+        <div class="custom-select-wrapper">
+          <button id="ip-ai-display" class="custom-select-trigger">Gemini (Cloud)</button>
+          <div id="ip-ai-options" class="custom-options">
+            <div class="custom-option" data-value="gemini">Gemini (Cloud)</div>
+            <div class="custom-option" data-value="local">Local AI (Ollama/LM)</div>
           </div>
         </div>
       </div>

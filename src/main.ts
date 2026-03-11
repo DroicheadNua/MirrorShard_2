@@ -2240,7 +2240,7 @@ ${nextContext}
     document.querySelector('#btn-markdown')?.addEventListener('click', () => {
       this.openMarkdownPreviewWithCheck();
     });
-    document.querySelector('#btn-idea_processor')?.addEventListener('click', () => {
+    document.querySelector('#btn-idea-processor')?.addEventListener('click', () => {
       this.openIdeaProcessor();
     });
 
