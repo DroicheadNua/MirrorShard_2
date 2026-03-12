@@ -91,6 +91,7 @@ async function setupSettings() {
         const aiSystemPromptInput = document.querySelector('#ai-system-prompt') as HTMLTextAreaElement;
         const aiMaxTokensInput = document.querySelector('#ai-max-tokens') as HTMLInputElement;
         const faMaxTokensInput = document.querySelector('#fa-max-tokens') as HTMLInputElement;
+        const aiContextLimitInput = document.querySelector('#ai-context-limit') as HTMLInputElement;
         const userNameInput = document.querySelector('#user-name') as HTMLInputElement;
         const userIconDisplay = document.querySelector('#user-icon-path') as HTMLElement;
         const aiNameInput = document.querySelector('#ai-name') as HTMLInputElement;
@@ -509,6 +510,7 @@ async function setupSettings() {
         aiSystemPromptInput.value = await store.get<string>('aiSystemPrompt') || '';
         aiMaxTokensInput.value = (await store.get<number>('aiMaxTokens') || 2000).toString();
         faMaxTokensInput.value = (await store.get<number>('faMaxTokens') || 30).toString();
+        aiContextLimitInput.value = (await store.get<number>('aiContextLimit') || 2000).toString();
         aiThinkingOverlayCheck.checked = await store.get<boolean>('showAiThinkingOverlay') ?? true;
         userNameInput.value = await store.get<string>('aiChatUserName') || 'User';
         localLlmModelInput.value = await store.get<string>('localLlmModel') || 'local-model';
@@ -746,6 +748,7 @@ async function setupSettings() {
                 const newSystemPrompt = aiSystemPromptInput.value;
                 const newAiMaxTokens = parseInt(aiMaxTokensInput.value, 10) || 2000;
                 const newFaMaxTokens = parseInt(faMaxTokensInput.value, 10) || 30;
+                const newAiContextLimit = parseInt(aiContextLimitInput.value, 10) || 2000;
                 const newLocalModel = localLlmModelInput.value.trim();
                 const newAiThinkingOverlay = aiThinkingOverlayCheck.checked;
 
@@ -789,6 +792,7 @@ async function setupSettings() {
                 }
                 await store.set('aiMaxTokens', newAiMaxTokens);
                 await store.set('faMaxTokens', newFaMaxTokens);
+                await store.set('aiContextLimit', newAiContextLimit);
                 await store.set('showAiThinkingOverlay', newAiThinkingOverlay);
                 // User Profile
                 await store.set('aiChatUserName', userNameInput.value || 'User');
@@ -833,6 +837,7 @@ async function setupSettings() {
                     selectedApiType: currentApiType || 'gemini',
                     aiMaxTokens: newAiMaxTokens,
                     faMaxTokens: newFaMaxTokens,
+                    aiContextLimit: newAiContextLimit,
                     aiChatUserName: userNameInput.value || 'User',
                     aiChatUserIconPath: pendingUserIcon,
                     aiChatAiName: aiNameInput.value || 'AI',

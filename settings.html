@@ -190,7 +190,7 @@
                 </div>
 
                 <div class="ai-setting-group">
-                    <h4>Local LLM (LM Studio / Ollama)</h4>
+                    <h4>Local LLM</h4>
                     <label style="display: flex; gap: 5px;">
                         Endpoint URL
                         <input type="text" id="local-llm-url" placeholder="http://127.0.0.1:1234/v1/chat/completions"
@@ -201,6 +201,8 @@
                             <option value="http://127.0.0.1:1234/v1/chat/completions">LM Studio (Default)</option>
                             <!-- Ollama Default -->
                             <option value="http://127.0.0.1:11434/v1/chat/completions">Ollama (Default)</option>
+                            <!-- koboldcpp Default -->
+                            <option value="http://localhost:5001/v1/chat/completions">koboldcpp (Default)</option>
                             <option value="">手動入力</option>
                         </select>
                     </label>
@@ -220,13 +222,22 @@
                         AI連想機能応答長:
                         <input type="number" id="fa-max-tokens" placeholder="30" min="10" max="100"
                             style="width: 40px;" />
-                        <span style="font-size: 0.8em; color: #111;"></span>
+
                     </label>
                     <label>
                         <input type="checkbox" id="check-ai-thinking-overlay" checked />
                         AI思考時の演出
                     </label>
                     <br />
+                    <label>
+                        コンテキスト長:
+                        <input type="number" id="ai-context-limit" placeholder="2000" min="1000" max="100000"
+                            style="width: 60px;" />
+                        <span style="font-size: 0.7em; color: #111;">※ローカルAIに渡す文脈の長さ。通常は2000～3000程度を推奨<br>
+                            ※Geminiは設定にかかわらず最大4000になります。<br>
+                            ※この値＋システムプロンプトの長さが使用モデルの最大コンテクスト長を越えるとエラーになります<div class=""></div>
+                        </span><br>
+                    </label>
                     <label>
                         System Prompt (AIへの役割指示):
                         <textarea id="ai-system-prompt" class="setting-textarea"

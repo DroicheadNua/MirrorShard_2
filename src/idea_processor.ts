@@ -1837,6 +1837,10 @@ function setupKeyboardEvents() {
       e.preventDefault();
       newFile();
     }
+    if (isCtrl && key === 'g' && !isShift) {
+      e.preventDefault();
+      createGroupNodeByButton();
+    }
     if (isCtrl && key === 'r' && !isShift) {
       e.preventDefault();
       InitializeStage();
@@ -1856,6 +1860,12 @@ function setupKeyboardEvents() {
     if (isCtrl && key === 'f' && !isShift) {
       if (!isTextEditing) e.preventDefault();
     }
+    if (isCtrl && key === 'e' && !isShift) {
+      e.preventDefault();
+      e.stopPropagation();
+      const exportMenu = document.getElementById('ip-export-menu');
+      if (exportMenu) exportMenu.classList.toggle('hidden');
+    }
 
     // フルスクリーン切り替え
     // Mac: Cmd + Ctrl + F
@@ -1872,7 +1882,13 @@ function setupKeyboardEvents() {
       }
     }
 
-    // ★ Shift + Enter : 画面中央にノード作成
+    if (e.key === 'F2') {
+      e.preventDefault();
+      e.stopPropagation();
+      invoke('open_settings_window');
+    }
+
+    // Shift + Enter : 画面中央にノード作成
     if (isShift && e.key === 'Enter') {
       e.preventDefault();
 
@@ -3812,15 +3828,17 @@ function setupUIButtons() {
   document.getElementById('ip-ai-btn')?.addEventListener('click', () => {
     triggerFreeAssociation();
   });
+  const selector = document.getElementById('ip-ai-selector-container');
   // --- テンプレートメニュー制御 ---
   const templateBtn = document.getElementById('ip-template-button');
   const templateMenu = document.getElementById('ip-template-menu');
 
-  if (templateBtn && templateMenu) {
+  if (templateBtn && templateMenu && selector) {
     // ボタンクリックでメニュー開閉
     templateBtn.addEventListener('click', (e) => {
       e.stopPropagation();
       templateMenu.classList.toggle('hidden');
+      selector.classList.toggle('hidden');
     });
 
     // メニュー項目クリック
@@ -3835,6 +3853,7 @@ function setupUIButtons() {
           generateTemplate(tmplName);
         }
         templateMenu.classList.add('hidden');
+        selector.classList.remove('hidden');
       }
     });
 
@@ -3842,6 +3861,7 @@ function setupUIButtons() {
     window.addEventListener('click', () => {
       if (!templateMenu.classList.contains('hidden')) {
         templateMenu.classList.add('hidden');
+        selector.classList.remove('hidden');
       }
     });
   }
@@ -3849,10 +3869,11 @@ function setupUIButtons() {
   // エクスポートメニューのクリック処理
   const exportButton = document.getElementById('ip-export-button')!;
   const exportMenu = document.getElementById('ip-export-menu');
-  if (exportButton && exportMenu) {
+  if (exportButton && exportMenu && selector) {
     exportButton.addEventListener('click', (e) => {
       e.stopPropagation();
       exportMenu.classList.toggle('hidden');
+      selector.classList.toggle('hidden');
     });
     exportMenu.addEventListener('click', (e) => {
       const target = e.target as HTMLElement;
@@ -3872,6 +3893,14 @@ function setupUIButtons() {
         }
 
         exportMenu.classList.add('hidden');
+        selector.classList.remove('hidden');
+      }
+    });
+    // メニュー外クリックで閉じる
+    window.addEventListener('click', () => {
+      if (!exportMenu.classList.contains('hidden')) {
+        exportMenu.classList.add('hidden');
+        selector.classList.remove('hidden');
       }
     });
   }

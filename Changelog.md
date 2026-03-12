@@ -19,6 +19,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
  - アイデアプロセッサ専用のAIセレクタを実装  
  - AI機能（Chain of Thought）をAI Free Associationに改称  
  - ライトモードのUIをメインエディタと連動  
+- ローカルLLMのエンドポイントURLのプルダウンにkoboldcppのデフォルト値を追加  
+- AIに渡すコンテキストの長さを設定できるようになった  
 
 ### Fixed (修正点)  
 

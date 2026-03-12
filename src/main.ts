@@ -591,7 +591,15 @@ class App {
     const cursor = state.selection.main.head;
 
     // 1. コンテキストの取得 (カーソル前の1000文字程度)
-    const contextLimit = 2000;
+    let contextLimit = await this.store.get<number>('aiContextLimit') || 2000;
+    // Gemini（API利用）の場合は、予期せぬ課金やエラーを防ぐため強制的に上限をかける
+    if (this.mainAiApi === 'gemini') {
+      const MAX_GEMINI_LIMIT = 2000; // 安全策
+      if (contextLimit > MAX_GEMINI_LIMIT) {
+        console.warn(`Geminiのコンテキスト長は安全のため ${MAX_GEMINI_LIMIT} 字以下に制限されます`);
+        contextLimit = MAX_GEMINI_LIMIT;
+      }
+    }
     const from = Math.max(0, cursor - contextLimit);
     const textContext = state.doc.sliceString(from, cursor);
 
@@ -666,17 +674,32 @@ class App {
     const state = view.state;
     const cursor = state.selection.main.head;
 
-    // 1. コンテキストの取得 (前後2000文字程度)
-    const contextLimit = 2000;
-    const from = Math.max(0, cursor - contextLimit);
-    const to = Math.min(state.doc.length, cursor + contextLimit);
+    // 1. 設定値の取得と数値変換の保証
+    let limit = Number(await this.store.get<number>('aiContextLimit')) || 2000;
+
+    // Geminiガード
+    if (this.mainAiApi === 'gemini') {
+      const MAX_GEMINI_LIMIT = 4000; // 安全策
+      if (limit > MAX_GEMINI_LIMIT) {
+        console.warn(`Geminiのコンテキスト長は安全のため ${MAX_GEMINI_LIMIT} 字以下に制限されます`);
+        limit = MAX_GEMINI_LIMIT;
+      }
+    }
+    // 2. 配分の計算（Math.floorで整数化を確実にする）
+    const prevLimit = Math.floor(limit * 0.66);
+    const nextLimit = Math.floor(limit * 0.33);
+
+    const from = Math.max(0, cursor - prevLimit);
+    const to = Math.min(state.doc.length, cursor + nextLimit);
 
     const prevContext = state.doc.sliceString(from, cursor);
     const nextContext = state.doc.sliceString(cursor, to);
 
-    // 前後のどちらかが極端に短い場合は通常の続き書きとして扱うか、警告する
-    // ここではとりあえず実行するが、実用上はチェックしても良い
-    if (!prevContext.trim() && !nextContext.trim()) return;
+    // ガード：前後どちらも空なら実行しない
+    if (!prevContext.trim() && !nextContext.trim()) {
+      console.log("Context is empty. Aborting.");
+      return;
+    }
 
     console.log("AI Missing Link Completion requested...");
 
@@ -710,13 +733,14 @@ ${nextContext}
       if (this.mainAiApi === 'gemini') {
         const apiKey = await this.store.get<string>('geminiApiKey');
         if (!apiKey) throw new Error("Gemini API Key is not set.");
-
-        const response = await this.requestGeminiDirect(apiKey!, userPrompt, systemPrompt, undefined, this.aiAbortController.signal);
-        resultText = response;
+        resultText = await this.requestGeminiDirect(apiKey!, userPrompt, systemPrompt, undefined, this.aiAbortController.signal);
       } else {
-        const url = await this.store.get<string>('localLlmUrl') || "http://127.0.0.1:1234/v1/chat/completions";
-        const response = await this.requestLocalAiDirect(url, userPrompt, systemPrompt, undefined, this.aiAbortController.signal);
-        resultText = response;
+        const url = await this.store.get<string>('localLlmUrl');
+        // 出力上限を取得（確実に数値にする）
+        const maxTokens = Number(await this.store.get<number>('aiMaxTokens')) || 1000;
+
+        // ローカルリクエストの実行
+        resultText = await this.requestLocalAiDirect(url!, userPrompt, systemPrompt, maxTokens, this.aiAbortController.signal);
       }
 
       // 3. エディタに挿入
