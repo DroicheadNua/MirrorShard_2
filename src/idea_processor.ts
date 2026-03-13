@@ -1867,6 +1867,9 @@ function setupKeyboardEvents() {
       e.preventDefault();
       return;
     }
+    if (isCtrl && key === 'p' && !isShift) {
+      e.preventDefault();
+    }
     if (isCtrl && isShift && key === 'o') {
       e.preventDefault();
       toggleOutlinePane();

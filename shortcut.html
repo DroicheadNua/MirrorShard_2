@@ -128,11 +128,18 @@
   <script type="module">
     import { getCurrentWindow } from '@tauri-apps/api/window';
     document.addEventListener('keydown', (e) => {
+      const isShift = e.shiftKey;
+      const key = e.key.toLowerCase();
+      const isCtrlOrCmd = e.ctrlKey || e.metaKey;
       if (e.key === 'F1') {
         e.preventDefault();
         e.stopPropagation();
         getCurrentWindow().close();
       }
+      if (isCtrlOrCmd && key === 'f' && !isShift) { e.preventDefault(); }
+      if (isCtrlOrCmd && key === 'p' && !isShift) { e.preventDefault(); }
+      if (isCtrlOrCmd && key === 'r') { e.preventDefault(); }
+      if (isCtrlOrCmd && key === 'r' && isShift) { e.preventDefault(); }
     });
 
     // --- 右クリックメニューの無効化 ---

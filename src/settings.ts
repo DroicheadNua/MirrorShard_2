@@ -874,10 +874,17 @@ async function setupSettings() {
         closeBtn.addEventListener('click', hideWindow);
 
         document.addEventListener('keydown', (e) => {
+            const isShift = e.shiftKey;
+            const key = e.key.toLowerCase();
+            const isCtrlOrCmd = e.ctrlKey || e.metaKey;
             if (e.key === 'F2') {
                 e.preventDefault();
                 hideWindow();
             }
+            if (isCtrlOrCmd && key === 'f' && !isShift) { e.preventDefault(); }
+            if (isCtrlOrCmd && key === 'p' && !isShift) { e.preventDefault(); }
+            if (isCtrlOrCmd && key === 'r') { e.preventDefault(); }
+            if (isCtrlOrCmd && key === 'r' && isShift) { e.preventDefault(); }
         });
 
         await setupUnifiedThemes(store);

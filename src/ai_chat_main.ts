@@ -472,6 +472,11 @@ function setupEventListeners() {
             return;
         }
 
+        if (isCtrlOrCmd && key === 'f' && !isShift) { e.preventDefault(); }
+        if (isCtrlOrCmd && key === 'p' && !isShift) { e.preventDefault(); }
+        if (isCtrlOrCmd && key === 'r') { e.preventDefault(); }
+        if (isCtrlOrCmd && key === 'r' && isShift) { e.preventDefault(); }
+
     });
 
     messageInput.addEventListener('keydown', (e) => {

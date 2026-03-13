@@ -317,6 +317,8 @@
             // ショートカット
             document.addEventListener('keydown', (e) => {
                 const isCtrlOrCmd = e.ctrlKey || e.metaKey;
+                const isShift = e.shiftKey;
+                const key = e.key.toLowerCase();
                 if (isCtrlOrCmd && e.key.toLowerCase() === 'p') {
                     e.preventDefault();
                     window.print();
@@ -325,6 +327,8 @@
                     e.preventDefault();
                     getCurrentWindow().close();
                 }
+                if (isCtrlOrCmd && key === 'r') { e.preventDefault(); }
+                if (isCtrlOrCmd && key === 'r' && isShift) { e.preventDefault(); }
             });
 
             // --- 右クリックメニューの無効化 ---

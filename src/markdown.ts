@@ -407,6 +407,8 @@ async function init() {
         } else if (isCtrlOrCmd && (e.code === 'Digit0' || e.code === 'Numpad0')) {
             e.preventDefault(); updateZoom('reset');
         }
+        if (isCtrlOrCmd && key === 'p' && !isShift) { e.preventDefault(); }
+        if (isCtrlOrCmd && key === 'r' && isShift) { e.preventDefault(); }
     });
 
     document.addEventListener('wheel', (e) => {
