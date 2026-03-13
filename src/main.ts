@@ -1455,6 +1455,17 @@ ${nextContext}
       }
     });
 
+    // AI動作中のキー入力ガード 
+    window.addEventListener('keydown', (e) => {
+      if (this.isAiProcessing) {
+        // Escapeキー（中断）以外のすべてのキー入力を握り潰す
+        if (e.key !== 'Escape') {
+          e.preventDefault();
+          e.stopPropagation();
+        }
+      }
+    }, { capture: true });
+
     // プレビューからの更新要求に応える
     await listen('preview-request-update', async () => {
       await this.sendDataToPreview(true);

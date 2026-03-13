@@ -23,6 +23,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - AIに渡すコンテキストの長さを設定できるようになった  
 
 ### Fixed (修正点)  
+- AIによる文書生成時に文字入力ができてしまう不具合を修正  
 
 
 ## [1.3.0] - 2026-3-2  

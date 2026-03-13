@@ -158,7 +158,7 @@ async function undo() {
   try {
     historyIndex--;
     const data = JSON.parse(history[historyIndex]);
-    recreateStage(data);
+    await recreateStage(data);
     console.log(`[History] Undo to index: ${historyIndex}`);
   } catch (e) {
     console.error("[History] Undo failed:", e);
@@ -175,7 +175,7 @@ async function redo() {
   try {
     historyIndex++;
     const data = JSON.parse(history[historyIndex]);
-    recreateStage(data);
+    await recreateStage(data);
     console.log(`[History] Redo to index: ${historyIndex}`);
   } catch (e) {
     console.error("[History] Redo failed:", e);
@@ -261,7 +261,7 @@ function _getCurrentStageData() {
 // 4. ステージ再構築 (recreateStage) - Undo/Redoの要
 // =================================================================
 
-function recreateStage(data: any) {
+async function recreateStage(data: any) {
   // 1. レイヤーをクリア（ステージ自体は破棄しない）
   layer.destroyChildren();
   setupSelectionTools();
@@ -315,6 +315,7 @@ function recreateStage(data: any) {
   }
 
   // 4. 描画更新
+  await updateAllNodesAppearance();
   layer.batchDraw();
 }
 
@@ -338,7 +339,7 @@ function createNodeFromData(data: any) {
     name: 'text',
     text: data.title || 'New Node',
     fontSize: 16,
-    fontFamily: "serif-ja, serif",
+    fontFamily: getKonvaFontFamily(),
     fill: colors.text, // テーマに合わせた文字色（ライトなら黒系）
     padding: 8,
     width: data.width || 200,
@@ -418,7 +419,6 @@ export function initializeIdeaProcessor() {
   setupSelectionTools();
 
   // イベント登録
-  setupWindowFeatures();
   setupEventListeners();
   setupKeyboardEvents();
 
@@ -429,7 +429,6 @@ export function initializeIdeaProcessor() {
     layer.batchDraw();
   });
   setTimeout(() => {
-    recordHistory('Initial Empty State');
     isDirty = false; // 初期化直後はダーティではない
   }, 100);
 }
@@ -941,7 +940,7 @@ function createGroupNode(x: number, y: number, titleStr = 'グループ名') {
     text: titleStr,
     y: -25, // 枠の上に配置
     fontSize: 14,
-    fontFamily: 'var(--user-font-family, serif-ja, serif)',
+    fontFamily: getKonvaFontFamily(),
     fill: colors.text,
   });
 
@@ -1122,7 +1121,7 @@ function createSingleLink(fromNode: Konva.Group, toNode: Konva.Group, type: Link
   labelGroup.add(new Konva.Text({
     text: '',
     fontSize: 14,
-    fontFamily: "serif-ja, serif",
+    fontFamily: getKonvaFontFamily(),
     fill: linkColor, // 文字色もリンク色と同じ
     padding: 5,
     name: 'link-label',
@@ -1358,8 +1357,14 @@ function startLabelEditing(labelText: Konva.Text, linkGroup: Konva.Group) {
 
   textarea.focus();
 
+  let isRemoving = false;
+
   const removeTextarea = () => {
+    if (isRemoving) return;
     if (!textarea.parentNode) return;
+
+    isRemoving = true;
+
     const newVal = textarea.value;
 
     // 値を更新
@@ -1378,7 +1383,7 @@ function startLabelEditing(labelText: Konva.Text, linkGroup: Konva.Group) {
   };
 
   textarea.addEventListener('input', updateSize);
-  // Ctrl+Enter で確定、Esc でキャンセル
+
   textarea.addEventListener('keydown', (e) => {
     if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) {
       e.preventDefault();
@@ -1429,8 +1434,12 @@ function startGroupTitleEditing(titleText: Konva.Text) {
 
   textarea.focus();
 
+  let isRemoving = false;
+
   const removeTextarea = () => {
+    if (isRemoving) return;
     if (!textarea.parentNode) return;
+    isRemoving = true;
     const newVal = textarea.value;
     if (newVal !== titleText.text()) {
       titleText.text(newVal);
@@ -1692,6 +1701,10 @@ const handleContentEditorKeyDown = (e: KeyboardEvent) => {
     e.preventDefault();
     closeContentEditor();
   }
+  if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) {
+    e.preventDefault();
+    closeContentEditor();
+  }
 };
 
 function saveContentChanges() {
@@ -1794,15 +1807,20 @@ function generateUUID() {
 }
 
 function setupKeyboardEvents() {
-  document.addEventListener('keydown', (e) => {
+  // AI動作中のガード
+  window.addEventListener('keydown', (e) => {
     if (isAiThinking) {
+      // Escapeは中断処理として通す
       if (e.key === 'Escape') {
         abortAiProcessing();
       }
       e.preventDefault();
       e.stopPropagation();
-      return;
     }
+  }, { capture: true });
+  // 通常のキー処理
+  document.addEventListener('keydown', async (e) => {
+    if (isAiThinking) return; // 保険
     const isCtrl = e.ctrlKey || e.metaKey;
     const isShift = e.shiftKey;
     const key = e.key.toLowerCase();
@@ -2065,8 +2083,12 @@ function startTextEditing(textNode: Konva.Text, group: Konva.Group, isNew = fals
   // 入力時のリサイズ
   textarea.addEventListener('input', updateTextareaSize);
 
+  let isRemoving = false; // 多重実行を防止するローカルフラグ
   const removeTextarea = () => {
+    if (isRemoving) return;
     if (!textarea.parentNode) return;
+
+    isRemoving = true;
 
     const newVal = textarea.value;
     const oldText = textNode.text(); // 変更判定用
@@ -2074,7 +2096,6 @@ function startTextEditing(textNode: Konva.Text, group: Konva.Group, isNew = fals
     // テキスト更新
     if (newVal !== oldText) {
       textNode.text(newVal);
-
       updateConnectedLinks(group);
     }
     adjustNodeSize(group);
@@ -2834,6 +2855,23 @@ function setupSelectionTools() {
     isHistoryEnabled = true;
     recordHistory('Moved multiple nodes');
   });
+}
+
+// --- 現在のフォントファミリーを取得するヘルパー ---
+function getKonvaFontFamily() {
+  // まずインラインスタイルから探す
+  let font = document.documentElement.style.getPropertyValue('--user-font-family');
+
+  // なければ計算済みスタイルから探す（CSSファイルで定義されている場合）
+  if (!font) {
+    font = getComputedStyle(document.documentElement).getPropertyValue('--user-font-family');
+  }
+
+  // 余計なクォーテーションや空白を除去
+  font = font.trim().replace(/"/g, '').replace(/'/g, '');
+
+  // 見つからなければデフォルトを返す
+  return font || 'serif-ja, serif';
 }
 
 // =================================================================
@@ -3794,7 +3832,7 @@ function clearAiProcessingState() {
 // =================================================================
 
 // ■ 初期化時に呼び出すセットアップ関数
-async function setupWindowFeatures() {
+async function setupWindowFeatures(): Promise<boolean> {
   osType = await type();
 
   // ストアの初期化
@@ -3810,7 +3848,8 @@ async function setupWindowFeatures() {
   setupSettingsListener();
 
   // 3. 初期状態の適用（ストアから読み込んで反映）
-  await applyInitialSettings();
+  const isLoaded = await applyInitialSettings();
+  return isLoaded;
 }
 
 // ■ UIボタンのイベント登録
@@ -3953,8 +3992,8 @@ function setupOutlineEvents() {
 }
 
 // ■ 初期設定の適用
-async function applyInitialSettings() {
-  if (!store) return;
+async function applyInitialSettings(): Promise<boolean> {
+  if (!store) return false;
 
   // 1.ユーザーフォントの読み込み
   const userFont = await store.get<string>('userFontFamily');
@@ -3995,9 +4034,11 @@ async function applyInitialSettings() {
     console.log('Loading last opened file:', lastFile);
     // 引数付きで呼び出す（ダイアログを出さずに開く）
     await loadFromMrsd(lastFile);
+    return true; // ロード成功を返す
   } else {
     // ファイルがない場合は Untitled 更新だけしておく
     _updateTitle();
+    return false; // ロードしなかった
   }
 }
 
@@ -4235,19 +4276,21 @@ async function createGroupNodeByButton() {
 // =================================================================
 
 document.addEventListener('DOMContentLoaded', async () => {
-  // 1. Konvaなどの初期化
+  // 1. Konva等のセットアップ
   initializeIdeaProcessor();
 
+  // 2. ウィンドウ機能のセットアップと、前回ファイルの自動ロードを完全に待機する
+  const isFileLoaded = await setupWindowFeatures();
 
+  // 3. もしファイルがロードされていなかった（完全な新規起動）場合のみ、空の履歴を作る
+  if (!isFileLoaded) {
+    history = [];
+    historyIndex = -1;
+    recordHistory('Initial Empty State');
+    isDirty = false; // 初期状態はクリーン
+  }
 
-  // 3. レンダリング安定待ち（履歴初期化）
-  setTimeout(() => {
-    if (history.length === 0) {
-      recordHistory('Initial Empty State');
-    }
-  }, 100);
-
-  // 4. リスナー準備完了後に、メインへ合図を送る
-  console.log('[Tauri] Sending idea_processor-ready...');
-  await emit('idea_processor-ready');
+  // 4. 準備完了を通知
+  console.log('[Tauri] Sending idea-processor-ready...');
+  await emit('idea-processor-ready');
 });
