@@ -216,24 +216,20 @@
                 <div class="ai-setting-group">
                     <h4>Behavior</h4>
                     <label>
-                        最大応答長:
+                        最大応答長(100〜100000):
                         <input type="number" id="ai-max-tokens" placeholder="2000" min="100" max="100000"
-                            style="width: 60px;" />
-                        AI連想機能応答長:
-                        <input type="number" id="fa-max-tokens" placeholder="30" min="10" max="100"
+                            style="width: 60px;" /><br>
+                        AI連想機能応答長(10〜1000):
+                        <input type="number" id="fa-max-tokens" placeholder="30" min="10" max="1000"
                             style="width: 40px;" />
-
-                    </label>
-                    <label>
-                        <input type="checkbox" id="check-ai-thinking-overlay" checked />
-                        AI思考時の演出
-                    </label>
-                    <br />
-                    <label>
-                        コンテキスト長:
+                        <br />
+                        コンテキスト長(1000〜100000):
                         <input type="number" id="ai-context-limit" placeholder="2000" min="1000" max="100000"
                             style="width: 60px;" />
-                        <span style="font-size: 0.7em; color: #111;">※ローカルAIに渡す文脈の長さ。通常は2000～3000程度を推奨<br>
+                        <input type="checkbox" id="check-ai-thinking-overlay" checked />
+                        AI思考時の演出
+                        <span style="font-size: 0.7em; color: #111;"><br>
+                            ※ローカルAIに渡す文脈の長さ。通常は2000～3000程度を推奨<br>
                             ※Geminiは設定にかかわらず最大4000になります。<br>
                             ※この値＋システムプロンプトの長さが使用モデルの最大コンテクスト長を越えるとエラーになります<div class=""></div>
                         </span><br>

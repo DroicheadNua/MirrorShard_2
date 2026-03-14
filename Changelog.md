@@ -5,7 +5,7 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [1.4.0] - 2026-3-XX  
+## [1.4.0] - 2026-3-14  
 
 ### Added (新機能)  
 - アイデアプロセッサを実装。これを以てElectron版にあった機能はほぼ全て移植完了  
@@ -24,6 +24,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed (修正点)  
 - AIによる文書生成時に文字入力ができてしまう不具合を修正  
+- サブウィンドウでOS標準のショートカットを無効化していなかった不具合を修正  
 
 
 ## [1.3.0] - 2026-3-2  

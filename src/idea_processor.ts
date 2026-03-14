@@ -2713,6 +2713,7 @@ async function newFile() {
   recordHistory('Initial Empty State');
   isDirty = false;
   _updateTitle(); // Untitledに戻す
+  renderIpOutline();
 
   // ストアのパスもクリアしておく
   if (store) {
@@ -3673,7 +3674,11 @@ async function triggerFreeAssociation() {
       };
 
       // 元ノードの中心位置に初期ノードを作成（編集モードなし）
-      const newNode = createNewNode(centerX - 60, centerY - 30, idea, '', false);
+      // 先頭50文字をタイトルに設定、残りはContentTextに
+      const shortTitle = idea.split('\n')[0].substring(0, 50) + (idea.length > 50 ? '...' : '');
+
+      // createNewNode の第3引数にTitle、第4引数に全文(ContentText)を渡す
+      const newNode = createNewNode(centerX - 60, centerY - 30, shortTitle, idea, false);
       newNodes.push(newNode);
 
       // アニメーションの初期状態（小さく、透明に）
@@ -3857,17 +3862,54 @@ async function setupWindowFeatures(): Promise<boolean> {
 
 // ■ UIボタンのイベント登録
 function setupUIButtons() {
-  document.getElementById('ip-toggle-on-top-btn')?.addEventListener('click', IPToggleOnTop);
-  document.getElementById('ip-close-btn')?.addEventListener('click', IPClose);
-  document.getElementById('ip-fullscreen-btn')?.addEventListener('click', IPToggleFullscreen);
-  document.getElementById('ip-theme-toggle-btn')?.addEventListener('click', IPThemeToggle);
-  document.getElementById('ip-create-group-button')?.addEventListener('click', createGroupNodeByButton);
-  document.getElementById('ip-save-as-button')?.addEventListener('click', saveByBtn);
-  document.getElementById('ip-load-button')?.addEventListener('click', () => loadFromMrsd());
-  document.getElementById('ip-new-file-button')?.addEventListener('click', newFile);
-  document.getElementById('ip-zoom-reset-btn')?.addEventListener('click', zoomReset);
-  document.getElementById('ip-reset-window-btn')?.addEventListener('click', InitializeStage);
+  const isEditing = () => isTextEditing || isContentEditing;
+  document.getElementById('ip-toggle-on-top-btn')?.addEventListener('click', () => {
+    if (isEditing()) return;
+    IPToggleOnTop();
+  });
+  document.getElementById('ip-close-btn')?.addEventListener('click', () => {
+    if (isEditing()) return;
+    IPClose();
+  });
+  document.getElementById('ip-fullscreen-btn')?.addEventListener('click', () => {
+    if (isEditing()) return;
+    IPToggleFullscreen();
+  });
+  document.getElementById('ip-theme-toggle-btn')?.addEventListener('click', () => {
+    if (isEditing()) return;
+    IPThemeToggle();
+  });
+  document.getElementById('ip-create-group-button')?.addEventListener('click', () => {
+    if (isEditing()) return;
+    createGroupNodeByButton();
+  });
+  document.getElementById('ip-save-as-button')?.addEventListener('click', () => {
+    if (isEditing()) return;
+    saveByBtn();
+  });
+  document.getElementById('ip-load-button')?.addEventListener('click', () => {
+    if (isEditing()) return;
+    loadFromMrsd();
+  });
+  document.getElementById('ip-new-file-button')?.addEventListener('click', () => {
+    if (isEditing()) return;
+    newFile();
+  });
+  document.getElementById('ip-zoom-reset-btn')?.addEventListener('click', () => {
+    if (isEditing()) return;
+    zoomReset();
+  });
+  document.getElementById('ip-reset-window-btn')?.addEventListener('click', () => {
+    if (isEditing()) return;
+    InitializeStage();
+  });
   document.getElementById('ip-ai-btn')?.addEventListener('click', () => {
+    if (isContentEditing) {
+      // v1.5.0でここに Template Completion のロジックを入れる
+      console.log("Future: Trigger Template Completion");
+      return;
+    }
+    if (isTextEditing) return; // 単なるノード名編集時は無効
     triggerFreeAssociation();
   });
   const selector = document.getElementById('ip-ai-selector-container');
@@ -3878,6 +3920,7 @@ function setupUIButtons() {
   if (templateBtn && templateMenu && selector) {
     // ボタンクリックでメニュー開閉
     templateBtn.addEventListener('click', (e) => {
+      if (isEditing()) return;
       e.stopPropagation();
       templateMenu.classList.toggle('hidden');
       selector.classList.toggle('hidden');
@@ -3885,6 +3928,7 @@ function setupUIButtons() {
 
     // メニュー項目クリック
     templateMenu.addEventListener('click', (e) => {
+      if (isEditing()) return;
       const target = e.target as HTMLElement;
       // closestで親のli要素などを探す
       const item = target.closest('[data-template]') as HTMLElement;
@@ -3913,11 +3957,13 @@ function setupUIButtons() {
   const exportMenu = document.getElementById('ip-export-menu');
   if (exportButton && exportMenu && selector) {
     exportButton.addEventListener('click', (e) => {
+      if (isEditing()) return;
       e.stopPropagation();
       exportMenu.classList.toggle('hidden');
       selector.classList.toggle('hidden');
     });
     exportMenu.addEventListener('click', (e) => {
+      if (isEditing()) return;
       const target = e.target as HTMLElement;
       if (target.classList.contains('export-item')) {
         const format = target.dataset.format;
@@ -3950,7 +3996,10 @@ function setupUIButtons() {
 
 function setupOutlineEvents() {
   // 開閉ボタン
-  document.getElementById('ip-toggle-outline-btn')?.addEventListener('click', toggleOutlinePane);
+  document.getElementById('ip-toggle-outline-btn')?.addEventListener('click', () => {
+    if (isTextEditing || isContentEditing) return;
+    toggleOutlinePane();
+  });
 
   // 全展開・全折りたたみ
   document.getElementById('outline-expand-all')?.addEventListener('click', () => setAllIpOutlineCollapsed(false));

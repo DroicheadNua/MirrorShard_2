@@ -1,8 +1,8 @@
-# MirrorShard 2 ver. 1.3.0  
+# MirrorShard 2 ver. 1.4.0  
 
-創作支援用テキストエディタ「MirrorShard」の改良版です。  
+AIサポートつきの多機能ライティングエディタ「MirrorShard」の改良版です。  
 ソフトウェアフレームワークをTauriに変更することで、起動の高速化とメモリ消費量の削減に成功。さらに配布バイナリのファイルサイズは前作の30分の1程度にまで大幅に削減されています。  
-アイデアプロセッサ機能は未搭載ですが、代わりにAI機能を大幅に強化。メインウィンドウにもAI機能が搭載され、カーソル位置からの執筆、コード補完、選択範囲の要約/リライト/翻訳が可能に。  
+前作のほぼ全機能を移植完了、さらに前作よりAI機能を大幅に強化。メインウィンドウにもAI機能が搭載され、カーソル位置からの執筆、コード補完、選択範囲の要約/リライト/翻訳が可能に。  
 加えてマークダウン／HTMLプレビュー機能とコードエディタモードを追加、より汎用性の高いエディタとして生まれ変わりました。  
 
 創作用エディタとして、また巨大テキストファイルを扱えるアウトラインプロセッサやマークダウンエディタとして、幅広く運用できると思います。  
@@ -10,21 +10,27 @@
 公式サイトを作成しました  
 https://droicheadnua.github.io/MirrorShard-Official/
 
+## 📰 メディア掲載 / Media Coverage
+
+**窓の杜（Impress Watch）**様にご紹介いただきました  
+* [日本語小説エディター「MirrorShard」が「Tauri」で生まれ変わった！ 軽量・高速に](https://forest.watch.impress.co.jp/docs/news/2091824.html)
+
+
 ![MirrorShard_2 Key Visual](screenshots/ScreenShot01.jpg)
 
 ## ダウンロード  
 
 [![Windows](https://img.shields.io/badge/Download-Windows-blue)]  
-(https://github.com/DroicheadNua/MirrorShard_2/releases/download/v1.3.0/MirrorShard.2_1.3.0_x64_ja-JP.msi)  
+(https://github.com/DroicheadNua/MirrorShard_2/releases/download/v1.4.0/MirrorShard.2_1.4.0_x64_ja-JP.msi)  
 [![Mac (Apple Silicon)](https://img.shields.io/badge/Download-Mac_(Apple_Silicon)-green)]  
-(https://github.com/DroicheadNua/MirrorShard_2/releases/download/v1.3.0/MirrorShard.2_1.3.0_aarch64.dmg)  
+(https://github.com/DroicheadNua/MirrorShard_2/releases/download/v1.4.0/MirrorShard.2_1.4.0_aarch64.dmg)  
 
 または、[最新のリリース一覧ページ](https://github.com/DroicheadNua/MirrorShard_2/releases/latest)からダウンロードできます。  
 最下段の「Assets」の項目が折りたたまれている場合は、▶マークを押して展開してください。    
 
 ## 既知の問題 (Known Issues)  
 
-現在、v1.3.0において以下の問題が確認されています。  
+現在、v1.4.0において以下の問題が確認されています。  
 
 ### Windows版  
 - ATOK 2017などの旧バージョンのATOKを使用している環境において、変換中のアンダーラインや文節区切りが表示されない現象が確認されています。  
@@ -48,6 +54,8 @@ mirrorshard.dev@gmail.com
 ・AIチャット機能を搭載。Google Gemini（API使用）のほか、LM StudioやOllamaなどを介してローカルLLMとの連携も可能  
 ![MirrorShard_2 AI_Chat](screenshots/ScreenShot03.jpg)
 ・メインエディタにもAI機能を搭載。カーソル位置からAIに文章の続きを書かせたり、選択範囲をAIに要約/翻訳/リライトさせたりすることも可能  
+・アイデアプロセッサを搭載。アイデアの整理や発想支援などに。  
+![MirrorShard_2 Idea_Processor](screenshots/ScreenShot05.jpg)
 ・マークダウン／HTMLプレビュー機能を搭載。マークダウンエディタ・HTMLエディタとしても運用可能に  
 ・コードエディタモードを搭載、AIによる簡易的なコード補完機能も実装。また、ターミナルを開く機能を搭載  
 ![MirrorShard_2 AI_Chat](screenshots/ScreenShot04.jpg)
@@ -83,8 +91,7 @@ mirrorshard.dev@gmail.com
 ・AIチャット機能がOllamaにも対応。またLAN接続にも対応  
 ・降雪エフェクトがメインエディタに適用されるようになった  
 ・右クリックメニューから、選択中のファイルのあるフォルダを開けるように  
-
-・アイデアプロセッサには未対応。最終的には既存の全機能を移植する予定  
+・ルビ、三点リーダー（……）などの挿入ボタンを設置  
 
 ## 操作方法  
 詳しい操作方法については、[ユーザーマニュアル](docs/user-manual.md)をご覧ください。  
@@ -119,6 +126,9 @@ Linux版はグラフィック環境由来（特にNvidia製グラフィックボ
 
 ・BGM  
 　ACE-Stepによる生成  
+
+・タイプライター音  
+　Springin'様 https://www.springin.org  
 
 ・Tokyo Night  Color Scheme（Enkia様）(https://github.com/enkia/tokyo-night-vscode-theme)  
 　システムテーマの一つとしてお借りした他、コードエディターモードの配色もこちらをベースにしています。  
