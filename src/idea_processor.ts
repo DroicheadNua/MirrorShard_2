@@ -341,9 +341,11 @@ function createNodeFromData(data: any) {
     fontSize: 16,
     fontFamily: getKonvaFontFamily(),
     fill: colors.text, // テーマに合わせた文字色（ライトなら黒系）
-    padding: 8,
+    padding: 12,
     width: data.width || 200,
     lineHeight: 1.2,
+    wrap: 'char',
+    offsetX: 5,
   });
 
   const backgroundRect = new Konva.Rect({
@@ -366,32 +368,33 @@ function createNodeFromData(data: any) {
   return nodeGroup;
 }
 
-// --- ノードサイズをテキスト量に合わせて最適化する関数 ---
 function adjustNodeSize(nodeGroup: Konva.Group) {
   const textNode = nodeGroup.findOne('.text') as Konva.Text;
   const bg = nodeGroup.findOne('.background') as Konva.Rect;
   if (!textNode || !bg) return;
 
-  const maxWidth = 200; // 折り返しの最大幅
-  // KonvaのTextはpaddingを含んだ幅を返すため、追加の計算は本来不要
-  // Electron版の挙動（余裕を持たせる）に合わせるなら以下
-  // const padding = 16; 
+  const maxWidth = 200;
 
-  // 1. 一時的に幅の制限をなくして、テキスト本来の幅を計算
-  textNode.width(undefined as any);
+  // 1. 確実に幅制限を解除
+  textNode.setAttr('width', undefined);
 
-  // 2. 幅の判定
-  if (textNode.width() > maxWidth) {
-    // 最大幅を超える場合は、折り返しを有効にする
+  // 2. width() ではなく getClientRect() を使う
+  // これにより、フォントのカーニングや描画のハミ出しも含めた「実際のピクセルサイズ」を取得できる
+  let textBounds = textNode.getClientRect({ relativeTo: nodeGroup });
+
+  if (textBounds.width > maxWidth) {
+    // 最大幅を超える場合はKonvaに折り返しを任せる
     textNode.width(maxWidth);
+    // 折り返し後にもう一度、実際の描画サイズを測り直す
+    textBounds = textNode.getClientRect({ relativeTo: nodeGroup });
   }
-  // 超えない場合は width(undefined) のまま（自動幅）
 
-  // 3. 背景サイズを同期
-  bg.width(textNode.width());
-  bg.height(textNode.height());
+  // 3. 背景サイズを「実際の描画ピクセル領域」と完全に一致させる
+  // width()の計算誤差がここで吸収される
+  bg.width(textBounds.width);
+  bg.height(textBounds.height);
 
-  // 4. リンクの接続位置を更新
+  // リンクの端点更新
   updateConnectedLinks(nodeGroup);
 }
 
@@ -536,7 +539,10 @@ function setupEventListeners() {
       // グループ内（背景）ダブルクリックで新規ノード作成＆登録
       const pos = stage.getPointerPosition();
       if (pos) {
-        const newNode = createNewNode(pos.x, pos.y);
+        const scale = stage.scaleX();
+        const logicalX = (pos.x - stage.x()) / scale;
+        const logicalY = (pos.y - stage.y()) / scale;
+        const newNode = createNewNode(logicalX, logicalY);
         // グループに登録
         const childIds = groupNode.getAttr('childNodeIds') || [];
         childIds.push(newNode.id());
@@ -566,7 +572,11 @@ function setupEventListeners() {
     if (e.target === stage) {
       const pos = stage.getPointerPosition();
       if (pos) {
-        createNewNode(pos.x, pos.y);
+        const scale = stage.scaleX();
+        const logicalX = (pos.x - stage.x()) / scale;
+        const logicalY = (pos.y - stage.y()) / scale;
+
+        createNewNode(logicalX, logicalY);
         // recordHistory('Node created');
       }
     }
@@ -889,8 +899,8 @@ function createNewNode(x: number, y: number, textStr = 'New Node', contentStr = 
     id, x, y, width: 200, height: 60, title: textStr,
     contentText: contentStr
   });
-  adjustNodeSize(node);
   updateAllNodesAppearance();
+  adjustNodeSize(node);
   renderIpOutline();
   // 手動作成（ダブルクリック等）の時だけ編集モードに入る
   if (isInteractive) {
@@ -2002,23 +2012,20 @@ function startTextEditing(textNode: Konva.Text, group: Konva.Group, isNew = fals
   deselectAll();
   layer.batchDraw();
 
-  const textPosition = textNode.getAbsolutePosition();
   const stageBox = document.getElementById('ip-container')!.getBoundingClientRect();
-  const areaPosition = {
-    x: stageBox.left + textPosition.x,
-    y: stageBox.top + textPosition.y,
-  };
+  const bg = group.findOne('.background') as Konva.Rect;
+  const bgPos = bg.getAbsolutePosition();
 
   const textarea = document.createElement('textarea');
   document.body.appendChild(textarea);
 
   textarea.value = textNode.text();
   textarea.style.position = 'absolute';
-  textarea.style.top = areaPosition.y + 'px';
-  textarea.style.left = areaPosition.x + 'px';
+  textarea.style.left = (stageBox.left + bgPos.x) + 'px';
+  textarea.style.top = (stageBox.top + bgPos.y) + 'px';
   const scale = stage.scaleX();
-  textarea.style.width = (textNode.width() * scale) + 'px';
-  textarea.style.height = (textNode.height() * scale) + 'px';
+  textarea.style.width = (bg.width() * scale) + 'px';
+  textarea.style.height = (bg.height() * scale) + 'px';
   textarea.style.fontSize = (textNode.fontSize() * scale) + 'px';
   textarea.style.fontFamily = textNode.fontFamily();
   textarea.style.lineHeight = textNode.lineHeight().toString();
@@ -2037,12 +2044,12 @@ function startTextEditing(textNode: Konva.Text, group: Konva.Group, isNew = fals
   textarea.style.borderRadius = '6px';
   textarea.style.outline = 'none';
   textarea.style.resize = 'none';
-  textarea.style.padding = (textNode.padding() * scale) + 'px';
+  textarea.style.padding = (8 * scale) + 'px';
   textarea.style.margin = '0px';
   textarea.style.overflow = 'hidden';
   textarea.style.zIndex = '500';
   textarea.style.minWidth = (150 * scale) + 'px';
-  textarea.style.boxSizing = 'content-box';
+  textarea.style.boxSizing = 'border-box';
 
   // --- サイズ調整ロジック ---
   const updateTextareaSize = () => {
@@ -2058,12 +2065,6 @@ function startTextEditing(textNode: Konva.Text, group: Konva.Group, isNew = fals
     textarea.style.height = newHeight + 'px';
   };
 
-  // 初期状態で一回計算を実行し、KonvaサイズではなくDOMサイズで確定させる
-  // これにより、文字を打ち始めた瞬間のガタつき（Konvaサイズ→DOMサイズのジャンプ）を防ぐ
-  // ただし、初期幅だけはKonvaに合わせないと折り返し位置が変わる可能性があるため
-  // 初期幅を設定してから高さを計算させる
-  textarea.style.width = (textNode.width() * scale) + 'px';
-  textarea.style.height = (textNode.height() * scale) + 'px';
 
   // DOM描画待ちをしてからリサイズ計算を走らせる
   requestAnimationFrame(() => {

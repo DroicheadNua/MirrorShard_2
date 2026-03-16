@@ -5,6 +5,19 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.4.1] - 2026-3-16 
+
+### Added (新機能)  
+
+
+### Changed (変更点)    
+
+
+### Fixed (修正点)  
+- アイデアプロセッサ:新規ノード作成時の座標計算にズームが考慮されていなかった不具合を修正  
+- アイデアプロセッサ: ノードタイトルが英文のときの表示不具合を修正  
+
+
 ## [1.4.0] - 2026-3-14  
 
 ### Added (新機能)  

@@ -1,4 +1,4 @@
-# MirrorShard 2 ver. 1.4.0  
+# MirrorShard 2 ver. 1.4.1  
 
 AIサポートつきの多機能ライティングエディタ「MirrorShard」の改良版です。  
 ソフトウェアフレームワークをTauriに変更することで、起動の高速化とメモリ消費量の削減に成功。さらに配布バイナリのファイルサイズは前作の30分の1程度にまで大幅に削減されています。  
@@ -21,16 +21,16 @@ https://droicheadnua.github.io/MirrorShard-Official/
 ## ダウンロード  
 
 [![Windows](https://img.shields.io/badge/Download-Windows-blue)]  
-(https://github.com/DroicheadNua/MirrorShard_2/releases/download/v1.4.0/MirrorShard.2_1.4.0_x64_ja-JP.msi)  
+(https://github.com/DroicheadNua/MirrorShard_2/releases/download/v1.4.1/MirrorShard.2_1.4.1_x64_ja-JP.msi)  
 [![Mac (Apple Silicon)](https://img.shields.io/badge/Download-Mac_(Apple_Silicon)-green)]  
-(https://github.com/DroicheadNua/MirrorShard_2/releases/download/v1.4.0/MirrorShard.2_1.4.0_aarch64.dmg)  
+(https://github.com/DroicheadNua/MirrorShard_2/releases/download/v1.4.1/MirrorShard.2_1.4.1_aarch64.dmg)  
 
 または、[最新のリリース一覧ページ](https://github.com/DroicheadNua/MirrorShard_2/releases/latest)からダウンロードできます。  
 最下段の「Assets」の項目が折りたたまれている場合は、▶マークを押して展開してください。    
 
 ## 既知の問題 (Known Issues)  
 
-現在、v1.4.0において以下の問題が確認されています。  
+現在、v1.4.1において以下の問題が確認されています。  
 
 ### Windows版  
 - ATOK 2017などの旧バージョンのATOKを使用している環境において、変換中のアンダーラインや文節区切りが表示されない現象が確認されています。  
