@@ -2,9 +2,11 @@
 import { GoogleGenerativeAI, GenerativeModel, ChatSession } from "@google/generative-ai";
 
 export interface ChatSettings {
-    apiType: 'gemini' | 'local';
+    apiType: 'gemini' | 'groq' | 'local';
     geminiApiKey?: string;
     geminiModel?: string;
+    groqApiKey?: string;
+    groqModel?: string;
     localUrl?: string;
     localModel?: string;
     systemPrompt?: string;
@@ -15,6 +17,7 @@ export class AiChat {
     private genAI: GoogleGenerativeAI | null = null;
     private model: GenerativeModel | null = null;
     private chatSession: ChatSession | null = null;
+    // 初期値の型エラーを回避
     private currentSettings: ChatSettings = { apiType: 'gemini' };
 
     private onUpdate: (text: string, isFinal: boolean) => void;
@@ -25,6 +28,7 @@ export class AiChat {
 
     public async updateSettings(settings: ChatSettings) {
         this.currentSettings = settings;
+        // Geminiの場合のみSDKの初期化が必要
         if (this.currentSettings.apiType === 'gemini') {
             const apiKey = this.currentSettings.geminiApiKey;
             const modelName = this.currentSettings.geminiModel || "gemini-2.5-flash";
@@ -56,6 +60,8 @@ export class AiChat {
 
         if (this.currentSettings.apiType === 'gemini') {
             await this.sendToGemini(lastMsg.content);
+        } else if (this.currentSettings.apiType === 'groq') {
+            await this.sendToGroq(history);
         } else {
             await this.sendToLocalLLM(history);
         }
@@ -80,11 +86,36 @@ export class AiChat {
         }
     }
 
-    // Local LLMをストリーミング対応に書き換え
+    // Groq用の送信処理 (OpenAI互換形式)
+    private async sendToGroq(history: { role: string, content: string }[]) {
+        const url = "https://api.groq.com/openai/v1/chat/completions";
+        const apiKey = this.currentSettings.groqApiKey;
+        const model = this.currentSettings.groqModel || "llama-3.3-70b-versatile";
+
+        if (!apiKey) {
+            this.onUpdate("Error: Groq API Key is not set.", true);
+            return;
+        }
+
+        // 認証ヘッダーを付与して共通のストリーミング処理へ
+        const headers = {
+            "Content-Type": "application/json",
+            "Authorization": `Bearer ${apiKey}`
+        };
+
+        await this.fetchOpenAICompatibleStream(url, model, history, headers);
+    }
+
     private async sendToLocalLLM(history: { role: string, content: string }[]) {
         const url = this.currentSettings.localUrl || "http://127.0.0.1:1234/v1/chat/completions";
         const model = this.currentSettings.localModel || "local-model";
+        const headers = { "Content-Type": "application/json" };
 
+        await this.fetchOpenAICompatibleStream(url, model, history, headers);
+    }
+
+    // Local LLMとGroqで共通のSSEストリーミング処理
+    private async fetchOpenAICompatibleStream(url: string, model: string, history: any[], headers: any) {
         const messages = [];
         if (this.currentSettings.systemPrompt) {
             messages.push({ role: "system", content: this.currentSettings.systemPrompt });
@@ -96,17 +127,20 @@ export class AiChat {
         try {
             const response = await fetch(url, {
                 method: "POST",
-                headers: { "Content-Type": "application/json" },
+                headers: headers,
                 body: JSON.stringify({
                     messages: messages,
-                    stream: true, // ストリーミング有効化
-                    max_tokens: maxTokens, // API側への制限指示
+                    stream: true,
+                    max_tokens: maxTokens,
                     temperature: 0.7,
                     model: model
                 })
             });
 
-            if (!response.ok) throw new Error(`Status ${response.status}`);
+            if (!response.ok) {
+                const errData = await response.json().catch(() => ({}));
+                throw new Error(errData.error?.message || `Status ${response.status}`);
+            }
             if (!response.body) throw new Error("No response body");
 
             const reader = response.body.getReader();
@@ -119,10 +153,8 @@ export class AiChat {
                 if (done) break;
 
                 buffer += decoder.decode(value, { stream: true });
-
-                // 行ごとに処理 (SSE形式: data: {...})
                 const lines = buffer.split('\n');
-                buffer = lines.pop() || ""; // 最後の不完全な行はバッファに戻す
+                buffer = lines.pop() || "";
 
                 for (const line of lines) {
                     const trimmed = line.trim();
@@ -133,23 +165,20 @@ export class AiChat {
                             const delta = json.choices?.[0]?.delta?.content;
                             if (delta) {
                                 fullText += delta;
-                                // 念の為、クライアント側でも文字数制限チェック
-                                if (fullText.length > maxTokens * 4) { // トークン数≒文字数*0.5~1.5なので余裕を持たせる
+                                if (fullText.length > maxTokens * 4) {
                                     reader.cancel();
                                     break;
                                 }
                                 this.onUpdate(fullText, false);
                             }
-                        } catch (e) {
-                            // JSONパースエラーは無視して次へ
-                        }
+                        } catch (e) { }
                     }
                 }
             }
             this.onUpdate(fullText, true);
 
         } catch (error) {
-            console.error("Local LLM Stream Error:", error);
+            console.error("Stream Error:", error);
             this.onUpdate(`Error: ${String(error)}`, true);
         }
     }

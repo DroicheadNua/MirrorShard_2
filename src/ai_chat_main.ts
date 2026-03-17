@@ -84,6 +84,8 @@ async function init() {
 
         const apiKey = await store.get<string>('geminiApiKey');
         const model = await store.get<string>('geminiModel');
+        const groqKey = await store.get<string>('groqApiKey');
+        const groqModel = await store.get<string>('groqModel');
         const localUrl = await store.get<string>('localLlmUrl');
         const sysPrompt = await store.get<string>('aiSystemPrompt');
         const maxTokens = await store.get<number>('aiMaxTokens') || 2000;
@@ -94,16 +96,24 @@ async function init() {
         }
 
         aiSettings = {
-            apiType: (savedApiType as 'gemini' | 'local'),
+            apiType: (savedApiType as 'gemini' | 'groq' | 'local'),
             geminiApiKey: apiKey || undefined,
             geminiModel: model || undefined,
+            groqApiKey: groqKey || undefined,
+            groqModel: groqModel || undefined,
             localUrl: localUrl || undefined,
             systemPrompt: sysPrompt || undefined,
             maxTokens: maxTokens
         };
 
         if (apiTrigger) {
-            apiTrigger.textContent = savedApiType === 'gemini' ? 'Gemini' : 'Local LLM';
+            if (savedApiType === 'gemini') {
+                apiTrigger.textContent = 'Gemini';
+            } else if (savedApiType === 'groq') {
+                apiTrigger.textContent = 'Groq';
+            } else {
+                apiTrigger.textContent = 'Local LLM';
+            }
         }
         await aiChat.updateSettings(aiSettings);
         await loadProfileSettings();
@@ -257,6 +267,8 @@ function setupSettingsListener() {
         const p = event.payload;
         aiSettings.geminiApiKey = p.geminiApiKey ?? aiSettings.geminiApiKey;
         aiSettings.geminiModel = p.geminiModel ?? aiSettings.geminiModel;
+        aiSettings.groqApiKey = p.groqApiKey ?? aiSettings.groqApiKey;
+        aiSettings.groqModel = p.groqModel ?? aiSettings.groqModel;
         aiSettings.localUrl = p.localLlmUrl ?? aiSettings.localUrl;
         aiSettings.localModel = p.localLlmModel ?? aiSettings.localModel;
         aiSettings.systemPrompt = p.aiSystemPrompt ?? aiSettings.systemPrompt;
@@ -308,6 +320,14 @@ function setupSettingsListener() {
         if (p.enableGlow !== undefined || p.glowColor !== undefined || p.glowRadius !== undefined) {
             await applyGlowEffect();
         }
+        if (p.selectedApiType) {
+            aiSettings.apiType = p.selectedApiType;
+            if (apiTrigger) {
+                if (aiSettings.apiType === 'gemini') apiTrigger.textContent = 'Gemini';
+                else if (aiSettings.apiType === 'groq') apiTrigger.textContent = 'Groq';
+                else apiTrigger.textContent = 'Local LLM';
+            }
+        }
         // ログを再描画して新しい名前/アイコンを反映
         redrawLog();
     });
@@ -341,7 +361,7 @@ function setupEventListeners() {
     // 各項目のクリックイベントを設定
     apiItems.forEach(item => {
         item.addEventListener('click', async () => {
-            const newType = item.getAttribute('data-value') as 'gemini' | 'local';
+            const newType = item.getAttribute('data-value') as 'gemini' | 'groq' | 'local';
             const newText = item.textContent;
 
             if (newType) {

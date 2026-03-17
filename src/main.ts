@@ -159,7 +159,7 @@ class App {
   private fontList = [this.serifFont, this.sansSerifFont, this.monospaceFont];
   private languageCompartment = new Compartment();
 
-  private mainAiApi: 'gemini' | 'local' = 'gemini';
+  private mainAiApi: 'gemini' | 'groq' | 'local' = 'gemini';
   private showAiThinkingOverlay = true;
   private isAiProcessing = false; // AI動作中フラグ
   private aiAbortController: AbortController | null = null;// 通信中断用
@@ -593,10 +593,10 @@ class App {
     // 1. コンテキストの取得 (カーソル前の1000文字程度)
     let contextLimit = await this.store.get<number>('aiContextLimit') || 2000;
     // Gemini（API利用）の場合は、予期せぬ課金やエラーを防ぐため強制的に上限をかける
-    if (this.mainAiApi === 'gemini') {
+    if (this.mainAiApi === 'gemini' || this.mainAiApi === 'groq') {
       const MAX_GEMINI_LIMIT = 2000; // 安全策
       if (contextLimit > MAX_GEMINI_LIMIT) {
-        console.warn(`Geminiのコンテキスト長は安全のため ${MAX_GEMINI_LIMIT} 字以下に制限されます`);
+        console.warn(`Gemini/Groqのコンテキスト長は安全のため ${MAX_GEMINI_LIMIT} 字以下に制限されます`);
         contextLimit = MAX_GEMINI_LIMIT;
       }
     }
@@ -623,6 +623,11 @@ class App {
         // AiChatで実装した通信ロジックを流用 (簡略化)
         // ※ ここでは stream は使わず、一括で受け取るのが挿入しやすくて楽
         const response = await this.requestGeminiDirect(apiKey!, textContext, systemPrompt, undefined, this.aiAbortController.signal);
+        resultText = response;
+      } else if (this.mainAiApi === 'groq') {
+        const apiKey = await this.store.get<string>('groqApiKey');
+        if (!apiKey) throw new Error("Groq API Key is not set.");
+        const response = await this.requestGroqDirect(apiKey, textContext, systemPrompt, undefined, this.aiAbortController.signal);
         resultText = response;
       } else {
         const url = await this.store.get<string>('localLlmUrl') || "http://127.0.0.1:1234/v1/chat/completions";
@@ -678,7 +683,7 @@ class App {
     let limit = Number(await this.store.get<number>('aiContextLimit')) || 2000;
 
     // Geminiガード
-    if (this.mainAiApi === 'gemini') {
+    if (this.mainAiApi === 'gemini' || this.mainAiApi === 'groq') {
       const MAX_GEMINI_LIMIT = 4000; // 安全策
       if (limit > MAX_GEMINI_LIMIT) {
         console.warn(`Geminiのコンテキスト長は安全のため ${MAX_GEMINI_LIMIT} 字以下に制限されます`);
@@ -734,6 +739,10 @@ ${nextContext}
         const apiKey = await this.store.get<string>('geminiApiKey');
         if (!apiKey) throw new Error("Gemini API Key is not set.");
         resultText = await this.requestGeminiDirect(apiKey!, userPrompt, systemPrompt, undefined, this.aiAbortController.signal);
+      } else if (this.mainAiApi === 'groq') {
+        const apiKey = await this.store.get<string>('groqApiKey');
+        if (!apiKey) throw new Error("Groq API Key is not set.");
+        resultText = await this.requestGroqDirect(apiKey, userPrompt, systemPrompt, undefined, this.aiAbortController.signal);
       } else {
         const url = await this.store.get<string>('localLlmUrl');
         // 出力上限を取得（確実に数値にする）
@@ -921,6 +930,10 @@ ${nextContext}
         const apiKey = await this.store.get<string>('geminiApiKey');
         if (!apiKey) throw new Error("Gemini API Key is not set.");
         resultText = await this.requestGeminiDirect(apiKey, selectedText, systemPrompt, tempMaxTokens, this.aiAbortController?.signal);
+      } else if (this.mainAiApi === 'groq') {
+        const apiKey = await this.store.get<string>('groqApiKey');
+        if (!apiKey) throw new Error("Groq API Key is not set.");
+        resultText = await this.requestGroqDirect(apiKey, selectedText, systemPrompt, undefined, this.aiAbortController.signal);
       } else {
         const url = await this.store.get<string>('localLlmUrl') || "http://127.0.0.1:1234/v1/chat/completions";
         resultText = await this.requestLocalAiDirect(url, selectedText, systemPrompt, tempMaxTokens, this.aiAbortController?.signal);
@@ -1023,6 +1036,57 @@ ${nextContext}
         // テキストがない場合、ブロックされた理由が含まれている可能性がある
         const finishReason = data.candidates?.[0]?.finishReason;
         throw new Error(`No response text. Finish Reason: ${finishReason}`);
+      }
+
+    } catch (e) {
+      console.error(e);
+      throw e;
+    }
+  }
+
+  // --- Groq (Cloud) への直接リクエスト ---
+  private async requestGroqDirect(apiKey: string, prompt: string, systemPrompt: string, maxTokensOverride?: number, signal?: AbortSignal): Promise<string> {
+    // ★ ストアからGroq用のモデル名を取得
+    const modelName = await this.store.get<string>('groqModel') || 'llama-3.3-70b-versatile';
+
+    let maxTokens = maxTokensOverride;
+    if (!maxTokens) {
+      const stored = await this.store.get<number | string>('aiMaxTokens') || 2000;
+      maxTokens = typeof stored === 'string' ? parseInt(stored, 10) : stored;
+    }
+
+    try {
+      const response = await fetch("https://api.groq.com/openai/v1/chat/completions", {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${apiKey}` // Groqは認証ヘッダーが必須
+        },
+        body: JSON.stringify({
+          model: modelName,
+          messages: [
+            { role: "system", content: systemPrompt },
+            { role: "user", content: prompt }
+          ],
+          stream: false, // メインエディタの挿入機能は一括取得
+          max_tokens: maxTokens,
+          temperature: 0.7
+        }),
+        signal: signal
+      });
+
+      if (!response.ok) {
+        throw new Error(`Groq API Error: ${response.status} ${response.statusText}`);
+      }
+
+      const data = await response.json();
+      // OpenAI互換フォーマットの解析
+      const text = data.choices?.[0]?.message?.content;
+
+      if (text) {
+        return text;
+      } else {
+        throw new Error("No response text from Groq.");
       }
 
     } catch (e) {

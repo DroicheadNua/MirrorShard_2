@@ -5,6 +5,20 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+
+## [1.5.0] - 2026-3-XX  
+
+### Added (新機能)  
+- Groq APIに対応。メインエディタ・AIチャット・アイデアプロセッサのいずれでも使用可能  
+
+
+### Changed (変更点)    
+
+
+### Fixed (修正点) 
+
+
+
 ## [1.4.1] - 2026-3-16 
 
 ### Added (新機能)  

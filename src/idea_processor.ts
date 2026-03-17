@@ -334,7 +334,7 @@ function createNodeFromData(data: any) {
   nodeGroup.setAttr('contentText', data.contentText || '');
   nodeGroup.setAttr('placeholder', data.placeholder || '');
   nodeGroup.setAttr('isTemplateItem', data.isTemplateItem || false);
-
+  const isMac = navigator.userAgent.includes('Mac OS X');
   const textNode = new Konva.Text({
     name: 'text',
     text: data.title || 'New Node',
@@ -343,9 +343,10 @@ function createNodeFromData(data: any) {
     fill: colors.text, // テーマに合わせた文字色（ライトなら黒系）
     padding: 12,
     width: data.width || 200,
+    minWidth: 150,
     lineHeight: 1.2,
     wrap: 'char',
-    offsetX: 5,
+    offsetX: isMac ? 5 : 0,
   });
 
   const backgroundRect = new Konva.Rect({
@@ -2028,7 +2029,7 @@ function startTextEditing(textNode: Konva.Text, group: Konva.Group, isNew = fals
   textarea.style.height = (bg.height() * scale) + 'px';
   textarea.style.fontSize = (textNode.fontSize() * scale) + 'px';
   textarea.style.fontFamily = textNode.fontFamily();
-  textarea.style.lineHeight = textNode.lineHeight().toString();
+  textarea.style.lineHeight = (textNode.lineHeight() * scale).toString();
   textarea.style.textAlign = textNode.align();
 
   const color = getCurrentThemeColors();
@@ -2041,10 +2042,10 @@ function startTextEditing(textNode: Konva.Text, group: Konva.Group, isNew = fals
   }
   textarea.style.background = color.labelBackground;
   textarea.style.border = '1px solid ' + color.text;
-  textarea.style.borderRadius = '6px';
+  textarea.style.borderRadius = (6 * scale) + 'px';
   textarea.style.outline = 'none';
   textarea.style.resize = 'none';
-  textarea.style.padding = (8 * scale) + 'px';
+  textarea.style.padding = (12 * scale) + 'px';
   textarea.style.margin = '0px';
   textarea.style.overflow = 'hidden';
   textarea.style.zIndex = '500';
@@ -3622,6 +3623,32 @@ async function triggerFreeAssociation() {
       if (!response.ok) throw new Error(`Gemini API Error: ${response.statusText}`);
       const data = await response.json();
       resultText = data.candidates?.[0]?.content?.parts?.[0]?.text || '';
+    }
+    else if (ipAiApi === 'groq') {
+      const apiKey = await store.get<string>('groqApiKey');
+      const model = await store.get<string>('groqModel') || 'llama-3.3-70b-versatile';
+      console.log(`Loaded:${model}`);
+      if (!apiKey) throw new Error("Groq API Key が設定されていません。");
+
+      const response = await fetch("https://api.groq.com/openai/v1/chat/completions", {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${apiKey}`
+        },
+        body: JSON.stringify({
+          model: model,
+          messages: [
+            { role: 'system', content: systemPrompt },
+            { role: 'user', content: prompt }
+          ],
+          temperature: 0.7
+        }),
+        signal: aiAbortController.signal
+      });
+      if (!response.ok) throw new Error(`Groq API Error: ${response.statusText}`);
+      const data = await response.json();
+      resultText = data.choices?.[0]?.message?.content || '';
     }
     else {
       const url = await store.get<string>('localLlmUrl') || "http://127.0.0.1:1234/v1/chat/completions";

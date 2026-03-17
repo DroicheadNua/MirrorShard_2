@@ -86,7 +86,9 @@ async function setupSettings() {
 
         // --- 3.1. UI要素の取得 (AI新規) ---
         const geminiApiKeyInput = document.querySelector('#gemini-api-key') as HTMLInputElement;
+        const groqApiKeyInput = document.querySelector('#groq-api-key') as HTMLInputElement;
         const geminiModelInput = document.querySelector('#gemini-model') as HTMLInputElement;
+        const groqModelInput = document.querySelector('#groq-model') as HTMLInputElement;
         const localLlmUrlInput = document.querySelector('#local-llm-url') as HTMLInputElement;
         const aiSystemPromptInput = document.querySelector('#ai-system-prompt') as HTMLTextAreaElement;
         const aiMaxTokensInput = document.querySelector('#ai-max-tokens') as HTMLInputElement;
@@ -97,6 +99,7 @@ async function setupSettings() {
         const aiNameInput = document.querySelector('#ai-name') as HTMLInputElement;
         const aiIconDisplay = document.querySelector('#ai-icon-path') as HTMLElement;
         const modelPresetSelect = document.querySelector('#gemini-model-preset') as HTMLSelectElement;
+        const groqModelPresetSelect = document.querySelector('#groq-model-preset') as HTMLSelectElement;
         const localLlmModelInput = document.querySelector('#local-llm-model') as HTMLInputElement;
         const urlPresetSelect = document.querySelector('#local-llm-url-preset') as HTMLSelectElement;
         const aiThinkingOverlayCheck = document.querySelector('#check-ai-thinking-overlay') as HTMLInputElement;
@@ -505,7 +508,9 @@ async function setupSettings() {
 
         // AI Settings
         geminiApiKeyInput.value = await store.get<string>('geminiApiKey') || '';
+        groqApiKeyInput.value = await store.get<string>('groqApiKey') || '';
         geminiModelInput.value = await store.get<string>('geminiModel') || 'gemini-2.5-flash';
+        groqModelInput.value = await store.get<string>('groqModel') || 'Llama 3.3 70B';
         localLlmUrlInput.value = await store.get<string>('localLlmUrl') || 'http://127.0.0.1:1234/v1/chat/completions';
         aiSystemPromptInput.value = await store.get<string>('aiSystemPrompt') || '';
         aiMaxTokensInput.value = (await store.get<number>('aiMaxTokens') || 2000).toString();
@@ -526,6 +531,14 @@ async function setupSettings() {
                 // 含まれていなければ「手動入力」等の空欄やデフォルト位置にする
                 // (HTML側で <option value="">手動入力</option> としている場合)
                 modelPresetSelect.value = "";
+            }
+        }
+        if (groqModelPresetSelect) {
+            const options = Array.from(groqModelPresetSelect.options).map(o => o.value);
+            if (options.includes(groqModelInput.value)) {
+                groqModelPresetSelect.value = groqModelInput.value;
+            } else {
+                groqModelPresetSelect.value = "";
             }
         }
         if (urlPresetSelect) {
@@ -743,7 +756,9 @@ async function setupSettings() {
 
                 // AI Params
                 const newGeminiApiKey = geminiApiKeyInput.value.trim();
+                const newGroqApiKey = groqApiKeyInput.value.trim();
                 const newGeminiModel = geminiModelInput.value.trim();
+                const newGroqModel = groqModelInput.value.trim();
                 const newLocalUrl = localLlmUrlInput.value.trim();
                 const newSystemPrompt = aiSystemPromptInput.value;
                 const newAiMaxTokens = parseInt(aiMaxTokensInput.value, 10) || 2000;
@@ -784,6 +799,8 @@ async function setupSettings() {
                 // AI設定の保存
                 if (newGeminiApiKey) await store.set('geminiApiKey', newGeminiApiKey);
                 await store.set('geminiModel', newGeminiModel);
+                if (newGroqApiKey) await store.set('groqApiKey', newGroqApiKey);
+                await store.set('groqModel', newGroqModel);
                 await store.set('localLlmUrl', newLocalUrl);
                 await store.set('aiSystemPrompt', newSystemPrompt);
                 const currentApiType = await store.get<string>('selectedApiType');
@@ -831,7 +848,9 @@ async function setupSettings() {
                     shellPath: newShellPath,
                     terminalDefaultCwd: newTerminalDefaultCwd,
                     geminiApiKey: newGeminiApiKey,
+                    groqApiKey: newGroqApiKey,
                     geminiModel: newGeminiModel,
+                    groqModel: newGroqModel,
                     localLlmUrl: newLocalUrl,
                     aiSystemPrompt: newSystemPrompt,
                     selectedApiType: currentApiType || 'gemini',

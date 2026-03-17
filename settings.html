@@ -170,20 +170,42 @@
             <!-- タブ2: AI設定 -->
             <div id="tab-ai" class="tab-content">
                 <div class="ai-setting-group">
-                    <h4>Google Gemini</h4>
+                    <h4>Cloud AI (Gemini / Groq)</h4>
+
+                    <!-- Gemini設定 -->
                     <label style="display: flex; gap: 5px;">
-                        API Key
+                        Gemini API Key
                         <input type="password" id="gemini-api-key" placeholder="AIzaSy..."
                             style="flex-grow: 1;margin: auto;" />
                     </label>
                     <label style="display: flex; gap: 5px;">
-                        Model
+                        Gemini Model
                         <input type="text" id="gemini-model" placeholder="<モデル名を入力>"
                             style="flex-grow: 1;margin: auto;" />
                         <select id="gemini-model-preset" style="flex-grow: 0;margin: auto;"
                             onchange="document.getElementById('gemini-model').value = this.value;">
                             <option value="gemini-2.5-flash">Gemini 2.5 Flash</option>
                             <option value="gemini-2.5-pro">Gemini 2.5 Pro</option>
+                            <option value="">手動入力</option>
+                        </select>
+                    </label>
+
+                    <hr style="margin: 10px 0; border: 0; border-top: 1px solid var(--ui-text-color); opacity: 0.3;">
+
+                    <!-- Groq設定 -->
+                    <label style="display: flex; gap: 5px;">
+                        Groq API Key
+                        <input type="password" id="groq-api-key" placeholder="gsk_..."
+                            style="flex-grow: 1;margin: auto;" />
+                    </label>
+                    <label style="display: flex; gap: 5px;">
+                        Groq Model
+                        <input type="text" id="groq-model" placeholder="<モデル名を入力>" style="flex-grow: 1;margin: auto;" />
+                        <select id="groq-model-preset" style="flex-grow: 0;margin: auto;"
+                            onchange="document.getElementById('groq-model').value = this.value;">
+                            <option value="llama-3.3-70b-versatile">Llama 3.3 70B</option>
+                            <option value="moonshotai/kimi-k2-instruct-0905">Kimi K2</option>
+                            <option value="openai/gpt-oss-120b">GPT OSS 120B</option>
                             <option value="">手動入力</option>
                         </select>
                     </label>
