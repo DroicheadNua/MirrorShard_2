@@ -10,6 +10,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added (新機能)  
 - Groq APIに対応。メインエディタ・AIチャット・アイデアプロセッサのいずれでも使用可能  
+- エクスポートウィンドウのDOCX出力機能を実装  
+ - ※ルビは変換されません。
 
 
 ### Changed (変更点)    

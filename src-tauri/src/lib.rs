@@ -420,6 +420,9 @@ async fn export_with_pandoc(
                 )?);
             }
         }
+        "docx" => {
+            cmd.arg("-o").arg(&output_path);
+        }
         _ => return Err("Unsupported format".to_string()),
     }
     // 実行

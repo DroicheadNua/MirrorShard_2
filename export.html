@@ -33,6 +33,7 @@
                 <span style="border-left: 1px solid #666; margin: 0 10px;"></span>
 
                 <button id="btn-print" title="印刷 / PDF保存(Ctrl+P)">🖨️</button>
+                <button id="btn-docx" title="MS-Word (DOCX) 保存">DOCX</button>
                 <button id="btn-html" title="HTML保存">HTML</button>
                 <button id="btn-epub" title="EPUB保存">EPUB</button>
                 <button id="btn-close" title="閉じる(Ctrl+E)">×</button>
@@ -84,6 +85,7 @@
         import { getCurrentWindow } from '@tauri-apps/api/window';
         import { open, save } from '@tauri-apps/plugin-dialog';
         import updateArticle from '/src/scripts/ruby.ts';
+        import { Store } from '@tauri-apps/plugin-store';
 
         async function initExport() {
             const contentDiv = document.getElementById('content');
@@ -94,11 +96,14 @@
             const epubTitleInput = document.getElementById('epub-title');
             const epubAuthorInput = document.getElementById('epub-author');
             const epubCoverPathInput = document.getElementById('epub-cover-path');
+            let rawMarkdownText = "";
 
             // データ受信
             await listen('export-data', (event) => {
                 const { text } = event.payload;
                 if (contentDiv) {
+                    // 生テキストを保持
+                    rawMarkdownText = text;
                     // 1. 基本的な改行変換
                     contentDiv.innerHTML = text.replace(/\n/g, '<br>');
                     // 2. ルビ変換を実行
@@ -180,6 +185,39 @@
 
                     await invoke('write_file', { path, content: fullHtml, encoding: 'UTF-8' });
                     alert('保存しました');
+                }
+            });
+
+            // --- MS-Word (DOCX) 保存 ---
+            document.getElementById('btn-docx')?.addEventListener('click', async () => {
+                const text = rawMarkdownText;
+                if (!text || !text.trim()) { alert('書き出すコンテンツがありません。'); return; }
+
+                const path = await save({
+                    title: 'MS-Word (DOCX) として書き出し',
+                    defaultPath: 'Untitled.docx',
+                    filters: [{ name: 'Word Document', extensions: ['docx'] }]
+                });
+
+                if (path) {
+                    try {
+                        const store = await Store.load('.settings.dat');
+                        const pandocPath = await store.get('pandocPath');
+
+                        await invoke('export_with_pandoc', {
+                            sourceContent: text, // 無変換の生のMarkdownをそのまま渡す
+                            outputPath: path,
+                            format: "docx",
+                            isVertical: false,
+                            pandocPathSetting: pandocPath || null,
+                            metadata: { title: "Exported Document" }
+                        });
+
+                        alert('DOCXファイルの書き出しに成功しました。');
+                    } catch (e) {
+                        console.error(e);
+                        alert(`DOCXエクスポート失敗:\n${e}`);
+                    }
                 }
             });
 
