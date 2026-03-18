@@ -8,7 +8,7 @@ use portable_pty::{native_pty_system, CommandBuilder, MasterPty, PtySize};
 use std::fs;
 use std::io::{Read, Write};
 use std::path::{Path, PathBuf};
-use std::process::Command;
+use std::process::{Child, Command};
 use std::sync::{Arc, Mutex};
 use std::thread;
 #[cfg(target_os = "macos")]
@@ -16,6 +16,9 @@ use tauri::RunEvent;
 use tauri::{AppHandle, Emitter, Manager, State, WindowEvent};
 use tauri_plugin_cli::CliExt;
 use tauri_plugin_window_state::{Builder, StateFlags};
+
+// OpenCodeのプロセスを管理するための構造体
+struct OpenCodeProcess(Mutex<Option<Child>>);
 
 // PTYの入力側を保持する構造体
 struct TerminalState {
@@ -45,9 +48,57 @@ struct EpubSection {
 struct InitialFile(Mutex<Option<String>>);
 // 2回目に開かれたファイルパスを保持するための状態
 struct SecondInstanceFile(Mutex<Option<String>>);
-// ★ Mac用のファイルパス保持場所
+// Mac用のファイルパス保持場所
 struct MacFileBuffer(Mutex<Option<String>>);
 // --- Tauriコマンドの定義 ---
+
+#[tauri::command]
+async fn open_opencode(
+    app: tauri::AppHandle,
+    state: State<'_, OpenCodeProcess>,
+) -> Result<(), String> {
+    if let Some(win) = app.get_webview_window("opencode") {
+        win.close().map_err(|e| e.to_string())?;
+        return Ok(());
+    }
+
+    {
+        let mut lock = state.0.lock().unwrap();
+        if lock.is_none() {
+            // 最もシンプルな起動コマンド
+            let cmd_name = if cfg!(target_os = "windows") {
+                "opencode.cmd"
+            } else {
+                "opencode"
+            };
+
+            let child = Command::new(cmd_name)
+                .arg("web")
+                .arg("--no-open")
+                .spawn()
+                .map_err(|e| format!("起動失敗: {}", e))?;
+
+            *lock = Some(child);
+            // サーバー起動待ち
+            std::thread::sleep(std::time::Duration::from_millis(1500));
+        }
+    }
+
+    // ウィンドウ生成（External URL）
+    let builder = tauri::WebviewWindowBuilder::new(
+        &app,
+        "opencode",
+        tauri::WebviewUrl::External("http://127.0.0.1:4096".parse().unwrap()),
+    )
+    .title("OpenCode")
+    .inner_size(1000.0, 800.0)
+    .decorations(true);
+
+    let window = builder.build().map_err(|e| e.to_string())?;
+    window.show().unwrap();
+
+    Ok(())
+}
 
 #[tauri::command]
 async fn force_save_file(path: String, content: Vec<u8>) -> Result<(), String> {
@@ -976,6 +1027,7 @@ pub fn run() {
             writer: Arc::new(Mutex::new(None)),
             master: Arc::new(Mutex::new(None)),
         })
+        .manage(OpenCodeProcess(Mutex::new(None)))
         .setup(|app| {
             // ---  起動時引数を解析し、状態に書き込む ---
             if let Ok(matches) = app.cli().matches() {
@@ -1063,11 +1115,23 @@ pub fn run() {
             toggle_devtools,
             set_simple_fullscreen,
             force_save_file,
+            open_opencode,
         ])
+        .on_window_event(|app_handle, event| {
+            if let tauri::WindowEvent::CloseRequested { .. } = event {
+                // メインウィンドウが閉じられたときに実行
+                let state = app_handle.state::<OpenCodeProcess>();
+                let mut lock = state.0.lock().unwrap();
+                if let Some(mut child) = lock.take() {
+                    println!("Killing OpenCode server process...");
+                    let _ = child.kill(); // プロセスを終了させる
+                }
+            }
+        })
         .build(tauri::generate_context!())
         .expect("error while building tauri application")
         .run(|_app_handle, event| match event {
-            // ★ Macの関連付け起動イベント
+            // Macの関連付け起動イベント
             #[cfg(target_os = "macos")]
             RunEvent::Opened { urls } => {
                 if let Some(url) = urls.first() {

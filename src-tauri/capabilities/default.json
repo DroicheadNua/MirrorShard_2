@@ -16,7 +16,8 @@
     "shortcut",
     "markdown",
     "terminal",
-    "idea_processor"
+    "idea_processor",
+    "opencode"
   ],
   "permissions": [
     "core:default",

@@ -2752,6 +2752,10 @@ ${nextContext}
       e.preventDefault();
       this.toggleCodeMode();
     }
+    if (isCtrlOrCmd && key === 'k' && isShift) {
+      e.preventDefault();
+      this.openOpenCode();
+    }
     if ((isCtrlOrCmd && key === '`' && !isShift) || (isCtrlOrCmd && key === '@' && !isShift)) {
       e.preventDefault();
       e.stopPropagation();
@@ -3664,6 +3668,14 @@ ${nextContext}
   private async openIdeaProcessor() {
     console.log('openIdeaProcessor');
     await invoke('open_idea_processor');
+  }
+
+  private async openOpenCode() {
+    try {
+      await invoke('open_opencode');
+    } catch (e) {
+      console.error(e);
+    }
   }
 
   /**
