@@ -19,7 +19,7 @@ body {
   width: 100%;
   height: 100%;
   overflow: hidden;
-  font-family: var(--user-font-family, serif, monospace);
+  font-family: var(--user-font-family, 'Hiragino Mincho ProN', 'Yu Mincho', 'YuMincho', serif);
   line-height: 1.5;
   background-color: var(--window-bg-color, #EAE3D2);
   color: var(--editor-text-color, black);
@@ -196,7 +196,7 @@ body.code-mode .custom-option:hover {
 body.dark-mode .top-right-buttons button {
   color: #3e3;
   border: 1px solid rgba(55, 255, 55, 0.3);
-  font-family: monospace, sans-serif;
+  font-family: 'Menlo', 'Monaco', 'Consolas', 'BIZ UDGothic', monospace;
   text-shadow:
     0 0 5px rgba(0, 255, 0, 0.5),
     0 0 10px rgba(0, 255, 0, 0.4),
@@ -463,7 +463,7 @@ body.dark-mode .action-btn {
   border-radius: 10px;
   padding: 5px 10px;
   cursor: pointer;
-  font-family: monospace;
+  font-family: 'Menlo', 'Monaco', 'Consolas', 'BIZ UDGothic', monospace;
   font-weight: bold;
 }
 
@@ -482,7 +482,7 @@ body.dark-mode .cyber-button:hover {
   border-radius: 5px;
   padding: 5px 10px;
   cursor: pointer;
-  font-family: monospace;
+  font-family: 'Menlo', 'Monaco', 'Consolas', 'BIZ UDGothic', monospace;
   font-style: oblique;
   resize: none;
   background-color: var(--editor-bg-color, ivory);

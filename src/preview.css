@@ -7,7 +7,7 @@ body {
     overflow-x: hidden;
     word-wrap: break-word;
     background-color: transparent;
-    font-family: "Yu Mincho", "Hiragino Mincho ProN", serif;
+    font-family: 'Hiragino Mincho ProN', 'Yu Mincho', 'YuMincho', serif;
     border-radius: 6px;
 }
 
@@ -193,7 +193,7 @@ body.dark-mode .preview-controls button:hover {
     display: block;
     font-size: 13px;
     cursor: pointer;
-    font-family: sans-serif;
+    font-family: 'Hiragino Sans', 'BIZ UDPGothic', 'Yu Gothic', 'Meiryo', sans-serif;
     text-align: left;
 }
 
@@ -251,7 +251,7 @@ body.dark-mode .dropdown-content hr {
     border-radius: 8px;
     width: 300px;
     box-shadow: 0 10px 25px rgba(0, 0, 0, 0.5);
-    font-family: sans-serif;
+    font-family: 'Hiragino Sans', 'BIZ UDPGothic', 'Yu Gothic', 'Meiryo', sans-serif;
     color: #333;
 }
 

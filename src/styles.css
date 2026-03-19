@@ -1,5 +1,5 @@
 body.font-serif {
-  font-family: "Yu Mincho", "Hiragino Mincho ProN", serif;
+  font-family: 'Hiragino Mincho ProN', 'Yu Mincho', 'YuMincho', serif;
 }
 
 body.font-sans-serif {
@@ -7,17 +7,17 @@ body.font-sans-serif {
 }
 
 body.font-monospace {
-  font-family: "BIZ UDゴシック", "Osaka-Mono", monospace;
+  font-family: 'Menlo', 'Monaco', 'Consolas', 'BIZ UDGothic', monospace;
 }
 
 body:not(.font-serif):not(.font-sans-serif):not(.font-monospace) {
   /* 変数が未定義の場合はシステムUIフォントへフォールバック */
-  font-family: var(--user-font-family, system-ui, sans-serif);
+  font-family: var(--user-font-family, 'Hiragino Sans', 'BIZ UDPGothic', 'Yu Gothic', 'Meiryo', system-ui, sans-serif);
 }
 
 /* 基本的なリセットとフォント設定 */
 :root {
-  font-family: sans-serif;
+  font-family: 'Hiragino Sans', 'BIZ UDPGothic', 'Yu Gothic', 'Meiryo', sans-serif;
   line-height: 1.5;
   font-weight: 400;
 
@@ -381,7 +381,7 @@ body.code-mode .file-entry:hover {
   border: none;
   background: transparent;
   cursor: pointer;
-  font-family: monospace;
+  font-family: 'Menlo', 'Monaco', 'Consolas', 'BIZ UDGothic', monospace;
   padding: 0;
   flex-shrink: 0;
   /* 縮まないように */
@@ -541,7 +541,7 @@ body.code-mode .outline-text:hover {
   padding: 0 10px;
   /* 左右の余白 */
   box-sizing: border-box;
-  font-family: monospace;
+  font-family: 'Menlo', 'Monaco', 'Consolas', 'BIZ UDGothic', monospace;
   font-size: 0.8rem;
   opacity: 0.8;
   color: var(--outline-text-color);
@@ -860,7 +860,7 @@ body.code-mode .file-entry,
 body.code-mode #status-bar,
 body.code-mode #status-breadcrumbs,
 body.code-mode #status-filepath {
-  font-family: var(--code-font-family, monospace) !important;
+  font-family: var(--code-font-family, 'Menlo', 'Monaco', 'Consolas', 'BIZ UDGothic', monospace) !important;
 }
 
 body.code-mode .sidebar-content::-webkit-scrollbar {
@@ -1049,7 +1049,7 @@ body.code-mode .custom-option:hover {
 
 .loading-text {
   color: #00FF41;
-  font-family: monospace;
+  font-family: 'Menlo', 'Monaco', 'Consolas', 'BIZ UDGothic', monospace;
   font-size: 1.5em;
   margin-top: 15px;
   text-shadow: 0 0 10px rgba(0, 255, 65, 0.8);

@@ -82,7 +82,7 @@ body {
     box-sizing: border-box;
     flex-shrink: 0;
 
-    font-family: "Yu Mincho", serif;
+    font-family: 'Hiragino Mincho ProN', 'Yu Mincho', 'YuMincho', serif;
     line-height: 1.8;
     word-wrap: break-word;
     overflow: visible;

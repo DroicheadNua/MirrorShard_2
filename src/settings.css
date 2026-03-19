@@ -8,7 +8,7 @@ body {
     word-wrap: break-word;
     background-color: transparent;
     border-radius: 6px;
-    font-family: serif;
+    font-family: 'Hiragino Mincho ProN', 'Yu Mincho', 'YuMincho', serif;
     background-size: cover;
     background-position: center;
     background-repeat: no-repeat;
@@ -303,14 +303,14 @@ textarea.setting-textarea {
     color: #eee;
     border: 1px solid #555;
     resize: vertical;
-    font-family: monospace;
+    font-family: 'Menlo', 'Monaco', 'Consolas', 'BIZ UDGothic', monospace;
     border-radius: 4px;
 }
 
 textarea.setting-textarea::placeholder {
     opacity: 0.8;
     font-style: oblique;
-    font-family: serif;
+    font-family: 'Hiragino Mincho ProN', 'Yu Mincho', 'YuMincho', serif;
 }
 
 .color-preview {
