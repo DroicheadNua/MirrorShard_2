@@ -37,7 +37,7 @@ h2 {
 dl {
   display: grid;
   grid-template-columns: 200px 1fr;
-  gap: 0em 1em;
+  gap: 0.5em 0em;
 }
 
 #shortcut-wrapper::-webkit-scrollbar {

@@ -90,6 +90,7 @@ interface MrsdNode {
   title: string;      // ノード内のテキスト
   parentId: string | null;
   isTemplateItem: boolean;
+  placeholder: string;
 }
 
 interface MrsdGroup {
@@ -98,8 +99,11 @@ interface MrsdGroup {
   y: number;
   width: number;
   height: number;
-  label: string;      // グループ名
+  label: string;
   isTemplateRoot: boolean;
+  archetype: string;
+  childNodeIds: string[];
+  isCollapsed: boolean;
 }
 
 interface MrsdEdge {
@@ -214,6 +218,8 @@ function _getCurrentStageData() {
       id: node.id(), x: node.x(), y: node.y(), width: rect.width(), height: rect.height(),
       title: textNode.text(), // 見た目のテキスト
       contentText: node.getAttr('contentText') || '', // 本文
+      isTemplateItem: node.getAttr('isTemplateItem') || false,
+      placeholder: node.getAttr('placeholder') || '',
       parentId: node.getAttr('parentId') || null, // 親IDを属性から取得
     });
   });
@@ -249,7 +255,10 @@ function _getCurrentStageData() {
         width: bg.width(),
         height: bg.height(),
         title: title.text(),
-        childNodeIds: group.getAttr('childNodeIds') || []
+        childNodeIds: group.getAttr('childNodeIds') || [],
+        isTemplateRoot: group.getAttr('isTemplateRoot') || false,
+        archetype: group.getAttr('archetype') || '',
+        isCollapsed: group.getAttr('isCollapsed') || false
       });
     }
   });
@@ -262,16 +271,40 @@ function _getCurrentStageData() {
 // =================================================================
 
 async function recreateStage(data: any) {
-  // 1. レイヤーをクリア（ステージ自体は破棄しない）
+  // レイヤーをクリア（ステージ自体は破棄しない）
   layer.destroyChildren();
   setupSelectionTools();
   selectedNodes = [];
   selectedShape = null;
 
+  // 1. グループノードの復元
+  if (data.groups) {
+    data.groups.forEach((g: any) => {
+      const groupNode = createGroupNode(g.x, g.y, g.label || g.title);
+      groupNode.id(g.id);
+      groupNode.setAttr('isTemplateRoot', g.isTemplateRoot || false);
+      groupNode.setAttr('archetype', g.archetype || '');
+      groupNode.setAttr('childNodeIds', g.childNodeIds || []);
+
+      const bg = groupNode.findOne('.group-bg') as Konva.Rect;
+      const handle = groupNode.findOne('.resize-handle') as Konva.Circle;
+      if (bg && handle) {
+        bg.width(g.width);
+        bg.height(g.height);
+        handle.x(g.width);
+        handle.y(g.height);
+      }
+    });
+  }
+
   // 2. ノードの復元
   if (data.nodes) {
-    data.nodes.forEach((nodeData: any) => {
-      createNodeFromData(nodeData);
+    data.nodes.forEach((n: any) => {
+      const nodeGroup = createNewNode(n.x, n.y, n.title || n.text, n.contentText, false);
+      nodeGroup.id(n.id);
+      nodeGroup.setAttr('isTemplateItem', n.isTemplateItem || false);
+      nodeGroup.setAttr('placeholder', n.placeholder || '');
+      nodeGroup.setAttr('parentId', n.parentId || null);
     });
   }
 
@@ -296,27 +329,15 @@ async function recreateStage(data: any) {
     });
   }
 
-  // 4. グループノードの復元
-  if (data.groups) {
-    data.groups.forEach((gData: any) => {
-      const groupNode = createGroupNode(gData.x, gData.y, gData.title);
-      groupNode.id(gData.id);
-      groupNode.setAttr('childNodeIds', gData.childNodeIds || []);
-
-      const bg = groupNode.findOne('.group-bg') as Konva.Rect;
-      const handle = groupNode.findOne('.resize-handle') as Konva.Circle;
-      if (bg && handle) {
-        bg.width(gData.width);
-        bg.height(gData.height);
-        handle.x(gData.width);
-        handle.y(gData.height);
-      }
-    });
-  }
-
   // 4. 描画更新
   await updateAllNodesAppearance();
+  // ペアリングによる色（Heading色）を再適用するために全グループを走査
+  stage.find<Konva.Group>('.container-group').forEach(group => {
+    updateGroupMembersAppearance(group, false);
+  });
+
   layer.batchDraw();
+  renderIpOutline();
 }
 
 function createNodeFromData(data: any) {
@@ -331,6 +352,7 @@ function createNodeFromData(data: any) {
   });
 
   // 属性の分離: タイトルは表示用、contentTextは本文用
+  nodeGroup.setAttr('parentId', data.parentId || null);
   nodeGroup.setAttr('contentText', data.contentText || '');
   nodeGroup.setAttr('placeholder', data.placeholder || '');
   nodeGroup.setAttr('isTemplateItem', data.isTemplateItem || false);
@@ -1353,7 +1375,7 @@ function startLabelEditing(labelText: Konva.Text, linkGroup: Konva.Group) {
   const color = getCurrentThemeColors();
   textarea.style.fontSize = '12px';
   textarea.style.fontFamily = labelText.fontFamily();
-  textarea.style.lineHeight = '1em';
+  textarea.style.lineHeight = '1.2em';
   textarea.style.color = color.text;
   textarea.style.background = color.labelBackground;
   textarea.style.border = '1px solid ' + color.text;
@@ -1513,6 +1535,7 @@ function generateTemplate(templateName: string) {
   if (templateName === 'greimas') {
     const group = createGroupNode(offsetX + 110, offsetY + 100, '行為者モデル');
     group.setAttr('isTemplateRoot', true);
+    group.setAttr('archetype', 'greimas');
     const bg = group.findOne('.group-bg') as Konva.Rect;
     const handle = group.findOne('.resize-handle') as Konva.Circle;
     if (bg) { bg.width(650); bg.height(350); handle.x(650); handle.y(350); }
@@ -1531,6 +1554,9 @@ function generateTemplate(templateName: string) {
     const nodes = [sujet, objet, destinateur, destinataire, adjuvant, opposant];
     const childIds = nodes.map(n => n.id());
     group.setAttr('childNodeIds', childIds);
+    nodes.forEach(node => {
+      node.setAttr('parentId', group.id());
+    });
     updateGroupMembersAppearance(group, false); // 念のため色更新
 
     // リンク作成
@@ -1547,6 +1573,7 @@ function generateTemplate(templateName: string) {
   else if (templateName === 'heros-journey') {
     const group = createGroupNode(offsetX + 50, offsetY + 50, "英雄の旅 (Hero's Journey)");
     group.setAttr('isTemplateRoot', true);
+    group.setAttr('archetype', 'heros-journey');
     const bg = group.findOne('.group-bg') as Konva.Rect;
     const handle = group.findOne('.resize-handle') as Konva.Circle;
     if (bg) { bg.width(900); bg.height(700); handle.x(900); handle.y(700); }
@@ -1581,6 +1608,9 @@ function generateTemplate(templateName: string) {
     });
 
     group.setAttr('childNodeIds', createdNodes.map(n => n.id()));
+    createdNodes.forEach(node => {
+      node.setAttr('parentId', group.id());
+    });
     updateGroupMembersAppearance(group, false);
 
     for (let i = 0; i < createdNodes.length; i++) {
@@ -1595,6 +1625,7 @@ function generateTemplate(templateName: string) {
   else if (templateName === 'beat-sheet') {
     const group = createGroupNode(offsetX + 50, offsetY + 50, "エッセンシャル・ビートシート");
     group.setAttr('isTemplateRoot', true);
+    group.setAttr('archetype', 'beat-sheet');
     const bg = group.findOne('.group-bg') as Konva.Rect;
     const handle = group.findOne('.resize-handle') as Konva.Circle;
     if (bg) { bg.width(1050); bg.height(550); handle.x(1050); handle.y(550); }
@@ -1623,6 +1654,9 @@ function generateTemplate(templateName: string) {
     });
 
     group.setAttr('childNodeIds', createdNodes.map(n => n.id()));
+    createdNodes.forEach(node => {
+      node.setAttr('parentId', group.id());
+    });
     updateGroupMembersAppearance(group, false);
 
     for (let i = 0; i < 11; i++) {
@@ -1635,6 +1669,7 @@ function generateTemplate(templateName: string) {
   else if (templateName === 'three-act-structure') {
     const group = createGroupNode(offsetX + 100, offsetY + 100, "三幕構成");
     group.setAttr('isTemplateRoot', true);
+    group.setAttr('archetype', 'three-act-structure');
     const bg = group.findOne('.group-bg') as Konva.Rect;
     const handle = group.findOne('.resize-handle') as Konva.Circle;
     if (bg) { bg.width(800); bg.height(250); handle.x(800); handle.y(250); }
@@ -1653,6 +1688,9 @@ function generateTemplate(templateName: string) {
     });
 
     group.setAttr('childNodeIds', createdNodes.map(n => n.id()));
+    createdNodes.forEach(node => {
+      node.setAttr('parentId', group.id());
+    });
     updateGroupMembersAppearance(group, false);
 
     createSingleLink(createdNodes[0], createdNodes[1], LinkType.ARROW);
@@ -1716,6 +1754,23 @@ function openContentEditor(nodeGroup: Konva.Group) {
 const handleContentEditorKeyDown = (e: KeyboardEvent) => {
   // エディタ内でのDelete等はキャンバスに伝播させない
   e.stopPropagation();
+
+  const isCtrl = e.ctrlKey || e.metaKey;
+  const isShift = e.shiftKey;
+  const key = e.key.toLowerCase();
+
+  // Template Completion のショートカット
+  if (isCtrl && isShift && key === 'f') {
+    e.preventDefault();
+    e.stopPropagation();
+    triggerTemplateCompletion();
+    return;
+  }
+
+  // DeleteやBackspaceがノード削除を暴発させないようにする
+  if (e.key === 'Delete' || e.key === 'Backspace') {
+    e.stopPropagation();
+  }
 
   // Escapeで閉じる
   if (e.key === 'Escape') {
@@ -1895,9 +1950,13 @@ function setupKeyboardEvents() {
       e.preventDefault();
       toggleOutlinePane();
     }
-    if (isCtrl && isShift && key === 'f') {
+    if (isCtrl && e.shiftKey && key === 'f') {
       e.preventDefault();
-      triggerFreeAssociation();
+      if (isContentEditing) {
+        triggerTemplateCompletion();
+      } else if (selectedShape && selectedShape.name() === 'node-group' && !isTextEditing) {
+        triggerFreeAssociation();
+      }
     }
     if (isCtrl && key === 'f' && !isShift) {
       if (!isTextEditing) e.preventDefault();
@@ -1993,16 +2052,16 @@ function setupKeyboardEvents() {
     // --- 削除機能 ---
     if ((key === 'delete' || key === 'backspace') && !isTextEditing) {
       if (selectedShape) {
-        // テンプレートアイテム単体の削除を禁止する
-        if (selectedShape.getAttr('isTemplateItem') === true) {
-          console.log("Template items cannot be deleted individually.");
-          // 視覚的なフィードバック（メッセージ等）を出すならここ
-          return;
-        }
         e.preventDefault();
 
+        // 1. テンプレートノード（子）の単体削除を禁止
+        if (selectedShape.getAttr('isTemplateItem') === true) {
+          console.log("Template items are protected.");
+          return;
+        }
+
+        // 2. ノード（node-group）を消す場合のリンク巻き添え処理
         if (selectedShape.name() === 'node-group') {
-          // ノードを消す場合、繋がっているリンクもすべて巻き添えにする
           const links = layer.find('.link-group');
           links.forEach((link: any) => {
             const nodes = link.getAttr('nodes');
@@ -2012,21 +2071,42 @@ function setupKeyboardEvents() {
           });
         }
 
+        // 3. グループ（container-group）を消す場合の処理
         if (selectedShape.name() === 'container-group') {
-          // もしこれがテンプレートの親グループなら
+          const childIds = selectedShape.getAttr('childNodeIds') || [];
+
+          // テンプレートルートなら所属ノード（と、そのリンク）をすべて道連れにする
           if (selectedShape.getAttr('isTemplateRoot') === true) {
-            const childIds = selectedShape.getAttr('childNodeIds') || [];
             childIds.forEach((id: string) => {
-              const childNode = layer.findOne('#' + id);
+              const childNode = layer.findOne('#' + id) as Konva.Group;
               if (childNode) {
-                childNode.destroy(); // 子ノードを一括削除
+                // 子ノードに繋がっているリンクも消す
+                const links = layer.find('.link-group');
+                links.forEach((link: any) => {
+                  const nodes = link.getAttr('nodes');
+                  if (nodes && (nodes[0] === childNode || nodes[1] === childNode)) {
+                    link.destroy();
+                  }
+                });
+                childNode.destroy();
+              }
+            });
+          } else {
+            // 通常のグループなら、ペアリングを解除するだけ（ノードは残す）
+            childIds.forEach((id: string) => {
+              const childNode = layer.findOne('#' + id) as Konva.Group;
+              if (childNode) {
+                childNode.setAttr('parentId', null);
+                const bg = childNode.findOne('.background') as Konva.Rect;
+                if (bg) bg.strokeEnabled(false);
               }
             });
           }
         }
 
-        selectedShape.destroy(); // 本体を削除
-        deselectAll();           // 選択状態クリア
+        // 4. 最後に選択されていた本体を削除
+        selectedShape.destroy();
+        deselectAll();
         recordHistory('Deleted');
         renderIpOutline();
       }
@@ -2058,7 +2138,7 @@ function startTextEditing(textNode: Konva.Text, group: Konva.Group, isNew = fals
   textarea.style.height = (bg.height() * scale) + 'px';
   textarea.style.fontSize = (textNode.fontSize() * scale) + 'px';
   textarea.style.fontFamily = textNode.fontFamily();
-  textarea.style.lineHeight = (textNode.lineHeight() * scale).toString();
+  textarea.style.lineHeight = '1.2';
   textarea.style.textAlign = textNode.align();
 
   const color = getCurrentThemeColors();
@@ -2443,7 +2523,10 @@ async function saveToMrsd(forceSaveAs = false) {
           width: bg.width(),
           height: bg.height(),
           label: title.text(),
-          isTemplateRoot: false
+          isTemplateRoot: group.getAttr('isTemplateRoot') || false,
+          archetype: group.getAttr('archetype') || '',
+          childNodeIds: group.getAttr('childNodeIds') || [],
+          isCollapsed: false
         });
       }
     });
@@ -2458,6 +2541,7 @@ async function saveToMrsd(forceSaveAs = false) {
 
       const title = textNode.text();
       const content = node.getAttr('contentText') || '';
+      const placeholder = node.getAttr('placeholder') || '';
       const safeTitle = title.split('\n')[0].substring(0, 15).replace(/[\\/:*?"<>|]/g, "_") || "Untitled";
       const fileName = `${safeTitle}_${node.id().slice(-6)}.md`;
 
@@ -2484,7 +2568,8 @@ async function saveToMrsd(forceSaveAs = false) {
         height: bg.height(),
         title: title,
         parentId: parentId,
-        isTemplateItem: false
+        isTemplateItem: node.getAttr('isTemplateItem') || false,
+        placeholder: placeholder,
       });
 
       const fileContent = content || null;
@@ -2603,6 +2688,8 @@ async function loadFromMrsd(targetPath?: string) {
       data.groups.forEach((g) => {
         const groupNode = createGroupNode(g.x, g.y, g.label);
         groupNode.id(g.id);
+        groupNode.setAttr('isTemplateRoot', g.isTemplateRoot || false);
+        groupNode.setAttr('archetype', g.archetype || '');
 
         // サイズ復元
         const bg = groupNode.findOne('.group-bg') as Konva.Rect;
@@ -2649,12 +2736,11 @@ async function loadFromMrsd(targetPath?: string) {
 
       const nodeGroup = createNewNode(finalX, finalY, title, content, false);
 
-      // 親IDの設定 (parentId属性をセット)
-      if (n.parentId) {
-        nodeGroup.setAttr('parentId', n.parentId);
-      }
       nodeGroup.id(n.id);
-
+      // 読み込んだデータをノードの属性として再セットする
+      nodeGroup.setAttr('isTemplateItem', n.isTemplateItem || false);
+      nodeGroup.setAttr('placeholder', n.placeholder || '');
+      nodeGroup.setAttr('parentId', n.parentId || null);
       // サイズ自動調整
       adjustNodeSize(nodeGroup);
 
@@ -3773,6 +3859,198 @@ async function triggerFreeAssociation() {
   }
 }
 
+// =================================================================
+// テンプレート補完 (Template Completion)
+// =================================================================
+async function triggerTemplateCompletion() {
+  if (isAiThinking || !currentlyEditingNodeId || !store) return;
+
+  // 1. ターゲットノードと親グループの検証
+  const currentNode = layer.findOne('#' + currentlyEditingNodeId) as Konva.Group;
+  if (!currentNode) return;
+
+  const parentId = currentNode.getAttr('parentId');
+  if (!parentId) {
+    alert('このノードには親グループが設定されていません。');
+    return;
+  }
+  const parentGroup = layer.findOne('#' + parentId) as Konva.Group;
+  if (!parentGroup) {
+    alert('親テンプレートグループが見つかりません。');
+    return;
+  }
+  if (!parentGroup.getAttr('isTemplateRoot')) {
+    alert('親グループがテンプレートルートとして設定されていません。');
+    return;
+  }
+
+  // --- 1. アーキタイプ名と基本構造の取得 ---
+  const archetype = parentGroup.getAttr('archetype') || 'unknown';
+
+  // 行為者モデル（分析用）は補完から除外
+  if (archetype === 'greimas') {
+    alert('行為者モデル（Actantial model）は構造設計用のため、文章の自動補完には対応していません。');
+    return;
+  }
+  // 予期せぬエラー防止のため、身分証がない場合もガード
+  if (!archetype && !parentGroup.getAttr('isTemplateRoot')) {
+    return;
+  }
+
+  const ARCHETYPE_DEFINITIONS: Record<string, string[]> = {
+    'heros-journey': [
+      '日常の世界', '冒険への誘い', '冒険の拒絶', '賢者との出会い', '第一関門突破',
+      '試練、仲間、敵', '最も危険な場所', '最大の試練', '報酬', '帰路', '復活', '宝物との帰還'
+    ],
+    'beat-sheet': [
+      'オープニング', '事件の発生', '決意', '新しい世界', '挫折', '絶望',
+      '転機', '反撃', 'クライマックス', '最後の障害', '決着', 'エンディング'
+    ],
+    'three-act-structure': [
+      '第一幕：発端', '第二幕：葛藤', '第三幕：結末'
+    ]
+  };
+
+  const archetypeStructureArray = ARCHETYPE_DEFINITIONS[archetype] || [];
+  const archetypeStructure = archetypeStructureArray.map((s, i) => `${i + 1}. ${s}`).join('\n');
+
+  // --- 2. ユーザーが書き換えた現在の物語構成（currentStory）の収集 ---
+  const childIds = parentGroup.getAttr('childNodeIds') as string[] || [];
+  let currentStory = '';
+  let currentStepNumber = 0;
+
+  childIds.forEach((id, index) => {
+    const child = layer.findOne('#' + id) as Konva.Group;
+    if (child) {
+      const textNode = child.findOne('.text') as Konva.Text;
+      const userTitle = textNode ? textNode.text() : 'Untitled';
+
+      // 各ノードのタイトルを80文字程度でカットオフ（コンテキスト節約）
+      const displayTitle = userTitle.length > 80 ? userTitle.substring(0, 80) + '...' : userTitle;
+      currentStory += `${index + 1}. ${displayTitle}\n`;
+
+      if (id === currentlyEditingNodeId) {
+        currentStepNumber = index + 1;
+      }
+    }
+  });
+
+  // 3. テキストエリアからコンテキスト（直前の文章）を取得
+  const textarea = document.getElementById('ip-content-editor') as HTMLTextAreaElement;
+  if (!textarea) return;
+
+  const cursor = textarea.selectionStart;
+  const fullText = textarea.value;
+
+  let limit = Number(await store.get<number>('aiContextLimit')) || 2000;
+  if (ipAiApi === 'gemini' && limit > 2000) {
+    console.warn(`Gemini context limited to 2000`);
+    limit = 2000;
+  }
+
+  const contextStart = Math.max(0, cursor - limit);
+  const contextText = fullText.slice(contextStart, cursor);
+
+  // --- 3. プロンプト構築 ---
+  const systemPrompt = "あなたはプロの小説家です。物語の構造（アーキタイプ）を理解し、全体の流れに沿った執筆を行います。";
+
+  const prompt = `あなたは「${archetype}」という構造に沿って執筆しています。
+本来の構成：
+${archetypeStructure}
+
+現在の計画（各ノードのタイトル）：
+${currentStory}
+
+現在は 【第${currentStepNumber}ステップ】 を執筆中です。
+以下の続きを、文体やトーンを維持し、前後の流れと矛盾しないように執筆してください。
+出力は続きの文章のみとし、解説や挨拶は不要です。
+
+【これまでの文章】
+${contextText}`;
+
+  // 4. 通信準備とUIロック
+  isAiThinking = true;
+  aiAbortController = new AbortController();
+  aiThinkingMode = "Template Completion";
+  setAiLoading(true);
+
+  try {
+    let resultText = "";
+    // 出力トークンはFreeAssociation用(faMaxTokens)ではなく、通常用(aiMaxTokens)を使う
+    const maxTokens = Number(await store.get<number>('aiMaxTokens')) || 1000;
+
+    // --- 5. API通信 (FreeAssociationと同じロジックを流用) ---
+    if (ipAiApi === 'gemini') {
+      const apiKey = await store.get<string>('geminiApiKey');
+      const model = await store.get<string>('geminiModel') || 'gemini-1.5-flash';
+      if (!apiKey) throw new Error("Gemini API Key が設定されていません。");
+
+      const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          contents: [{ role: 'user', parts: [{ text: prompt }] }],
+          systemInstruction: { parts: [{ text: systemPrompt }] }
+        }),
+        signal: aiAbortController.signal
+      });
+      if (!response.ok) throw new Error(`Gemini API Error: ${response.statusText}`);
+      const data = await response.json();
+      resultText = data.candidates?.[0]?.content?.parts?.[0]?.text || '';
+    }
+    else if (ipAiApi === 'groq') {
+      const apiKey = await store.get<string>('groqApiKey');
+      const model = await store.get<string>('groqModel') || 'llama-3.3-70b-versatile';
+      if (!apiKey) throw new Error("Groq API Key is not set.");
+
+      const response = await fetch("https://api.groq.com/openai/v1/chat/completions", {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${apiKey}` },
+        body: JSON.stringify({ model: model, messages: [{ role: 'system', content: systemPrompt }, { role: 'user', content: prompt }], max_tokens: maxTokens, temperature: 0.7 }),
+        signal: aiAbortController.signal
+      });
+      if (!response.ok) throw new Error(`Groq API Error: ${response.statusText}`);
+      const data = await response.json();
+      resultText = data.choices?.[0]?.message?.content || '';
+    }
+    else {
+      const url = await store.get<string>('localLlmUrl') || "http://127.0.0.1:1234/v1/chat/completions";
+      const model = await store.get<string>('localLlmModel') || "local-model";
+      const response = await fetch(url, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ model: model, messages: [{ role: 'system', content: systemPrompt }, { role: 'user', content: prompt }], max_tokens: maxTokens, temperature: 0.7 }),
+        signal: aiAbortController.signal
+      });
+      if (!response.ok) throw new Error(`Local LLM API Error: ${response.statusText}`);
+      const data = await response.json();
+      resultText = data.choices?.[0]?.message?.content || '';
+    }
+
+    if (!resultText) throw new Error("AIから有効な応答が得られませんでした。");
+
+    // --- 6. 結果をテキストエリアに挿入 ---
+    const newText = fullText.slice(0, cursor) + resultText + fullText.slice(textarea.selectionEnd);
+    textarea.value = newText;
+
+    // カーソルを挿入した文章の末尾に移動
+    const newCursorPos = cursor + resultText.length;
+    textarea.selectionStart = newCursorPos;
+    textarea.selectionEnd = newCursorPos;
+
+    // スクロールを一番下（またはカーソル位置）へ
+    textarea.scrollTop = textarea.scrollHeight;
+    textarea.focus();
+
+    // ※ コンテンツの保存（saveContentChanges）は、ユーザーが確認してエディタを閉じる時に自動で行われます。
+
+  } catch (e: any) {
+    handleAiError(e);
+  } finally {
+    clearAiProcessingState();
+  }
+}
+
 // --- AIセレクターの初期化 ---
 async function initAiSelector() {
   const displayBtn = document.getElementById('ip-ai-display');
@@ -3885,7 +4163,7 @@ function clearAiProcessingState() {
   aiAbortController = null;
   setAiLoading(false);
 
-  const aiButton = document.getElementById('ip-ai-cot-btn') as HTMLButtonElement;
+  const aiButton = document.getElementById('ip-ai-btn') as HTMLButtonElement;
   if (aiButton) aiButton.disabled = false;
 
   stage.container().focus();
@@ -3961,13 +4239,15 @@ function setupUIButtons() {
     InitializeStage();
   });
   document.getElementById('ip-ai-btn')?.addEventListener('click', () => {
+    // コンテンツエディタ編集中（isContentEditing）なら Template Completion
     if (isContentEditing) {
-      // v1.5.0でここに Template Completion のロジックを入れる
-      console.log("Future: Trigger Template Completion");
+      triggerTemplateCompletion();
       return;
     }
-    if (isTextEditing) return; // 単なるノード名編集時は無効
-    triggerFreeAssociation();
+    // それ以外で、ノードが選択されていれば Free Association
+    if (selectedShape && selectedShape.name() === 'node-group' && !isTextEditing) {
+      triggerFreeAssociation();
+    }
   });
   const selector = document.getElementById('ip-ai-selector-container');
   // --- テンプレートメニュー制御 ---
