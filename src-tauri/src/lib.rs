@@ -57,42 +57,50 @@ async fn open_opencode(
     app: tauri::AppHandle,
     state: State<'_, OpenCodeProcess>,
 ) -> Result<(), String> {
+    // 1. ウィンドウが存在すれば閉じるだけ（サーバーキルは on_window_event に任せる）
     if let Some(win) = app.get_webview_window("opencode") {
         win.close().map_err(|e| e.to_string())?;
         return Ok(());
     }
 
+    // 2. サーバー起動
     {
         let mut lock = state.0.lock().unwrap();
-        if lock.is_none() {
-            // 最もシンプルな起動コマンド
-            let cmd_name = if cfg!(target_os = "windows") {
-                "opencode.cmd"
-            } else {
-                "opencode"
-            };
+        println!("Starting OpenCode server (browser suppressed)...");
 
-            let child = Command::new(cmd_name)
-                .arg("web")
-                .arg("--no-open")
-                .spawn()
-                .map_err(|e| format!("起動失敗: {}", e))?;
+        let cmd_name = if cfg!(target_os = "windows") {
+            "opencode.cmd"
+        } else {
+            "opencode"
+        };
+        let mut cmd = std::process::Command::new(cmd_name);
+        cmd.args(["serve", "--port", "4096"]);
 
-            *lock = Some(child);
-            // サーバー起動待ち
-            std::thread::sleep(std::time::Duration::from_millis(1500));
-        }
+        // ブラウザを開くコマンドを「即終了するコマンド」にすり替える
+        #[cfg(target_os = "windows")]
+        cmd.env("BROWSER", "cmd /C exit 0");
+        #[cfg(not(target_os = "windows"))]
+        cmd.env("BROWSER", ":"); // Unixの「何もしない」コマンド
+
+        let child = cmd
+            .stdout(std::process::Stdio::inherit())
+            .stderr(std::process::Stdio::inherit())
+            .spawn()
+            .map_err(|e| format!("起動失敗: {}", e))?;
+
+        *lock = Some(child);
+        std::thread::sleep(std::time::Duration::from_millis(2000));
     }
 
-    // ウィンドウ生成（External URL）
+    // 3. ウィンドウ生成 (iframeなし、URL直叩きでブロック回避)
     let builder = tauri::WebviewWindowBuilder::new(
         &app,
         "opencode",
         tauri::WebviewUrl::External("http://127.0.0.1:4096".parse().unwrap()),
     )
-    .title("OpenCode")
-    .inner_size(1000.0, 800.0)
-    .decorations(true);
+    .title("OpenCode - AI Coding Assistant")
+    .inner_size(1100.0, 850.0)
+    .decorations(true); // カスタムタイトルバーは一旦諦め、安定性を優先
 
     let window = builder.build().map_err(|e| e.to_string())?;
     window.show().unwrap();
@@ -1117,31 +1125,63 @@ pub fn run() {
             force_save_file,
             open_opencode,
         ])
-        .on_window_event(|app_handle, event| {
-            if let tauri::WindowEvent::CloseRequested { .. } = event {
-                // メインウィンドウが閉じられたときに実行
-                let state = app_handle.state::<OpenCodeProcess>();
-                let mut lock = state.0.lock().unwrap();
-                if let Some(mut child) = lock.take() {
-                    println!("Killing OpenCode server process...");
-                    let _ = child.kill(); // プロセスを終了させる
+        // ウィンドウのライフサイクルイベントを監視する
+        .on_window_event(|window, event| match event {
+            // ウィンドウが完全に破壊された(閉じられた)時
+            tauri::WindowEvent::Destroyed => {
+                // そのウィンドウの名前が "opencode" だったら
+                if window.label() == "opencode" {
+                    let state = window.state::<OpenCodeProcess>();
+                    // ロックを取得して子プロセスを取り出す
+                    let mut lock = state.inner().0.lock().unwrap();
+                    if let Some(child) = lock.take() {
+                        let pid = child.id();
+                        println!(
+                            "OpenCode window closed. Killing server tree (PID: {})...",
+                            pid
+                        );
+
+                        // Windowsの場合はタスクキルで子プロセスごと一掃
+                        #[cfg(target_os = "windows")]
+                        let _ = std::process::Command::new("taskkill")
+                            .args(["/F", "/T", "/PID", &pid.to_string()])
+                            .spawn();
+
+                        #[cfg(not(target_os = "windows"))]
+                        let _ = child.kill();
+                    }
                 }
             }
+            _ => {}
         })
         .build(tauri::generate_context!())
         .expect("error while building tauri application")
-        .run(|_app_handle, event| match event {
+        .run(|app_handle, event| match event {
+            tauri::RunEvent::Exit => {
+                let state = app_handle.state::<OpenCodeProcess>();
+                let mut lock = state.inner().0.lock().unwrap();
+                if let Some(child) = lock.take() {
+                    let pid = child.id();
+                    #[cfg(target_os = "windows")]
+                    let _ = std::process::Command::new("taskkill")
+                        .args(["/F", "/T", "/PID", &pid.to_string()])
+                        .spawn();
+                    #[cfg(not(target_os = "windows"))]
+                    let _ = child.kill();
+                }
+            }
             // Macの関連付け起動イベント
             #[cfg(target_os = "macos")]
-            RunEvent::Opened { urls } => {
+            tauri::RunEvent::Opened { urls } => {
+                use tauri::Manager; // emit を使うために必要
                 if let Some(url) = urls.first() {
                     if let Ok(path_buf) = url.to_file_path() {
                         if let Some(path_str) = path_buf.to_str() {
                             // 1. 起動済みならイベントで通知
-                            let _ = _app_handle.emit("open-file-from-os", path_str);
-                            // 2. 未起動ならStateに保存 (後でフロントエンドが取りに来る)
-                            let state: State<MacFileBuffer> = _app_handle.state();
-                            *state.0.lock().unwrap() = Some(path_str.to_string());
+                            let _ = app_handle.emit("open-file-from-os", path_str);
+                            // 2. 未起動ならStateに保存
+                            let state: tauri::State<MacFileBuffer> = app_handle.state();
+                            *state.inner().0.lock().unwrap() = Some(path_str.to_string());
                         }
                     }
                 }

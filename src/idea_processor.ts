@@ -500,6 +500,12 @@ function setupEventListeners() {
         deselectAll();
 
       } else if (isShift && selectedNodes.length > 0) {
+        // 選択されたノードの中にテンプレートアイテムが含まれていないかチェック
+        const hasTemplateItem = selectedNodes.some(node => node.getAttr('isTemplateItem') === true);
+        if (hasTemplateItem) {
+          console.log("Cannot detach template items from their group.");
+          return;
+        }
         // 解除: 選択中のノードをグループから外す
         let childIds = group.getAttr('childNodeIds') || [];
         selectedNodes.forEach(node => {
@@ -1506,6 +1512,7 @@ function generateTemplate(templateName: string) {
   // --- 1. グレマスの行為者モデル ---
   if (templateName === 'greimas') {
     const group = createGroupNode(offsetX + 110, offsetY + 100, '行為者モデル');
+    group.setAttr('isTemplateRoot', true);
     const bg = group.findOne('.group-bg') as Konva.Rect;
     const handle = group.findOne('.resize-handle') as Konva.Circle;
     if (bg) { bg.width(650); bg.height(350); handle.x(650); handle.y(350); }
@@ -1539,6 +1546,7 @@ function generateTemplate(templateName: string) {
   // --- 2. 英雄の旅 (Hero's Journey) ---
   else if (templateName === 'heros-journey') {
     const group = createGroupNode(offsetX + 50, offsetY + 50, "英雄の旅 (Hero's Journey)");
+    group.setAttr('isTemplateRoot', true);
     const bg = group.findOne('.group-bg') as Konva.Rect;
     const handle = group.findOne('.resize-handle') as Konva.Circle;
     if (bg) { bg.width(900); bg.height(700); handle.x(900); handle.y(700); }
@@ -1586,6 +1594,7 @@ function generateTemplate(templateName: string) {
   // --- 3. ビートシート (Beat Sheet) ---
   else if (templateName === 'beat-sheet') {
     const group = createGroupNode(offsetX + 50, offsetY + 50, "エッセンシャル・ビートシート");
+    group.setAttr('isTemplateRoot', true);
     const bg = group.findOne('.group-bg') as Konva.Rect;
     const handle = group.findOne('.resize-handle') as Konva.Circle;
     if (bg) { bg.width(1050); bg.height(550); handle.x(1050); handle.y(550); }
@@ -1625,6 +1634,7 @@ function generateTemplate(templateName: string) {
   // --- 4. 三幕構成 ---
   else if (templateName === 'three-act-structure') {
     const group = createGroupNode(offsetX + 100, offsetY + 100, "三幕構成");
+    group.setAttr('isTemplateRoot', true);
     const bg = group.findOne('.group-bg') as Konva.Rect;
     const handle = group.findOne('.resize-handle') as Konva.Circle;
     if (bg) { bg.width(800); bg.height(250); handle.x(800); handle.y(250); }
@@ -1983,6 +1993,12 @@ function setupKeyboardEvents() {
     // --- 削除機能 ---
     if ((key === 'delete' || key === 'backspace') && !isTextEditing) {
       if (selectedShape) {
+        // テンプレートアイテム単体の削除を禁止する
+        if (selectedShape.getAttr('isTemplateItem') === true) {
+          console.log("Template items cannot be deleted individually.");
+          // 視覚的なフィードバック（メッセージ等）を出すならここ
+          return;
+        }
         e.preventDefault();
 
         if (selectedShape.name() === 'node-group') {
@@ -1994,6 +2010,19 @@ function setupKeyboardEvents() {
               link.destroy();
             }
           });
+        }
+
+        if (selectedShape.name() === 'container-group') {
+          // もしこれがテンプレートの親グループなら
+          if (selectedShape.getAttr('isTemplateRoot') === true) {
+            const childIds = selectedShape.getAttr('childNodeIds') || [];
+            childIds.forEach((id: string) => {
+              const childNode = layer.findOne('#' + id);
+              if (childNode) {
+                childNode.destroy(); // 子ノードを一括削除
+              }
+            });
+          }
         }
 
         selectedShape.destroy(); // 本体を削除
