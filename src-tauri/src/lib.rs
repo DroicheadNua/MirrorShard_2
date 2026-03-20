@@ -8,7 +8,7 @@ use portable_pty::{native_pty_system, CommandBuilder, MasterPty, PtySize};
 use std::fs;
 use std::io::{Read, Write};
 use std::path::{Path, PathBuf};
-use std::process::{Child, Command};
+use std::process::{Child, Command, Stdio};
 use std::sync::{Arc, Mutex};
 use std::thread;
 #[cfg(target_os = "macos")]
@@ -17,7 +17,6 @@ use tauri::{AppHandle, Emitter, Manager, State, WindowEvent};
 use tauri_plugin_cli::CliExt;
 use tauri_plugin_window_state::{Builder, StateFlags};
 
-// OpenCodeのプロセスを管理するための構造体
 struct OpenCodeProcess(Mutex<Option<Child>>);
 
 // PTYの入力側を保持する構造体
@@ -52,39 +51,59 @@ struct SecondInstanceFile(Mutex<Option<String>>);
 struct MacFileBuffer(Mutex<Option<String>>);
 // --- Tauriコマンドの定義 ---
 
+// 共通のツリーキルヘルパー関数
+fn kill_opencode_tree(child: &mut Child) {
+    let pid = child.id();
+    #[cfg(target_os = "windows")]
+    {
+        use std::os::windows::process::CommandExt;
+        // /T で大元のcmdと子分のnodeを両方殺し、0x08000000 でtaskkill自体の窓も出さない
+        let _ = Command::new("taskkill")
+            .args(["/F", "/T", "/PID", &pid.to_string()])
+            .creation_flags(0x08000000)
+            .spawn(); // 完了を待たずに投げっぱなし（フリーズ回避）
+    }
+    #[cfg(not(target_os = "windows"))]
+    let _ = child.kill();
+}
+
 #[tauri::command]
-async fn open_opencode(
-    app: tauri::AppHandle,
-    state: State<'_, OpenCodeProcess>,
-) -> Result<(), String> {
-    // 1. ウィンドウが存在すれば閉じるだけ（サーバーキルは on_window_event に任せる）
+async fn open_opencode(app: AppHandle, state: State<'_, OpenCodeProcess>) -> Result<(), String> {
+    // ウィンドウを閉じる際のトグル処理
     if let Some(win) = app.get_webview_window("opencode") {
-        win.close().map_err(|e| e.to_string())?;
+        let _ = win.close();
+        let mut lock = state.inner().0.lock().unwrap();
+        if let Some(mut child) = lock.take() {
+            println!("Stopping OpenCode server tree (PID: {})...", child.id());
+            kill_opencode_tree(&mut child);
+        }
         return Ok(());
     }
 
-    // 2. サーバー起動
+    // サーバー起動
     {
-        let mut lock = state.0.lock().unwrap();
-        println!("Starting OpenCode server (browser suppressed)...");
+        let mut lock = state.inner().0.lock().unwrap();
 
-        let cmd_name = if cfg!(target_os = "windows") {
-            "opencode.cmd"
+        let mut cmd = if cfg!(target_os = "windows") {
+            let mut c = Command::new("cmd");
+            c.args(["/C", "set BROWSER=true && opencode serve --port 4096"]);
+            #[cfg(target_os = "windows")]
+            {
+                use std::os::windows::process::CommandExt;
+                c.creation_flags(0x08000000); // 窓を出さない
+            }
+            c
         } else {
-            "opencode"
+            let mut c = Command::new("opencode");
+            c.args(["serve", "--port", "4096"]);
+            c.env("BROWSER", ":");
+            c
         };
-        let mut cmd = std::process::Command::new(cmd_name);
-        cmd.args(["serve", "--port", "4096"]);
 
-        // ブラウザを開くコマンドを「即終了するコマンド」にすり替える
-        #[cfg(target_os = "windows")]
-        cmd.env("BROWSER", "cmd /C exit 0");
-        #[cfg(not(target_os = "windows"))]
-        cmd.env("BROWSER", ":"); // Unixの「何もしない」コマンド
-
+        // 入出力を完全に「虚無」に捨ててバッファ詰まりを防ぐ
         let child = cmd
-            .stdout(std::process::Stdio::inherit())
-            .stderr(std::process::Stdio::inherit())
+            .stdout(Stdio::null())
+            .stderr(Stdio::null())
             .spawn()
             .map_err(|e| format!("起動失敗: {}", e))?;
 
@@ -92,7 +111,7 @@ async fn open_opencode(
         std::thread::sleep(std::time::Duration::from_millis(2000));
     }
 
-    // 3. ウィンドウ生成 (iframeなし、URL直叩きでブロック回避)
+    // 5. ウィンドウ生成
     let builder = tauri::WebviewWindowBuilder::new(
         &app,
         "opencode",
@@ -100,7 +119,7 @@ async fn open_opencode(
     )
     .title("OpenCode - AI Coding Assistant")
     .inner_size(1100.0, 850.0)
-    .decorations(true); // カスタムタイトルバーは一旦諦め、安定性を優先
+    .decorations(true);
 
     let window = builder.build().map_err(|e| e.to_string())?;
     window.show().unwrap();
@@ -1127,28 +1146,12 @@ pub fn run() {
         ])
         // ウィンドウのライフサイクルイベントを監視する
         .on_window_event(|window, event| match event {
-            // ウィンドウが完全に破壊された(閉じられた)時
             tauri::WindowEvent::Destroyed => {
-                // そのウィンドウの名前が "opencode" だったら
                 if window.label() == "opencode" {
                     let state = window.state::<OpenCodeProcess>();
-                    // ロックを取得して子プロセスを取り出す
                     let mut lock = state.inner().0.lock().unwrap();
-                    if let Some(child) = lock.take() {
-                        let pid = child.id();
-                        println!(
-                            "OpenCode window closed. Killing server tree (PID: {})...",
-                            pid
-                        );
-
-                        // Windowsの場合はタスクキルで子プロセスごと一掃
-                        #[cfg(target_os = "windows")]
-                        let _ = std::process::Command::new("taskkill")
-                            .args(["/F", "/T", "/PID", &pid.to_string()])
-                            .spawn();
-
-                        #[cfg(not(target_os = "windows"))]
-                        let _ = child.kill();
+                    if let Some(mut child) = lock.take() {
+                        kill_opencode_tree(&mut child);
                     }
                 }
             }
@@ -1160,14 +1163,8 @@ pub fn run() {
             tauri::RunEvent::Exit => {
                 let state = app_handle.state::<OpenCodeProcess>();
                 let mut lock = state.inner().0.lock().unwrap();
-                if let Some(child) = lock.take() {
-                    let pid = child.id();
-                    #[cfg(target_os = "windows")]
-                    let _ = std::process::Command::new("taskkill")
-                        .args(["/F", "/T", "/PID", &pid.to_string()])
-                        .spawn();
-                    #[cfg(not(target_os = "windows"))]
-                    let _ = child.kill();
+                if let Some(mut child) = lock.take() {
+                    kill_opencode_tree(&mut child);
                 }
             }
             // Macの関連付け起動イベント
