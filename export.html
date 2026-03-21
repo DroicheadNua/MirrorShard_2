@@ -203,14 +203,16 @@
                     try {
                         const store = await Store.load('.settings.dat');
                         const pandocPath = await store.get('pandocPath');
+                        // \n を 「半角スペース2つ + \n」 に置換することで、Pandocに強制的に改行させる
+                        const contentForPandoc = rawMarkdownText.replace(/\n/g, '  \n');
 
                         await invoke('export_with_pandoc', {
-                            sourceContent: text, // 無変換の生のMarkdownをそのまま渡す
+                            sourceContent: contentForPandoc,
                             outputPath: path,
                             format: "docx",
                             isVertical: false,
                             pandocPathSetting: pandocPath || null,
-                            metadata: { title: "Exported Document" }
+                            metadata: {}
                         });
 
                         alert('DOCXファイルの書き出しに成功しました。');

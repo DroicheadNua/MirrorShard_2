@@ -5,7 +5,9 @@ use encoding_rs::{SHIFT_JIS, UTF_8};
 use epub_builder::{EpubBuilder, EpubContent, ReferenceType, ZipLibrary};
 use font_kit::source::SystemSource;
 use portable_pty::{native_pty_system, CommandBuilder, MasterPty, PtySize};
+use regex::Regex;
 use std::fs;
+use std::fs::File;
 use std::io::{Read, Write};
 use std::path::{Path, PathBuf};
 use std::process::{Child, Command, Stdio};
@@ -16,6 +18,7 @@ use tauri::RunEvent;
 use tauri::{AppHandle, Emitter, Manager, State, WindowEvent};
 use tauri_plugin_cli::CliExt;
 use tauri_plugin_window_state::{Builder, StateFlags};
+use zip::{write::SimpleFileOptions, ZipArchive, ZipWriter};
 
 struct OpenCodeProcess(Mutex<Option<Child>>);
 
@@ -421,6 +424,69 @@ async fn open_markdown_preview(app: AppHandle) {
     let _ = builder.build();
 }
 
+// --- DOCX内のXMLを書き換えてルビを適用する関数 ---
+fn apply_ruby_to_docx(file_path: &str) -> Result<(), String> {
+    let path = std::path::Path::new(file_path);
+    let file = File::open(path).map_err(|e| e.to_string())?;
+    let mut archive = ZipArchive::new(file).map_err(|e| e.to_string())?;
+
+    // メモリ上に新しいZipを作成するためのバッファ
+    let mut buffer = Vec::new();
+    {
+        let mut writer = ZipWriter::new(std::io::Cursor::new(&mut buffer));
+
+        for i in 0..archive.len() {
+            let mut file = archive.by_index(i).map_err(|e| e.to_string())?;
+            let name = file.name().to_string();
+            let options = SimpleFileOptions::default()
+                .compression_method(file.compression())
+                .unix_permissions(file.unix_mode().unwrap_or(0o644));
+
+            writer
+                .start_file(name.clone(), options)
+                .map_err(|e| e.to_string())?;
+
+            if name == "word/document.xml" {
+                // 本文XMLの場合、中身を書き換える
+                let mut content = String::new();
+                file.read_to_string(&mut content)
+                    .map_err(|e| e.to_string())?;
+
+                // 1. 漢字《ルビ》形式を ｜漢字《ルビ》に統一 (ここは変更なし)
+                let re_standardize = Regex::new(r"([\p{sc=Han}]+)《([^》]*)》").unwrap();
+                content = re_standardize
+                    .replace_all(&content, "｜$1《$2》")
+                    .to_string();
+                content = content.replace("｜｜", "｜").replace("||", "｜");
+
+                // 2. ｜親字《ルビ》 を 成功例と全く同じ XML 構造に置換
+                let re_final = Regex::new(r"[\|｜]([^《<]+)《([^》>]+)》").unwrap();
+
+                // ★ 修正：LibreOfficeの成功例から抽出したパラメータ (w:hps=12, w:hpsRaise=21等) を完全に再現
+                let ruby_xml = r#"</w:t></w:r><w:r><w:ruby><w:rubyPr><w:rubyAlign w:val="center"/><w:hps w:val="12"/><w:hpsRaise w:val="21"/><w:hpsBaseText w:val="21"/><w:lid w:val="ja-JP"/></w:rubyPr><w:rt><w:r><w:rPr><w:rFonts w:ascii="Noto Serif JP" w:hAnsi="Noto Serif JP"/><w:sz w:val="12"/><w:szCs w:val="12"/></w:rPr><w:t>$2</w:t></w:r></w:rt><w:rubyBase><w:r><w:t>$1</w:t></w:r></w:rubyBase></w:ruby></w:r><w:r><w:t xml:space="preserve">"#;
+
+                content = re_final.replace_all(&content, ruby_xml).to_string();
+
+                writer
+                    .write_all(content.as_bytes())
+                    .map_err(|e| e.to_string())?;
+            } else {
+                // それ以外のファイルはそのままコピー
+                let mut data = Vec::new();
+                file.read_to_end(&mut data).map_err(|e| e.to_string())?;
+                writer.write_all(&data).map_err(|e| e.to_string())?;
+            }
+        }
+        writer.finish().map_err(|e| e.to_string())?;
+    }
+
+    // 元のファイルを新しいバッファの内容で上書き
+    let mut out_file = File::create(path).map_err(|e| e.to_string())?;
+    out_file.write_all(&buffer).map_err(|e| e.to_string())?;
+
+    Ok(())
+}
+
 #[tauri::command]
 async fn export_with_pandoc(
     app: AppHandle,
@@ -509,6 +575,10 @@ async fn export_with_pandoc(
         .map_err(|e| format!("Failed to execute pandoc: {}", e))?;
 
     if output.status.success() {
+        if format == "docx" {
+            println!("Applying ruby surgical transformation to DOCX...");
+            apply_ruby_to_docx(&output_path)?;
+        }
         Ok(())
     } else {
         let stderr = String::from_utf8_lossy(&output.stderr);
