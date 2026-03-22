@@ -13,8 +13,6 @@ use std::path::{Path, PathBuf};
 use std::process::{Child, Command, Stdio};
 use std::sync::{Arc, Mutex};
 use std::thread;
-#[cfg(target_os = "macos")]
-use tauri::RunEvent;
 use tauri::{AppHandle, Emitter, Manager, State, WindowEvent};
 use tauri_plugin_cli::CliExt;
 use tauri_plugin_window_state::{Builder, StateFlags};
@@ -56,13 +54,13 @@ struct MacFileBuffer(Mutex<Option<String>>);
 
 // 共通のツリーキルヘルパー関数
 fn kill_opencode_tree(child: &mut Child) {
-    let pid = child.id();
+    let _pid = child.id();
     #[cfg(target_os = "windows")]
     {
         use std::os::windows::process::CommandExt;
         // /T で大元のcmdと子分のnodeを両方殺し、0x08000000 でtaskkill自体の窓も出さない
         let _ = Command::new("taskkill")
-            .args(["/F", "/T", "/PID", &pid.to_string()])
+            .args(["/F", "/T", "/PID", &_pid.to_string()])
             .creation_flags(0x08000000)
             .spawn(); // 完了を待たずに投げっぱなし（フリーズ回避）
     }
@@ -97,9 +95,29 @@ async fn open_opencode(app: AppHandle, state: State<'_, OpenCodeProcess>) -> Res
             }
             c
         } else {
-            let mut c = Command::new("opencode");
+            // Mac用の修正:
+            // 1. Homebrewの標準パス (Apple Silicon / Intel両対応) を確認
+            let brew_path = "/opt/homebrew/bin/opencode";
+            let intel_path = "/usr/local/bin/opencode";
+
+            let final_cmd = if std::path::Path::new(brew_path).exists() {
+                brew_path
+            } else if std::path::Path::new(intel_path).exists() {
+                intel_path
+            } else {
+                "opencode" // どちらにもなければPATHに賭ける
+            };
+
+            println!("Mac: {} を起動します", final_cmd);
+            let mut c = Command::new(final_cmd);
             c.args(["serve", "--port", "4096"]);
-            c.env("BROWSER", ":");
+            c.env("BROWSER", "true");
+
+            // 開発中は Stdio::inherit() に
+            #[cfg(debug_assertions)]
+            c.stdout(std::process::Stdio::inherit())
+                .stderr(std::process::Stdio::inherit());
+
             c
         };
 

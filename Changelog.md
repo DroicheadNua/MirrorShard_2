@@ -10,7 +10,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added (新機能)  
 - Groq APIに対応。メインエディタ・AIチャット・アイデアプロセッサのいずれでも使用可能  
-- エクスポートウィンドウのDOCX出力機能を実装  
+- エクスポートウィンドウにDOCX出力機能を追加  
 - OpenCode連携機能を実装。OpenCodeがグローバルインストールされている場合、Ctrl+Shift+Kでopencode serveを起動、別ウィンドウで開くことが可能に  
 - アイデアプロセッサにAI機能「Template Completion」を追加。テンプレート（Story Archetype）のコンテンツテキスト（ノードではなく、ノードを右クリックして出現するエディタ）を編集中にAIボタン（またはCtrl+Shift＋F）を押すと、物語構造全体と直前のテキストを踏まえてAIが文章を生成する機能  
 

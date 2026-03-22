@@ -1,153 +1,78 @@
-# MirrorShard 2 ver. 1.4.1  
+[日本語](README-ja.md) | **English**
 
-AIサポートつきの多機能ライティングエディタ「MirrorShard」の改良版です。  
-ソフトウェアフレームワークをTauriに変更することで、起動の高速化とメモリ消費量の削減に成功。さらに配布バイナリのファイルサイズは前作の30分の1程度にまで大幅に削減されています。  
-前作のほぼ全機能を移植完了、さらに前作よりAI機能を大幅に強化。メインウィンドウにもAI機能が搭載され、カーソル位置からの執筆、コード補完、選択範囲の要約/リライト/翻訳が可能に。  
-加えてマークダウン／HTMLプレビュー機能とコードエディタモードを追加、より汎用性の高いエディタとして生まれ変わりました。  
+# MirrorShard 2 ver. 1.5.0
 
-創作用エディタとして、また巨大テキストファイルを扱えるアウトラインプロセッサやマークダウンエディタとして、幅広く運用できると思います。  
+MirrorShard 2 is a minimalist, highly immersive AI-supported writing editor.  
+Built with the Tauri framework, it boasts fast startup times and low memory consumption. The distributed binary size is under 10MB—a drastic reduction from its Electron-based predecessor.  
 
-公式サイトを作成しました  
-https://droicheadnua.github.io/MirrorShard-Official/
+It features a lightweight outline processor capable of handling massive text files, integrated AI assistance for writing from the cursor, code completion, and summarizing/rewriting/translating selected text.  
+Additionally, it comes packed with versatile tools: a dedicated AI Chat window, an Idea Processor (Canvas), Markdown/HTML preview, and OpenCode integration. Whether you are writing a novel, drafting a blog, performing casual text editing, or developing apps centered around OpenCode, MirrorShard adapts to your creative workflow.
 
-## 📰 メディア掲載 / Media Coverage
+*Note: A fully localized English version of the application and its documentation is planned for a future release in a separate repository. *
 
-**窓の杜（Impress Watch）**様にご紹介いただきました  
-* [日本語小説エディター「MirrorShard」が「Tauri」で生まれ変わった！ 軽量・高速に](https://forest.watch.impress.co.jp/docs/news/2091824.html)
+**[Official Website (Japanese)](https://droicheadnua.github.io/MirrorShard-Official/)**
 
+## 📰 Media Coverage
+Featured on **Mado no Mori (Impress Watch)** (Japanese):
+* [Japanese Novel Editor "MirrorShard" reborn with "Tauri"! Lighter and Faster](https://forest.watch.impress.co.jp/docs/news/2091824.html)
 
-![MirrorShard_2 Key Visual](screenshots/ScreenShot01.jpg)
+## 💾 Downloads
 
-## ダウンロード  
+[![Download Windows](https://img.shields.io/badge/Download-Windows_x64-blue?style=for-the-badge&logo=windows)](https://github.com/DroicheadNua/MirrorShard_2/releases/download/v1.5.0/MirrorShard.2_1.5.0_x64_ja-JP.msi)  
+[![Download Mac](https://img.shields.io/badge/Download-Mac_Apple_Silicon-green?style=for-the-badge&logo=apple)](https://github.com/DroicheadNua/MirrorShard_2/releases/download/v1.5.0/MirrorShard.2_1.5.0_aarch64.dmg)  
 
-[![Windows](https://img.shields.io/badge/Download-Windows-blue)]  
-(https://github.com/DroicheadNua/MirrorShard_2/releases/download/v1.4.1/MirrorShard.2_1.4.1_x64_ja-JP.msi)  
-[![Mac (Apple Silicon)](https://img.shields.io/badge/Download-Mac_(Apple_Silicon)-green)]  
-(https://github.com/DroicheadNua/MirrorShard_2/releases/download/v1.4.1/MirrorShard.2_1.4.1_aarch64.dmg)  
+Alternatively, download from the [Latest Release Page](https://github.com/DroicheadNua/MirrorShard_2/releases/latest).  
+*(Expand the "Assets" section at the bottom to find the installer files).*
 
-または、[最新のリリース一覧ページ](https://github.com/DroicheadNua/MirrorShard_2/releases/latest)からダウンロードできます。  
-最下段の「Assets」の項目が折りたたまれている場合は、▶マークを押して展開してください。    
+## ⚠️ Known Issues (v1.5.0)
+*   **Windows**: When using older versions of ATOK (e.g., ATOK 2017), underlines and clause separators may not display during conversion. This is a known compatibility issue between WebView2 and legacy IMEs. (Google Japanese Input and Microsoft IME work flawlessly).
+*   **Mac**: Selecting large areas using the scrollbar behaves erratically.
 
-## 既知の問題 (Known Issues)  
-
-現在、v1.4.1において以下の問題が確認されています。  
-
-### Windows版  
-- ATOK 2017などの旧バージョンのATOKを使用している環境において、変換中のアンダーラインや文節区切りが表示されない現象が確認されています。  
-  これはWebView2と旧来のIMEとの相性に起因するもので、Google日本語入力、Microsoft IMEでは正常に動作することを確認済みです。  
-  （※最新のATOKサブスクリプション版での動作は未検証です）  
-
-### Mac版  
-- スクロールバーを使用して広範囲を範囲選択すると、挙動がおかしくなります。  
-
-## トラブルの際には  
-　インストールやご使用などにつきまして、何か疑問の点等ございましたら「faq.md」を御覧ください。  
-　それでも解決しない問題がございましたら、MirrorShard開発アカウント
-mirrorshard.dev@gmail.com
-までご一報いただければ幸いです。  
-
-## 主な特徴  
-・ソフトウェアフレームワークにTauriを採用、起動の高速化と省メモリ化に成功  
-・没入感を妨げないミニマルなデザインとフレームレスウィンドウ  
-・数十万行に及ぶ巨大サイズのテキストにも対応  
-・マークダウン記法によるアウトライン機能を搭載。アウトラインプロセッサとしても運用可能  
-・AIチャット機能を搭載。Google Gemini（API使用）のほか、LM StudioやOllamaなどを介してローカルLLMとの連携も可能  
+## 💡 Key Features
+*   **Tauri Powered**: fast startup and low memory footprint.
+*   **Immersive Design**: A minimalist, frameless window that won't disrupt your focus. Includes a "ZEN Mode" that hides all UI elements.
+*   **Heavy-Duty Performance**: Adopting Codemirror 6, handles massive text files with hundreds of thousands of lines.
+*   **Built-in Outliner**: Features a Markdown-based outliner, functioning perfectly as an outline processor.
+*   **Hybrid AI Chat**: A dedicated AI Chat window supporting Google Gemini, Groq (API), and Local LLMs (via LM Studio, Ollama, koboldcpp, etc.).
 ![MirrorShard_2 AI_Chat](screenshots/ScreenShot03.jpg)
-・メインエディタにもAI機能を搭載。カーソル位置からAIに文章の続きを書かせたり、選択範囲をAIに要約/翻訳/リライトさせたりすることも可能  
-・アイデアプロセッサを搭載。アイデアの整理や発想支援などに。  
+*   **Editor AI Integration**: Call upon AI directly within the main editor to continue writing from your cursor, complete code, or summarize/translate/rewrite selected text.
+*   **Idea Processor (Canvas)**: A visual workspace to organize and expand your thoughts. Includes an "AI Free Association" feature that generates three new ideas from a selected node.
 ![MirrorShard_2 Idea_Processor](screenshots/ScreenShot05.jpg)
-・マークダウン／HTMLプレビュー機能を搭載。マークダウンエディタ・HTMLエディタとしても運用可能に  
-・コードエディタモードを搭載、AIによる簡易的なコード補完機能も実装。また、ターミナルを開く機能を搭載  
+*   **Template Completion**: AI understands the overall plot structure (Story Archetypes) and your current node to contextually generate the next scene. (Image shows generation by kimi-k2).
+![MirrorShard_2 Idea_Processor](screenshots/ScreenShot07.jpg)
+*   **OpenCode Integration**: Use the editor as a development environment alongside OpenCode (AI Coding Agent).
+![MirrorShard_2 Idea_Processor](screenshots/ScreenShot06.jpg)
+*   **Markdown & HTML Preview**: Real-time preview with zoom and outline synchronization.
+*   **Code Editor Mode**: Includes syntax highlighting, AI code completion, and a built-in terminal.
 ![MirrorShard_2 AI_Chat](screenshots/ScreenShot04.jpg)
-・安全なファイル保存機能（アトミックセーブ）を採用。停電やPCクラッシュなど、不測の事態にも強い設計  
-　※ただし仕様上、「ファイル作成日＝ファイル更新日」になります。詳しくはFAQを御覧ください。  
-・配色やエディタの配置を自在にカスタマイズ。編集したカラーテーマはプリセットとして保存可能  
-・背景画像を活かせる半透明ウィンドウを実装。お好みで痛エディタも  
+*   **Robust Saving**: Employs atomic saving to protect your data against power outages or crashes.
+*   **Deep Customization**: Fully customizable color schemes (with presets), window transparency, background image support, and adjustable editor widths/margins.
 ![MirrorShard_2 Background_Image](screenshots/ScreenShot02.jpg)
-・UIを非表示にし、没入感を高める「ZEN」モードを搭載  
-・縦書きプレビューウィンドウを実装。青空文庫形式のルビにも対応  
-・PDF・HTML・EPUBでの出力、及びプリンタでの印刷に対応（※PDF・印刷は横書きのみ）。  
-・Geminiのログを読み込み可能。Geminiの膨大なログから必要な情報を検索・抽出するのに役立ちます  
+*   **Japanese Vertical Writing**: Includes a vertical writing preview window supporting Aozora Bunko Ruby format.
+*   **Versatile Export**: Export to PDF, DOCX (MS Word), HTML, EPUB, or print directly (Horizontal writing only for PDF/DOCX/Print).
+*   **Log Viewer**: Import and read massive Gemini chat logs without freezing.
 
-## 前作（Electron版）からの変更点  
-・フレームワークの変更により軽量化と高速化に成功。メモリ消費量も減少  
-・ファイルサイズも大幅削減、前作のほぼ20分の1程度に  
-・AI機能が大幅強化。メインウィンドウにもAI機能が搭載され、カーソル位置からの執筆、コード補完、選択範囲の要約/リライト/翻訳が可能に  
-・アイコンをSVG画像に変更、よりミニマルなデザインに  
-・禁則処理やワードラップなど、ワープロとしての設定項目を強化  
-・画面のカスタマイズ性が大幅に向上。カラーピッカーによる配色のカスタマイズとプリセットへの保存が可能になり、テキストエリアの幅や右寄せ・左寄せの設定も可能に  
-・マークダウン／HTMLプレビュー機能を搭載  
-・コードエディタモードを搭載  
-・内蔵ターミナルを搭載  
-・ファイル一覧とアウトラインペインを分離  
-・軽量化のため添付音源と画像を各1種ずつに  
-・フォントの同梱をやめ、フォントサイクルはシステムフォント（serif・sans-serif・monospace）を使用するように変更  
-・縦書きウィンドウのリアルタイムプレビューを廃止（代わりに更新ボタンを設置）  
-・横書きのエクスポート機能でPandocが不要に（ただし縦書きのエクスポートにはPandocが必要）  
-・プリンタでの印刷が可能に（横書きのみ）  
-・縦書きのPDF出力を廃止（HTML、EPUBのみ）  
-・ZENモード時、ツールバーへのマウスオーバーでUIボタンが表示される仕様に  
-・選択範囲の文字数カウント機能を追加  
-・AIチャット機能がOllamaにも対応。またLAN接続にも対応  
-・降雪エフェクトがメインエディタに適用されるようになった  
-・右クリックメニューから、選択中のファイルのあるフォルダを開けるように  
-・ルビ、三点リーダー（……）などの挿入ボタンを設置  
+## 🎵 Materials Used  
+*   **Background images and icons**: Generated by Imagen 4  
+*   **BGM**: Generated by ACE-Step  
+*   **Typewriter sounds**: Springin' (https://www.springin.org)  
+*   **Tokyo Night Color Scheme**: Based on a design by Enkia (https://github.com/enkia/tokyo-night-vscode-theme).
 
-## 操作方法  
-詳しい操作方法については、[ユーザーマニュアル](docs/user-manual.md)をご覧ください。  
+## ⚖️ Important Notes (Disclaimer)  
+This software is freeware and is provided “as is” without warranty.  
+The author assumes no liability whatsoever for any damages (including, but not limited to, data loss or lost profits) arising from the use of this software.  
+Although the software has been developed with the utmost care, it may contain unexpected bugs. Please make regular backups when handling important data.  
+By using this software, you are deemed to have agreed to the above disclaimer.  
 
-## Linux版について  
-Linux版はグラフィック環境由来（特にNvidia製グラフィックボード使用時やWayland環境）の不具合が多いため、バイナリの配布は停止しています。  
-ただ、X11ベースの軽量環境（MX Linux, Zorin OS Lite等）においては、Electron版より軽快に動作することを確認しています。  
-詳細な条件やビルド方法については [Linux版について](docs/linux-support.md)をご覧ください。  
+## License  
+This software is released under the MIT License.  
 
-## エンコードについて  
-　原則として、UTF-8 (BOMなし) での利用を強く推奨します。  
-
-　本ソフトウェアが対応しているエンコードは、UTF-8とShift-JISのみとなっております。テキストファイルのエンコードを自動判別して読み込む仕様になっておりますが、特殊なエンコードの場合、判別に失敗することがあります。  
-　読み込んだファイルが文字化けしている場合、そのまま保存してしまうと誤ったエンコードで保存されてしまい、ファイルの内容が失われてしまう場合があります。保存せずにタブを閉じてください。  
-　エンコードの判別ができなかった場合は警告メッセージが表示されますが、稀ではあるものの、特殊な条件下では警告が出ないまま文字化けが発生することがございます。ご注意ください。  
-
-　特殊なエンコードのファイルを本ソフトウェアで使用する場合、OS標準のメモアプリや他のエディタなどでUTF-8 (BOMなし) 形式に変換してからご利用ください。  
-
-## 🎵 BGM機能とパフォーマンスについて  
-
-本アプリケーションのBGM機能は、OSによって動作仕様とメモリ消費量が異なります。  
-
-*   **Windows / macOS:**  
-    *   設定画面から任意の音楽ファイル（mp3/wav/ogg）を指定して再生する場合、ストリーミング再生となるため**メモリ消費は最小限**に抑えられます。  
-*   **Linux (Raspberry Pi含む):**  
-    *   OSの制限により、音楽データをすべてメモリ上に展開して再生します。そのため、**BGM使用時はメモリ消費量が増加します。**  
-    *   特にRaspberry Pi等の低スペック環境でメモリ不足を感じる場合は、BGMをオフにすることをお勧めします。  
-
-## 使用素材  
-・背景画像およびアイコン  
-　Imagen 4 による生成  
-
-・BGM  
-　ACE-Stepによる生成  
-
-・タイプライター音  
-　Springin'様 https://www.springin.org  
-
-・Tokyo Night  Color Scheme（Enkia様）(https://github.com/enkia/tokyo-night-vscode-theme)  
-　システムテーマの一つとしてお借りした他、コードエディターモードの配色もこちらをベースにしています。  
-
-## ご利用にあたっての注意（免責事項）  
-このソフトウェアはフリーウェアであり、無保証（AS IS）で提供されます。  
-作者は、このソフトウェアの使用によって生じたいかなる損害（データの損失、逸失利益などを含むがこれに限らない）についても、一切の責任を負いません。  
-開発には細心の注意を払っていますが、予期せぬ不具合が含まれている可能性があります。重要なデータを扱う際には、定期的にバックアップを取るようにしてください。  
-このソフトウェアを利用した時点で、上記の免責事項に同意したものとみなします。  
-
-## ライセンス  
-　本ソフトウェアはMITライセンスのもとで公開されています。  
-
-　本ソフトウェアはTauriで開発されました。エディタエンジンとしてCodeMirror 6 を採用しており、またオープンソースの小説用テキストエディタLeft  
+This software was developed using Tauri. It uses CodeMirror 6 as its editor engine and draws heavily on the open-source novel-writing text editor Left  
 https://github.com/hundredrabbits/Left  
-から多くの影響を受けています。特にアウトライン機能はLeftのソースコードを参考にしています。  
+. In particular, the outline feature was developed with reference to Left’s source code.  
 
-　なお、本ソフトウェアのコードの大半はGemini君が書いてくれました。開発当初2.5 proだったGemini君も3 pro preview、3.1 pro previewと進化していき、開発も少しずつ楽になっていった気がします。ありがとうGemini君。  
 
-　Copyright (c) 2025-2026 [DroicheadNua]  
-　mirrorshard.dev@gmail.com  
-　https://github.com/DroicheadNua/MirrorShard_2  
+---
+Copyright (c) 2025-2026[DroicheadNua]  
+mirrorshard.dev@gmail.com  
+https://github.com/DroicheadNua/MirrorShard_2
