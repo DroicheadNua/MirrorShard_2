@@ -124,6 +124,12 @@ MirrorShardのAI機能は「AIに生殺与奪の権を握らせるな」とい�
 設定画面（F2）の「Terminal Settings > Shell Path」に `bin\bash.exe`（Git Bash）を指定して使用するか、Windowsの「実行ポリシー（Execution Policy）」を変更する必要があります。  
 （実行ポリシーの変更については、Microsoftの公式ドキュメント等をご参照ください）  
 
+## OpenCode関係  
+
+### Q. OpenCodeをインストールしたのに、Ctrl+Shift+Kで起動できません。  
+
+**A.** 環境変数をご確認ください。OpenCodeのインストールフォルダがPathに通っていない可能性があります。  
+
 
 ## その他  
 

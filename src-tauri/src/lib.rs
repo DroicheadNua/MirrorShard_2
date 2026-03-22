@@ -470,20 +470,18 @@ fn apply_ruby_to_docx(file_path: &str) -> Result<(), String> {
                 file.read_to_string(&mut content)
                     .map_err(|e| e.to_string())?;
 
-                // 1. 漢字《ルビ》形式を ｜漢字《ルビ》に統一 (ここは変更なし)
-                let re_standardize = Regex::new(r"([\p{sc=Han}]+)《([^》]*)》").unwrap();
-                content = re_standardize
-                    .replace_all(&content, "｜$1《$2》")
-                    .to_string();
-                content = content.replace("｜｜", "｜").replace("||", "｜");
+                // 共通のルビ用OpenXMLテンプレート（フォント指定なしのクリーンな構造）
+                let ruby_xml = r#"</w:t></w:r><w:r><w:ruby><w:rubyPr><w:rubyAlign w:val="center"/><w:hps w:val="12"/><w:hpsRaise w:val="21"/><w:hpsBaseText w:val="21"/><w:lid w:val="ja-JP"/></w:rubyPr><w:rt><w:r><w:rPr><w:sz w:val="12"/><w:szCs w:val="12"/></w:rPr><w:t>$2</w:t></w:r></w:rt><w:rubyBase><w:r><w:t>$1</w:t></w:r></w:rubyBase></w:ruby></w:r><w:r><w:t xml:space="preserve">"#;
 
-                // 2. ｜親字《ルビ》 を 成功例と全く同じ XML 構造に置換
-                let re_final = Regex::new(r"[\|｜]([^《<]+)《([^》>]+)》").unwrap();
+                // 1. 【明示的ルビ】半角「|」または全角「｜」が付いているパターン
+                // 最初の [\|｜] はキャプチャしない（置換結果に残さない）ため、縦棒は完全に消滅します。
+                let re_explicit = Regex::new(r"[\|｜]([^《<]+)《([^》>]+)》").unwrap();
+                content = re_explicit.replace_all(&content, ruby_xml).to_string();
 
-                // ★ 修正：LibreOfficeの成功例から抽出したパラメータ (w:hps=12, w:hpsRaise=21等) を完全に再現
-                let ruby_xml = r#"</w:t></w:r><w:r><w:ruby><w:rubyPr><w:rubyAlign w:val="center"/><w:hps w:val="12"/><w:hpsRaise w:val="21"/><w:hpsBaseText w:val="21"/><w:lid w:val="ja-JP"/></w:rubyPr><w:rt><w:r><w:rPr><w:rFonts w:ascii="Noto Serif JP" w:hAnsi="Noto Serif JP"/><w:sz w:val="12"/><w:szCs w:val="12"/></w:rPr><w:t>$2</w:t></w:r></w:rt><w:rubyBase><w:r><w:t>$1</w:t></w:r></w:rubyBase></w:ruby></w:r><w:r><w:t xml:space="preserve">"#;
-
-                content = re_final.replace_all(&content, ruby_xml).to_string();
+                // 2. 【暗黙的ルビ】漢字に直接《》が付いているパターン
+                // 上の処理で明示的ルビは既にXML化されているので、残ったものだけが安全に処理されます。
+                let re_implicit = Regex::new(r"([\p{sc=Han}]+)《([^》>]+)》").unwrap();
+                content = re_implicit.replace_all(&content, ruby_xml).to_string();
 
                 writer
                     .write_all(content.as_bytes())
