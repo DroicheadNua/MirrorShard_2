@@ -5,6 +5,8 @@
 MirrorShard 2 is a minimalist, highly immersive AI-supported writing editor.  
 Built with the Tauri framework, it boasts fast startup times and low memory consumption. The distributed binary size is under 10MB—a drastic reduction from its Electron-based predecessor.  
 
+![MirrorShard_2 Key Visual](screenshots/ScreenShot-en2.jpg)
+
 It features a lightweight outline processor capable of handling massive text files, integrated AI assistance for writing from the cursor, code completion, and summarizing/rewriting/translating selected text.  
 Additionally, it comes packed with versatile tools: a dedicated AI Chat window, an Idea Processor (Canvas), Markdown/HTML preview, and OpenCode integration. Whether you are writing a novel, drafting a blog, performing casual text editing, or developing apps centered around OpenCode, MirrorShard adapts to your creative workflow.
 
