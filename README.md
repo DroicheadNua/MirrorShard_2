@@ -42,9 +42,9 @@ Alternatively, download from the [Latest Release Page](https://github.com/Droich
 ![MirrorShard_2 Idea_Processor](screenshots/ScreenShot05.jpg)
 *   **Template Completion**: AI understands the overall plot structure (Story Archetypes) and your current node to contextually generate the next scene. (Image shows generation by kimi-k2).
 ![MirrorShard_2 Idea_Processor](screenshots/ScreenShot07.jpg)
-*   **OpenCode Integration**: Use the editor as a development environment alongside OpenCode (AI Coding Agent).
+*   **Built-in OpenCode Integration**: Launch the OpenCode AI Coding Agent in a dedicated sub-window with a single shortcut (Ctrl+Shift+K). It automatically spawns a local server to provide a powerful AI-driven development environment within the editor.
 ![MirrorShard_2 Idea_Processor](screenshots/ScreenShot06.jpg)
-*   **Markdown & HTML Preview**: Real-time preview with zoom and outline synchronization.
+*   **Markdown & HTML Preview**: A dedicated preview window that updates automatically upon saving. It features independent zoom control and bidirectional outline synchronization with the main editor.
 *   **Code Editor Mode**: Includes syntax highlighting, AI code completion, and a built-in terminal.
 ![MirrorShard_2 AI_Chat](screenshots/ScreenShot04.jpg)
 *   **Robust Saving**: Employs atomic saving to protect your data against power outages or crashes.
