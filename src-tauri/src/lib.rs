@@ -20,6 +20,8 @@ use zip::{write::SimpleFileOptions, ZipArchive, ZipWriter};
 
 struct OpenCodeProcess(Mutex<Option<Child>>);
 
+struct SillyTavernProcess(Mutex<Option<Child>>);
+
 // PTYの入力側を保持する構造体
 struct TerminalState {
     writer: Arc<Mutex<Option<Box<dyn Write + Send>>>>,
@@ -53,7 +55,7 @@ struct MacFileBuffer(Mutex<Option<String>>);
 // --- Tauriコマンドの定義 ---
 
 // 共通のツリーキルヘルパー関数
-fn kill_opencode_tree(child: &mut Child) {
+fn kill_child_tree(child: &mut Child) {
     let _pid = child.id();
     #[cfg(target_os = "windows")]
     {
@@ -69,6 +71,122 @@ fn kill_opencode_tree(child: &mut Child) {
 }
 
 #[tauri::command]
+async fn open_silly_tavern(
+    app: tauri::AppHandle,
+    state: State<'_, SillyTavernProcess>,
+    st_path_setting: Option<String>, // 引数でパスを受け取る
+) -> Result<(), String> {
+    // 1. ウィンドウのトグル処理
+    if let Some(win) = app.get_webview_window("silly_tavern") {
+        let _ = win.close();
+        return Ok(());
+    }
+
+    // 2. パスの決定
+    let st_path = st_path_setting.unwrap_or_default();
+
+    if st_path.is_empty() || !std::path::Path::new(&st_path).exists() {
+        return Err("SillyTavernのパスが設定されていないか、フォルダが見つかりません。設定画面でパスを指定してください。".to_string());
+    }
+
+    // 3. サーバー起動
+    {
+        let mut lock = state.inner().0.lock().unwrap();
+
+        // 以前のプロセスが残っていれば念のため殺しておく
+        if let Some(mut child) = lock.take() {
+            kill_child_tree(&mut child);
+        }
+
+        #[cfg(target_os = "windows")]
+        let mut cmd = {
+            use std::os::windows::process::CommandExt;
+            let mut c = std::process::Command::new("cmd");
+            c.args(["/C", "node server.js"]);
+            c.creation_flags(0x08000000);
+            c
+        };
+
+        #[cfg(not(target_os = "windows"))]
+        let mut cmd = {
+            let mut c = std::process::Command::new("node");
+            c.arg("server.js");
+            c
+        };
+
+        cmd.current_dir(&st_path);
+
+        let child = cmd
+            .stdout(std::process::Stdio::null())
+            .stderr(std::process::Stdio::null())
+            .spawn()
+            .map_err(|e| format!("起動失敗: {}", e))?;
+
+        *lock = Some(child);
+
+        // 4. ポート監視 (SillyTavernの標準 8000 番を待機)
+        let addr = "127.0.0.1:8000";
+        let mut ready = false;
+        for _ in 0..100 {
+            if std::net::TcpStream::connect_timeout(
+                &addr.parse().unwrap(),
+                std::time::Duration::from_millis(100),
+            )
+            .is_ok()
+            {
+                ready = true;
+                break;
+            }
+            std::thread::sleep(std::time::Duration::from_millis(200));
+        }
+
+        if !ready {
+            return Err("SillyTavernサーバーの起動待ち時間を超えました。".to_string());
+        }
+    }
+
+    // 5. ウィンドウ生成
+    let builder = tauri::WebviewWindowBuilder::new(
+        &app,
+        "silly_tavern",
+        tauri::WebviewUrl::External("http://127.0.0.1:8000".parse().unwrap()),
+    )
+    .title("SillyTavern")
+    .inner_size(1200.0, 900.0)
+    // Mac特有のIME変換確定(Enter)の誤爆を防ぐJSを注入
+    .initialization_script(
+        r#"
+        let isComposing = false;
+        
+        // 変換開始を検知
+        document.addEventListener('compositionstart', () => { 
+            isComposing = true; 
+        }, true);
+        
+        // 変換終了を検知（WebViewのラグを吸収するため、フラグ解除をわずかに遅らせる）
+        document.addEventListener('compositionend', () => { 
+            setTimeout(() => { isComposing = false; }, 50); 
+        }, true);
+        
+        // キーボード入力をSillyTavernが受け取る「前」に横取りする（capture: true）
+        document.addEventListener('keydown', (e) => {
+            // 変換中（または変換直後）のEnterキーなら、イベントを握り潰す
+            if (e.key === 'Enter' && isComposing) {
+                e.stopPropagation();
+                e.stopImmediatePropagation();
+            }
+        }, true);
+    "#,
+    )
+    .decorations(true);
+
+    let window = builder.build().map_err(|e| e.to_string())?;
+    window.show().unwrap();
+
+    Ok(())
+}
+
+#[tauri::command]
 async fn open_opencode(app: AppHandle, state: State<'_, OpenCodeProcess>) -> Result<(), String> {
     // ウィンドウを閉じる際のトグル処理
     if let Some(win) = app.get_webview_window("opencode") {
@@ -76,7 +194,7 @@ async fn open_opencode(app: AppHandle, state: State<'_, OpenCodeProcess>) -> Res
         let mut lock = state.inner().0.lock().unwrap();
         if let Some(mut child) = lock.take() {
             println!("Stopping OpenCode server tree (PID: {})...", child.id());
-            kill_opencode_tree(&mut child);
+            kill_child_tree(&mut child);
         }
         return Ok(());
     }
@@ -1141,6 +1259,7 @@ pub fn run() {
             master: Arc::new(Mutex::new(None)),
         })
         .manage(OpenCodeProcess(Mutex::new(None)))
+        .manage(SillyTavernProcess(Mutex::new(None)))
         .setup(|app| {
             // ---  起動時引数を解析し、状態に書き込む ---
             if let Ok(matches) = app.cli().matches() {
@@ -1229,15 +1348,26 @@ pub fn run() {
             set_simple_fullscreen,
             force_save_file,
             open_opencode,
+            open_silly_tavern,
         ])
         // ウィンドウのライフサイクルイベントを監視する
         .on_window_event(|window, event| match event {
             tauri::WindowEvent::Destroyed => {
-                if window.label() == "opencode" {
+                let label = window.label();
+                if label == "opencode" {
                     let state = window.state::<OpenCodeProcess>();
-                    let mut lock = state.inner().0.lock().unwrap();
-                    if let Some(mut child) = lock.take() {
-                        kill_opencode_tree(&mut child);
+                    if let Ok(mut lock) = state.inner().0.lock() {
+                        if let Some(mut child) = lock.take() {
+                            kill_child_tree(&mut child);
+                        }
+                    }
+                } else if label == "silly_tavern" {
+                    // ★ 追加
+                    let state = window.state::<SillyTavernProcess>();
+                    if let Ok(mut lock) = state.inner().0.lock() {
+                        if let Some(mut child) = lock.take() {
+                            kill_child_tree(&mut child);
+                        }
                     }
                 }
             }
@@ -1247,10 +1377,16 @@ pub fn run() {
         .expect("error while building tauri application")
         .run(|app_handle, event| match event {
             tauri::RunEvent::Exit => {
-                let state = app_handle.state::<OpenCodeProcess>();
-                let mut lock = state.inner().0.lock().unwrap();
-                if let Some(mut child) = lock.take() {
-                    kill_opencode_tree(&mut child);
+                // 両方のプロセスを一掃
+                if let Ok(mut lock) = app_handle.state::<OpenCodeProcess>().inner().0.lock() {
+                    if let Some(mut child) = lock.take() {
+                        kill_child_tree(&mut child);
+                    }
+                }
+                if let Ok(mut lock) = app_handle.state::<SillyTavernProcess>().inner().0.lock() {
+                    if let Some(mut child) = lock.take() {
+                        kill_child_tree(&mut child);
+                    }
                 }
             }
             // Macの関連付け起動イベント

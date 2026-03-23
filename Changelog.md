@@ -5,6 +5,16 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.6.0] - 2026-3-XX  
+
+### Added (新機能)  
+- SillyTavern連携機能を実装。SillyTavernがインストールされている場合、Ctrl+Shift+Jで起動、別ウィンドウで開くことが可能に  
+
+### Changed (変更点)    
+
+
+### Fixed (修正点) 
+
 
 ## [1.5.0] - 2026-3-22  
 

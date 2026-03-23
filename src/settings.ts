@@ -81,6 +81,7 @@ async function setupSettings() {
         const glowRadiusVal = document.querySelector('#glow-radius-val') as HTMLElement;
         const useUiBgCheck = document.querySelector('#use-ui-bg') as HTMLInputElement;
         const pandocPath = document.querySelector('#pandoc-path') as HTMLInputElement;
+        const sillyTavernPath = document.querySelector('#silly-tavern-path') as HTMLInputElement;
         const shellPath = document.querySelector('#shell-path') as HTMLInputElement;
         const terminalDefaultCwd = document.querySelector('#terminal-cwd') as HTMLInputElement;
 
@@ -458,6 +459,9 @@ async function setupSettings() {
         const pandoc = await store.get<string>('pandocPath') ?? '';
         if (pandocPath) pandocPath.value = pandoc;
 
+        const sillyTavern = await store.get<string>('sillyTavernPath') ?? '';
+        if (sillyTavernPath) sillyTavernPath.value = sillyTavern;
+
         const shell = await store.get<string>('shellPath') ?? '';
         if (shellPath) shellPath.value = shell;
 
@@ -649,6 +653,19 @@ async function setupSettings() {
             }
         });
 
+        document.querySelector('#btn-select-silly-tavern')?.addEventListener('click', async () => {
+            const path = await open({
+                title: 'ディレクトリを選択',
+                directory: true,
+                properties: ['openDirectory']
+            });
+
+            if (path && typeof path === 'string') {
+                const input = document.querySelector('#silly-tavern-path') as HTMLInputElement;
+                if (input) input.value = path;
+            }
+        });
+
         document.querySelector('#btn-select-shell')?.addEventListener('click', async () => {
             const osType = await type();
             const extensions = osType === 'windows' ? ['exe'] : [''];
@@ -734,6 +751,7 @@ async function setupSettings() {
                 console.log('Applying Font:', newUserFont);
                 const newAlign = alignSelect.value;
                 const newPandocPath = pandocPath.value;
+                const newSillyTavernPath = sillyTavernPath.value;
                 const newShellPath = shellPath.value;
                 const newTerminalDefaultCwd = terminalDefaultCwd.value;
                 const newCodeLanguage = codeLanguageSelect.value;
@@ -777,6 +795,7 @@ async function setupSettings() {
                 await store.set('editorAlign', newAlign);
                 await store.set('editorBlur', newBlur);
                 await store.set('pandocPath', newPandocPath);
+                await store.set('sillyTavernPath', newSillyTavernPath);
                 await store.set('shellPath', newShellPath);
                 await store.set('terminalDefaultCwd', newTerminalDefaultCwd);
                 await store.set('codeLanguage', newCodeLanguage);
@@ -845,6 +864,7 @@ async function setupSettings() {
                     editorBlur: newBlur,
                     useUiBg: newUseUiBg,
                     pandocPath: newPandocPath,
+                    sillyTavernPath: newSillyTavernPath,
                     shellPath: newShellPath,
                     terminalDefaultCwd: newTerminalDefaultCwd,
                     geminiApiKey: newGeminiApiKey,

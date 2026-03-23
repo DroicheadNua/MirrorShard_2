@@ -2756,6 +2756,10 @@ ${nextContext}
       e.preventDefault();
       this.openOpenCode();
     }
+    if (isCtrlOrCmd && key === 'j' && isShift) {
+      e.preventDefault();
+      this.openSillyTavern();
+    }
     if ((isCtrlOrCmd && key === '`' && !isShift) || (isCtrlOrCmd && key === '@' && !isShift)) {
       e.preventDefault();
       e.stopPropagation();
@@ -3675,6 +3679,21 @@ ${nextContext}
       await invoke('open_opencode');
     } catch (e) {
       console.error(e);
+    }
+  }
+
+  private async openSillyTavern() {
+    try {
+      // ストアからパスを取得
+      const stPath = await this.store.get<string>('sillyTavernPath');
+
+      // Rustコマンドを呼び出し
+      await invoke('open_silly_tavern', {
+        stPathSetting: stPath || null // キャメルケースで渡す
+      });
+    } catch (e) {
+      // message APIなどでエラーを表示
+      console.error("SillyTavern Error:", e);
     }
   }
 
