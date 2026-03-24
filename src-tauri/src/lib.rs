@@ -70,6 +70,35 @@ fn kill_child_tree(child: &mut Child) {
     let _ = child.kill();
 }
 
+// --- nodeのパスを解決するヘルパー (Mac/Linux用) ---
+fn resolve_node_path() -> String {
+    #[cfg(target_os = "macos")]
+    {
+        // 1. nodebrew のパスを動的に生成
+        if let Ok(home) = std::env::var("HOME") {
+            let nodebrew_node = format!("{}/.nodebrew/current/bin/node", home);
+            if std::path::Path::new(&nodebrew_node).exists() {
+                return nodebrew_node;
+            }
+        }
+
+        // 2. Homebrew (Apple Silicon) の標準パス
+        let brew_node = "/opt/homebrew/bin/node";
+        if std::path::Path::new(brew_node).exists() {
+            return brew_node.to_string();
+        }
+
+        // 3. Intel Mac / 旧標準パス
+        let intel_node = "/usr/local/bin/node";
+        if std::path::Path::new(intel_node).exists() {
+            return intel_node.to_string();
+        }
+    }
+
+    // 見つからない場合や Windows はデフォルトに期待
+    "node".to_string()
+}
+
 #[tauri::command]
 async fn open_silly_tavern(
     app: tauri::AppHandle,
@@ -109,7 +138,10 @@ async fn open_silly_tavern(
 
         #[cfg(not(target_os = "windows"))]
         let mut cmd = {
-            let mut c = std::process::Command::new("node");
+            let node_exe = resolve_node_path();
+            println!("Mac: node実体 ({}) を使って起動します", node_exe);
+
+            let mut c = std::process::Command::new(node_exe);
             c.arg("server.js");
             c
         };
