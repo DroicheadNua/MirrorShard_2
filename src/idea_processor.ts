@@ -1953,18 +1953,13 @@ function setupKeyboardEvents() {
     if (isCtrl && e.shiftKey && key === 'f') {
       e.preventDefault();
       if (isContentEditing) {
-        // エディタ展開中
         triggerTemplateCompletion();
-      } else if (!isTextEditing) {
-        // キャンバス操作中
-        if (selectedNodes.length > 1) {
-          // 2つ以上なら錬金術
-          triggerNodeAlchemy();
-        } else if (selectedNodes.length === 1) {
-          // 1つだけならAFA（AFA内部で selectedShape を使うため、念のためここで同期しておく）
-          selectedShape = selectedNodes[0];
-          triggerFreeAssociation();
-        }
+      } else if (selectedShape && selectedShape.name() === 'link-group') {
+        triggerIpMissingLink();
+      } else if (selectedNodes.length > 1 && !isTextEditing) {
+        triggerNodeAlchemy();
+      } else if (selectedNodes.length === 1 && !isTextEditing) {
+        triggerFreeAssociation();
       }
     }
     if (isCtrl && key === 'f' && !isShift) {
@@ -4406,6 +4401,169 @@ async function showStringInput(title: string, defaultValue: string): Promise<str
 }
 
 // =================================================================
+// IP Missing Link (2つのノードの間を埋める)
+// =================================================================
+async function triggerIpMissingLink() {
+  if (isAiThinking || !selectedShape || selectedShape.name() !== 'link-group' || !store) return;
+
+  // 1. リンクの両端のノードを取得
+  const linkGroup = selectedShape as Konva.Group;
+  const nodes = linkGroup.getAttr('nodes') as Konva.Group[];
+  if (!nodes || nodes.length < 2) return;
+
+  const fromNode = nodes[0];
+  const toNode = nodes[1];
+
+  // 元のリンクの「線種」と「ラベル」を記憶しておく
+  const originalType = linkGroup.getAttr('linkType') as LinkType || LinkType.ARROW;
+  const labelNode = linkGroup.findOne('.link-label') as Konva.Text;
+  const originalLabelText = labelNode ? labelNode.text() : '';
+
+  // 2. 情報の抽出
+  const fromTitle = fromNode.findOne<Konva.Text>('.text')?.text() || '起点';
+  const fromContent = fromNode.getAttr('contentText') || '';
+
+  const toTitle = toNode.findOne<Konva.Text>('.text')?.text() || '終点';
+  const toContent = toNode.getAttr('contentText') || '';
+
+  // 3. ユーザーへの指示入力ダイアログ
+  const lastPrompt = await store.get<string>('lastMissingLinkPrompt') || 'この2つの間を繋ぐ出来事や展開';
+  const userInstruction = await showStringInput('何を生成させますか？', lastPrompt);
+
+  if (userInstruction === null) return;
+
+  await store.set('lastMissingLinkPrompt', userInstruction);
+  await store.save();
+
+  // 4. プロンプトの構築
+  const charLimit = await store.get<number>('faMaxTokens') || 200;
+
+  const systemPrompt = "あなたは創造的なプロットメイカーです。提示された「起点」と「終点」のギャップを埋める、論理的かつドラマチックな「ミッシングリンク（繋ぎの展開）」を提案してください。余計な前置きやマークダウンは不要です。";
+
+  const prompt = `以下の「起点」から「終点」に至る過程で欠けている、「${userInstruction}」を提案してください。
+出力は ${charLimit}文字以内 に収めてください。
+
+【起点】
+タイトル: ${fromTitle}
+内容: ${fromContent}
+
+【終点】
+タイトル: ${toTitle}
+内容: ${toContent}`;
+
+  // 5. 新ノードの出現座標を計算（リンクの中点より少し上）
+  let midX = (fromNode.x() + toNode.x()) / 2;
+  let midY = (fromNode.y() + toNode.y()) / 2;
+
+  // 矢印の線分から正確な中点を取る
+  const arrow = linkGroup.findOne('.link-shape') || linkGroup.findOne('.link-shape-1');
+  if (arrow && (arrow as Konva.Arrow).points().length >= 4) {
+    const pts = (arrow as Konva.Arrow).points();
+    midX = (pts[0] + pts[2]) / 2;
+    midY = (pts[1] + pts[3]) / 2;
+  }
+
+  // 6. 通信準備
+  isAiThinking = true;
+  aiAbortController = new AbortController();
+  aiThinkingMode = "Missing Link (Canvas)";
+  setAiLoading(true);
+
+  try {
+    let resultText = "";
+
+    // --- API通信 (AFA・NAと全く同じロジック) ---
+    if (ipAiApi === 'gemini') {
+      const apiKey = await store.get<string>('geminiApiKey');
+      const model = await store.get<string>('geminiModel') || 'gemini-2.5-flash';
+      if (!apiKey) throw new Error("Gemini API Key が設定されていません。");
+      const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`, {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ contents: [{ role: 'user', parts: [{ text: prompt }] }], systemInstruction: { parts: [{ text: systemPrompt }] } }),
+        signal: aiAbortController.signal
+      });
+      if (!response.ok) throw new Error(`Gemini API Error: ${response.statusText}`);
+      const data = await response.json();
+      resultText = data.candidates?.[0]?.content?.parts?.[0]?.text || '';
+    }
+    else if (ipAiApi === 'groq') {
+      const apiKey = await store.get<string>('groqApiKey');
+      const model = await store.get<string>('groqModel') || 'llama-3.3-70b-versatile';
+      if (!apiKey) throw new Error("Groq API Key is not set.");
+      const response = await fetch("https://api.groq.com/openai/v1/chat/completions", {
+        method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${apiKey}` },
+        body: JSON.stringify({ model: model, messages: [{ role: 'system', content: systemPrompt }, { role: 'user', content: prompt }], max_tokens: charLimit, temperature: 0.7 }),
+        signal: aiAbortController.signal
+      });
+      if (!response.ok) throw new Error(`Groq API Error: ${response.statusText}`);
+      const data = await response.json();
+      resultText = data.choices?.[0]?.message?.content || '';
+    }
+    else {
+      const url = await store.get<string>('localLlmUrl') || "http://127.0.0.1:1234/v1/chat/completions";
+      const model = await store.get<string>('localLlmModel') || "local-model";
+      const response = await fetch(url, {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ model: model, messages: [{ role: 'system', content: systemPrompt }, { role: 'user', content: prompt }], max_tokens: charLimit, temperature: 0.7 }),
+        signal: aiAbortController.signal
+      });
+      if (!response.ok) throw new Error(`Local LLM API Error: ${response.statusText}`);
+      const data = await response.json();
+      resultText = data.choices?.[0]?.message?.content || '';
+    }
+
+    if (!resultText) throw new Error("AIから有効な応答が得られませんでした。");
+
+    // 7. アニメーション付きでノードを挿入し、リンクを引き直す
+    const shortTitle = resultText.split('\n')[0].substring(0, 30) + (resultText.length > 30 ? '...' : '');
+
+    // 中点に作成 (少し上にズラして被りを防ぐ)
+    const newNode = createNewNode(midX - 60, midY - 60, shortTitle, resultText, false);
+
+    newNode.scale({ x: 0.1, y: 0.1 });
+    newNode.opacity(0);
+
+    new Konva.Tween({
+      node: newNode,
+      duration: 0.6,
+      x: midX - 60,
+      y: midY - 60,
+      scaleX: 1,
+      scaleY: 1,
+      opacity: 1,
+      easing: Konva.Easings.EaseOut,
+      onFinish: () => {
+        // 元のリンクを破壊する前に、属性を継承して新しいリンクを2本引く
+        linkGroup.destroy();
+
+        // 1. 起点 -> 新ノード (元の線種を維持、ラベルを移植)
+        const link1 = createSingleLink(fromNode, newNode, originalType);
+        if (originalLabelText) {
+          const l1Text = link1.findOne('.link-label') as Konva.Text;
+          if (l1Text) {
+            l1Text.text(originalLabelText);
+            updateLinkPoints(link1); // ラベル位置を更新
+          }
+        }
+
+        // 2. 新ノード -> 終点 (元の線種を維持、ラベルは空)
+        createSingleLink(newNode, toNode, originalType);
+
+        deselectAll();
+        recordHistory('IP Missing Link executed');
+        renderIpOutline();
+        layer.batchDraw();
+      }
+    }).play();
+
+  } catch (e: any) {
+    handleAiError(e);
+  } finally {
+    clearAiProcessingState();
+  }
+}
+
+// =================================================================
 // 8. ウィンドウ制御とテーマ管理 (Window & Theme & Settings)
 // =================================================================
 
@@ -4476,13 +4634,14 @@ function setupUIButtons() {
   document.getElementById('ip-ai-btn')?.addEventListener('click', () => {
     if (isContentEditing) {
       triggerTemplateCompletion();
-    } else if (!isTextEditing) {
-      if (selectedNodes.length > 1) {
-        triggerNodeAlchemy();
-      } else if (selectedNodes.length === 1) {
-        selectedShape = selectedNodes[0];
-        triggerFreeAssociation();
-      }
+    } else if (selectedShape && selectedShape.name() === 'link-group') {
+      // リンクが選択されている時は Missing Link
+      triggerIpMissingLink();
+    } else if (selectedNodes.length > 1 && !isTextEditing) {
+      triggerNodeAlchemy();
+    } else if (selectedNodes.length === 1 && !isTextEditing) {
+      // 単一選択
+      triggerFreeAssociation();
     }
   });
   const selector = document.getElementById('ip-ai-selector-container');
