@@ -9,6 +9,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added (新機能)  
 - SillyTavern連携機能を実装。SillyTavernがインストールされている場合、Ctrl+Shift+Jで起動、別ウィンドウで開くことが可能に  
+- アイデアプロセッサにAI機能「IP Missing Link」を追加。リンクを選択してAIボタンを押すと、リンクの両端のノードの内容とリンクのラベルをAIが読み取り、その間を埋めるノードを生成する機能  
+- アイデアプロセッサにAI機能「Node Alchemy」を追加。ノードを範囲選択してAIボタンを押すと、選択範囲内のノードの内容をAIが読み取り、それらを踏まえた内容のノードを生成する機能  
 
 ### Changed (変更点)    
 

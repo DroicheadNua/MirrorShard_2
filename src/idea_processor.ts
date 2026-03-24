@@ -1170,7 +1170,16 @@ function createSingleLink(fromNode: Konva.Group, toNode: Konva.Group, type: Link
   linkGroup.add(labelGroup);
 
   layer.add(linkGroup);
-  linkGroup.moveToBottom();
+  // 階層構造を整理する
+  // 1. まず全グループを最背面に
+  stage.find('.container-group').forEach(g => g.moveToBottom());
+  // 2. リンクをその一つ上に（全リンクをグループより上へ）
+  linkGroup.moveToTop();
+  // 3. 最後に全ノードを最前面に
+  stage.find('.node-group').forEach(n => n.moveToTop());
+  // 4. 選択ツールをさらにその上に
+  if (transformer) transformer.moveToTop();
+  if (selectionRect) selectionRect.moveToTop();
   updateLinkPoints(linkGroup);
 
   // ホバー時に線を太くする
@@ -4408,7 +4417,16 @@ async function triggerIpMissingLink() {
 
   // 1. リンクの両端のノードを取得
   const linkGroup = selectedShape as Konva.Group;
+  // リンク自体に属性があるか、または両端がテンプレートアイテムならガード
+  const isTemplateLink = linkGroup.getAttr('isTemplateItem') === true;
   const nodes = linkGroup.getAttr('nodes') as Konva.Group[];
+  const isBothTemplate = nodes && nodes[0].getAttr('isTemplateItem') && nodes[1].getAttr('isTemplateItem');
+
+  if (isTemplateLink || isBothTemplate) {
+    alert('テンプレートの基幹リンクを改変することはできません。');
+    return;
+  }
+
   if (!nodes || nodes.length < 2) return;
 
   const fromNode = nodes[0];
@@ -4440,8 +4458,33 @@ async function triggerIpMissingLink() {
 
   const systemPrompt = "あなたは創造的なプロットメイカーです。提示された「起点」と「終点」のギャップを埋める、論理的かつドラマチックな「ミッシングリンク（繋ぎの展開）」を提案してください。余計な前置きやマークダウンは不要です。";
 
-  const prompt = `以下の「起点」から「終点」に至る過程で欠けている、「${userInstruction}」を提案してください。
-出力は ${charLimit}文字以内 に収めてください。
+  // --- 1. 線種と言語化のマッピング ---
+  let relationTypeDesc = "";
+  let relationFlowDesc = "";
+
+  switch (originalType) {
+    case LinkType.ARROW:
+      relationTypeDesc = "一方通行の作用・影響";
+      relationFlowDesc = `「${fromTitle}」から「${toTitle}」へと働きかける関係性です。`;
+      break;
+    case LinkType.DOUBLE_ARROW:
+      relationTypeDesc = "相互作用・対立";
+      relationFlowDesc = `「${fromTitle}」と「${toTitle}」が互いに影響し合う、あるいは対立する関係性です。`;
+      break;
+    case LinkType.LINE:
+      relationTypeDesc = "関連・付随";
+      relationFlowDesc = `「${fromTitle}」と「${toTitle}」の間に何らかの繋がりがある状態です。`;
+      break;
+  }
+
+  // --- 2. ラベルがある場合の補足 ---
+  const actionDesc = originalLabelText
+    ? `具体的な作用の内容: 「${originalLabelText}」`
+    : "具体的な作用の詳細は未定義です。";
+
+  // --- 3. プロンプトの組み立て（セクション化） ---
+  const prompt = `
+以下の2つの要素（起点と終点）の間に介在し、両者を繋ぐための「${userInstruction}」を提案してください。
 
 【起点】
 タイトル: ${fromTitle}
@@ -4449,7 +4492,17 @@ async function triggerIpMissingLink() {
 
 【終点】
 タイトル: ${toTitle}
-内容: ${toContent}`;
+内容: ${toContent}
+
+【現在の二者の関係性】
+タイプ: ${relationTypeDesc}
+概要: ${relationFlowDesc}
+${actionDesc}
+
+【指示】
+上記の「関係性」を踏まえ、起点から終点へと至るまでの論理的なミッシングリンク（繋ぎの展開）を執筆してください。
+出力は ${charLimit}文字以内 に収め、続きの文章のみを出力してください。
+`;
 
   // 5. 新ノードの出現座標を計算（リンクの中点より少し上）
   let midX = (fromNode.x() + toNode.x()) / 2;
