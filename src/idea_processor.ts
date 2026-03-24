@@ -831,7 +831,7 @@ function setupEventListeners() {
             transformer.nodes(selectedNodes);
             transformer.visible(true);
 
-            // ★ Transformerがイベントを奪わないように設定（重要！）
+            // Transformerがイベントを奪わないように設定
             transformer.listening(false);
 
             // 視覚効果
@@ -1953,9 +1953,18 @@ function setupKeyboardEvents() {
     if (isCtrl && e.shiftKey && key === 'f') {
       e.preventDefault();
       if (isContentEditing) {
+        // エディタ展開中
         triggerTemplateCompletion();
-      } else if (selectedShape && selectedShape.name() === 'node-group' && !isTextEditing) {
-        triggerFreeAssociation();
+      } else if (!isTextEditing) {
+        // キャンバス操作中
+        if (selectedNodes.length > 1) {
+          // 2つ以上なら錬金術
+          triggerNodeAlchemy();
+        } else if (selectedNodes.length === 1) {
+          // 1つだけならAFA（AFA内部で selectedShape を使うため、念のためここで同期しておく）
+          selectedShape = selectedNodes[0];
+          triggerFreeAssociation();
+        }
       }
     }
     if (isCtrl && key === 'f' && !isShift) {
@@ -3943,8 +3952,8 @@ async function triggerTemplateCompletion() {
   const fullText = textarea.value;
 
   let limit = Number(await store.get<number>('aiContextLimit')) || 2000;
-  if (ipAiApi === 'gemini' && limit > 2000) {
-    console.warn(`Gemini context limited to 2000`);
+  if ((ipAiApi === 'gemini' || ipAiApi === 'groq') && limit > 2000) {
+    console.warn(`Cloud AI context limited to 2000`);
     limit = 2000;
   }
 
@@ -4171,6 +4180,232 @@ function clearAiProcessingState() {
 }
 
 // =================================================================
+// Node Alchemy (複数アイデアの融合)
+// =================================================================
+async function triggerNodeAlchemy() {
+  if (isAiThinking || selectedNodes.length < 2 || !store) return;
+
+  // 0. ダイアログを表示してユーザーの指示を仰ぐ
+  // ストアから前回の入力を取得（デフォルトは一般的な指示に）
+  const lastPrompt = await store.get<string>('lastAlchemyPrompt') || 'これらの要素を組み合わせた新しいプロット展開';
+
+  const userInstruction = await showStringInput('何を生成させますか？', lastPrompt);
+
+  // キャンセルされた場合は処理を中断
+  if (userInstruction === null) {
+    return;
+  }
+
+  // 次回のためにストアに保存
+  await store.set('lastAlchemyPrompt', userInstruction);
+  await store.save();
+
+  // --- 1. 中心座標の計算 (全ノードの平均) ---
+  let sumX = 0, sumY = 0;
+  let combinedContext = "";
+
+  selectedNodes.forEach((node, index) => {
+    // 座標取得
+    const bg = node.findOne('.background') as Konva.Rect;
+    const nx = node.x();
+    const ny = node.y();
+    const nw = bg ? bg.width() : 150;
+    const nh = bg ? bg.height() : 60;
+
+    // 中心点を足していく
+    sumX += nx + (nw / 2);
+    sumY += ny + (nh / 2);
+
+    // テキスト収集
+    const textNode = node.findOne<Konva.Text>('.text');
+    const title = textNode ? textNode.text() : `要素 ${index + 1}`;
+    const content = node.getAttr('contentText') || '';
+    combinedContext += `【要素 ${index + 1}: ${title}】\n${content}\n\n`;
+  });
+
+  // 割り算して平均値（最終的な出現座標）を決定
+  const centerX = sumX / selectedNodes.length;
+  const centerY = sumY / selectedNodes.length;
+
+  // --- 2. コンテキストのカットオフ（制限超過防止） ---
+  let limit = Number(await store.get<number>('aiContextLimit')) || 2000;
+  if ((ipAiApi === 'gemini' || ipAiApi === 'groq') && limit > 4000) {
+    console.warn(`Cloud AI context limited to 4000`);
+    limit = 4000;
+  }
+
+  if (combinedContext.length > limit) {
+    // 上限を超えた場合は切り捨てて、AIにそれが分かるように注記を入れる
+    combinedContext = combinedContext.slice(0, limit) + "\n\n(※文字数制限により以降カット)";
+  }
+
+  // --- 3. プロンプト構築と通信 ---
+  // AFAの文字数制限設定(faMaxTokens)を流用、または錬金術用に少し多めに解釈
+  const charLimit = await store.get<number>('faMaxTokens') || 200;
+
+  const systemPrompt = "あなたは創造的なブレインストーミングのアシスタントです。提示された複数の異なるアイデアや要素を踏まえて、ユーザーの指示に従って新しいアイデアを生み出してください。余計な前置きやマークダウンは不要です。";
+
+  // ユーザーの入力を直接プロンプトに埋め込む
+  const prompt = `以下の複数の要素と矛盾なく調和する、新たな「${userInstruction}」を提案してください。
+出力は ${charLimit}文字以内 に収めてください。
+
+${combinedContext}`;
+
+  // 通信準備とUIロック
+  isAiThinking = true;
+  aiAbortController = new AbortController();
+  aiThinkingMode = "Node Alchemy";
+  setAiLoading(true);
+
+  try {
+    let resultText = "";
+
+    // --- 4. API通信 (AFAと全く同じロジックを流用) ---
+    if (ipAiApi === 'gemini') {
+      const apiKey = await store.get<string>('geminiApiKey');
+      const model = await store.get<string>('geminiModel') || 'gemini-2.5-flash';
+      if (!apiKey) throw new Error("Gemini API Key が設定されていません。");
+      const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`, {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ contents: [{ role: 'user', parts: [{ text: prompt }] }], systemInstruction: { parts: [{ text: systemPrompt }] } }),
+        signal: aiAbortController.signal
+      });
+      if (!response.ok) throw new Error(`Gemini API Error: ${response.statusText}`);
+      const data = await response.json();
+      resultText = data.candidates?.[0]?.content?.parts?.[0]?.text || '';
+    }
+    else if (ipAiApi === 'groq') {
+      const apiKey = await store.get<string>('groqApiKey');
+      const model = await store.get<string>('groqModel') || 'llama-3.3-70b-versatile';
+      if (!apiKey) throw new Error("Groq API Key is not set.");
+      const response = await fetch("https://api.groq.com/openai/v1/chat/completions", {
+        method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${apiKey}` },
+        body: JSON.stringify({ model: model, messages: [{ role: 'system', content: systemPrompt }, { role: 'user', content: prompt }], max_tokens: charLimit, temperature: 0.7 }),
+        signal: aiAbortController.signal
+      });
+      if (!response.ok) throw new Error(`Groq API Error: ${response.statusText}`);
+      const data = await response.json();
+      resultText = data.choices?.[0]?.message?.content || '';
+    }
+    else {
+      const url = await store.get<string>('localLlmUrl') || "http://127.0.0.1:1234/v1/chat/completions";
+      const model = await store.get<string>('localLlmModel') || "local-model";
+      const response = await fetch(url, {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ model: model, messages: [{ role: 'system', content: systemPrompt }, { role: 'user', content: prompt }], max_tokens: charLimit, temperature: 0.7 }),
+        signal: aiAbortController.signal
+      });
+      if (!response.ok) throw new Error(`Local LLM API Error: ${response.statusText}`);
+      const data = await response.json();
+      resultText = data.choices?.[0]?.message?.content || '';
+    }
+
+    if (!resultText) throw new Error("AIから有効な応答が得られませんでした。");
+
+    // --- 5. アニメーション付きでノードを生成 ---
+    const shortTitle = resultText.split('\n')[0].substring(0, 30) + (resultText.length > 30 ? '...' : '');
+
+    // 中心座標にノードを作成
+    const newNode = createNewNode(centerX - 60, centerY - 30, shortTitle, resultText, false);
+
+    // 初期状態は極小・透明
+    newNode.scale({ x: 0.1, y: 0.1 });
+    newNode.opacity(0);
+
+    // AFAと同じアニメーションで登場させる
+    new Konva.Tween({
+      node: newNode,
+      duration: 0.6,
+      x: centerX - 60,
+      y: centerY - 30,
+      scaleX: 1,
+      scaleY: 1,
+      opacity: 1,
+      easing: Konva.Easings.EaseOut,
+      onFinish: () => {
+        // 錬金術の「素材」となったノードから、新しいノードへ矢印を引く場合は以下
+        // 選択ノードが多いと矢印が大量に引かれることになるので一旦コメントアウト
+        // selectedNodes.forEach(originalNode => {
+        //   createSingleLink(originalNode, newNode, LinkType.ARROW);
+        // });
+
+        // 選択を解除して履歴を記録
+        deselectAll();
+        recordHistory('Node Alchemy executed');
+        renderIpOutline();
+        layer.batchDraw();
+      }
+    }).play();
+
+  } catch (e: any) {
+    handleAiError(e);
+  } finally {
+    clearAiProcessingState();
+  }
+}
+
+// --- 必要な時だけDOMを生成して文字列入力を受け取る関数 ---
+async function showStringInput(title: string, defaultValue: string): Promise<string | null> {
+  return new Promise((resolve) => {
+    const overlay = document.createElement('div');
+    overlay.style.cssText = `
+      position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+      background: rgba(0, 0, 0, 0.7); display: flex; align-items: center;
+      justify-content: center; z-index: 10000; backdrop-filter: blur(2px);
+    `;
+
+    const theme = getCurrentThemeColors();
+    const isDark = document.body.classList.contains('dark-mode');
+
+    // ダイアログの背景色は、ノード背景(nodeBg)が透明な場合は専用の色にする
+    const bgColor = isDark ? '#222' : '#f0f0f0';
+
+    const container = document.createElement('div');
+    container.style.cssText = `
+      background: ${bgColor};
+      border: 1px solid ${theme.text};
+      padding: 20px; border-radius: 8px; width: 320px;
+      box-shadow: 0 0 20px rgba(0, 0, 0, 0.5); 
+      color: ${theme.text};
+      font-family: sans-serif;
+    `;
+
+    container.innerHTML = `
+      <div style="margin-bottom: 15px; font-weight: bold; border-bottom: 1px solid ${theme.text}; padding-bottom: 5px;">${title}</div>
+      <input type="text" id="dynamic-str-input" value="${defaultValue}" 
+             style="width: 100%; background: ${isDark ? 'rgba(0,0,0,0.3)' : 'white'}; color: inherit; border: 1px solid ${theme.text}; padding: 5px; margin-bottom: 20px; box-sizing: border-box;">
+      <div style="display: flex; justify-content: flex-end; gap: 10px;">
+          <button id="dyn-btn-cancel" style="padding: 5px 12px; cursor: pointer; background: transparent; border: 1px solid gray; color: gray;">Cancel</button>
+          <button id="dyn-btn-ok" style="padding: 5px 12px; cursor: pointer; background: transparent; border: 1px solid ${theme.text}; color: ${theme.text}; font-weight: bold;">Run</button>
+      </div>
+    `;
+
+    overlay.appendChild(container);
+    document.body.appendChild(overlay);
+
+    const input = overlay.querySelector('#dynamic-str-input') as HTMLInputElement;
+    input.focus();
+    input.select();
+
+    const done = (val: string | null) => {
+      document.body.removeChild(overlay);
+      resolve(val);
+    };
+
+    overlay.querySelector('#dyn-btn-ok')?.addEventListener('click', () => done(input.value));
+    overlay.querySelector('#dyn-btn-cancel')?.addEventListener('click', () => done(null));
+
+    input.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        done(input.value);
+      }
+      if (e.key === 'Escape') done(null);
+    });
+  });
+}
+
+// =================================================================
 // 8. ウィンドウ制御とテーマ管理 (Window & Theme & Settings)
 // =================================================================
 
@@ -4239,14 +4474,15 @@ function setupUIButtons() {
     InitializeStage();
   });
   document.getElementById('ip-ai-btn')?.addEventListener('click', () => {
-    // コンテンツエディタ編集中（isContentEditing）なら Template Completion
     if (isContentEditing) {
       triggerTemplateCompletion();
-      return;
-    }
-    // それ以外で、ノードが選択されていれば Free Association
-    if (selectedShape && selectedShape.name() === 'node-group' && !isTextEditing) {
-      triggerFreeAssociation();
+    } else if (!isTextEditing) {
+      if (selectedNodes.length > 1) {
+        triggerNodeAlchemy();
+      } else if (selectedNodes.length === 1) {
+        selectedShape = selectedNodes[0];
+        triggerFreeAssociation();
+      }
     }
   });
   const selector = document.getElementById('ip-ai-selector-container');

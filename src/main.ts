@@ -596,7 +596,7 @@ class App {
     if (this.mainAiApi === 'gemini' || this.mainAiApi === 'groq') {
       const MAX_GEMINI_LIMIT = 2000; // 安全策
       if (contextLimit > MAX_GEMINI_LIMIT) {
-        console.warn(`Gemini/Groqのコンテキスト長は安全のため ${MAX_GEMINI_LIMIT} 字以下に制限されます`);
+        console.warn(`Cloud AIのコンテキスト長は安全のため ${MAX_GEMINI_LIMIT} 字以下に制限されます`);
         contextLimit = MAX_GEMINI_LIMIT;
       }
     }
@@ -686,7 +686,7 @@ class App {
     if (this.mainAiApi === 'gemini' || this.mainAiApi === 'groq') {
       const MAX_GEMINI_LIMIT = 4000; // 安全策
       if (limit > MAX_GEMINI_LIMIT) {
-        console.warn(`Geminiのコンテキスト長は安全のため ${MAX_GEMINI_LIMIT} 字以下に制限されます`);
+        console.warn(`Cloud AIのコンテキスト長は安全のため ${MAX_GEMINI_LIMIT} 字以下に制限されます`);
         limit = MAX_GEMINI_LIMIT;
       }
     }
