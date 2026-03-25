@@ -3683,17 +3683,25 @@ ${nextContext}
   }
 
   private async openSillyTavern() {
-    try {
-      // ストアからパスを取得
-      const stPath = await this.store.get<string>('sillyTavernPath');
+    // AI起動中のオーバーレイを流用して「起動中」を表示
+    this.aiThinkingMode = "SillyTavern Activating...";
+    this.setAiLoading(true);
 
-      // Rustコマンドを呼び出し
-      await invoke('open_silly_tavern', {
-        stPathSetting: stPath || null // キャメルケースで渡す
+    try {
+      const stPath = await this.store.get<string>('sillyTavernPath');
+      const result = await invoke<string>('open_silly_tavern', {
+        stPathSetting: stPath || null
       });
+
+      if (result === "opened") {
+        // サーバーがポートを開くまでの時間を考慮して、少し長めにオーバーレイを出す
+        setTimeout(() => this.setAiLoading(false), 3000);
+      } else {
+        this.setAiLoading(false);
+      }
     } catch (e) {
-      // message APIなどでエラーを表示
-      console.error("SillyTavern Error:", e);
+      this.setAiLoading(false);
+      alert(`SillyTavernの起動に失敗しました: ${e}`);
     }
   }
 

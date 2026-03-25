@@ -71,8 +71,8 @@ fn kill_child_tree(child: &mut Child) {
 }
 
 // --- nodeのパスを解決するヘルパー (Mac/Linux用) ---
+#[cfg(target_os = "macos")]
 fn resolve_node_path() -> String {
-    #[cfg(target_os = "macos")]
     {
         // 1. nodebrew のパスを動的に生成
         if let Ok(home) = std::env::var("HOME") {
@@ -213,6 +213,11 @@ async fn open_silly_tavern(
     .decorations(true);
 
     let window = builder.build().map_err(|e| e.to_string())?;
+    #[cfg(target_os = "windows")]
+    {
+        use tauri::Theme;
+        let _ = window.set_theme(Some(Theme::Dark));
+    }
     window.show().unwrap();
 
     Ok(())
