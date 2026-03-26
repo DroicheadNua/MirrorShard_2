@@ -3819,7 +3819,7 @@ async function triggerFreeAssociation() {
     // 最大3つに制限
     const finalIdeas = ideas.slice(0, 3);
 
-    finalIdeas.forEach((idea, i) => {
+    finalIdeas.forEach((rawIdeaText, i) => {
       // 放射状に配置するための計算
       const angleOffset = -Math.PI / 2; // 12時方向から開始
       const angle = angleOffset + (i / finalIdeas.length) * Math.PI * 2;
@@ -3831,10 +3831,11 @@ async function triggerFreeAssociation() {
 
       // 元ノードの中心位置に初期ノードを作成（編集モードなし）
       // 先頭50文字をタイトルに設定、残りはContentTextに
-      const shortTitle = idea.split('\n')[0].substring(0, 50) + (idea.length > 50 ? '...' : '');
+      const isTruncated = rawIdeaText.length > 50 || rawIdeaText.includes('\n');
+      const sTitle = rawIdeaText.split('\n')[0].substring(0, 50) + (isTruncated ? '...' : '');
+      const fContent = isTruncated ? rawIdeaText : "";
 
-      // createNewNode の第3引数にTitle、第4引数に全文(ContentText)を渡す
-      const newNode = createNewNode(centerX - 60, centerY - 30, shortTitle, idea, false);
+      const newNode = createNewNode(centerX - 60, centerY - 30, sTitle, fContent, false);
       newNodes.push(newNode);
 
       // アニメーションの初期状態（小さく、透明に）
@@ -4307,10 +4308,11 @@ ${combinedContext}`;
     if (!resultText) throw new Error("AIから有効な応答が得られませんでした。");
 
     // --- 5. アニメーション付きでノードを生成 ---
-    const shortTitle = resultText.split('\n')[0].substring(0, 30) + (resultText.length > 30 ? '...' : '');
+    const isTruncated = resultText.length > 50 || resultText.includes('\n');
+    const shortTitle = resultText.split('\n')[0].substring(0, 50) + (isTruncated ? '...' : '');
+    const finalContent = isTruncated ? resultText : "";
 
-    // 中心座標にノードを作成
-    const newNode = createNewNode(centerX - 60, centerY - 30, shortTitle, resultText, false);
+    const newNode = createNewNode(centerX - 60, centerY - 30, shortTitle, finalContent, false);
 
     // 初期状態は極小・透明
     newNode.scale({ x: 0.1, y: 0.1 });
@@ -4568,10 +4570,12 @@ ${actionDesc}
     if (!resultText) throw new Error("AIから有効な応答が得られませんでした。");
 
     // 7. アニメーション付きでノードを挿入し、リンクを引き直す
-    const shortTitle = resultText.split('\n')[0].substring(0, 30) + (resultText.length > 30 ? '...' : '');
+    const isTruncated = resultText.length > 50 || resultText.includes('\n');
+    const shortTitle = resultText.split('\n')[0].substring(0, 50) + (isTruncated ? '...' : '');
+    const finalContent = isTruncated ? resultText : "";
 
     // 中点に作成 (少し上にズラして被りを防ぐ)
-    const newNode = createNewNode(midX - 60, midY - 60, shortTitle, resultText, false);
+    const newNode = createNewNode(midX - 60, midY - 60, shortTitle, finalContent, false);
 
     newNode.scale({ x: 0.1, y: 0.1 });
     newNode.opacity(0);

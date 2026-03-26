@@ -17,7 +17,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - kimi-k2-instruct-0905の提供停止に伴いプルダウンメニューから削除  
 
 
-### Fixed (修正点) 
+### Fixed (修正点)   
+- AI Free associationで、省略がない場合にもコンテンツエディタ内にノードと同じテキストが複製されていた問題を修正  
 
 
 ## [1.5.0] - 2026-3-22  
