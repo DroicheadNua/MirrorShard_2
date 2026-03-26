@@ -4,7 +4,6 @@ import { type } from '@tauri-apps/plugin-os';
 import { invoke, convertFileSrc } from '@tauri-apps/api/core';
 import { getCurrentWindow } from '@tauri-apps/api/window';
 import { writeText } from '@tauri-apps/plugin-clipboard-manager';
-import updateArticle from './scripts/ruby';
 import { save } from '@tauri-apps/plugin-dialog';
 import { writeTextFile } from '@tauri-apps/plugin-fs';
 import { Store } from '@tauri-apps/plugin-store';
@@ -59,7 +58,7 @@ async function renderContent() {
             breaks: useHardBreaks
         });
 
-        // ※Markdownのルビ変換はDOM挿入後に行う（updateArticle）
+        // ※Markdownのルビ変換は行わない
     } else {
         // --- HTML/Astroモード ---
         // クラス除去（スタイル干渉回避）
@@ -153,12 +152,6 @@ async function renderContent() {
     } else {
         // パース不要（画像なしのMarkdownなど）ならそのまま表示
         contentDiv.innerHTML = rawHtml;
-    }
-
-    // 2. ルビ変換 (DOM操作) - Markdownモードのみ
-    // (HTMLモードではタグ構造を壊す可能性があるため行わないのが基本だが、必要ならここで行う)
-    if (currentMode === 'markdown') {
-        updateArticle(contentDiv);
     }
 }
 

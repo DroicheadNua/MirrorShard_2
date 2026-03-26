@@ -21,9 +21,9 @@ v0.3.0以降、MirrorShard 2のLinuxバイナリの配布を停止いたしま�
 ・X11環境 (またはXWaylandが正常に機能する環境)  
 のPCであれば、動作させることは可能です。  
 IMEの表示不具合は残るものの、Electron版に較べて起動・動作とも高速でファイルサイズも小さく、巨大なテキストファイルも軽快に扱えます。    
-特に「Raspberry Pi＋MX Linux（Xfceデスクトップ）」などのシングルボードコンピュータとか、「Windows11非対応の旧型機（グラフィックボードなし）に軽量Linuxを入れた再生PC」のような低スペックPCでは、有力な選択肢になるかもしれません。  
+特に「Raspberry Pi＋MX Linux（Xfceデスクトップ）」などのシングルボードコンピュータとか、「Windows11非対応の旧型機 （グラフィックボードなし）に軽量Linuxを入れた再生PC」のような低スペックPCでは、有力な選択肢になるかもしれません。  
 
-## ■ 利用方法（ビルド）  
+## ■ 利用方法 （ビルド）  
 
 上記の制約を理解した上で、ご自身の環境でMirrorShard 2を利用したい場合は、GitHubのリポジトリからソースコードを取得し、ビルドを行ってください。  
 
@@ -32,15 +32,27 @@ IMEの表示不具合は残るものの、Electron版に較べて起動・動作
 *   Node.js & pnpm  
 *   WebKitGTK 開発ライブラリ (Debian系なら `libwebkit2gtk-4.0-dev` 等)  
 
-```bash  
-# クローン  
+```
+bash  
+#クローン  
 git clone https://github.com/DroicheadNua/MirrorShard_2.git  
 cd MirrorShard_2  
 
-# 依存関係インストール  
+#依存関係インストール  
 pnpm install  
 
-# ビルド (releaseモード)  
+#ビルド (releaseモード)  
 pnpm tauri build  
+```
 
 ビルドに成功すると、 src-tauri/target/release/bundle/deb/ (または rpm, appimage) 等にインストーラが生成されます。これをインストールしてご利用ください。  
+
+## 🎵 BGM機能とパフォーマンスについて  
+
+本アプリケーションのBGM機能は、OSによって動作仕様とメモリ消費量が異なります。  
+
+*   **Windows / macOS:**  
+    *   設定画面から任意の音楽ファイル（mp3/wav/ogg）を指定して再生する場合、ストリーミング再生となるため**メモリ消費は最小限**に抑えられます。  
+*   **Linux (Raspberry Pi含む):**  
+    *   OSの制限により、音楽データをすべてメモリ上に展開して再生します。そのため、**BGM使用時はメモリ消費量が増加します。**  
+    *   特にRaspberry Pi等の低スペック環境でメモリ不足を感じる場合は、BGMをオフにすることをお勧めします。  

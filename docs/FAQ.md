@@ -130,6 +130,11 @@ MirrorShardのAI機能は「AIに生殺与奪の権を握らせるな」とい�
 
 **A.** 環境変数をご確認ください。OpenCodeのインストールフォルダがPathに通っていない可能性があります。  
 
+## SillyTavern関係  
+
+### Q. 起動すると、標準ブラウザが勝手に開いてしまいます。  
+
+**A.** SillyTavernフォルダ内の config.yaml で、 browserLaunch: enabled: false に設定してください。  
 
 ## その他  
 

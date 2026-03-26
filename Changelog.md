@@ -5,7 +5,7 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [1.6.0] - 2026-3-XX  
+## [1.6.0] - 2026-3-28  
 
 ### Added (新機能)  
 - SillyTavern連携機能を実装。SillyTavernがインストールされている場合、Ctrl+Shift+Jで起動、別ウィンドウで開くことが可能に  
@@ -13,6 +13,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - アイデアプロセッサにAI機能「Node Alchemy」を追加。ノードを範囲選択してAIボタンを押すと、選択範囲内のノードの内容をAIが読み取り、それらを踏まえた内容のノードを生成する機能  
 
 ### Changed (変更点)    
+- マークダウンプレビューのルビ変換を廃止  
+- kimi-k2-instruct-0905の提供停止に伴いプルダウンメニューから削除  
 
 
 ### Fixed (修正点) 
