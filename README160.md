@@ -43,7 +43,7 @@ Organize your chaotic thoughts on an infinite canvas. Perfect for Free-form Mind
 
     Template Completion: AI understands the overall plot structure and your current progress to help draft scenes that fit the big picture.
 
-    ![alt text](screenshots/ScreenShot05.jpg)
+![alt text](screenshots/ScreenShot05.jpg)
 
 🗂️ Information Management & Character Building
 
@@ -51,7 +51,7 @@ Organize your chaotic thoughts on an infinite canvas. Perfect for Free-form Mind
 
     SillyTavern Integration: Seamlessly launch the world-renowned character-interaction studio in a dedicated window (Ctrl+Shift+J). Perfect for testing character voices, personas, and managing complex lorebooks within your writing environment.
 
-    ![alt text](screenshots/ScreenShot08e.jpg)
+![alt text](screenshots/ScreenShot08e.jpg)
 
 ✍️ Immersive Drafting
 
@@ -69,7 +69,7 @@ Create your perfect writing sanctuary with a minimalist UI.
 
     Deep Customization: Fully adjustable color schemes, transparency, and background images. Make it your own unique writing space.
 
-    ![alt text](screenshots/ScreenShot02.jpg)
+![alt text](screenshots/ScreenShot02.jpg)
 
 📦 Professional Exporting
 
@@ -85,7 +85,7 @@ Export your work in industry-standard formats.
 
     Code Editor Mode: Includes syntax highlighting (HTML/CSS/JS/TS/Rust/Python/Markdown), AI code completion, and a built-in terminal.
 
-    ![alt text](screenshots/ScreenShot03.jpg)
+![alt text](screenshots/ScreenShot03.jpg)
 
 ⚙️ Miscellaneous
 
