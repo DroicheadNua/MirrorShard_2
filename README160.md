@@ -33,6 +33,8 @@ Alternatively, download from the [Latest Release Page](https://github.com/Droich
 
 Organize your chaotic thoughts on an infinite canvas. Perfect for Free-form Mind Mapping, Affinity Mapping, and non-linear brainstorming.
 
+![alt text](screenshots/ScreenShot05.jpg)
+
     AI Free Association: Spark three new ideas instantly from a single selected node.
 
     IP Missing Link: Select a link between two nodes and let AI bridge the gap with logical connections or dramatic plot points.
@@ -43,7 +45,7 @@ Organize your chaotic thoughts on an infinite canvas. Perfect for Free-form Mind
 
     Template Completion: AI understands the overall plot structure and your current progress to help draft scenes that fit the big picture.
 
-![alt text](screenshots/ScreenShot05.jpg)
+![alt text](screenshots/ScreenShot07.jpg)
 
 🗂️ Information Management & Character Building
 
@@ -79,13 +81,21 @@ Export your work in industry-standard formats.
 
     Vertical Writing Preview: Native support for traditional Japanese vertical layouts with ruby.
 
+![alt text](screenshots/ScreenShot01.jpg)
+
 🛠️ Coding & AI Agent Integration
+
+    Hybrid AI Chat: A dedicated AI Chat window supporting Google Gemini, Groq (API), and Local LLMs (via LM Studio, Ollama, koboldcpp, etc.). 
+
+![alt text](screenshots/ScreenShot03.jpg)
 
     OpenCode AI Integration: Launch the OpenCode AI Coding Agent in a dedicated window (Ctrl+Shift+K) to help you customize the editor or manage scripts.
 
+![alt text](screenshots/ScreenShot06.jpg)
+
     Code Editor Mode: Includes syntax highlighting (HTML/CSS/JS/TS/Rust/Python/Markdown), AI code completion, and a built-in terminal.
 
-![alt text](screenshots/ScreenShot03.jpg)
+![alt text](screenshots/ScreenShot04.jpg)
 
 ⚙️ Miscellaneous
 
