@@ -1573,7 +1573,7 @@ ${nextContext}
       const content = event.payload.content;
       if (content) {
         // 1. 新規タブを作成
-        this.createNewTab();
+        this.createNewTab("From IP");
 
         // 2. タブの描画が完了するのを少し待ってからテキストを挿入
         setTimeout(() => {
@@ -3026,7 +3026,7 @@ ${nextContext}
     // ★ 2. セッションパスのフィルタリングと保存
     const sessionPaths = this.openTabs
       .map(t => t.path)
-      .filter(path => path !== "Untitled");
+      .filter(path => !this.isVirtualPath(path));
 
     await this.store.set('sessionFilePaths', sessionPaths);
 
@@ -3035,7 +3035,7 @@ ${nextContext}
   }
 
   private addToHistory(filePath: string) {
-    if (filePath === "Untitled") return;
+    if (this.isVirtualPath(filePath)) return;
     // 1. 既存の履歴から同じパスを削除
     this.recentFiles = this.recentFiles.filter(p => p !== filePath);
     // 2. 配列の先頭に新しいパスを追加
@@ -3395,7 +3395,7 @@ ${nextContext}
   private async saveActiveFile() {
     if (!this.activeTabPath) return;
 
-    if (this.activeTabPath === "Untitled") {
+    if (this.isVirtualPath(this.activeTabPath)) {
       await this.saveActiveFileAs();
       return;
     }
@@ -3430,8 +3430,10 @@ ${nextContext}
 
     try {
       // 1. フロントエンドで「保存ダイアログ」を開く
-      // デフォルトのファイル名を現在のファイル名（またはUntitled.txt）にする
-      const defaultName = this.activeTabPath.split(/[/\\]/).pop() || 'Untitled.txt';
+      // 現在のパスを取得
+      const currentName = this.activeTabPath.split(/[/\\]/).pop() || 'Untitled';
+      // 拡張子が付いていない場合は .txt を足して提案する
+      const defaultName = currentName.includes('.') ? currentName : `${currentName}.txt`;
 
       const newPath = await save({
         title: '名前を付けて保存',
@@ -3506,25 +3508,44 @@ ${nextContext}
     }
   }
 
-  private createNewTab() {
-    const newFilePath = "Untitled";
+  private createNewTab(baseName: string = "Untitled") {
+    // 1. 重複しない名前（仮想パス）を生成
+    let newFilePath = baseName;
+    let counter = 2;
+    // 既に同じ名前のタブが開いている間は番号を増やす
+    while (this.openTabs.some(tab => tab.path === newFilePath)) {
+      newFilePath = `${baseName} (${counter})`;
+      counter++;
+    }
+
     const initialExtensions = this.isCodeMode ? this.createCodeExtensions() : this.createEditorExtensions();
 
     const state = EditorState.create({
       extensions: this.mainCompartment.of(initialExtensions)
     });
-    // encodingとlineEndingのデフォルト値を追加
+
     const tab: OpenTab = {
-      path: newFilePath,
+      path: newFilePath, // ここに "Untitled (2)" や "From IP" が入る
       state,
       isDirty: false,
-      encoding: 'UTF-8',      // 新規ファイルはUTF-8
-      lineEnding: 'LF',       // デフォルトはLF (環境に応じて変えても良い)
+      encoding: 'UTF-8',
+      lineEnding: 'LF',
       headings: [],
     };
 
     this.openTabs.push(tab);
     this.openOrSwitchTab(newFilePath);
+  }
+
+  // --- 仮想ファイル（保存ダイアログが必要なファイル）かどうかを判定 ---
+  private isVirtualPath(path: string | null): boolean {
+    if (!path) return true;
+    // 1. スラッシュやバックスラッシュを含まない（＝ディレクトリ構造がない）
+    // 2. 且つ、Untitled や From IP で始まる
+    const isNamedVirtual = path.startsWith("Untitled") || path.startsWith("From IP");
+    const hasNoSeparator = !path.includes("/") && !path.includes("\\");
+
+    return isNamedVirtual && hasNoSeparator;
   }
 
   // コンテンツを指定して新しいタブを開く

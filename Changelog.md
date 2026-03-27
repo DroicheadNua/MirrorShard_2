@@ -19,6 +19,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed (修正点)   
 - AI Free associationで、省略がない場合にもコンテンツエディタ内にノードと同じテキストが複製されていた問題を修正  
+- 新規ファイル作成、Send to Editor機能などの処理を修正  
 
 
 ## [1.5.0] - 2026-3-22  

@@ -10,7 +10,7 @@ Built with the Tauri framework, it boasts fast startup times and low memory cons
 It features a lightweight outline processor capable of handling massive text files, integrated AI assistance for writing from the cursor, code completion, and summarizing/rewriting/translating selected text.  
 Additionally, it comes packed with versatile tools: a dedicated AI Chat window, an Idea Processor (Canvas), Markdown/HTML preview, and OpenCode integration. Whether you are writing a novel, drafting a blog, performing casual text editing, or developing apps centered around OpenCode, MirrorShard adapts to your creative workflow.
 
-*Note: A fully localized English version of the application and its documentation is planned for a future release in a separate repository. *
+*Note: I had originally planned to release the English version in a separate repository, but we’ve changed our approach and decided to implement the language switching feature (Japanese/English) directly within MirrorShard 2 itself. *
 
 **[Official Website (Japanese)](https://droicheadnua.github.io/MirrorShard-Official/)**
 
