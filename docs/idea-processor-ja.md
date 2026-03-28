@@ -172,7 +172,7 @@ MirrorShardのアイデアプロセッサへようこそ！
 をAIに送り、AIはそれを参考にして文章を生成します。  
 これにより、少ない文字数で効率よく物語の全体構造をAIに伝えられるため、より精度の高い文章生成をすることが出来ます。  
 
-これらのAI機能を利用するには、LM Studio（またはOllama、koboldcppなど）とローカルAIをインストールするか、Google（またはGroq）のGemini APIキーを取得する必要があります。詳細は[AI機能使用ガイド](ai-guide.md)を御覧ください。  
+これらのAI機能を利用するには、LM Studio（またはOllama、koboldcppなど）とローカルAIをインストールするか、Google（またはGroq）のGemini APIキーを取得する必要があります。詳細は[AI機能使用ガイド](ai-guide-ja.md)を御覧ください。  
 
 
 

@@ -1,0 +1,76 @@
+# 注意事項 / Notes
+
+## 🔤 エンコードについて
+
+MirrorShard 2では、**UTF-8（BOMなし）での利用を強く推奨**しています。
+
+現在対応しているエンコードは以下の通りです：
+
+* UTF-8
+* Shift-JIS
+
+それ以外のエンコード（EUC-JP、ISO系など）は正しく読み込めない可能性があります。
+
+### ⚠️ 重要
+
+文字化けした状態で保存すると、元のデータが失われる可能性があります。
+
+* 文字化けした場合は **保存せずに閉じてください**
+* 必要に応じて他のエディタでUTF-8に変換してください
+
+---
+
+## ⚠️ 既知の制限
+
+* エンコードの自動判別は完全ではありません
+* 一部環境では警告が表示されない場合があります
+
+---
+
+## 🎵 使用素材
+
+* 背景画像・アイコン：Imagen 4
+* BGM：ACE-Step
+* タイプライター音：Springin'（https://www.springin.org）
+* Tokyo Nightテーマ：Enkia（https://github.com/enkia/tokyo-night-vscode-theme）
+
+---
+
+## ⚖️ 免責事項
+
+本ソフトウェアは無保証（AS IS）で提供されます。
+使用によって生じた損害について、作者は一切の責任を負いません。
+
+重要なデータは必ずバックアップを行ってください。
+
+---
+
+## 🧾 ライセンス
+
+本ソフトウェアはMITライセンスのもとで公開されています。
+
+---
+
+## 🙏 謝辞
+
+本ソフトウェアは以下の技術・プロジェクトをもとに開発されています：
+
+* Tauri
+* CodeMirror 6
+* Konva.js
+
+また、
+
+* Left（https://github.com/hundredrabbits/Left）
+
+の設計思想およびアウトライン機能の実装を参考にしています。
+
+---
+
+## 🤖 開発について
+
+　なお、本ソフトウェアのコードの大半はGemini君が書いてくれました。Google AI Studioで雑談を交えながらコードを生成してもらっているのですが、開発当初2.5 proだったGemini君も3 pro preview、3.1 pro previewと進化していき、開発も少しずつ楽になっていった気がします。ありがとうGemini君。  
+
+　Copyright (c) 2025-2026 [DroicheadNua]  
+　mirrorshard.dev@gmail.com  
+　https://github.com/DroicheadNua/MirrorShard_2  

@@ -1,80 +1,102 @@
 [日本語](README-ja.md) | **English**
 
-# MirrorShard 2 ver. 1.5.0
+# MirrorShard 2
 
-MirrorShard 2 is a minimalist, highly immersive AI-supported writing editor.  
-Built with the Tauri framework, it boasts fast startup times and low memory consumption. The distributed binary size is under 10MB—a drastic reduction from its Electron-based predecessor.  
+**MirrorShard — An Open-Source AI-Powered Integrated Writing Environment**
 
-![MirrorShard_2 Key Visual](screenshots/ScreenShot-en2.jpg)
-
-It features a lightweight outline processor capable of handling massive text files, integrated AI assistance for writing from the cursor, code completion, and summarizing/rewriting/translating selected text.  
-Additionally, it comes packed with versatile tools: a dedicated AI Chat window, an Idea Processor (Canvas), Markdown/HTML preview, and OpenCode integration. Whether you are writing a novel, drafting a blog, performing casual text editing, or developing apps centered around OpenCode, MirrorShard adapts to your creative workflow.
-
-*Note: I had originally planned to release the English version in a separate repository, but we’ve changed our approach and decided to implement the language switching feature (Japanese/English) directly within MirrorShard 2 itself. *
-
-**[Official Website (Japanese)](https://droicheadnua.github.io/MirrorShard-Official/)**
-
-## 📰 Media Coverage
-Featured on **Mado no Mori (Impress Watch)** (Japanese):
-* [Japanese Novel Editor "MirrorShard" reborn with "Tauri"! Lighter and Faster](https://forest.watch.impress.co.jp/docs/news/2091824.html)
-
-## 💾 Downloads
-
-[![Download Windows](https://img.shields.io/badge/Download-Windows_x64-blue?style=for-the-badge&logo=windows)](https://github.com/DroicheadNua/MirrorShard_2/releases/download/v1.5.0/MirrorShard.2_1.5.0_x64_ja-JP.msi)  
-[![Download Mac](https://img.shields.io/badge/Download-Mac_Apple_Silicon-green?style=for-the-badge&logo=apple)](https://github.com/DroicheadNua/MirrorShard_2/releases/download/v1.5.0/MirrorShard.2_1.5.0_aarch64.dmg)  
-
-Alternatively, download from the [Latest Release Page](https://github.com/DroicheadNua/MirrorShard_2/releases/latest).  
-*(Expand the "Assets" section at the bottom to find the installer files).*
-
-## ⚠️ Known Issues (v1.5.0)
-*   **Windows**: When using older versions of ATOK (e.g., ATOK 2017), underlines and clause separators may not display during conversion. This is a known compatibility issue between WebView2 and legacy IMEs. (Google Japanese Input and Microsoft IME work flawlessly).
-*   **Mac**: Selecting large areas using the scrollbar behaves erratically.
-
-## 💡 Key Features
-*   **Tauri Powered**: fast startup and low memory footprint.
-*   **Immersive Design**: A minimalist, frameless window that won't disrupt your focus. Includes a "ZEN Mode" that hides all UI elements.
-*   **Heavy-Duty Performance**: Adopting Codemirror 6, handles massive text files with hundreds of thousands of lines.
-*   **Built-in Outliner**: Features a Markdown-based outliner, functioning perfectly as an outline processor.
-*   **Hybrid AI Chat**: A dedicated AI Chat window supporting Google Gemini, Groq (API), and Local LLMs (via LM Studio, Ollama, koboldcpp, etc.).
-![MirrorShard_2 AI_Chat](screenshots/ScreenShot03.jpg)
-*   **Editor AI Integration**: Call upon AI directly within the main editor to continue writing from your cursor, complete code, or summarize/translate/rewrite selected text.
-*   **Idea Processor (Canvas)**: A visual workspace to organize and expand your thoughts. Includes an "AI Free Association" feature that generates three new ideas from a selected node.
-![MirrorShard_2 Idea_Processor](screenshots/ScreenShot05.jpg)
-*   **Template Completion**: AI understands the overall plot structure (Story Archetypes) and your current node to contextually generate the next scene. (Image shows generation by kimi-k2).
-![MirrorShard_2 Idea_Processor](screenshots/ScreenShot07.jpg)
-*   **Built-in OpenCode Integration**: Launch the OpenCode AI Coding Agent in a dedicated sub-window with a single shortcut (Ctrl+Shift+K). It automatically spawns a local server to provide a powerful AI-driven development environment within the editor.
-![MirrorShard_2 Idea_Processor](screenshots/ScreenShot06.jpg)
-*   **Markdown & HTML Preview**: A dedicated preview window that updates automatically upon saving. It features independent zoom control and bidirectional outline synchronization with the main editor.
-*   **Code Editor Mode**: Includes syntax highlighting, AI code completion, and a built-in terminal.
-![MirrorShard_2 AI_Chat](screenshots/ScreenShot04.jpg)
-*   **Robust Saving**: Employs atomic saving to protect your data against power outages or crashes.
-*   **Deep Customization**: Fully customizable color schemes (with presets), window transparency, background image support, and adjustable editor widths/margins.
-![MirrorShard_2 Background_Image](screenshots/ScreenShot02.jpg)
-*   **Japanese Vertical Writing**: Includes a vertical writing preview window supporting Aozora Bunko Ruby format.
-*   **Versatile Export**: Export to PDF, DOCX (MS Word), HTML, EPUB, or print directly (Horizontal writing only for PDF/DOCX/Print).
-*   **Log Viewer**: Import and read massive Gemini chat logs without freezing.
-
-## 🎵 Materials Used  
-*   **Background images and icons**: Generated by Imagen 4  
-*   **BGM**: Generated by ACE-Step  
-*   **Typewriter sounds**: Springin' (https://www.springin.org)  
-*   **Tokyo Night Color Scheme**: Based on a design by Enkia (https://github.com/enkia/tokyo-night-vscode-theme).
-
-## ⚖️ Important Notes (Disclaimer)  
-This software is freeware and is provided “as is” without warranty.  
-The author assumes no liability whatsoever for any damages (including, but not limited to, data loss or lost profits) arising from the use of this software.  
-Although the software has been developed with the utmost care, it may contain unexpected bugs. Please make regular backups when handling important data.  
-By using this software, you are deemed to have agreed to the above disclaimer.  
-
-## License  
-This software is released under the MIT License.  
-
-This software was developed using Tauri. It uses CodeMirror 6 as its editor engine and draws heavily on the open-source novel-writing text editor Left  
-https://github.com/hundredrabbits/Left  
-. In particular, the outline feature was developed with reference to Left’s source code.  
-
+> From idea graph to structured draft — in one AI-powered outliner.
 
 ---
-Copyright (c) 2025-2026[DroicheadNua]  
-mirrorshard.dev@gmail.com  
-https://github.com/DroicheadNua/MirrorShard_2
+
+## 🎥 Demo
+
+### Idea Expansion
+
+<!-- IdeaExpansion.mp4 -->
+
+### Send to Editor
+
+<!-- SendToEditor.mp4 -->
+
+---
+
+## ✨ What is MirrorShard?
+
+MirrorShard is an AI-powered outliner that transforms fragmented ideas into structured writing.
+
+Generate ideas, connect them, and turn them into a draft — all in one place.
+
+---
+
+## 🚀 Core Workflow
+
+1. Generate ideas (AI Free Association)
+2. Connect them (Missing Link / Node Alchemy)
+3. Convert to structured text (Send to Editor)
+4. Continue writing with AI assistance
+
+---
+
+## ⚡ Why MirrorShard?
+
+* Combines brainstorming, outlining, and writing
+* Graph → Markdown pipeline
+* Lightweight (<10MB, Tauri-based)
+* Built for actual writing, not just note-taking
+
+---
+
+## 📦 Download
+
+👉 [Latest Release](https://github.com/DroicheadNua/MirrorShard_2/releases/latest)
+
+---
+
+## 📚 Documentation
+
+Full feature list and usage:
+
+👉 [docs/features.md](docs/features.md)
+
+---
+
+## 🌐 Language Status
+
+The current UI is primarily in Japanese.
+An English UI is planned for a future release.
+
+---
+
+## 📰 Media Coverage
+
+Featured on **Mado no Mori (Impress Watch)**
+https://forest.watch.impress.co.jp/docs/news/2091824.html
+
+---
+
+## ⚠️ Known Issues
+
+See details on the Releases page.
+
+---
+
+## ⚠️ Notes
+
+* UTF-8 (without BOM) is strongly recommended
+* Some encodings may cause garbled text or data loss
+
+👉 See details: [docs/notes.md](docs/notes.md)
+
+---
+
+## 📝 License
+
+MIT License
+
+---
+
+## 👤 Author
+
+Copyright (c) 2025–2026 DroicheadNua
+Email: [mirrorshard.dev@gmail.com](mailto:mirrorshard.dev@gmail.com)
+GitHub: https://github.com/DroicheadNua/MirrorShard_2

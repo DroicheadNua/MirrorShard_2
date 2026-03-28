@@ -90,7 +90,8 @@
     "resources": [
       "../docs/*",
       "../README.md",
-      "../Changelog.md",
+      "../README-ja.md",
+      "../Changelog-ja.md",
       "resources/**/*"
     ],
     "windows": {
