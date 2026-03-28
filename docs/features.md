@@ -8,7 +8,7 @@ MirrorShard is designed to support the entire creative workflow — from idea ge
 
 A non-linear, visual environment for brainstorming and idea development.
 
-![Idea_Processor](screenshots/features01.jpg)
+![Idea_Processor](../screenshots/features01.jpg)
 
 ### AI Features
 
@@ -33,7 +33,7 @@ A non-linear, visual environment for brainstorming and idea development.
 
 A minimal, distraction-free editor designed for immersive writing.
 
-![editor](screenshots/features02.jpg)
+![editor](../screenshots/features02.jpg)
 
 * **ZEN Mode & Frameless Window**
   Focus entirely on your text.

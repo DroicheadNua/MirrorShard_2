@@ -9,7 +9,7 @@ MirrorShard 2は、アイデア生成から構造化、執筆までを一体化�
 
 ブレインストーミングやアイデアの展開を行うためのツールです。
 
-![Idea_Processor](screenshots/features01.jpg)
+![Idea_Processor](../screenshots/features01.jpg)
 
 ### AI機能
 
@@ -34,7 +34,7 @@ MirrorShard 2は、アイデア生成から構造化、執筆までを一体化�
 
 没入感のある執筆体験のために設計された、ミニマルでシンプルなエディタです。
 
-![editor](screenshots/features02.jpg)
+![editor](../screenshots/features02.jpg)
 
 * **Send to Editor**
   アイデアプロセッサから生成された構造をそのまま文章へと展開できます。
@@ -85,6 +85,8 @@ MirrorShard 2は、アイデア生成から構造化、執筆までを一体化�
 
 * **縦書きプレビュー**
   日本語の縦書きレイアウトと、青空文庫形式のルビに対応しています。
+
+  ![vertical_writing](../screenshots/ScreenShot01.jpg)
 
 ---
 
