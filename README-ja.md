@@ -11,12 +11,13 @@ MirrorShard 2は、発想から構造化、そして執筆までを一つの流�
 
 ## 🎬 デモ
 
-<!-- IdeaExpansion.mp4 / SendToEditor.mp4 をここに配置 -->
+### Idea Expansion
 
-<!-- 例：
-![Idea Expansion](screenshots/IdeaExpansion.gif)
-![Send to Editor](screenshots/SendToEditor.gif)
--->
+https://github.com/user-attachments/assets/2d22c7e3-ff4d-4958-a1e6-ae4c5e4361b5
+
+### Send to Editor
+
+https://github.com/user-attachments/assets/291d7852-6d6e-4040-899c-efd4a500f360
 
 ---
 
