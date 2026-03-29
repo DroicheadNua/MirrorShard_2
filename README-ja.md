@@ -75,6 +75,19 @@ https://github.com/user-attachments/assets/291d7852-6d6e-4040-899c-efd4a500f360
 
 ---
 
+## 📰 メディア掲載
+
+「窓の杜」にて紹介されました  
+https://forest.watch.impress.co.jp/docs/news/2091824.html
+
+---
+
+## 🌐 公式サイト
+
+https://droicheadnua.github.io/MirrorShard-Official/
+
+---
+
 ## 💾 ダウンロード
 
 [Releasesページ](https://github.com/DroicheadNua/MirrorShard_2/releases/latest) からダウンロードできます。
