@@ -71,7 +71,7 @@ fn kill_child_tree(child: &mut Child) {
 }
 
 // --- nodeのパスを解決するヘルパー (Mac/Linux用) ---
-#[cfg(target_os = "macos")]
+#[cfg(not(target_os = "windows"))]
 fn resolve_node_path() -> String {
     {
         // 1. nodebrew のパスを動的に生成
@@ -1285,6 +1285,15 @@ async fn write_file(path: String, content: String, encoding: String) -> Result<(
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
+    // Linux環境でのみ起動時に環境変数を強制セットする
+    #[cfg(target_os = "linux")]
+    {
+        println!("Linux detected: Disabling WebKit compositing mode for stability.");
+        std::env::set_var("WEBKIT_DISABLE_COMPOSITING_MODE", "1");
+        // もしWayland環境でウィンドウが表示されない等の問題が続く場合は
+        // 以下の「X11バックエンド強制」もセットで試す
+        // std::env::set_var("GDK_BACKEND", "x11");
+    }
     tauri::Builder::default()
         .plugin(tauri_plugin_os::init())
         .plugin(tauri_plugin_cli::init())
