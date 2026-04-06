@@ -514,7 +514,7 @@ async function setupSettings() {
         geminiApiKeyInput.value = await store.get<string>('geminiApiKey') || '';
         groqApiKeyInput.value = await store.get<string>('groqApiKey') || '';
         geminiModelInput.value = await store.get<string>('geminiModel') || 'gemini-2.5-flash';
-        groqModelInput.value = await store.get<string>('groqModel') || 'Llama 3.3 70B';
+        groqModelInput.value = await store.get<string>('groqModel') || 'llama-3.3-70b-versatile';
         localLlmUrlInput.value = await store.get<string>('localLlmUrl') || 'http://127.0.0.1:1234/v1/chat/completions';
         aiSystemPromptInput.value = await store.get<string>('aiSystemPrompt') || '';
         aiMaxTokensInput.value = (await store.get<number>('aiMaxTokens') || 2000).toString();
