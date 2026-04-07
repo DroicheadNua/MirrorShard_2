@@ -112,6 +112,8 @@ class App {
   private outlineControls2 = document.querySelector<HTMLElement>('.outline-controls-2');
   private outlineContainer = document.querySelector<HTMLElement>('#outline-container');
   private editorContainer = document.querySelector<HTMLElement>('#editor-container');
+  private markdownBtn = document.getElementById('btn-markdown');
+  private typesoundBtn = document.getElementById('btn-typesound');
   private statusBar = document.querySelector<HTMLElement>('#status-bar');
   private isSpotlightMode = false;
   private isTypeSoundEnabled = false;
@@ -984,7 +986,7 @@ ${nextContext}
 
   // --- Geminiへの直接リクエスト ---
   private async requestGeminiDirect(apiKey: string, prompt: string, systemPrompt: string, maxTokensOverride?: number, signal?: AbortSignal): Promise<string> {
-    const model = await this.store.get<string>('geminiModel') || 'gemini-2.5-flash';
+    const model = await this.store.get<string>('geminiModel') || 'gemini-3.1-flash-lite-preview';
 
     // 数値として確実に取得する (Storeから文字列で返ってくる場合の対策)
     // オーバーライドがあればそれを使い、なければ設定値を使う
@@ -1262,6 +1264,12 @@ ${nextContext}
     // UI要素のチェック
     if (!this.editorContainer || !this.fileListContainer || !this.outlineControls || !this.outlineControls2 || !this.outlineContainer) {
       console.error("Fatal Error: A required UI container was not found."); return;
+    }
+
+    // Linuxのときは一部機能を使用不可に
+    if (this.currentOs === 'linux' && this.markdownBtn && this.typesoundBtn) {
+      this.markdownBtn.style.display = 'none';
+      this.typesoundBtn.style.display = 'none';
     }
 
     // テーマとフォントの定義
@@ -3121,6 +3129,7 @@ ${nextContext}
   }
 
   private async openMarkdownPreviewWithCheck() {
+    if (this.currentOs === 'linux') return;
     const textLength = this.editorView.state.doc.length;
     const limit = 50000;
     let shouldTruncate = false;
@@ -3165,6 +3174,7 @@ ${nextContext}
 
   // トグル関数
   private toggleSpotlightMode() {
+    if (this.currentOs === 'linux') return;
     if (this.isCodeMode) return;
     if (this.isSpotlightMode) {
       this.isSpotlightMode = false;
@@ -3303,6 +3313,7 @@ ${nextContext}
 
   // 音を鳴らす関数
   private playTypeSound() {
+    if (this.currentOs === 'linux') return;
     if (!this.isTypeSoundEnabled || !this.audioContext || !this.typeSoundBuffer) return;
 
     // コンテキストがサスペンド状態なら、再開させる
@@ -3325,6 +3336,7 @@ ${nextContext}
   }
 
   private async toggleTypeSound() {
+    if (this.currentOs === 'linux') return;
     if (this.isTypeSoundEnabled) {
       this.isTypeSoundEnabled = false;
     } else {
@@ -3696,6 +3708,8 @@ ${nextContext}
   }
 
   private async openOpenCode() {
+    // Linuxでは使用不可に
+    if (this.currentOs === 'linux') return;
     try {
       await invoke('open_opencode');
     } catch (e) {
@@ -3704,6 +3718,9 @@ ${nextContext}
   }
 
   private async openSillyTavern() {
+    // Linuxでは使用不可に
+    if (this.currentOs === 'linux') return;
+
     // AI起動中のオーバーレイを流用して「起動中」を表示
     this.aiThinkingMode = "SillyTavern Activating...";
     this.setAiLoading(true);

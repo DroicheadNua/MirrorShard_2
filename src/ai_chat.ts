@@ -31,7 +31,7 @@ export class AiChat {
         // Geminiの場合のみSDKの初期化が必要
         if (this.currentSettings.apiType === 'gemini') {
             const apiKey = this.currentSettings.geminiApiKey;
-            const modelName = this.currentSettings.geminiModel || "gemini-2.5-flash";
+            const modelName = this.currentSettings.geminiModel || "gemini-3.1-flash-lite-preview";
             if (apiKey) {
                 this.genAI = new GoogleGenerativeAI(apiKey);
                 this.model = this.genAI.getGenerativeModel({

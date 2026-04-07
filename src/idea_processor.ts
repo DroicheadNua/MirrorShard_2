@@ -3735,7 +3735,7 @@ async function triggerFreeAssociation() {
     // セレクターの変数 (ipAiApi) を使用
     if (ipAiApi === 'gemini') {
       const apiKey = await store.get<string>('geminiApiKey');
-      const model = await store.get<string>('geminiModel') || 'gemini-2.5-flash';
+      const model = await store.get<string>('geminiModel') || 'gemini-3.1-flash-lite-preview';
       console.log(`Loaded:${model}`);
       if (!apiKey) throw new Error("Gemini API Key が設定されていません。");
 
@@ -4268,7 +4268,7 @@ ${combinedContext}`;
     // --- 4. API通信 (AFAと全く同じロジックを流用) ---
     if (ipAiApi === 'gemini') {
       const apiKey = await store.get<string>('geminiApiKey');
-      const model = await store.get<string>('geminiModel') || 'gemini-2.5-flash';
+      const model = await store.get<string>('geminiModel') || 'gemini-3.1-flash-lite-preview';
       if (!apiKey) throw new Error("Gemini API Key が設定されていません。");
       const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`, {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
@@ -4530,7 +4530,7 @@ ${actionDesc}
     // --- API通信 (AFA・NAと全く同じロジック) ---
     if (ipAiApi === 'gemini') {
       const apiKey = await store.get<string>('geminiApiKey');
-      const model = await store.get<string>('geminiModel') || 'gemini-2.5-flash';
+      const model = await store.get<string>('geminiModel') || 'gemini-3.1-flash-lite-preview';
       if (!apiKey) throw new Error("Gemini API Key が設定されていません。");
       const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`, {
         method: 'POST', headers: { 'Content-Type': 'application/json' },

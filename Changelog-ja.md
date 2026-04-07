@@ -8,9 +8,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [1.7.0] - 2026-4-XX  
 
 ### Added (新機能)  
+- GeminiのモデルにGemini 3.1 Flash-Lite PreviewとGemini 3 Flash Previewを追加、デフォルトをGemini 3.1 Flash-Lite Previewに  
 
 
 ### Changed (変更点)    
+- Linuxで一部機能（OpenCode連携、SillyTavern連携、スポットライトモード、タイプ音、Markdown/HTMLプレビュー）を使用不可に（Linuxでは正常に動作しないため）  
+
 
 
 ### Fixed (修正点)   
