@@ -114,6 +114,7 @@ class App {
   private editorContainer = document.querySelector<HTMLElement>('#editor-container');
   private markdownBtn = document.getElementById('btn-markdown');
   private typesoundBtn = document.getElementById('btn-typesound');
+  private spotlightBtn = document.getElementById('btn-spotlight');
   private statusBar = document.querySelector<HTMLElement>('#status-bar');
   private isSpotlightMode = false;
   private isTypeSoundEnabled = false;
@@ -1267,9 +1268,10 @@ ${nextContext}
     }
 
     // Linuxのときは一部機能を使用不可に
-    if (this.currentOs === 'linux' && this.markdownBtn && this.typesoundBtn) {
+    if (this.currentOs === 'linux' && this.markdownBtn && this.typesoundBtn && this.spotlightBtn) {
       this.markdownBtn.style.display = 'none';
       this.typesoundBtn.style.display = 'none';
+      this.spotlightBtn.style.display = 'none';
     }
 
     // テーマとフォントの定義
