@@ -39,7 +39,7 @@ async function setupSettings() {
             wrapper.style.backgroundImage = 'radial-gradient(circle, #bdd6daff, grey)';
             body.style.backgroundColor = 'silver';
         }
-        if (osType !== 'linux') {
+        if (osType === 'linux') {
             st.style.display = 'none';
             md.style.display = 'none';
         }
