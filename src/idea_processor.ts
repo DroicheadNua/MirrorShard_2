@@ -3720,7 +3720,13 @@ async function triggerFreeAssociation() {
   // 設定取得 (名前を faMaxTokens に変更)
   const charLimit = await store.get<number>('faMaxTokens') || 30;
 
-  const systemPrompt = "あなたは創造的なブレインストーミングのアシスタントです。余計な前置きや説明、マークダウンの装飾は一切出力せず、結果のテキストのみを出力してください。";
+  // ストアからユーザー設定のシステムプロンプトを取得
+  const userSystemPrompt = await store?.get<string>('aiSystemPrompt') || "";
+  const baseSystemPrompt = "あなたは創造的なブレインストーミングのアシスタントです。余計な前置きや説明、マークダウンの装飾は一切出力せず、結果のテキストのみを出力してください。";
+  // プロンプトの合成
+  const systemPrompt = userSystemPrompt
+    ? `${baseSystemPrompt}\n\n【追加指示】:\n${userSystemPrompt}`
+    : baseSystemPrompt;
   const prompt = `「${nodeTitle}」という言葉から連想される、あるいはそれに続く創造的なアイデアを3つ出力してください。\n条件：\n- 1つのアイデアにつき ${charLimit}文字以内 に収めること\n- 3つのアイデアを改行で区切って出力すること（箇条書きの「・」などは不要）`;
 
   // 状態更新とUIガード
@@ -3966,7 +3972,12 @@ async function triggerTemplateCompletion() {
   const contextText = fullText.slice(contextStart, cursor);
 
   // --- 3. プロンプト構築 ---
-  const systemPrompt = "あなたはプロの小説家です。物語の構造（アーキタイプ）を理解し、全体の流れに沿った執筆を行います。";
+  const userSystemPrompt = await store?.get<string>('aiSystemPrompt') || "";
+  const baseSystemPrompt = "あなたはプロの小説家です。物語の構造（アーキタイプ）を理解し、全体の流れに沿った執筆を行います。";
+  // プロンプトの合成
+  const systemPrompt = userSystemPrompt
+    ? `${baseSystemPrompt}\n\n【追加指示】:\n${userSystemPrompt}`
+    : baseSystemPrompt;
 
   const prompt = `あなたは「${archetype}」という構造に沿って執筆しています。
 本来の構成：
@@ -4248,7 +4259,12 @@ async function triggerNodeAlchemy() {
   // AFAの文字数制限設定(faMaxTokens)を流用、または錬金術用に少し多めに解釈
   const charLimit = await store.get<number>('faMaxTokens') || 200;
 
-  const systemPrompt = "あなたは創造的なブレインストーミングのアシスタントです。提示された複数の異なるアイデアや要素を踏まえて、ユーザーの指示に従って新しいアイデアを生み出してください。余計な前置きやマークダウンは不要です。";
+  const userSystemPrompt = await store?.get<string>('aiSystemPrompt') || "";
+  const baseSystemPrompt = "あなたは創造的なブレインストーミングのアシスタントです。提示された複数の異なるアイデアや要素を踏まえて、ユーザーの指示に従って新しいアイデアを生み出してください。余計な前置きやマークダウンは不要です。";
+  // プロンプトの合成
+  const systemPrompt = userSystemPrompt
+    ? `${baseSystemPrompt}\n\n【追加指示】:\n${userSystemPrompt}`
+    : baseSystemPrompt;
 
   // ユーザーの入力を直接プロンプトに埋め込む
   const prompt = `以下の複数の要素と矛盾なく調和する、新たな「${userInstruction}」を提案してください。
@@ -4458,7 +4474,12 @@ async function triggerIpMissingLink() {
   // 4. プロンプトの構築
   const charLimit = await store.get<number>('faMaxTokens') || 200;
 
-  const systemPrompt = "あなたは創造的なプロットメイカーです。提示された「起点」と「終点」のギャップを埋める、論理的かつドラマチックな「ミッシングリンク（繋ぎの展開）」を提案してください。余計な前置きやマークダウンは不要です。";
+  const userSystemPrompt = await store?.get<string>('aiSystemPrompt') || "";
+  const baseSystemPrompt = "あなたは創造的なプロットメイカーです。提示された「起点」と「終点」のギャップを埋める、論理的かつドラマチックな「ミッシングリンク（繋ぎの展開）」を提案してください。余計な前置きやマークダウンは不要です。";
+  // プロンプトの合成
+  const systemPrompt = userSystemPrompt
+    ? `${baseSystemPrompt}\n\n【追加指示】:\n${userSystemPrompt}`
+    : baseSystemPrompt;
 
   // --- 1. 線種と言語化のマッピング ---
   let relationTypeDesc = "";

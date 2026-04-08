@@ -618,7 +618,16 @@ class App {
 
     try {
       let resultText = "";
-      const systemPrompt = "あなたは小説の執筆アシスタントです。渡された文章の続きを、文体やトーンを維持したまま執筆してください。続きの文章のみを出力し、挨拶や説明は不要です。";
+      // 1. ストアからユーザー設定のシステムプロンプトを取得
+      const userSystemPrompt = await this.store.get<string>('aiSystemPrompt') || "";
+
+      // 2. 機能固有の指示
+      const baseSystemPrompt = "あなたは小説の執筆アシスタントです。渡された文章の続きを、文体やトーンを維持したまま執筆してください。続きの文章のみを出力し、挨拶や説明は不要です。";
+
+      // 3. プロンプトの合成
+      const systemPrompt = userSystemPrompt
+        ? `${baseSystemPrompt}\n\n【ユーザーによる追加指示】:\n${userSystemPrompt}`
+        : baseSystemPrompt;
       if (this.mainAiApi === 'gemini') {
         const apiKey = await this.store.get<string>('geminiApiKey');
         if (!apiKey) throw new Error("Gemini API Key is not set.");
@@ -719,12 +728,17 @@ class App {
     try {
       let resultText = "";
 
+      const userSystemPrompt = await this.store.get<string>('aiSystemPrompt') || "";
       // システムプロンプト: 繋ぎの文章を書くことに特化させる
-      const systemPrompt = `あなたは執筆アシスタントです。
+      const baseSystemPrompt = `あなたは執筆アシスタントです。
 提示された「前半の文章」と「後半の文章」の間を自然に繋ぐ文章を執筆してください。
 文体やトーンは前後の文章に合わせてください。
 前半の末尾や後半の冒頭を繰り返さず、その間の出来事のみを出力してください。
 挨拶や説明は不要です。`;
+      // 3. プロンプトの合成
+      const systemPrompt = userSystemPrompt
+        ? `${baseSystemPrompt}\n\n【ユーザーによる追加指示】:\n${userSystemPrompt}`
+        : baseSystemPrompt;
 
       // ユーザープロンプト: 前後を分かりやすく渡す
       const userPrompt = `
@@ -889,14 +903,15 @@ ${nextContext}
     }
 
     const selectedText = state.sliceDoc(selection.from, selection.to);
+    const userSystemPrompt = await this.store.get<string>('aiSystemPrompt') || "";
 
     // モードごとの設定
-    let systemPrompt = "";
+    let baseSystemPrompt = "";
     let label = "";
 
     switch (mode) {
       case 'translate':
-        systemPrompt = "あなたはプロの翻訳家です。以下のテキストが日本語なら英語に、英語なら自然な日本語に翻訳してください。翻訳結果のみを出力し、解説は不要です。";
+        baseSystemPrompt = "あなたはプロの翻訳家です。以下のテキストが日本語なら英語に、英語なら自然な日本語に翻訳してください。翻訳結果のみを出力し、解説は不要です。";
         label = "[Translate]";
         break;
       case 'summary':
@@ -910,14 +925,18 @@ ${nextContext}
         await this.store.set('aiSummaryLength', length);
         await this.store.save();
 
-        systemPrompt = `あなたは優秀な編集者です。以下のテキストを**日本語で、およそ${length}文字以内**で要約してください。重要なポイントを逃さず、かつ簡潔にまとめてください。要約結果のみを出力してください。`;
+        baseSystemPrompt = `あなたは優秀な編集者です。以下のテキストを**日本語で、およそ${length}文字以内**で要約してください。重要なポイントを逃さず、かつ簡潔にまとめてください。要約結果のみを出力してください。`;
         label = `[Summarize] (${length} chars)`;
         break;
       case 'rewrite':
-        systemPrompt = "あなたは文章のプロです。以下のテキストを、より分かりやすく、読みやすい文章にリライト（推敲）してください。元の意味を保ったまま、表現を洗練させてください。リライト結果のみを出力してください。";
+        baseSystemPrompt = "あなたは文章のプロです。以下のテキストを、より分かりやすく、読みやすい文章にリライト（推敲）してください。元の意味を保ったまま、表現を洗練させてください。リライト結果のみを出力してください。";
         label = "[Rewrite]";
         break;
     }
+    // プロンプトの合成
+    const systemPrompt = userSystemPrompt
+      ? `${baseSystemPrompt}\n\n【ユーザーによる追加指示】:\n${userSystemPrompt}`
+      : baseSystemPrompt;
     this.isAiProcessing = true;
     this.aiAbortController = new AbortController();
     // ローディング表示
