@@ -32,10 +32,16 @@ async function setupSettings() {
         // --- 1. OSごとの見た目調整 ---
         const wrapper = document.querySelector('#settings-wrapper') as HTMLElement;
         const body = document.querySelector('body') as HTMLElement;
+        const st = document.querySelector('#silly-tavern-group') as HTMLElement;
+        const md = document.querySelector('#markdown-group') as HTMLElement;
         const osType = await type();
         if (osType !== 'macos') {
             wrapper.style.backgroundImage = 'radial-gradient(circle, #bdd6daff, grey)';
             body.style.backgroundColor = 'silver';
+        }
+        if (osType !== 'linux') {
+            st.style.display = 'none';
+            md.style.display = 'none';
         }
 
         // --- 2. Storeのロード ---
