@@ -73,8 +73,10 @@ function onAiUpdate(text: string, isFinal: boolean) {
     }
 
     autoScroll();
-    if (isFinal) {
+    const textarea = document.getElementById("message-input");
+    if (isFinal && textarea) {
         setUiLocked(false);
+        textarea.focus();
         // AIの返答が終わったタイミングでオートセーブ判定
         if (currentFilePath) {
             // 既に保存先のパスがある場合は、静かに上書き保存
@@ -892,15 +894,44 @@ async function saveLogAs() {
 }
 
 async function clearLog() {
-    const yes = await ask('現在のチャットログをすべて消去しますか？', { title: 'MirrorShard AI', kind: 'warning' });
-    if (!yes) return;
+    // 1. そもそも消去していいかどうかの大前提の確認
+    const initialConfirm = await ask('現在のチャットログをすべて消去しますか？', {
+        title: 'MirrorShard AI',
+        kind: 'warning'
+    });
+    if (!initialConfirm) return;
+
+    // 2. 消去はOKだが、未保存がある場合の救済措置
+    if (isChatDirty) {
+        const doSave = await ask('チャットログが保存されていません。保存してから新規作成しますか？\n（「いいえ」を選ぶと現在の内容は破棄されます）', {
+            title: '保存の確認',
+            kind: 'warning',
+            okLabel: '保存する',
+            cancelLabel: '保存しない（破棄）'
+        });
+
+        if (doSave) {
+            await saveLogOverwrite();
+            // 保存ダイアログでキャンセルされた場合などは isChatDirty が true のままなので、処理を中断
+            if (isChatDirty) return;
+        } else {
+            // ユーザーが「破棄」を明示的に選んだ場合
+            isChatDirty = false;
+        }
+    }
+
+    // 3. クリア処理の実行
     chatHistory = [];
-    chatLog.innerHTML = '';
+    if (chatLog) chatLog.innerHTML = '';
     currentFilePath = null;
+    isChatDirty = false; // 状態をクリーンに
+
     if (store) {
         await store.set('lastAiChatSessionPath', null);
         await store.save();
     }
+
+    showNotification("New chat session started.");
 }
 
 async function loadLog() {
