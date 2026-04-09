@@ -162,7 +162,7 @@ class App {
   private fontList = [this.serifFont, this.sansSerifFont, this.monospaceFont];
   private languageCompartment = new Compartment();
 
-  private mainAiApi: 'gemini' | 'groq' | 'local' = 'gemini';
+  private mainAiApi: 'gemini' | 'groq' | 'cohere' | 'mistral' | 'local' = 'gemini';
   private showAiThinkingOverlay = true;
   private isAiProcessing = false; // AI動作中フラグ
   private aiAbortController: AbortController | null = null;// 通信中断用
@@ -370,13 +370,12 @@ class App {
     });
   }
 
-  private initMainAiSelector() {
+  private async initMainAiSelector() {
     try {
       console.log("Initializing Main AI Selector...");
 
       const displayBtn = document.getElementById('main-ai-display');
       const optionsContainer = document.getElementById('main-ai-options');
-      const options = document.querySelectorAll('.custom-option');
 
       // 要素がない場合はログを出して終了（クラッシュさせない）
       if (!displayBtn || !optionsContainer) {
@@ -385,6 +384,29 @@ class App {
       }
 
       console.log("Elements found. Setting up listeners...");
+
+      // --- オプションの動的生成 ---
+      optionsContainer.innerHTML = ''; // 既存のHTML（もしあれば）をクリア
+
+      // 常に表示
+      optionsContainer.innerHTML += `<div class="custom-option" data-value="gemini">Gemini (Cloud)</div>`;
+
+      // チェックボックスに応じて追加
+      if (await this.store.get<boolean>('enableGroq')) {
+        optionsContainer.innerHTML += `<div class="custom-option" data-value="groq">Groq</div>`;
+      }
+      if (await this.store.get<boolean>('enableCohere')) {
+        optionsContainer.innerHTML += `<div class="custom-option" data-value="cohere">Cohere</div>`;
+      }
+      if (await this.store.get<boolean>('enableMistral')) {
+        optionsContainer.innerHTML += `<div class="custom-option" data-value="mistral">Mistral</div>`;
+      }
+
+      // 常に表示
+      optionsContainer.innerHTML += `<div class="custom-option" data-value="local">Local AI</div>`;
+
+      // --- イベントリスナーの再設定 ---
+      const options = optionsContainer.querySelectorAll('#main-ai-options .custom-option');
 
       // 1. 開閉ロジック
       displayBtn.addEventListener('click', (e) => {
@@ -596,7 +618,7 @@ class App {
     // 1. コンテキストの取得 (カーソル前の1000文字程度)
     let contextLimit = await this.store.get<number>('aiContextLimit') || 2000;
     // Gemini（API利用）の場合は、予期せぬ課金やエラーを防ぐため強制的に上限をかける
-    if (this.mainAiApi === 'gemini' || this.mainAiApi === 'groq') {
+    if (this.mainAiApi !== 'local') {
       const MAX_GEMINI_LIMIT = 2000; // 安全策
       if (contextLimit > MAX_GEMINI_LIMIT) {
         console.warn(`Cloud AIのコンテキスト長は安全のため ${MAX_GEMINI_LIMIT} 字以下に制限されます`);
@@ -631,20 +653,39 @@ class App {
       if (this.mainAiApi === 'gemini') {
         const apiKey = await this.store.get<string>('geminiApiKey');
         if (!apiKey) throw new Error("Gemini API Key is not set.");
-
         // AiChatで実装した通信ロジックを流用 (簡略化)
         // ※ ここでは stream は使わず、一括で受け取るのが挿入しやすくて楽
         const response = await this.requestGeminiDirect(apiKey!, textContext, systemPrompt, undefined, this.aiAbortController.signal);
         resultText = response;
-      } else if (this.mainAiApi === 'groq') {
-        const apiKey = await this.store.get<string>('groqApiKey');
-        if (!apiKey) throw new Error("Groq API Key is not set.");
-        const response = await this.requestGroqDirect(apiKey, textContext, systemPrompt, undefined, this.aiAbortController.signal);
-        resultText = response;
-      } else {
-        const url = await this.store.get<string>('localLlmUrl') || "http://127.0.0.1:1234/v1/chat/completions";
-        const response = await this.requestLocalAiDirect(url, textContext, systemPrompt, undefined, this.aiAbortController.signal);
-        resultText = response;
+      }
+      else if (this.mainAiApi === 'cohere') {
+        const apiKey = await this.store.get<string>('cohereApiKey');
+        const model = await this.store.get<string>('cohereModel') || "command-r-plus-08-2024";
+        if (!apiKey) throw new Error("Cohere API Key is not set.");
+        resultText = await this.requestCohereV2Direct(apiKey, model, textContext, systemPrompt, undefined, this.aiAbortController.signal);
+      }
+      else {
+        // Groq, Mistral, Local LLM はすべて OpenAI 互換の共通関数へ投げる
+        let url = "", apiKey = "", model = "";
+
+        if (this.mainAiApi === 'groq') {
+          url = "https://api.groq.com/openai/v1/chat/completions";
+          apiKey = await this.store.get<string>('groqApiKey') || "";
+          model = await this.store.get<string>('groqModel') || "llama-3.3-70b-versatile";
+        }
+        else if (this.mainAiApi === 'mistral') {
+          url = "https://api.mistral.ai/v1/chat/completions";
+          apiKey = await this.store.get<string>('mistralApiKey') || "";
+          model = await this.store.get<string>('mistralModel') || "mistral-small-latest";
+        }
+        else if (this.mainAiApi === 'local') {
+          url = await this.store.get<string>('localLlmUrl') || "http://127.0.0.1:1234/v1/chat/completions";
+          apiKey = "local"; // ローカルはキー不要なことが多いがダミーとして
+          model = await this.store.get<string>('localLlmModel') || "local-model";
+        }
+
+        if (this.mainAiApi !== 'local' && !apiKey) throw new Error(`${this.mainAiApi} API Key is not set.`);
+        resultText = await this.requestOpenAICompatibleDirect(url, apiKey, model, textContext, systemPrompt, undefined, this.aiAbortController.signal);
       }
 
       // 3. エディタに挿入
@@ -695,7 +736,7 @@ class App {
     let limit = Number(await this.store.get<number>('aiContextLimit')) || 2000;
 
     // Geminiガード
-    if (this.mainAiApi === 'gemini' || this.mainAiApi === 'groq') {
+    if (this.mainAiApi !== 'local') {
       const MAX_GEMINI_LIMIT = 4000; // 安全策
       if (limit > MAX_GEMINI_LIMIT) {
         console.warn(`Cloud AIのコンテキスト長は安全のため ${MAX_GEMINI_LIMIT} 字以下に制限されます`);
@@ -756,17 +797,34 @@ ${nextContext}
         const apiKey = await this.store.get<string>('geminiApiKey');
         if (!apiKey) throw new Error("Gemini API Key is not set.");
         resultText = await this.requestGeminiDirect(apiKey!, userPrompt, systemPrompt, undefined, this.aiAbortController.signal);
-      } else if (this.mainAiApi === 'groq') {
-        const apiKey = await this.store.get<string>('groqApiKey');
-        if (!apiKey) throw new Error("Groq API Key is not set.");
-        resultText = await this.requestGroqDirect(apiKey, userPrompt, systemPrompt, undefined, this.aiAbortController.signal);
-      } else {
-        const url = await this.store.get<string>('localLlmUrl');
-        // 出力上限を取得（確実に数値にする）
-        const maxTokens = Number(await this.store.get<number>('aiMaxTokens')) || 1000;
+      }
+      else if (this.mainAiApi === 'cohere') {
+        const apiKey = await this.store.get<string>('cohereApiKey');
+        const model = await this.store.get<string>('cohereModel') || "command-r-plus-08-2024";
+        if (!apiKey) throw new Error("Cohere API Key is not set.");
+        resultText = await this.requestCohereV2Direct(apiKey, model, userPrompt, systemPrompt, undefined, this.aiAbortController.signal);
+      }
+      else {
+        let url = "", apiKey = "", model = "";
 
-        // ローカルリクエストの実行
-        resultText = await this.requestLocalAiDirect(url!, userPrompt, systemPrompt, maxTokens, this.aiAbortController.signal);
+        if (this.mainAiApi === 'groq') {
+          url = "https://api.groq.com/openai/v1/chat/completions";
+          apiKey = await this.store.get<string>('groqApiKey') || "";
+          model = await this.store.get<string>('groqModel') || "llama-3.3-70b-versatile";
+        }
+        else if (this.mainAiApi === 'mistral') {
+          url = "https://api.mistral.ai/v1/chat/completions";
+          apiKey = await this.store.get<string>('mistralApiKey') || "";
+          model = await this.store.get<string>('mistralModel') || "mistral-small-latest";
+        }
+        else if (this.mainAiApi === 'local') {
+          url = await this.store.get<string>('localLlmUrl') || "http://127.0.0.1:1234/v1/chat/completions";
+          apiKey = "local";
+          model = await this.store.get<string>('localLlmModel') || "local-model";
+        }
+
+        if (this.mainAiApi !== 'local' && !apiKey) throw new Error(`${this.mainAiApi} API Key is not set.`);
+        resultText = await this.requestOpenAICompatibleDirect(url, apiKey, model, userPrompt, systemPrompt, undefined, this.aiAbortController.signal);
       }
 
       // 3. エディタに挿入
@@ -952,13 +1010,34 @@ ${nextContext}
         const apiKey = await this.store.get<string>('geminiApiKey');
         if (!apiKey) throw new Error("Gemini API Key is not set.");
         resultText = await this.requestGeminiDirect(apiKey, selectedText, systemPrompt, tempMaxTokens, this.aiAbortController?.signal);
-      } else if (this.mainAiApi === 'groq') {
-        const apiKey = await this.store.get<string>('groqApiKey');
-        if (!apiKey) throw new Error("Groq API Key is not set.");
-        resultText = await this.requestGroqDirect(apiKey, selectedText, systemPrompt, undefined, this.aiAbortController.signal);
-      } else {
-        const url = await this.store.get<string>('localLlmUrl') || "http://127.0.0.1:1234/v1/chat/completions";
-        resultText = await this.requestLocalAiDirect(url, selectedText, systemPrompt, tempMaxTokens, this.aiAbortController?.signal);
+      }
+      else if (this.mainAiApi === 'cohere') {
+        const apiKey = await this.store.get<string>('cohereApiKey');
+        const model = await this.store.get<string>('cohereModel') || "command-r-plus-08-2024";
+        if (!apiKey) throw new Error("Cohere API Key is not set.");
+        resultText = await this.requestCohereV2Direct(apiKey, model, selectedText, systemPrompt, tempMaxTokens, this.aiAbortController.signal);
+      }
+      else {
+        let url = "", apiKey = "", model = "";
+
+        if (this.mainAiApi === 'groq') {
+          url = "https://api.groq.com/openai/v1/chat/completions";
+          apiKey = await this.store.get<string>('groqApiKey') || "";
+          model = await this.store.get<string>('groqModel') || "llama-3.3-70b-versatile";
+        }
+        else if (this.mainAiApi === 'mistral') {
+          url = "https://api.mistral.ai/v1/chat/completions";
+          apiKey = await this.store.get<string>('mistralApiKey') || "";
+          model = await this.store.get<string>('mistralModel') || "mistral-small-latest";
+        }
+        else if (this.mainAiApi === 'local') {
+          url = await this.store.get<string>('localLlmUrl') || "http://127.0.0.1:1234/v1/chat/completions";
+          apiKey = "local";
+          model = await this.store.get<string>('localLlmModel') || "local-model";
+        }
+
+        if (this.mainAiApi !== 'local' && !apiKey) throw new Error(`${this.mainAiApi} API Key is not set.`);
+        resultText = await this.requestOpenAICompatibleDirect(url, apiKey, model, selectedText, systemPrompt, tempMaxTokens, this.aiAbortController.signal);
       }
 
       // 挿入処理 (選択範囲の後ろに改行を入れて追記)
@@ -1066,23 +1145,26 @@ ${nextContext}
     }
   }
 
-  // --- Groq (Cloud) への直接リクエスト ---
-  private async requestGroqDirect(apiKey: string, prompt: string, systemPrompt: string, maxTokensOverride?: number, signal?: AbortSignal): Promise<string> {
-    // ★ ストアからGroq用のモデル名を取得
-    const modelName = await this.store.get<string>('groqModel') || 'llama-3.3-70b-versatile';
-
+  // --- 汎用: OpenAI互換API (Groq, Mistral, Local LLM) への直接リクエスト ---
+  private async requestOpenAICompatibleDirect(
+    url: string,
+    apiKey: string,
+    modelName: string,
+    prompt: string,
+    systemPrompt: string,
+    maxTokensOverride?: number,
+    signal?: AbortSignal
+  ): Promise<string> {
     let maxTokens = maxTokensOverride;
     if (!maxTokens) {
-      const stored = await this.store.get<number | string>('aiMaxTokens') || 2000;
-      maxTokens = typeof stored === 'string' ? parseInt(stored, 10) : stored;
+      maxTokens = Number(await this.store.get<number>('aiMaxTokens')) || 2000;
     }
-
     try {
-      const response = await fetch("https://api.groq.com/openai/v1/chat/completions", {
+      const response = await fetch(url, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${apiKey}` // Groqは認証ヘッダーが必須
+          'Authorization': `Bearer ${apiKey}`
         },
         body: JSON.stringify({
           model: modelName,
@@ -1090,7 +1172,7 @@ ${nextContext}
             { role: "system", content: systemPrompt },
             { role: "user", content: prompt }
           ],
-          stream: false, // メインエディタの挿入機能は一括取得
+          stream: false, // メインエディタは一括取得
           max_tokens: maxTokens,
           temperature: 0.7
         }),
@@ -1098,45 +1180,44 @@ ${nextContext}
       });
 
       if (!response.ok) {
-        throw new Error(`Groq API Error: ${response.status} ${response.statusText}`);
+        const errText = await response.text();
+        throw new Error(`API Error (${response.status}): ${errText}`);
       }
 
       const data = await response.json();
-      // OpenAI互換フォーマットの解析
-      const text = data.choices?.[0]?.message?.content;
-
-      if (text) {
-        return text;
-      } else {
-        throw new Error("No response text from Groq.");
-      }
-
+      return data.choices?.[0]?.message?.content || '';
     } catch (e) {
-      console.error(e);
+      console.error("OpenAI Compatible API Error:", e);
       throw e;
     }
   }
 
-  // --- Local AI (Ollama/LM Studio) への直接リクエスト ---
-  private async requestLocalAiDirect(url: string, prompt: string, systemPrompt: string, maxTokensOverride?: number, signal?: AbortSignal): Promise<string> {
-    const modelName = await this.store.get<string>('localLlmModel') || 'local-model';
+  // --- Cohere v2 APIへの直接リクエスト ---
+  private async requestCohereV2Direct(
+    apiKey: string,
+    modelName: string,
+    prompt: string,
+    systemPrompt: string,
+    maxTokensOverride?: number,
+    signal?: AbortSignal
+  ): Promise<string> {
     let maxTokens = maxTokensOverride;
     if (!maxTokens) {
-      const stored = await this.store.get<number | string>('aiMaxTokens') || 2000;
-      maxTokens = typeof stored === 'string' ? parseInt(stored, 10) : stored;
+      maxTokens = Number(await this.store.get<number>('aiMaxTokens')) || 2000;
     }
-
     try {
-      const response = await fetch(url, {
+      const response = await fetch("https://api.cohere.com/v2/chat", {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${apiKey}`
+        },
         body: JSON.stringify({
-          model: modelName, // Ollamaのために必須
+          model: modelName,
           messages: [
             { role: "system", content: systemPrompt },
             { role: "user", content: prompt }
           ],
-          stream: false, // 一括取得
           max_tokens: maxTokens,
           temperature: 0.7
         }),
@@ -1144,21 +1225,14 @@ ${nextContext}
       });
 
       if (!response.ok) {
-        throw new Error(`Local AI Error: ${response.status} ${response.statusText}`);
+        const errText = await response.text();
+        throw new Error(`Cohere API Error (${response.status}): ${errText}`);
       }
 
       const data = await response.json();
-      // OpenAI互換フォーマットの解析
-      const text = data.choices?.[0]?.message?.content;
-
-      if (text) {
-        return text;
-      } else {
-        throw new Error("No response text from Local AI.");
-      }
-
+      return data.message?.content?.[0]?.text || '';
     } catch (e) {
-      console.error(e);
+      console.error("Cohere API Error:", e);
       throw e;
     }
   }
@@ -1303,8 +1377,6 @@ ${nextContext}
       parent: this.editorContainer,
     });
 
-    // AIセレクターの初期化
-    this.initMainAiSelector();
     // イベントリスナーを設定
     this.setupEventListeners();
 
@@ -1329,6 +1401,9 @@ ${nextContext}
         }
       } catch (e) { console.error(e); }
     }
+
+    // AIセレクターの初期化
+    this.initMainAiSelector();
 
     // ファイル指定があるかどうかのフラグ
     const hasInitialFile = !!fileToOpen;

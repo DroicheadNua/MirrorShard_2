@@ -199,6 +199,7 @@
                         Groq API Key
                         <input type="password" id="groq-api-key" placeholder="gsk_..."
                             style="flex-grow: 1;margin: auto;" />
+                        <input type="checkbox" id="enable-groq"> Groq を有効にする
                     </label>
                     <label style="display: flex; gap: 5px;">
                         Groq Model
@@ -228,6 +229,8 @@
                             onchange="document.getElementById('cohere-model').value = this.value;">
                             <option value="command-a-03-2025">Command A</option>
                             <option value="command-r-plus-08-2024">Command R+</option>
+                            <option value="c4ai-aya-expanse-32b">Aya Expanse</option>
+                            <option value="c4ai-aya-vision-32b">Aya Vision</option>
                             <option value="">手動入力</option>
                         </select>
                     </label>

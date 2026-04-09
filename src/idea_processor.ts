@@ -3698,6 +3698,65 @@ function exportAsPdf() {
   });
 }
 
+// --- OpenAI互換APIの共通リクエスト関数 ---
+async function fetchOpenAICompatible(url: string, apiKey: string, model: string, prompt: string, systemPrompt: string, maxTokens: number): Promise<string> {
+  const response = await fetch(url, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${apiKey}`
+    },
+    body: JSON.stringify({
+      model: model,
+      messages: [
+        { role: 'system', content: systemPrompt },
+        { role: 'user', content: prompt }
+      ],
+      max_tokens: maxTokens,
+      temperature: 0.7
+    }),
+    signal: aiAbortController?.signal
+  });
+
+  if (!response.ok) {
+    const errText = await response.text();
+    throw new Error(`API Error (${response.status}): ${errText}`);
+  }
+  const data = await response.json();
+  return data.choices?.[0]?.message?.content || '';
+}
+
+// --- Cohere (v2 API) への直接リクエスト関数 ---
+async function fetchCohereV2(apiKey: string, model: string, prompt: string, systemPrompt: string, maxTokens: number): Promise<string> {
+  const response = await fetch("https://api.cohere.com/v2/chat", {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${apiKey}`
+    },
+    body: JSON.stringify({
+      model: model,
+      // v2 APIはOpenAIと同じ messages 配列が使えます
+      messages: [
+        { role: 'system', content: systemPrompt },
+        { role: 'user', content: prompt }
+      ],
+      max_tokens: maxTokens,
+      temperature: 0.7
+    }),
+    signal: aiAbortController?.signal
+  });
+
+  if (!response.ok) {
+    const errText = await response.text();
+    throw new Error(`Cohere API Error (${response.status}): ${errText}`);
+  }
+
+  const data = await response.json();
+  // ★ Cohere v2 特有のレスポンス解読位置
+  return data.message?.content?.[0]?.text || '';
+}
+
 // =================================================================
 // AI アシスト機能 (AI Free Association)
 // =================================================================
@@ -3719,6 +3778,9 @@ async function triggerFreeAssociation() {
 
   // 設定取得 (名前を faMaxTokens に変更)
   const charLimit = await store.get<number>('faMaxTokens') || 30;
+  // API自体の出力上限は3つのアイデア＋改行＋トークン比率を考慮して
+  // charLimit の 5倍程度を確保
+  const apiMaxTokens = charLimit * 5;
 
   // ストアからユーザー設定のシステムプロンプトを取得
   const userSystemPrompt = await store?.get<string>('aiSystemPrompt') || "";
@@ -3758,52 +3820,37 @@ async function triggerFreeAssociation() {
       const data = await response.json();
       resultText = data.candidates?.[0]?.content?.parts?.[0]?.text || '';
     }
-    else if (ipAiApi === 'groq') {
-      const apiKey = await store.get<string>('groqApiKey');
-      const model = await store.get<string>('groqModel') || 'llama-3.3-70b-versatile';
-      console.log(`Loaded:${model}`);
-      if (!apiKey) throw new Error("Groq API Key が設定されていません。");
+    else if (ipAiApi === 'cohere') {
+      const apiKey = await store.get<string>('cohereApiKey') || "";
+      const model = await store.get<string>('cohereModel') || "command-r-plus-08-2024";
+      if (!apiKey) throw new Error("Cohere API Key が設定されていません。");
 
-      const response = await fetch("https://api.groq.com/openai/v1/chat/completions", {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${apiKey}`
-        },
-        body: JSON.stringify({
-          model: model,
-          messages: [
-            { role: 'system', content: systemPrompt },
-            { role: 'user', content: prompt }
-          ],
-          temperature: 0.7
-        }),
-        signal: aiAbortController.signal
-      });
-      if (!response.ok) throw new Error(`Groq API Error: ${response.statusText}`);
-      const data = await response.json();
-      resultText = data.choices?.[0]?.message?.content || '';
+      resultText = await fetchCohereV2(apiKey, model, prompt, systemPrompt, apiMaxTokens);
     }
     else {
-      const url = await store.get<string>('localLlmUrl') || "http://127.0.0.1:1234/v1/chat/completions";
-      const model = await store.get<string>('localLlmModel') || "local-model";
+      // Groq, Mistral, Local AI (OpenAI互換グループ)
+      let url = "", apiKey = "", model = "";
 
-      const response = await fetch(url, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          model: model,
-          messages: [
-            { role: 'system', content: systemPrompt },
-            { role: 'user', content: prompt }
-          ],
-          temperature: 0.7
-        }),
-        signal: aiAbortController.signal // 中断シグナルを渡す
-      });
-      if (!response.ok) throw new Error(`Local LLM API Error: ${response.statusText}`);
-      const data = await response.json();
-      resultText = data.choices?.[0]?.message?.content || '';
+      if (ipAiApi === 'groq') {
+        url = "https://api.groq.com/openai/v1/chat/completions";
+        apiKey = await store.get<string>('groqApiKey') || "";
+        model = await store.get<string>('groqModel') || "llama-3.3-70b-versatile";
+      }
+      else if (ipAiApi === 'mistral') {
+        url = "https://api.mistral.ai/v1/chat/completions";
+        apiKey = await store.get<string>('mistralApiKey') || "";
+        model = await store.get<string>('mistralModel') || "mistral-small-latest";
+      }
+      else if (ipAiApi === 'local') {
+        url = await store.get<string>('localLlmUrl') || "http://127.0.0.1:1234/v1/chat/completions";
+        apiKey = "local"; // ローカルはキー不要なことが多いがダミーとして
+        model = await store.get<string>('localLlmModel') || "local-model";
+      }
+
+      if (ipAiApi !== 'local' && !apiKey) throw new Error(`${ipAiApi} API Key が設定されていません。`);
+
+      // 互換API共通のフェッチ処理
+      resultText = await fetchOpenAICompatible(url, apiKey, model, prompt, systemPrompt, apiMaxTokens);
     }
 
     if (!resultText) throw new Error("AIから有効な応答が得られませんでした。");
@@ -3963,7 +4010,7 @@ async function triggerTemplateCompletion() {
   const fullText = textarea.value;
 
   let limit = Number(await store.get<number>('aiContextLimit')) || 2000;
-  if ((ipAiApi === 'gemini' || ipAiApi === 'groq') && limit > 2000) {
+  if ((ipAiApi !== 'local') && limit > 2000) {
     console.warn(`Cloud AI context limited to 2000`);
     limit = 2000;
   }
@@ -4023,33 +4070,36 @@ ${contextText}`;
       const data = await response.json();
       resultText = data.candidates?.[0]?.content?.parts?.[0]?.text || '';
     }
-    else if (ipAiApi === 'groq') {
-      const apiKey = await store.get<string>('groqApiKey');
-      const model = await store.get<string>('groqModel') || 'llama-3.3-70b-versatile';
-      if (!apiKey) throw new Error("Groq API Key is not set.");
+    else if (ipAiApi === 'cohere') {
+      const apiKey = await store.get<string>('cohereApiKey') || "";
+      const model = await store.get<string>('cohereModel') || "command-r-plus-08-2024";
+      if (!apiKey) throw new Error("Cohere API Key が設定されていません。");
 
-      const response = await fetch("https://api.groq.com/openai/v1/chat/completions", {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${apiKey}` },
-        body: JSON.stringify({ model: model, messages: [{ role: 'system', content: systemPrompt }, { role: 'user', content: prompt }], max_tokens: maxTokens, temperature: 0.7 }),
-        signal: aiAbortController.signal
-      });
-      if (!response.ok) throw new Error(`Groq API Error: ${response.statusText}`);
-      const data = await response.json();
-      resultText = data.choices?.[0]?.message?.content || '';
+      resultText = await fetchCohereV2(apiKey, model, prompt, systemPrompt, maxTokens);
     }
     else {
-      const url = await store.get<string>('localLlmUrl') || "http://127.0.0.1:1234/v1/chat/completions";
-      const model = await store.get<string>('localLlmModel') || "local-model";
-      const response = await fetch(url, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ model: model, messages: [{ role: 'system', content: systemPrompt }, { role: 'user', content: prompt }], max_tokens: maxTokens, temperature: 0.7 }),
-        signal: aiAbortController.signal
-      });
-      if (!response.ok) throw new Error(`Local LLM API Error: ${response.statusText}`);
-      const data = await response.json();
-      resultText = data.choices?.[0]?.message?.content || '';
+      let url = "", apiKey = "", model = "";
+
+      if (ipAiApi === 'groq') {
+        url = "https://api.groq.com/openai/v1/chat/completions";
+        apiKey = await store.get<string>('groqApiKey') || "";
+        model = await store.get<string>('groqModel') || "llama-3.3-70b-versatile";
+      }
+      else if (ipAiApi === 'mistral') {
+        url = "https://api.mistral.ai/v1/chat/completions";
+        apiKey = await store.get<string>('mistralApiKey') || "";
+        model = await store.get<string>('mistralModel') || "mistral-small-latest";
+      }
+      else if (ipAiApi === 'local') {
+        url = await store.get<string>('localLlmUrl') || "http://127.0.0.1:1234/v1/chat/completions";
+        apiKey = "local";
+        model = await store.get<string>('localLlmModel') || "local-model";
+      }
+
+      if (ipAiApi !== 'local' && !apiKey) throw new Error(`${ipAiApi} API Key が設定されていません。`);
+
+      // 互換API共通のフェッチ処理
+      resultText = await fetchOpenAICompatible(url, apiKey, model, prompt, systemPrompt, maxTokens);
     }
 
     if (!resultText) throw new Error("AIから有効な応答が得られませんでした。");
@@ -4087,9 +4137,11 @@ async function initAiSelector() {
 
   // 常に表示
   optionsContainer.innerHTML += `<div class="custom-option" data-value="gemini">Gemini (Cloud)</div>`;
-  optionsContainer.innerHTML += `<div class="custom-option" data-value="groq">Groq</div>`;
 
   // チェックボックスに応じて追加
+  if (await store.get<boolean>('enableGroq')) {
+    optionsContainer.innerHTML += `<div class="custom-option" data-value="groq">Groq</div>`;
+  }
   if (await store.get<boolean>('enableCohere')) {
     optionsContainer.innerHTML += `<div class="custom-option" data-value="cohere">Cohere</div>`;
   }
@@ -4268,7 +4320,7 @@ async function triggerNodeAlchemy() {
 
   // --- 2. コンテキストのカットオフ（制限超過防止） ---
   let limit = Number(await store.get<number>('aiContextLimit')) || 2000;
-  if ((ipAiApi === 'gemini' || ipAiApi === 'groq') && limit > 4000) {
+  if ((ipAiApi !== 'local') && limit > 4000) {
     console.warn(`Cloud AI context limited to 4000`);
     limit = 4000;
   }
@@ -4281,6 +4333,7 @@ async function triggerNodeAlchemy() {
   // --- 3. プロンプト構築と通信 ---
   // AFAの文字数制限設定(faMaxTokens)を流用、または錬金術用に少し多めに解釈
   const charLimit = await store.get<number>('faMaxTokens') || 200;
+  const apiMaxTokens = charLimit * 5;
 
   const userSystemPrompt = await store?.get<string>('aiSystemPrompt') || "";
   const baseSystemPrompt = "あなたは創造的なブレインストーミングのアシスタントです。提示された複数の異なるアイデアや要素を踏まえて、ユーザーの指示に従って新しいアイデアを生み出してください。余計な前置きやマークダウンは不要です。";
@@ -4318,30 +4371,35 @@ ${combinedContext}`;
       const data = await response.json();
       resultText = data.candidates?.[0]?.content?.parts?.[0]?.text || '';
     }
-    else if (ipAiApi === 'groq') {
-      const apiKey = await store.get<string>('groqApiKey');
-      const model = await store.get<string>('groqModel') || 'llama-3.3-70b-versatile';
-      if (!apiKey) throw new Error("Groq API Key is not set.");
-      const response = await fetch("https://api.groq.com/openai/v1/chat/completions", {
-        method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${apiKey}` },
-        body: JSON.stringify({ model: model, messages: [{ role: 'system', content: systemPrompt }, { role: 'user', content: prompt }], max_tokens: charLimit, temperature: 0.7 }),
-        signal: aiAbortController.signal
-      });
-      if (!response.ok) throw new Error(`Groq API Error: ${response.statusText}`);
-      const data = await response.json();
-      resultText = data.choices?.[0]?.message?.content || '';
+    else if (ipAiApi === 'cohere') {
+      const apiKey = await store.get<string>('cohereApiKey') || "";
+      const model = await store.get<string>('cohereModel') || "command-r-plus-08-2024";
+      if (!apiKey) throw new Error("Cohere API Key が設定されていません。");
+
+      resultText = await fetchCohereV2(apiKey, model, prompt, systemPrompt, apiMaxTokens);
     }
     else {
-      const url = await store.get<string>('localLlmUrl') || "http://127.0.0.1:1234/v1/chat/completions";
-      const model = await store.get<string>('localLlmModel') || "local-model";
-      const response = await fetch(url, {
-        method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ model: model, messages: [{ role: 'system', content: systemPrompt }, { role: 'user', content: prompt }], max_tokens: charLimit, temperature: 0.7 }),
-        signal: aiAbortController.signal
-      });
-      if (!response.ok) throw new Error(`Local LLM API Error: ${response.statusText}`);
-      const data = await response.json();
-      resultText = data.choices?.[0]?.message?.content || '';
+      let url = "", apiKey = "", model = "";
+
+      if (ipAiApi === 'groq') {
+        url = "https://api.groq.com/openai/v1/chat/completions";
+        apiKey = await store.get<string>('groqApiKey') || "";
+        model = await store.get<string>('groqModel') || "llama-3.3-70b-versatile";
+      }
+      else if (ipAiApi === 'mistral') {
+        url = "https://api.mistral.ai/v1/chat/completions";
+        apiKey = await store.get<string>('mistralApiKey') || "";
+        model = await store.get<string>('mistralModel') || "mistral-small-latest";
+      }
+      else if (ipAiApi === 'local') {
+        url = await store.get<string>('localLlmUrl') || "http://127.0.0.1:1234/v1/chat/completions";
+        apiKey = "local";
+        model = await store.get<string>('localLlmModel') || "local-model";
+      }
+
+      if (ipAiApi !== 'local' && !apiKey) throw new Error(`${ipAiApi} API Key が設定されていません。`);
+
+      resultText = await fetchOpenAICompatible(url, apiKey, model, prompt, systemPrompt, apiMaxTokens);
     }
 
     if (!resultText) throw new Error("AIから有効な応答が得られませんでした。");
@@ -4496,6 +4554,7 @@ async function triggerIpMissingLink() {
 
   // 4. プロンプトの構築
   const charLimit = await store.get<number>('faMaxTokens') || 200;
+  const apiMaxTokens = charLimit * 5;
 
   const userSystemPrompt = await store?.get<string>('aiSystemPrompt') || "";
   const baseSystemPrompt = "あなたは創造的なプロットメイカーです。提示された「起点」と「終点」のギャップを埋める、論理的かつドラマチックな「ミッシングリンク（繋ぎの展開）」を提案してください。余計な前置きやマークダウンは不要です。";
@@ -4585,30 +4644,35 @@ ${actionDesc}
       const data = await response.json();
       resultText = data.candidates?.[0]?.content?.parts?.[0]?.text || '';
     }
-    else if (ipAiApi === 'groq') {
-      const apiKey = await store.get<string>('groqApiKey');
-      const model = await store.get<string>('groqModel') || 'llama-3.3-70b-versatile';
-      if (!apiKey) throw new Error("Groq API Key is not set.");
-      const response = await fetch("https://api.groq.com/openai/v1/chat/completions", {
-        method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${apiKey}` },
-        body: JSON.stringify({ model: model, messages: [{ role: 'system', content: systemPrompt }, { role: 'user', content: prompt }], max_tokens: charLimit, temperature: 0.7 }),
-        signal: aiAbortController.signal
-      });
-      if (!response.ok) throw new Error(`Groq API Error: ${response.statusText}`);
-      const data = await response.json();
-      resultText = data.choices?.[0]?.message?.content || '';
+    else if (ipAiApi === 'cohere') {
+      const apiKey = await store.get<string>('cohereApiKey') || "";
+      const model = await store.get<string>('cohereModel') || "command-r-plus-08-2024";
+      if (!apiKey) throw new Error("Cohere API Key が設定されていません。");
+
+      resultText = await fetchCohereV2(apiKey, model, prompt, systemPrompt, apiMaxTokens);
     }
     else {
-      const url = await store.get<string>('localLlmUrl') || "http://127.0.0.1:1234/v1/chat/completions";
-      const model = await store.get<string>('localLlmModel') || "local-model";
-      const response = await fetch(url, {
-        method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ model: model, messages: [{ role: 'system', content: systemPrompt }, { role: 'user', content: prompt }], max_tokens: charLimit, temperature: 0.7 }),
-        signal: aiAbortController.signal
-      });
-      if (!response.ok) throw new Error(`Local LLM API Error: ${response.statusText}`);
-      const data = await response.json();
-      resultText = data.choices?.[0]?.message?.content || '';
+      let url = "", apiKey = "", model = "";
+
+      if (ipAiApi === 'groq') {
+        url = "https://api.groq.com/openai/v1/chat/completions";
+        apiKey = await store.get<string>('groqApiKey') || "";
+        model = await store.get<string>('groqModel') || "llama-3.3-70b-versatile";
+      }
+      else if (ipAiApi === 'mistral') {
+        url = "https://api.mistral.ai/v1/chat/completions";
+        apiKey = await store.get<string>('mistralApiKey') || "";
+        model = await store.get<string>('mistralModel') || "mistral-small-latest";
+      }
+      else if (ipAiApi === 'local') {
+        url = await store.get<string>('localLlmUrl') || "http://127.0.0.1:1234/v1/chat/completions";
+        apiKey = "local";
+        model = await store.get<string>('localLlmModel') || "local-model";
+      }
+
+      if (ipAiApi !== 'local' && !apiKey) throw new Error(`${ipAiApi} API Key が設定されていません。`);
+
+      resultText = await fetchOpenAICompatible(url, apiKey, model, prompt, systemPrompt, apiMaxTokens);
     }
 
     if (!resultText) throw new Error("AIから有効な応答が得られませんでした。");

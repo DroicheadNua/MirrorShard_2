@@ -2,11 +2,15 @@
 import { GoogleGenerativeAI, GenerativeModel, ChatSession } from "@google/generative-ai";
 
 export interface ChatSettings {
-    apiType: 'gemini' | 'groq' | 'local';
+    apiType: 'gemini' | 'groq' | 'cohere' | 'mistral' | 'local';
     geminiApiKey?: string;
     geminiModel?: string;
     groqApiKey?: string;
     groqModel?: string;
+    cohereApiKey?: string;
+    cohereModel?: string;
+    mistralApiKey?: string;
+    mistralModel?: string;
     localUrl?: string;
     localModel?: string;
     systemPrompt?: string;
@@ -58,14 +62,41 @@ export class AiChat {
         const lastMsg = history[history.length - 1];
         if (!lastMsg || lastMsg.role !== 'user') return;
 
-        if (this.currentSettings.apiType === 'gemini') {
+        const apiType = this.currentSettings.apiType;
+
+        if (apiType === 'gemini') {
             await this.sendToGemini(lastMsg.content);
-        } else if (this.currentSettings.apiType === 'groq') {
-            await this.sendToGroq(history);
+        } else if (apiType === 'cohere') {
+            await this.sendToCohereV2Stream(history);
         } else {
-            await this.sendToLocalLLM(history);
+            // Groq, Mistral, Local
+            let url = "";
+            let apiKey = "";
+            let model = "";
+
+            if (apiType === 'groq') {
+                url = "https://api.groq.com/openai/v1/chat/completions";
+                apiKey = this.currentSettings.groqApiKey || "";
+                model = this.currentSettings.groqModel || "llama-3.3-70b-versatile";
+            } else if (apiType === 'mistral') {
+                url = "https://api.mistral.ai/v1/chat/completions";
+                apiKey = this.currentSettings.mistralApiKey || "";
+                model = this.currentSettings.mistralModel || "mistral-small-latest";
+            } else if (apiType === 'local') {
+                url = this.currentSettings.localUrl || "http://127.0.0.1:1234/v1/chat/completions";
+                apiKey = "local";
+                model = this.currentSettings.localModel || "local-model";
+            }
+
+            if (apiType !== 'local' && !apiKey) {
+                this.onUpdate(`Error: ${apiType} API Key is not set.`, true);
+                return;
+            }
+
+            await this.sendToOpenAICompatibleStream(url, apiKey, model, history);
         }
     }
+
 
     private async sendToGemini(text: string) {
         if (!this.chatSession) {
@@ -86,36 +117,97 @@ export class AiChat {
         }
     }
 
-    // Groq用の送信処理 (OpenAI互換形式)
-    private async sendToGroq(history: { role: string, content: string }[]) {
-        const url = "https://api.groq.com/openai/v1/chat/completions";
-        const apiKey = this.currentSettings.groqApiKey;
-        const model = this.currentSettings.groqModel || "llama-3.3-70b-versatile";
+    // --- Cohere v2 専用ストリーミング処理 ---
+    private async sendToCohereV2Stream(history: { role: string, content: string }[]) {
+        const url = "https://api.cohere.com/v2/chat";
+        const apiKey = this.currentSettings.cohereApiKey;
+        const model = this.currentSettings.cohereModel || "command-r-plus-08-2024";
 
         if (!apiKey) {
-            this.onUpdate("Error: Groq API Key is not set.", true);
+            this.onUpdate("Error: Cohere API Key is not set.", true);
             return;
         }
 
-        // 認証ヘッダーを付与して共通のストリーミング処理へ
-        const headers = {
-            "Content-Type": "application/json",
-            "Authorization": `Bearer ${apiKey}`
-        };
+        const messages = [];
+        if (this.currentSettings.systemPrompt) {
+            messages.push({ role: "system", content: this.currentSettings.systemPrompt });
+        }
+        messages.push(...history);
 
-        await this.fetchOpenAICompatibleStream(url, model, history, headers);
+        try {
+            const response = await fetch(url, {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                    "Authorization": `Bearer ${apiKey}`
+                },
+                body: JSON.stringify({
+                    model: model,
+                    messages: messages,
+                    stream: true,
+                    temperature: 0.7
+                })
+            });
+
+            if (!response.ok) {
+                const errData = await response.json().catch(() => ({}));
+                throw new Error(errData.message || `Status ${response.status}`);
+            }
+            if (!response.body) throw new Error("No response body");
+
+            const reader = response.body.getReader();
+            const decoder = new TextDecoder("utf-8");
+            let fullText = "";
+            let buffer = "";
+
+            while (true) {
+                const { done, value } = await reader.read();
+                if (done) break;
+
+                buffer += decoder.decode(value, { stream: true });
+                const lines = buffer.split('\n');
+                buffer = lines.pop() || ""; // 不完全な行は次回へ持ち越し
+
+                for (const line of lines) {
+                    const trimmed = line.trim();
+                    if (!trimmed) continue;
+
+                    // SSE形式（data: ）のプレフィックスを外す
+                    let jsonStr = trimmed;
+                    if (trimmed.startsWith("data: ")) {
+                        jsonStr = trimmed.substring(6);
+                    }
+                    if (jsonStr === "[DONE]") continue;
+
+                    try {
+                        const json = JSON.parse(jsonStr);
+                        // ★ Cohere v2 特有のストリーミング形式をパース
+                        if (json.type === 'content-delta' && json.delta?.message?.content?.text) {
+                            fullText += json.delta.message.content.text;
+
+                            // 暴走ストップ（文字数換算として余裕を持たせる）
+                            const maxTokens = this.currentSettings.maxTokens || 2000;
+                            if (fullText.length > maxTokens * 4) {
+                                reader.cancel();
+                                break;
+                            }
+                            this.onUpdate(fullText, false);
+                        }
+                    } catch (e) {
+                        // チャンク分割の都合でJSONがパースできない時は無視
+                    }
+                }
+            }
+            this.onUpdate(fullText, true);
+
+        } catch (error) {
+            console.error("Cohere Stream Error:", error);
+            this.onUpdate(`Error: ${String(error)}`, true);
+        }
     }
 
-    private async sendToLocalLLM(history: { role: string, content: string }[]) {
-        const url = this.currentSettings.localUrl || "http://127.0.0.1:1234/v1/chat/completions";
-        const model = this.currentSettings.localModel || "local-model";
-        const headers = { "Content-Type": "application/json" };
-
-        await this.fetchOpenAICompatibleStream(url, model, history, headers);
-    }
-
-    // Local LLMとGroqで共通のSSEストリーミング処理
-    private async fetchOpenAICompatibleStream(url: string, model: string, history: any[], headers: any) {
+    // 汎用ストリーミング関数
+    private async sendToOpenAICompatibleStream(url: string, apiKey: string, model: string, history: any[]) {
         const messages = [];
         if (this.currentSettings.systemPrompt) {
             messages.push({ role: "system", content: this.currentSettings.systemPrompt });
@@ -123,23 +215,27 @@ export class AiChat {
         messages.push(...history);
 
         const maxTokens = this.currentSettings.maxTokens || 2000;
+        const headers: Record<string, string> = { "Content-Type": "application/json" };
+        if (apiKey !== "local") {
+            headers["Authorization"] = `Bearer ${apiKey}`;
+        }
 
         try {
             const response = await fetch(url, {
                 method: "POST",
                 headers: headers,
                 body: JSON.stringify({
+                    model: model,
                     messages: messages,
                     stream: true,
                     max_tokens: maxTokens,
-                    temperature: 0.7,
-                    model: model
+                    temperature: 0.7
                 })
             });
 
             if (!response.ok) {
-                const errData = await response.json().catch(() => ({}));
-                throw new Error(errData.error?.message || `Status ${response.status}`);
+                const errText = await response.text();
+                throw new Error(`API Error (${response.status}): ${errText}`);
             }
             if (!response.body) throw new Error("No response body");
 
@@ -165,13 +261,14 @@ export class AiChat {
                             const delta = json.choices?.[0]?.delta?.content;
                             if (delta) {
                                 fullText += delta;
+                                // 暴走停止ガード
                                 if (fullText.length > maxTokens * 4) {
                                     reader.cancel();
                                     break;
                                 }
                                 this.onUpdate(fullText, false);
                             }
-                        } catch (e) { }
+                        } catch (e) { /* 不完全なチャンクは無視 */ }
                     }
                 }
             }

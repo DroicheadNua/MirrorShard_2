@@ -41,7 +41,6 @@ const messageInput = document.getElementById('message-input') as HTMLTextAreaEle
 const sendBtn = document.getElementById('send-btn') as HTMLButtonElement;
 const apiTrigger = document.getElementById('api-selector-trigger');
 const apiOptions = document.getElementById('api-selector-options');
-const apiItems = document.querySelectorAll('.custom-option');
 const TRANSPARENT_ICON = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII=';
 
 // --- State ---
@@ -77,6 +76,59 @@ function onAiUpdate(text: string, isFinal: boolean) {
     if (isFinal) setUiLocked(false);
 }
 
+// --- AIセレクタの動的生成とイベント登録 ---
+async function renderAiSelector() {
+    if (!apiOptions || !store) return;
+
+    // 1. HTMLを一旦空にして再構築
+    apiOptions.innerHTML = '';
+
+    apiOptions.innerHTML += `<div class="custom-option" data-value="gemini">Gemini (Cloud)</div>`;
+
+    if (await store.get<boolean>('enableGroq')) {
+        apiOptions.innerHTML += `<div class="custom-option" data-value="groq">Groq</div>`;
+    }
+    if (await store.get<boolean>('enableCohere')) {
+        apiOptions.innerHTML += `<div class="custom-option" data-value="cohere">Cohere</div>`;
+    }
+    if (await store.get<boolean>('enableMistral')) {
+        apiOptions.innerHTML += `<div class="custom-option" data-value="mistral">Mistral</div>`;
+    }
+
+    apiOptions.innerHTML += `<div class="custom-option" data-value="local">Local AI</div>`;
+
+    // 2. 新しく生成された要素を取得し直してイベントを付ける
+    const newApiItems = apiOptions.querySelectorAll('.custom-option');
+
+    newApiItems.forEach(item => {
+        item.addEventListener('click', async () => {
+            const newType = item.getAttribute('data-value') as 'gemini' | 'groq' | 'cohere' | 'mistral' | 'local';
+            const newText = item.textContent;
+
+            if (newType && newText) {
+                // ロジックの実行
+                aiSettings.apiType = newType;
+                await aiChat.updateSettings(aiSettings);
+
+                if (store) {
+                    await store.set('selectedApiType', newType);
+                    await store.save();
+                }
+                showNotification(`Switched to ${newText}`);
+
+                // UIの更新
+                if (apiTrigger) apiTrigger.textContent = newText;
+                apiOptions.classList.remove('open');
+
+                // セッションのリセット（必要に応じて）
+                if (newType === 'gemini') {
+                    aiChat.startNewSession();
+                }
+            }
+        });
+    });
+}
+
 // --- 初期化 ---
 async function init() {
     try {
@@ -86,6 +138,10 @@ async function init() {
         const model = await store.get<string>('geminiModel');
         const groqKey = await store.get<string>('groqApiKey');
         const groqModel = await store.get<string>('groqModel');
+        const cohereKey = await store.get<string>('cohereApiKey');
+        const cohereModel = await store.get<string>('cohereModel');
+        const mistralKey = await store.get<string>('mistralApiKey');
+        const mistralModel = await store.get<string>('mistralModel');
         const localUrl = await store.get<string>('localLlmUrl');
         const sysPrompt = await store.get<string>('aiSystemPrompt');
         const maxTokens = await store.get<number>('aiMaxTokens') || 2000;
@@ -101,6 +157,10 @@ async function init() {
             geminiModel: model || undefined,
             groqApiKey: groqKey || undefined,
             groqModel: groqModel || undefined,
+            cohereApiKey: cohereKey || undefined,
+            cohereModel: cohereModel || undefined,
+            mistralApiKey: mistralKey || undefined,
+            mistralModel: mistralModel || undefined,
             localUrl: localUrl || undefined,
             systemPrompt: sysPrompt || undefined,
             maxTokens: maxTokens
@@ -111,11 +171,21 @@ async function init() {
                 apiTrigger.textContent = 'Gemini';
             } else if (savedApiType === 'groq') {
                 apiTrigger.textContent = 'Groq';
+            } else if (savedApiType === 'cohere') {
+                apiTrigger.textContent = 'Cohere';
+            } else if (savedApiType === 'mistral') {
+                apiTrigger.textContent = 'Mistral';
             } else {
                 apiTrigger.textContent = 'Local LLM';
             }
         }
         await aiChat.updateSettings(aiSettings);
+        await renderAiSelector();
+        // 表示テキストの初期化
+        if (apiTrigger && apiOptions) {
+            const activeOption = apiOptions.querySelector(`.custom-option[data-value="${savedApiType}"]`);
+            apiTrigger.textContent = activeOption ? activeOption.textContent : 'Gemini (Cloud)';
+        }
         await loadProfileSettings();
         await applyAppearanceSettings();
 
@@ -269,11 +339,15 @@ function setupSettingsListener() {
         aiSettings.geminiModel = p.geminiModel ?? aiSettings.geminiModel;
         aiSettings.groqApiKey = p.groqApiKey ?? aiSettings.groqApiKey;
         aiSettings.groqModel = p.groqModel ?? aiSettings.groqModel;
+        aiSettings.cohereApiKey = p.cohereApiKey ?? aiSettings.cohereApiKey;
+        aiSettings.cohereModel = p.cohereModel ?? aiSettings.cohereModel;
+        aiSettings.mistralApiKey = p.mistralApiKey ?? aiSettings.mistralApiKey;
+        aiSettings.mistralModel = p.mistralModel ?? aiSettings.mistralModel;
         aiSettings.localUrl = p.localLlmUrl ?? aiSettings.localUrl;
         aiSettings.localModel = p.localLlmModel ?? aiSettings.localModel;
         aiSettings.systemPrompt = p.aiSystemPrompt ?? aiSettings.systemPrompt;
         aiSettings.maxTokens = p.aiMaxTokens ?? aiSettings.maxTokens;
-        await aiChat.updateSettings(aiSettings);
+
         // 外観設定のリアルタイム反映
         const root = document.documentElement.style;
         if (p.customWindowBg !== undefined) {
@@ -320,14 +394,24 @@ function setupSettingsListener() {
         if (p.enableGlow !== undefined || p.glowColor !== undefined || p.glowRadius !== undefined) {
             await applyGlowEffect();
         }
+        // もし設定画面でプロバイダの有効/無効が切り替えられたら、メニューを再構築する
+        if (p.enableCohere !== undefined || p.enableMistral !== undefined) {
+            await renderAiSelector();
+        }
+
+        // もし設定画面から直接 apiType が変更された場合の処理 (同期)
         if (p.selectedApiType) {
             aiSettings.apiType = p.selectedApiType;
             if (apiTrigger) {
-                if (aiSettings.apiType === 'gemini') apiTrigger.textContent = 'Gemini';
-                else if (aiSettings.apiType === 'groq') apiTrigger.textContent = 'Groq';
-                else apiTrigger.textContent = 'Local LLM';
+                const textMap: Record<string, string> = {
+                    'gemini': 'Gemini (Cloud)', 'groq': 'Groq', 'cohere': 'Cohere',
+                    'mistral': 'Mistral', 'local': 'Local AI'
+                };
+                apiTrigger.textContent = textMap[p.selectedApiType] || 'Unknown API';
             }
         }
+
+        await aiChat.updateSettings(aiSettings);
         // ログを再描画して新しい名前/アイコンを反映
         redrawLog();
     });
@@ -356,31 +440,6 @@ function setupEventListeners() {
     // 画面クリックで閉じる
     document.addEventListener('click', () => {
         apiOptions?.classList.remove('open');
-    });
-
-    // 各項目のクリックイベントを設定
-    apiItems.forEach(item => {
-        item.addEventListener('click', async () => {
-            const newType = item.getAttribute('data-value') as 'gemini' | 'groq' | 'local';
-            const newText = item.textContent;
-
-            if (newType) {
-                // 1. ロジックの実行 (既存コードの流用)
-                aiSettings.apiType = newType;
-                await aiChat.updateSettings(aiSettings);
-                if (store) {
-                    await store.set('selectedApiType', newType);
-                    await store.save();
-                }
-                showNotification(`Switched to ${newText}`);
-
-                // 2. UIの更新
-                if (apiTrigger) apiTrigger.textContent = newText;
-
-                // 3. メニューを閉じる
-                apiOptions?.classList.remove('open');
-            }
-        });
     });
 
     chatForm.addEventListener('submit', async (e) => {

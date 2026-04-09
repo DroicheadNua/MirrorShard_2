@@ -100,6 +100,7 @@ async function setupSettings() {
         const groqModelInput = document.querySelector('#groq-model') as HTMLInputElement;
         const cohereModelInput = document.querySelector('#cohere-model') as HTMLInputElement;
         const mistralModelInput = document.querySelector('#mistral-model') as HTMLInputElement;
+        const enableGroq = document.querySelector('#enable-groq') as HTMLInputElement;
         const enableCohere = document.querySelector('#enable-cohere') as HTMLInputElement;
         const enableMistral = document.querySelector('#enable-mistral') as HTMLInputElement;
         const localLlmUrlInput = document.querySelector('#local-llm-url') as HTMLInputElement;
@@ -533,6 +534,7 @@ async function setupSettings() {
         groqModelInput.value = await store.get<string>('groqModel') || 'llama-3.3-70b-versatile';
         cohereModelInput.value = await store.get<string>('cohereModel') || '';
         mistralModelInput.value = await store.get<string>('mistralModel') || '';
+        enableGroq.checked = await store.get<boolean>('enableGroq') ?? false;
         enableCohere.checked = await store.get<boolean>('enableCohere') ?? false;
         enableMistral.checked = await store.get<boolean>('enableMistral') ?? false;
         localLlmUrlInput.value = await store.get<string>('localLlmUrl') || 'http://127.0.0.1:1234/v1/chat/completions';
@@ -817,6 +819,7 @@ async function setupSettings() {
                 const newGroqModel = groqModelInput.value.trim();
                 const newCohereModel = cohereModelInput.value.trim();
                 const newMistralModel = mistralModelInput.value.trim();
+                const newEnableGroq = enableGroq.checked;
                 const newEnableCohere = enableCohere.checked;
                 const newEnableMistral = enableMistral.checked;
                 const newLocalUrl = localLlmUrlInput.value.trim();
@@ -866,6 +869,7 @@ async function setupSettings() {
                 await store.set('groqModel', newGroqModel);
                 await store.set('cohereModel', newCohereModel);
                 await store.set('mistralModel', newMistralModel);
+                await store.set('enableGroq', newEnableGroq);
                 await store.set('enableCohere', newEnableCohere);
                 await store.set('enableMistral', newEnableMistral);
                 await store.set('localLlmUrl', newLocalUrl);
@@ -923,6 +927,7 @@ async function setupSettings() {
                     groqModel: newGroqModel,
                     cohereModel: newCohereModel,
                     mistralModel: newMistralModel,
+                    enableGroq: newEnableGroq,
                     enableCohere: newEnableCohere,
                     enableMistral: newEnableMistral,
                     localLlmUrl: newLocalUrl,
