@@ -253,6 +253,7 @@ body.dark-mode #chat-form {
   background-color: var(--editor-bg-color, ivory);
   border: 1px solid var(--editor-text-color, #ccc);
   color: var(--editor-text-color, #ccc);
+  line-height: 1.3;
 }
 
 #message-input::placeholder {
