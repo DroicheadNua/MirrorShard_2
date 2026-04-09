@@ -4080,11 +4080,30 @@ ${contextText}`;
 async function initAiSelector() {
   const displayBtn = document.getElementById('ip-ai-display');
   const optionsContainer = document.getElementById('ip-ai-options');
+  if (!displayBtn || !optionsContainer || !store) return;
+
+  // --- 1. オプションの動的生成 ---
+  optionsContainer.innerHTML = ''; // 既存のHTML（もしあれば）をクリア
+
+  // 常に表示
+  optionsContainer.innerHTML += `<div class="custom-option" data-value="gemini">Gemini (Cloud)</div>`;
+  optionsContainer.innerHTML += `<div class="custom-option" data-value="groq">Groq</div>`;
+
+  // チェックボックスに応じて追加
+  if (await store.get<boolean>('enableCohere')) {
+    optionsContainer.innerHTML += `<div class="custom-option" data-value="cohere">Cohere</div>`;
+  }
+  if (await store.get<boolean>('enableMistral')) {
+    optionsContainer.innerHTML += `<div class="custom-option" data-value="mistral">Mistral</div>`;
+  }
+
+  // 常に表示
+  optionsContainer.innerHTML += `<div class="custom-option" data-value="local">Local AI</div>`;
+
+  // --- 2. イベントリスナーの再設定 ---
   const options = document.querySelectorAll('#ip-ai-options .custom-option');
 
-  if (!displayBtn || !optionsContainer) return;
-
-  // 開閉
+  // 開閉ロジック
   displayBtn.addEventListener('click', (e) => {
     if (isAiThinking) return;
     e.stopPropagation();
@@ -4095,13 +4114,13 @@ async function initAiSelector() {
     optionsContainer.classList.remove('open');
   });
 
-  // 選択
+  // 選択ロジック
   options.forEach(opt => {
     opt.addEventListener('click', async () => {
       const value = opt.getAttribute('data-value');
       if (value && store) {
-        ipAiApi = value; // グローバル変数にセット
-        await store.set('ipAiApi', value); // 独立したキーで保存
+        ipAiApi = value; // グローバル変数
+        await store.set('ipAiApi', value);
         await store.save();
         displayBtn.textContent = opt.textContent;
         optionsContainer.classList.remove('open');
@@ -4109,12 +4128,16 @@ async function initAiSelector() {
     });
   });
 
-  // 初期値ロード
-  if (store) {
-    const val = await store.get<string>('ipAiApi') || 'gemini';
-    ipAiApi = val; // グローバル変数にセット
-    const target = Array.from(options).find(o => o.getAttribute('data-value') === val);
-    if (target && target.textContent) displayBtn.textContent = target.textContent;
+  // --- 3. 初期値の復元 ---
+  const val = await store.get<string>('ipAiApi') || 'gemini';
+  ipAiApi = val;
+  const target = Array.from(options).find(o => o.getAttribute('data-value') === val);
+  if (target && target.textContent) {
+    displayBtn.textContent = target.textContent;
+  } else {
+    // 設定されたAPIが無効化された場合のフォールバック
+    displayBtn.textContent = 'Gemini (Cloud)';
+    ipAiApi = 'gemini';
   }
 }
 

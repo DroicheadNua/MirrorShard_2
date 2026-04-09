@@ -170,7 +170,7 @@
             <!-- タブ2: AI設定 -->
             <div id="tab-ai" class="tab-content">
                 <div class="ai-setting-group">
-                    <h4>Cloud AI (Gemini / Groq)</h4>
+                    <h4>Cloud AI</h4>
 
                     <!-- Gemini設定 -->
                     <label style="display: flex; gap: 5px;">
@@ -210,6 +210,49 @@
                             <option value="">手動入力</option>
                         </select>
                     </label>
+
+                    <hr style="margin: 10px 0; border: 0; border-top: 1px solid var(--ui-text-color); opacity: 0.3;">
+
+                    <!-- Cohere設定 -->
+                    <label style="display: flex; gap: 5px;">
+                        Cohere API Key
+                        <input type="password" id="cohere-api-key" placeholder="..."
+                            style="flex-grow: 1;margin: auto;" />
+                        <input type="checkbox" id="enable-cohere"> Cohere を有効にする
+                    </label>
+                    <label style="display: flex; gap: 5px;">
+                        Cohere Model
+                        <input type="text" id="cohere-model" placeholder="<モデル名を入力>"
+                            style="flex-grow: 1;margin: auto;" />
+                        <select id="cohere-model-preset" style="flex-grow: 0;margin: auto;"
+                            onchange="document.getElementById('cohere-model').value = this.value;">
+                            <option value="command-a-03-2025">Command A</option>
+                            <option value="command-r-plus-08-2024">Command R+</option>
+                            <option value="">手動入力</option>
+                        </select>
+                    </label>
+
+                    <hr style="margin: 10px 0; border: 0; border-top: 1px solid var(--ui-text-color); opacity: 0.3;">
+
+                    <!-- Mistral設定 -->
+                    <label style="display: flex; gap: 5px;">
+                        Mistral API Key
+                        <input type="password" id="mistral-api-key" placeholder="..."
+                            style="flex-grow: 1;margin: auto;" />
+                        <input type="checkbox" id="enable-mistral"> mistral を有効にする
+                    </label>
+                    <label style="display: flex; gap: 5px;">
+                        Mistral Model
+                        <input type="text" id="mistral-model" placeholder="<モデル名を入力>"
+                            style="flex-grow: 1;margin: auto;" />
+                        <select id="mistral-model-preset" style="flex-grow: 0;margin: auto;"
+                            onchange="document.getElementById('mistral-model').value = this.value;">
+                            <option value="mistral-small-latest">Mistral Small 4</option>
+                            <option value="mistral-large-latest">Mistral Large 3</option>
+                            <option value="">手動入力</option>
+                        </select>
+                    </label>
+
                 </div>
 
                 <div class="ai-setting-group">

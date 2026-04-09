@@ -94,8 +94,14 @@ async function setupSettings() {
         // --- 3.1. UI要素の取得 (AI新規) ---
         const geminiApiKeyInput = document.querySelector('#gemini-api-key') as HTMLInputElement;
         const groqApiKeyInput = document.querySelector('#groq-api-key') as HTMLInputElement;
+        const cohereApiKeyInput = document.querySelector('#cohere-api-key') as HTMLInputElement;
+        const mistralApiKeyInput = document.querySelector('#mistral-api-key') as HTMLInputElement;
         const geminiModelInput = document.querySelector('#gemini-model') as HTMLInputElement;
         const groqModelInput = document.querySelector('#groq-model') as HTMLInputElement;
+        const cohereModelInput = document.querySelector('#cohere-model') as HTMLInputElement;
+        const mistralModelInput = document.querySelector('#mistral-model') as HTMLInputElement;
+        const enableCohere = document.querySelector('#enable-cohere') as HTMLInputElement;
+        const enableMistral = document.querySelector('#enable-mistral') as HTMLInputElement;
         const localLlmUrlInput = document.querySelector('#local-llm-url') as HTMLInputElement;
         const aiSystemPromptInput = document.querySelector('#ai-system-prompt') as HTMLTextAreaElement;
         const aiMaxTokensInput = document.querySelector('#ai-max-tokens') as HTMLInputElement;
@@ -107,6 +113,8 @@ async function setupSettings() {
         const aiIconDisplay = document.querySelector('#ai-icon-path') as HTMLElement;
         const modelPresetSelect = document.querySelector('#gemini-model-preset') as HTMLSelectElement;
         const groqModelPresetSelect = document.querySelector('#groq-model-preset') as HTMLSelectElement;
+        const cohereModelPresetSelect = document.querySelector('#cohere-model-preset') as HTMLSelectElement;
+        const mistralModelPresetSelect = document.querySelector('#mistral-model-preset') as HTMLSelectElement;
         const localLlmModelInput = document.querySelector('#local-llm-model') as HTMLInputElement;
         const urlPresetSelect = document.querySelector('#local-llm-url-preset') as HTMLSelectElement;
         const aiThinkingOverlayCheck = document.querySelector('#check-ai-thinking-overlay') as HTMLInputElement;
@@ -519,8 +527,14 @@ async function setupSettings() {
         // AI Settings
         geminiApiKeyInput.value = await store.get<string>('geminiApiKey') || '';
         groqApiKeyInput.value = await store.get<string>('groqApiKey') || '';
+        cohereApiKeyInput.value = await store.get<string>('cohereApiKey') || '';
+        mistralApiKeyInput.value = await store.get<string>('mistralApiKey') || '';
         geminiModelInput.value = await store.get<string>('geminiModel') || 'gemini-3.1-flash-lite-preview';
         groqModelInput.value = await store.get<string>('groqModel') || 'llama-3.3-70b-versatile';
+        cohereModelInput.value = await store.get<string>('cohereModel') || '';
+        mistralModelInput.value = await store.get<string>('mistralModel') || '';
+        enableCohere.checked = await store.get<boolean>('enableCohere') ?? false;
+        enableMistral.checked = await store.get<boolean>('enableMistral') ?? false;
         localLlmUrlInput.value = await store.get<string>('localLlmUrl') || 'http://127.0.0.1:1234/v1/chat/completions';
         aiSystemPromptInput.value = await store.get<string>('aiSystemPrompt') || '';
         aiMaxTokensInput.value = (await store.get<number>('aiMaxTokens') || 2000).toString();
@@ -549,6 +563,22 @@ async function setupSettings() {
                 groqModelPresetSelect.value = groqModelInput.value;
             } else {
                 groqModelPresetSelect.value = "";
+            }
+        }
+        if (cohereModelPresetSelect) {
+            const options = Array.from(cohereModelPresetSelect.options).map(o => o.value);
+            if (options.includes(cohereModelInput.value)) {
+                cohereModelPresetSelect.value = cohereModelInput.value;
+            } else {
+                cohereModelPresetSelect.value = "";
+            }
+        }
+        if (mistralModelPresetSelect) {
+            const options = Array.from(mistralModelPresetSelect.options).map(o => o.value);
+            if (options.includes(mistralModelInput.value)) {
+                mistralModelPresetSelect.value = mistralModelInput.value;
+            } else {
+                mistralModelPresetSelect.value = "";
             }
         }
         if (urlPresetSelect) {
@@ -781,8 +811,14 @@ async function setupSettings() {
                 // AI Params
                 const newGeminiApiKey = geminiApiKeyInput.value.trim();
                 const newGroqApiKey = groqApiKeyInput.value.trim();
+                const newCohereApiKey = cohereApiKeyInput.value.trim();
+                const newMistralApiKey = mistralApiKeyInput.value.trim();
                 const newGeminiModel = geminiModelInput.value.trim();
                 const newGroqModel = groqModelInput.value.trim();
+                const newCohereModel = cohereModelInput.value.trim();
+                const newMistralModel = mistralModelInput.value.trim();
+                const newEnableCohere = enableCohere.checked;
+                const newEnableMistral = enableMistral.checked;
                 const newLocalUrl = localLlmUrlInput.value.trim();
                 const newSystemPrompt = aiSystemPromptInput.value;
                 const newAiMaxTokens = parseInt(aiMaxTokensInput.value, 10) || 2000;
@@ -825,7 +861,13 @@ async function setupSettings() {
                 if (newGeminiApiKey) await store.set('geminiApiKey', newGeminiApiKey);
                 await store.set('geminiModel', newGeminiModel);
                 if (newGroqApiKey) await store.set('groqApiKey', newGroqApiKey);
+                if (newCohereApiKey) await store.set('cohereApiKey', newCohereApiKey);
+                if (newMistralApiKey) await store.set('mistralApiKey', newMistralApiKey);
                 await store.set('groqModel', newGroqModel);
+                await store.set('cohereModel', newCohereModel);
+                await store.set('mistralModel', newMistralModel);
+                await store.set('enableCohere', newEnableCohere);
+                await store.set('enableMistral', newEnableMistral);
                 await store.set('localLlmUrl', newLocalUrl);
                 await store.set('aiSystemPrompt', newSystemPrompt);
                 const currentApiType = await store.get<string>('selectedApiType');
@@ -875,8 +917,14 @@ async function setupSettings() {
                     terminalDefaultCwd: newTerminalDefaultCwd,
                     geminiApiKey: newGeminiApiKey,
                     groqApiKey: newGroqApiKey,
+                    cohereApiKey: newCohereApiKey,
+                    mistralApiKey: newMistralApiKey,
                     geminiModel: newGeminiModel,
                     groqModel: newGroqModel,
+                    cohereModel: newCohereModel,
+                    mistralModel: newMistralModel,
+                    enableCohere: newEnableCohere,
+                    enableMistral: newEnableMistral,
                     localLlmUrl: newLocalUrl,
                     aiSystemPrompt: newSystemPrompt,
                     selectedApiType: currentApiType || 'gemini',
