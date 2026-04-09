@@ -2,12 +2,11 @@
 import { AiChat, ChatSettings } from "./ai_chat";
 import { Store } from "@tauri-apps/plugin-store";
 import { save, open, ask } from "@tauri-apps/plugin-dialog";
-import { writeTextFile } from "@tauri-apps/plugin-fs";
 import { writeText } from "@tauri-apps/plugin-clipboard-manager";
 import { getCurrentWindow } from "@tauri-apps/api/window";
 import { marked } from "marked";
 import { emit, listen } from "@tauri-apps/api/event";
-import { convertFileSrc } from "@tauri-apps/api/core";
+import { convertFileSrc, invoke } from "@tauri-apps/api/core";
 import { type } from "@tauri-apps/plugin-os";
 import { Menu, MenuItem, PredefinedMenuItem } from "@tauri-apps/api/menu";
 
@@ -53,6 +52,7 @@ let userName = 'User';
 let aiName = 'AI';
 let userIconSrc = '';
 let aiIconSrc = '';
+let isChatDirty = false;
 const osType = await type();
 
 const aiChat = new AiChat(onAiUpdate);
@@ -73,7 +73,17 @@ function onAiUpdate(text: string, isFinal: boolean) {
     }
 
     autoScroll();
-    if (isFinal) setUiLocked(false);
+    if (isFinal) {
+        setUiLocked(false);
+        // AIの返答が終わったタイミングでオートセーブ判定
+        if (currentFilePath) {
+            // 既に保存先のパスがある場合は、静かに上書き保存
+            saveLogOverwrite();
+        } else {
+            // 新規チャットの場合は、未保存マークをつける
+            isChatDirty = true;
+        }
+    }
 }
 
 // --- AIセレクタの動的生成とイベント登録 ---
@@ -204,6 +214,35 @@ async function init() {
     } catch (e) {
         console.error("Init Error:", e);
     }
+
+    const appWindow = getCurrentWindow();
+
+    appWindow.onCloseRequested(async (event) => {
+        if (isChatDirty) {
+            // 一旦ウィンドウが閉じるのをストップ
+            event.preventDefault();
+
+            const yes = await ask('チャットログが保存されていません。保存して閉じますか？\n（「いいえ」を選ぶと破棄されます）', {
+                title: '保存の確認',
+                kind: 'warning',
+                okLabel: '保存する',
+                cancelLabel: '保存しない（破棄）'
+            });
+
+            if (yes) {
+                // 保存処理を呼ぶ（ここでダイアログが出る）
+                await saveLogOverwrite();
+                // 保存が成功してパスが確定していれば閉じる
+                if (!isChatDirty) {
+                    appWindow.destroy();
+                }
+            } else {
+                // 保存せずに破棄して閉じる
+                isChatDirty = false;
+                appWindow.destroy();
+            }
+        }
+    });
 }
 
 // プロフィール読み込み関数
@@ -446,6 +485,7 @@ function setupEventListeners() {
         e.preventDefault();
         const text = messageInput.value.trim();
         if (!text || isProcessing) return;
+        isChatDirty = true;
         await processUserMessage(text);
     });
 
@@ -805,6 +845,7 @@ async function loadLogFile(path: string) {
             // 簡易判定: ユーザー操作中（フォーカスがある）なら通知
             showNotification('Loaded!');
         }
+        isChatDirty = false;
 
         if (store) {
             await store.set('lastAiChatSessionPath', currentFilePath);
@@ -825,9 +866,14 @@ async function saveLogOverwrite() {
     try {
         // 独自形式に変換して保存
         const pastelData = convertToPastelLog(chatHistory);
-        await writeTextFile(currentFilePath, JSON.stringify(pastelData, null, 2));
-
-        showNotification('Saved!');
+        const logData = JSON.stringify(pastelData, null, 2);
+        // await writeTextFile(currentFilePath, JSON.stringify(pastelData, null, 2));
+        await invoke('force_save_chat_log', {
+            path: currentFilePath,
+            content: logData
+        });
+        console.log('Saved!');
+        isChatDirty = false;
         if (store) {
             await store.set('lastAiChatSessionPath', currentFilePath);
             await store.save();
@@ -842,6 +888,7 @@ async function saveLogAs() {
     if (!path) return;
     currentFilePath = path;
     await saveLogOverwrite();
+    showNotification('Saved!');
 }
 
 async function clearLog() {

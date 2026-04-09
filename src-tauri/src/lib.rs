@@ -314,6 +314,14 @@ async fn force_save_file(path: String, content: Vec<u8>) -> Result<(), String> {
 }
 
 #[tauri::command]
+async fn force_save_chat_log(path: String, content: String) -> Result<(), String> {
+    use std::fs;
+    // Rust側から直接書き込む（WebViewの制限を受けない）
+    fs::write(&path, content).map_err(|e| e.to_string())?;
+    Ok(())
+}
+
+#[tauri::command]
 fn set_simple_fullscreen(window: tauri::WebviewWindow, enable: bool) {
     // macOSではSimple Fullscreen、他では通常のFullscreenとして振る舞う
     let _ = window.set_simple_fullscreen(enable);
@@ -1393,6 +1401,7 @@ pub fn run() {
             toggle_devtools,
             set_simple_fullscreen,
             force_save_file,
+            force_save_chat_log,
             open_opencode,
             open_silly_tavern,
         ])

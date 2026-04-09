@@ -13,6 +13,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed (変更点)    
 - Linuxで一部機能（OpenCode連携、SillyTavern連携、スポットライトモード、タイプ音、Markdown/HTMLプレビュー）を使用不可に（Linuxでは正常に動作しないため）  
+- AIチャットをオートセーブに  
 
 ### Fixed (修正点)   
 - メインエディタとアイデアプロセッサのAI機能にユーザー指定のシステムプロンプトが反映されていなかったので修正  
