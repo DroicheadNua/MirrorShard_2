@@ -317,7 +317,7 @@ class App {
   }
 
   // 必要な時だけDOMを生成して入力を受け取る関数
-  private async showDynamicInput(title: string, defaultValue: number): Promise<number | null> {
+  private async showDynamicInput(title: string, defaultValue: string | number): Promise<string | number | null> {
     return new Promise((resolve) => {
       // 1. オーバーレイの作成
       const overlay = document.createElement('div');
@@ -328,44 +328,64 @@ class App {
       `;
 
       // 2. コンテンツ容器の作成
+      // 型判定：デフォルト値が数値なら number 型、それ以外なら text 型の入力欄にする
+      const isNumber = typeof defaultValue === 'number';
+      const inputType = isNumber ? 'number' : 'text';
+
       const container = document.createElement('div');
+      const bgColor = document.documentElement.style.getPropertyValue('--window-bg-color') || '#1a1b26';
+      const textColor = document.documentElement.style.getPropertyValue('--ui-text-color') || '#eee';
+
       container.style.cssText = `
-        background: var(--window-bg-color, #1a1b26);
-        border: 1px solid var(--ui-text-color, #7aa2f7);
+        background: ${bgColor};
+        border: 1px solid ${textColor};
         padding: 20px; border-radius: 8px; width: 260px;
-        box-shadow: 0 0 20px rgba(0, 0, 0, 0.5); color: var(--ui-text-color, #eee);
+        box-shadow: 0 0 20px rgba(0, 0, 0, 0.5); color: ${textColor};
         font-family: sans-serif;
       `;
 
       container.innerHTML = `
         <div style="margin-bottom: 15px; font-weight: bold; border-bottom: 1px solid #555; padding-bottom: 5px;">${title}</div>
-        <input type="number" id="dynamic-num-input" value="${defaultValue}" 
+        <input type="${inputType}" id="dynamic-val-input" value="${defaultValue}" 
                style="width: 100%; background: rgba(0,0,0,0.3); color: inherit; border: 1px solid #555; padding: 5px; margin-bottom: 20px; box-sizing: border-box;">
         <div style="display: flex; justify-content: flex-end; gap: 10px;">
             <button id="dyn-btn-cancel" style="padding: 5px 12px; cursor: pointer; background: transparent; border: 1px solid #888; color: #888;">Cancel</button>
-            <button id="dyn-btn-ok" style="padding: 5px 12px; cursor: pointer; background: transparent; border: 1px solid var(--ui-text-color); color: var(--ui-text-color);">Run</button>
+            <button id="dyn-btn-ok" style="padding: 5px 12px; cursor: pointer; background: transparent; border: 1px solid ${textColor}; color: ${textColor};">Run</button>
         </div>
       `;
 
       overlay.appendChild(container);
       document.body.appendChild(overlay);
 
-      const input = overlay.querySelector('#dynamic-num-input') as HTMLInputElement;
+      const input = overlay.querySelector('#dynamic-val-input') as HTMLInputElement;
       input.focus();
       input.select();
 
       // クリーンアップして結果を返す
-      const done = (val: number | null) => {
+      const done = () => {
+        const rawValue = input.value;
         document.body.removeChild(overlay);
-        resolve(val);
+
+        // ここで型を復元して返す
+        if (isNumber) {
+          resolve(parseInt(rawValue, 10));
+        } else {
+          resolve(rawValue); // 文字列として返す
+        }
       };
 
-      overlay.querySelector('#dyn-btn-ok')?.addEventListener('click', () => done(parseInt(input.value, 10)));
-      overlay.querySelector('#dyn-btn-cancel')?.addEventListener('click', () => done(null));
+      overlay.querySelector('#dyn-btn-ok')?.addEventListener('click', done);
+      overlay.querySelector('#dyn-btn-cancel')?.addEventListener('click', () => {
+        document.body.removeChild(overlay);
+        resolve(null);
+      });
 
       input.addEventListener('keydown', (e) => {
-        if (e.key === 'Enter') done(parseInt(input.value, 10));
-        if (e.key === 'Escape') done(null);
+        if (e.key === 'Enter') done();
+        if (e.key === 'Escape') {
+          document.body.removeChild(overlay);
+          resolve(null);
+        }
       });
     });
   }
@@ -969,22 +989,32 @@ ${nextContext}
 
     switch (mode) {
       case 'translate':
-        baseSystemPrompt = "あなたはプロの翻訳家です。以下のテキストが日本語なら英語に、英語なら自然な日本語に翻訳してください。翻訳結果のみを出力し、解説は不要です。";
-        label = "[Translate]";
-        break;
-      case 'summary':
-        // 動的にUIを生成して文字数を聞く
-        const lastLen = await this.store.get<number>('aiSummaryLength') || 200;
-        const length = await this.showDynamicInput("Summary Length (Chars)", lastLen);
+        const lastLang = await this.store.get<string>('aiTranslateLanguage') || "英語";
+        // 文字列を渡すので、戻り値も string になる
+        const lang = await this.showDynamicInput("Translate to", lastLang) as string | null;
 
-        if (length === null) return; // キャンセル
+        if (lang === null) return;
 
-        // 次回用に保存
-        await this.store.set('aiSummaryLength', length);
+        await this.store.set('aiTranslateLanguage', lang);
         await this.store.save();
 
-        baseSystemPrompt = `あなたは優秀な編集者です。以下のテキストを**日本語で、およそ${length}文字以内**で要約してください。重要なポイントを逃さず、かつ簡潔にまとめてください。要約結果のみを出力してください。`;
-        label = `[Summarize] (${length} chars)`;
+        baseSystemPrompt = `あなたはプロの翻訳家です。以下のテキストを自然な「${lang}」に翻訳してください。翻訳結果のみを出力し、解説や挨拶は不要です。`;
+        label = `[Translate: ${lang}]`;
+        break;
+
+      case 'summary':
+        const lastLength = await this.store.get<number>('aiSummaryLength') || 200;
+        // 数値を渡すので、戻り値も number になる
+        const targetLength = await this.showDynamicInput("Target Length (chars)", lastLength) as number | null;
+
+        if (targetLength === null) return;
+
+        // 次回用に保存
+        await this.store.set('aiSummaryLength', targetLength);
+        await this.store.save();
+
+        baseSystemPrompt = `あなたは優秀な編集者です。以下のテキストを**日本語で、およそ${targetLength}文字以内**で要約してください。重要なポイントを逃さず、かつ簡潔にまとめてください。要約結果のみを出力してください。`;
+        label = `[Summarize] (${targetLength} chars)`;
         break;
       case 'rewrite':
         baseSystemPrompt = "あなたは文章のプロです。以下のテキストを、より分かりやすく、読みやすい文章にリライト（推敲）してください。元の意味を保ったまま、表現を洗練させてください。リライト結果のみを出力してください。";
