@@ -1,1 +1,47 @@
-{}
+{
+  "selectionCount": {
+    "title": "Character Count",
+    "message": "Selected text: {{count}} characters"
+  },
+  "noSelection": "Please select text before executing.",
+  "menu": {
+    "recentFiles": "Open Recent File",
+    "open": "Open...",
+    "save": "Save",
+    "saveAs": "Save As...",
+    "undo": "Undo",
+    "redo": "Redo",
+    "countChars": "Count Characters in Selection",
+    "aiTranslate": "AI: Translate",
+    "aiSummarize": "AI: Summarize",
+    "aiRewrite": "AI: Rewrite",
+    "importGeminiLog": "Import Gemini Log"
+  },
+  "preview": {
+    "truncated": "... (truncated)",
+    "truncatedLong": "... Text too long, preview omitted.",
+    "confirmTitle": "Preview Confirmation",
+    "confirmTitleMd": "Markdown Preview Confirmation",
+    "longTextWarning": "The text is very long ({{charCount}} characters), so generating the preview may take time.\n\nWould you like to preview only the first {{limit}} characters?\n(Pressing Cancel will abort the operation.)",
+    "okLabel": "Preview Limited",
+    "cancelLabel": "Cancel"
+  },
+  "app": {
+    "unsavedFiles": "{{count}} unsaved file(s) remain. Exit anyway?",
+    "appExitTitle": "Exit Application",
+    "saveAs": "Save As",
+    "saveFailed": "Failed to save.\n{{error}}",
+    "geminiImportFailed": "Failed to import Gemini log.\n{{error}}",
+    "closeTab": "Close Tab",
+    "closeTabUnsaved": "'{{filename}}' is unsaved. Discard changes?",
+    "sillytavernFailed": "Failed to launch SillyTavern: {{error}}"
+  },
+  "errors": {
+    "loadError": "Read Error",
+    "loadFailed": "Could not read file.\nDetails: {{detail}}",
+    "fileNotFound": "File Not Found",
+    "fileNotFoundDetail": "The linked file does not exist.\nPath: {{path}}",
+    "encodingError": "Could not read file.\nThe file may use an unsupported encoding (only UTF-8 and Shift-JIS are supported).\n\nDetails: {{detail}}"
+  },
+  "languageDefault": "English"
+}

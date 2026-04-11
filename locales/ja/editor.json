@@ -1,1 +1,47 @@
-{}
+{
+  "selectionCount": {
+    "title": "文字数カウント",
+    "message": "選択範囲の文字数: {{count}} 文字"
+  },
+  "noSelection": "テキストを選択してから実行してください。",
+  "menu": {
+    "recentFiles": "最近使ったファイルを開く",
+    "open": "開く...",
+    "save": "保存",
+    "saveAs": "名前を付けて保存...",
+    "undo": "元に戻す",
+    "redo": "やり直す",
+    "countChars": "選択範囲の文字数を数える",
+    "aiTranslate": "AI: 翻訳 (Translate)",
+    "aiSummarize": "AI: 要約 (Summarize)",
+    "aiRewrite": "AI: リライト (Rewrite)",
+    "importGeminiLog": "Geminiログをインポート"
+  },
+  "preview": {
+    "truncated": "……以降は省略されました",
+    "truncatedLong": "……テキストが長すぎるため、プレビューは省略されました",
+    "confirmTitle": "プレビューの確認",
+    "confirmTitleMd": "Markdownプレビューの確認",
+    "longTextWarning": "テキストが非常に長いため（{{charCount}}文字）、プレビューの生成に時間がかかる可能性があります。\n\n先頭の {{limit}} 文字だけをプレビューしますか？\n（「キャンセル」を押すと処理を中止します）",
+    "okLabel": "制限して表示",
+    "cancelLabel": "キャンセル"
+  },
+  "app": {
+    "unsavedFiles": "未保存のファイルが {{count}} 件あります。本当に終了しますか？",
+    "appExitTitle": "アプリケーションを終了",
+    "saveAs": "名前を付けて保存",
+    "saveFailed": "保存に失敗しました。\n{{error}}",
+    "geminiImportFailed": "Geminiログのインポートに失敗しました。\n{{error}}",
+    "closeTab": "タブを閉じる",
+    "closeTabUnsaved": "'{{filename}}' は保存されていません。変更を破棄しますか？",
+    "sillytavernFailed": "SillyTavernの起動に失敗しました: {{error}}"
+  },
+  "errors": {
+    "loadError": "読み込みエラー",
+    "loadFailed": "ファイルを読み込めませんでした。\n詳細: {{detail}}",
+    "fileNotFound": "ファイルが見つかりません",
+    "fileNotFoundDetail": "リンク先のファイルが存在しません。\nパス: {{path}}",
+    "encodingError": "ファイルを読み込めませんでした。\n対応していないエンコード（UTF-8, Shift-JIS以外）の可能性があります。\n\n詳細: {{detail}}"
+  },
+  "languageDefault": "英語"
+}

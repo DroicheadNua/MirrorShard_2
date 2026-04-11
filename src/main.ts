@@ -1,5 +1,5 @@
 import './styles.css';
-import { initI18n, applyTranslationsToDOM } from './i18n';
+import { initI18n, applyTranslationsToDOM, t } from './i18n';
 import { invoke } from '@tauri-apps/api/core';
 import { Store } from '@tauri-apps/plugin-store';
 import { EditorState, Compartment, RangeSetBuilder, Transaction } from '@codemirror/state';
@@ -564,8 +564,8 @@ class App {
     const count = text.length;
 
     // Tauri標準のメッセージダイアログで表示（手軽で確実です）
-    await message(`選択範囲の文字数: ${count} 文字`, {
-      title: '文字数カウント',
+    await message(t('editor.selectionCount.message', { count }), {
+      title: t('editor.selectionCount.title'),
       kind: 'info'
     });
   }
@@ -665,11 +665,12 @@ class App {
       const userSystemPrompt = await this.store.get<string>('aiSystemPrompt') || "";
 
       // 2. 機能固有の指示
-      const baseSystemPrompt = "あなたは小説の執筆アシスタントです。渡された文章の続きを、文体やトーンを維持したまま執筆してください。続きの文章のみを出力し、挨拶や説明は不要です。";
+      const baseSystemPrompt = t('prompts.systemPrompt.completion');
 
       // 3. プロンプトの合成
+      const userPrefix = t('prompts.template.userInstructionPrefix');
       const systemPrompt = userSystemPrompt
-        ? `${baseSystemPrompt}\n\n【ユーザーによる追加指示】:\n${userSystemPrompt}`
+        ? `${baseSystemPrompt}\n\n${userPrefix}\n${userSystemPrompt}`
         : baseSystemPrompt;
       if (this.mainAiApi === 'gemini') {
         const apiKey = await this.store.get<string>('geminiApiKey');
@@ -792,26 +793,27 @@ class App {
 
       const userSystemPrompt = await this.store.get<string>('aiSystemPrompt') || "";
       // システムプロンプト: 繋ぎの文章を書くことに特化させる
-      const baseSystemPrompt = `あなたは執筆アシスタントです。
-提示された「前半の文章」と「後半の文章」の間を自然に繋ぐ文章を執筆してください。
-文体やトーンは前後の文章に合わせてください。
-前半の末尾や後半の冒頭を繰り返さず、その間の出来事のみを出力してください。
-挨拶や説明は不要です。`;
+      const baseSystemPrompt = t('prompts.systemPrompt.missingLink');
       // 3. プロンプトの合成
+      const userPrefix = t('prompts.template.userInstructionPrefix');
       const systemPrompt = userSystemPrompt
-        ? `${baseSystemPrompt}\n\n【ユーザーによる追加指示】:\n${userSystemPrompt}`
+        ? `${baseSystemPrompt}\n\n${userPrefix}\n${userSystemPrompt}`
         : baseSystemPrompt;
 
       // ユーザープロンプト: 前後を分かりやすく渡す
+      const prevLabel = t('prompts.template.prevSection');
+      const nextLabel = t('prompts.template.nextSection');
+      const instructionLabel = t('prompts.template.instruction');
+      const instructionFiller = t('prompts.template.instructionFiller');
       const userPrompt = `
-【前半の文章】
+${prevLabel}
 ${prevContext}
 
-【後半の文章】
+${nextLabel}
 ${nextContext}
 
-【指示】
-上記の間を埋める文章を執筆してください。
+${instructionLabel}
+${instructionFiller}
 `;
 
       if (this.mainAiApi === 'gemini') {
@@ -977,7 +979,7 @@ ${nextContext}
 
     // 選択範囲がない場合は何もしない
     if (selection.empty) {
-      alert("テキストを選択してから実行してください。");
+      await message(t('editor.noSelection'), { kind: 'info' });
       return;
     }
 
@@ -990,8 +992,7 @@ ${nextContext}
 
     switch (mode) {
       case 'translate':
-        const lastLang = await this.store.get<string>('aiTranslateLanguage') || "英語";
-        // 文字列を渡すので、戻り値も string になる
+        const lastLang = await this.store.get<string>('aiTranslateLanguage') || t('editor.languageDefault');
         const lang = await this.showDynamicInput("Translate to", lastLang) as string | null;
 
         if (lang === null) return;
@@ -999,32 +1000,31 @@ ${nextContext}
         await this.store.set('aiTranslateLanguage', lang);
         await this.store.save();
 
-        baseSystemPrompt = `あなたはプロの翻訳家です。以下のテキストを自然な「${lang}」に翻訳してください。翻訳結果のみを出力し、解説や挨拶は不要です。`;
+        baseSystemPrompt = t('prompts.systemPrompt.translate', { lang });
         label = `[Translate: ${lang}]`;
         break;
 
       case 'summary':
         const lastLength = await this.store.get<number>('aiSummaryLength') || 200;
-        // 数値を渡すので、戻り値も number になる
         const targetLength = await this.showDynamicInput("Target Length (chars)", lastLength) as number | null;
 
         if (targetLength === null) return;
 
-        // 次回用に保存
         await this.store.set('aiSummaryLength', targetLength);
         await this.store.save();
 
-        baseSystemPrompt = `あなたは優秀な編集者です。以下のテキストを**日本語で、およそ${targetLength}文字以内**で要約してください。重要なポイントを逃さず、かつ簡潔にまとめてください。要約結果のみを出力してください。`;
+        baseSystemPrompt = t('prompts.systemPrompt.summarize', { length: targetLength });
         label = `[Summarize] (${targetLength} chars)`;
         break;
       case 'rewrite':
-        baseSystemPrompt = "あなたは文章のプロです。以下のテキストを、より分かりやすく、読みやすい文章にリライト（推敲）してください。元の意味を保ったまま、表現を洗練させてください。リライト結果のみを出力してください。";
+        baseSystemPrompt = t('prompts.systemPrompt.rewrite');
         label = "[Rewrite]";
         break;
     }
     // プロンプトの合成
+    const userPrefix = t('prompts.template.userInstructionPrefix');
     const systemPrompt = userSystemPrompt
-      ? `${baseSystemPrompt}\n\n【ユーザーによる追加指示】:\n${userSystemPrompt}`
+      ? `${baseSystemPrompt}\n\n${userPrefix}\n${userSystemPrompt}`
       : baseSystemPrompt;
     this.isAiProcessing = true;
     this.aiAbortController = new AbortController();
@@ -2575,60 +2575,47 @@ ${nextContext}
       const menu = await Menu.new({
         items: [
           await Submenu.new({
-            text: '最近使ったファイルを開く',
-            // 履歴が空の場合は無効化
+            text: t('editor.menu.recentFiles'),
             enabled: recentFileItems.length > 0,
-            // 生成したメニュー項目をサブメニューに設定
             items: recentFileItems
           }),
           await PredefinedMenuItem.new({ item: 'Separator' }),
-          // --- アプリケーション固有のコマンド ---
-          await MenuItem.new({ text: '開く...', action: () => this.openNewFile() }),
-          await MenuItem.new({ text: '保存', action: () => this.saveActiveFile() }),
-          await MenuItem.new({ text: '名前を付けて保存...', action: () => this.saveActiveFileAs() }),
+          await MenuItem.new({ text: t('editor.menu.open'), action: () => this.openNewFile() }),
+          await MenuItem.new({ text: t('editor.menu.save'), action: () => this.saveActiveFile() }),
+          await MenuItem.new({ text: t('editor.menu.saveAs'), action: () => this.saveActiveFileAs() }),
           await PredefinedMenuItem.new({ item: 'Separator' }),
-
-          // --- CodeMirrorのコマンドを呼び出す ---
-          // ★ enabled は使わず、常に有効にしておく (CodeMirrorが内部で判断する)
-          await MenuItem.new({ text: '元に戻す', action: () => undo(this.editorView) }),
-          await MenuItem.new({ text: 'やり直す', action: () => redo(this.editorView) }),
+          await MenuItem.new({ text: t('editor.menu.undo'), action: () => undo(this.editorView) }),
+          await MenuItem.new({ text: t('editor.menu.redo'), action: () => redo(this.editorView) }),
           await PredefinedMenuItem.new({ item: 'Separator' }),
-
-          // ★★★ PredefinedMenuItem を使う ★★★
           await PredefinedMenuItem.new({ item: 'Cut' }),
           await PredefinedMenuItem.new({ item: 'Copy' }),
           await PredefinedMenuItem.new({ item: 'Paste' }),
           await PredefinedMenuItem.new({ item: 'Separator' }),
           await PredefinedMenuItem.new({ item: 'SelectAll' }),
           await MenuItem.new({
-            text: '選択範囲の文字数を数える',
+            text: t('editor.menu.countChars'),
             enabled: hasSelection,
             action: () => this.showSelectionCount()
           }),
-
           await PredefinedMenuItem.new({ item: 'Separator' }),
-
-          // AI機能群 (選択時のみ有効)
           await MenuItem.new({
-            text: 'AI: 翻訳 (Translate)',
+            text: t('editor.menu.aiTranslate'),
             enabled: hasSelection,
             action: () => this.runAiEdit('translate')
           }),
           await MenuItem.new({
-            text: 'AI: 要約 (Summarize)',
+            text: t('editor.menu.aiSummarize'),
             enabled: hasSelection,
             action: () => this.runAiEdit('summary')
           }),
           await MenuItem.new({
-            text: 'AI: リライト (Rewrite)',
+            text: t('editor.menu.aiRewrite'),
             enabled: hasSelection,
             action: () => this.runAiEdit('rewrite')
           }),
-
           await PredefinedMenuItem.new({ item: 'Separator' }),
-
           await MenuItem.new({
-            text: 'Geminiログをインポート',
+            text: t('editor.menu.importGeminiLog'),
             action: () => this.importGeminiLog()
           }),
           await PredefinedMenuItem.new({ item: 'Separator' }),
@@ -3215,7 +3202,7 @@ ${nextContext}
     let cursorLine = 1;
     const limit = 50000;
     if (truncate && text.length > limit) {
-      text = text.substring(0, limit) + "\n\n(……以降は省略されました)";
+      text = text.substring(0, limit) + "\n\n" + t('editor.preview.truncated');
     } else {
       cursorLine = this.getCursorLineSafe();
     }
@@ -3251,11 +3238,11 @@ ${nextContext}
     if (textLength > limit) {
       const { ask } = await import('@tauri-apps/plugin-dialog');
       const confirmed = await ask(
-        `テキストが非常に長いため（${textLength}文字）、プレビューの生成に時間がかかる可能性があります。\n\n先頭の ${limit} 文字だけをプレビューしますか？\n（「キャンセル」を押すと処理を中止します）`,
-        { title: 'プレビューの確認', kind: 'warning', okLabel: '制限して表示', cancelLabel: 'キャンセル' }
+        t('editor.preview.longTextWarning', { charCount: textLength, limit: limit }),
+        { title: t('editor.preview.confirmTitle'), kind: 'warning', okLabel: t('editor.preview.okLabel'), cancelLabel: t('editor.preview.cancelLabel') }
       );
 
-      if (!confirmed) return; // キャンセルならここで終了（ウィンドウは開かない）
+      if (!confirmed) return;
 
       shouldTruncate = true;
     }
@@ -3277,8 +3264,8 @@ ${nextContext}
     if (textLength > limit) {
       const { ask } = await import('@tauri-apps/plugin-dialog');
       const confirmed = await ask(
-        `テキストが非常に長いため（${textLength}文字）、プレビューの生成に時間がかかる可能性があります。\n\n先頭の ${limit} 文字だけをプレビューしますか？\n（「キャンセル」を押すと処理を中止します）`,
-        { title: 'Markdownプレビューの確認', kind: 'warning', okLabel: '制限して表示', cancelLabel: 'キャンセル' }
+        t('editor.preview.longTextWarning', { charCount: textLength, limit: limit }),
+        { title: t('editor.preview.confirmTitleMd'), kind: 'warning', okLabel: t('editor.preview.okLabel'), cancelLabel: t('editor.preview.cancelLabel') }
       );
       if (!confirmed) return;
       shouldTruncate = true;
@@ -3297,7 +3284,7 @@ ${nextContext}
     const limit = 50000;
 
     if (truncate && text.length > limit) {
-      text = text.substring(0, limit) + "\n\n(……テキストが長すぎるため、プレビューは省略されました)";
+      text = text.substring(0, limit) + "\n\n" + t('editor.preview.truncatedLong');
     }
 
     // アクティブなファイルパスを送る
@@ -3524,8 +3511,8 @@ ${nextContext}
     if (dirtyTabs.length > 0) {
       const { ask } = await import('@tauri-apps/plugin-dialog');
       shouldClose = await ask(
-        `未保存のファイルが ${dirtyTabs.length} 件あります。本当に終了しますか？`,
-        { title: 'アプリケーションを終了', kind: 'warning' }
+        t('editor.app.unsavedFiles', { count: dirtyTabs.length }),
+        { title: t('editor.app.appExitTitle'), kind: 'warning' }
       );
     }
 
@@ -3587,7 +3574,7 @@ ${nextContext}
       const defaultName = currentName.includes('.') ? currentName : `${currentName}.txt`;
 
       const newPath = await save({
-        title: '名前を付けて保存',
+        title: t('editor.app.saveAs'),
         defaultPath: defaultName,
         filters: [{ name: 'Text Document', extensions: ['txt', 'md'] }]
       });
@@ -3628,7 +3615,7 @@ ${nextContext}
 
     } catch (error) {
       console.error(`Failed to save file as:`, error);
-      await message(`保存に失敗しました。\n${error}`, { kind: 'error' });
+      await message(t('editor.app.saveFailed', { error: String(error) }), { kind: 'error' });
     }
   }
 
@@ -3752,7 +3739,7 @@ ${nextContext}
     } catch (e: any) {
       console.error("Gemini Import Error:", e);
       // エラー表示
-      await message(`Geminiログのインポートに失敗しました。\n${e}`, { kind: 'error' });
+      await message(t('editor.app.geminiImportFailed', { error: String(e) }), { kind: 'error' });
     }
   }
 
@@ -3779,12 +3766,12 @@ ${nextContext}
     // もしファイルが未保存なら、確認ダイアログを出す
     if (tabToClose.isDirty) {
       const { ask } = await import('@tauri-apps/plugin-dialog');
-      const confirmed = await ask(`'${tabToClose.path.split(/[/\\]/).pop()}' は保存されていません。変更を破棄しますか？`, {
-        title: 'タブを閉じる',
-        kind: 'warning'
-      });
+      const confirmed = await ask(
+        t('editor.app.closeTabUnsaved', { filename: tabToClose.path.split(/[/\\]/).pop() || '' }),
+        { title: t('editor.app.closeTab'), kind: 'warning' }
+      );
       if (!confirmed) {
-        return; // "いいえ"が押されたら何もしない
+        return;
       }
     }
 
@@ -3878,7 +3865,7 @@ ${nextContext}
       }
     } catch (e) {
       this.setAiLoading(false);
-      alert(`SillyTavernの起動に失敗しました: ${e}`);
+      await message(t('editor.app.sillytavernFailed', { error: String(e) }), { kind: 'error' });
     }
   }
 
@@ -3973,14 +3960,14 @@ ${nextContext}
       } catch (error) {
         console.error(`[openOrSwitchTab] Failed to open file: ${filePath}`, error);
         const errStr = String(error);
-        let msgTitle = '読み込みエラー';
-        let msgBody = `ファイルを読み込めませんでした。\n詳細: ${errStr}`;
+        let msgTitle = t('editor.errors.loadError');
+        let msgBody = t('editor.errors.loadFailed', { detail: errStr });
 
         if (errStr.includes("No such file") || errStr.includes("os error 2")) {
-          msgTitle = 'ファイルが見つかりません';
-          msgBody = `リンク先のファイルが存在しません。\nパス: ${filePath}`;
+          msgTitle = t('editor.errors.fileNotFound');
+          msgBody = t('editor.errors.fileNotFoundDetail', { path: filePath });
         } else {
-          msgBody = `ファイルを読み込めませんでした。\n対応していないエンコード（UTF-8, Shift-JIS以外）の可能性があります。\n\n詳細: ${errStr}`;
+          msgBody = t('editor.errors.encodingError', { detail: errStr });
         }
 
         await message(msgBody, { title: msgTitle, kind: 'error' });
