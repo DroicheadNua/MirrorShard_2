@@ -32,6 +32,7 @@
     "core:window:allow-is-fullscreen",
     "core:window:allow-show",
     "core:window:allow-hide",
+    "core:window:allow-set-title",
     "dialog:default",
     "dialog:allow-open",
     "dialog:allow-save",

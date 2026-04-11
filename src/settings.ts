@@ -159,6 +159,8 @@ async function setupSettings() {
         if (appLanguageSelect) appLanguageSelect.value = initAppLanguage ?? 'ja';
         await initI18n((initAppLanguage as 'ja' | 'en') ?? 'ja');
         applyTranslationsToDOM();
+        const title: string = await invoke<string>('get_window_title', { windowKey: 'settings' }).catch((): string => '');
+        if (title) { await getCurrentWindow().setTitle(title); }
 
         appLanguageSelect?.addEventListener('change', async () => {
             const newLocale = appLanguageSelect.value as 'ja' | 'en';
@@ -166,6 +168,8 @@ async function setupSettings() {
             await store.save();
             await initI18n(newLocale);
             applyTranslationsToDOM();
+            const newTitle: string = await invoke<string>('get_window_title', { windowKey: 'settings' }).catch((): string => '');
+            if (newTitle) { await getCurrentWindow().setTitle(newTitle); }
         });
 
         const initWordBreak = await store.get<string>('editorWordBreak');
@@ -981,6 +985,8 @@ async function setupSettings() {
                 });
                 await initI18n(newAppLanguage as 'ja' | 'en');
                 applyTranslationsToDOM();
+                const title: string = await invoke<string>('get_window_title', { windowKey: 'settings' }).catch((): string => '');
+                if (title) { await getCurrentWindow().setTitle(title); }
 
             } catch (err) {
                 alert(`設定の保存に失敗しました: ${err}`);

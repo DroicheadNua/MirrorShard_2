@@ -1,5 +1,6 @@
 // src/ai-chat.ts
 import { GoogleGenerativeAI, GenerativeModel, ChatSession } from "@google/generative-ai";
+import { t } from "./i18n";
 
 export interface ChatSettings {
     apiType: 'gemini' | 'groq' | 'cohere' | 'mistral' | 'local';
@@ -89,7 +90,7 @@ export class AiChat {
             }
 
             if (apiType !== 'local' && !apiKey) {
-                this.onUpdate(`Error: ${apiType} API Key is not set.`, true);
+                this.onUpdate(t('aiChat.error.noApiKey', { api: apiType }), true);
                 return;
             }
 
@@ -100,7 +101,7 @@ export class AiChat {
 
     private async sendToGemini(text: string) {
         if (!this.chatSession) {
-            this.onUpdate("Error: Gemini session not initialized.", true);
+            this.onUpdate(t('aiChat.error.geminiNotInitialized'), true);
             return;
         }
         try {
@@ -113,7 +114,7 @@ export class AiChat {
             this.onUpdate(fullText, true);
         } catch (error) {
             console.error("Gemini Error:", error);
-            this.onUpdate(`Error: ${String(error)}`, true);
+            this.onUpdate(t('aiChat.error.geminiError', { detail: String(error) }), true);
         }
     }
 
@@ -124,7 +125,7 @@ export class AiChat {
         const model = this.currentSettings.cohereModel || "command-r-plus-08-2024";
 
         if (!apiKey) {
-            this.onUpdate("Error: Cohere API Key is not set.", true);
+            this.onUpdate(t('aiChat.error.cohereNoApiKey'), true);
             return;
         }
 
@@ -202,7 +203,7 @@ export class AiChat {
 
         } catch (error) {
             console.error("Cohere Stream Error:", error);
-            this.onUpdate(`Error: ${String(error)}`, true);
+            this.onUpdate(t('aiChat.error.cohereError', { detail: String(error) }), true);
         }
     }
 
@@ -276,7 +277,7 @@ export class AiChat {
 
         } catch (error) {
             console.error("Stream Error:", error);
-            this.onUpdate(`Error: ${String(error)}`, true);
+            this.onUpdate(t('aiChat.error.streamError', { detail: String(error) }), true);
         }
     }
 }

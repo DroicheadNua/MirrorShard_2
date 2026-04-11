@@ -10,6 +10,9 @@ import { readText, writeText } from '@tauri-apps/plugin-clipboard-manager';
 import '@xterm/xterm/css/xterm.css';
 
 async function init() {
+    const title: string = await invoke<string>('get_window_title', { windowKey: 'terminal' }).catch((): string => '');
+    if (title) { await getCurrentWindow().setTitle(title); }
+
     const store = await Store.load('.settings.dat');
     const shellPath = await store.get<string>('shellPath');
 

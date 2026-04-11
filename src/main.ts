@@ -1,5 +1,5 @@
 import './styles.css';
-import { initI18n, applyTranslationsToDOM, t } from './i18n';
+import { initI18n, applyTranslationsToDOM, t, translateRustError } from './i18n';
 import { invoke } from '@tauri-apps/api/core';
 import { Store } from '@tauri-apps/plugin-store';
 import { EditorState, Compartment, RangeSetBuilder, Transaction } from '@codemirror/state';
@@ -2475,8 +2475,13 @@ ${instructionFiller}
     document.querySelector('#btn-preview')?.addEventListener('click', () => {
       this.openPreviewWindowWithCheck();
     });
-    document.querySelector('#btn-export')?.addEventListener('click', () => {
-      invoke('open_export_window');
+    document.querySelector('#btn-export')?.addEventListener('click', async () => {
+      try {
+        await invoke('open_export_window');
+      } catch (e) {
+        console.error(e);
+        await message(translateRustError(e), { kind: 'error' });
+      }
     });
     document.querySelector('#btn-ai-chat')?.addEventListener('click', () => {
       this.openAiChat();
@@ -3249,7 +3254,13 @@ ${instructionFiller}
     }
 
     // ウィンドウを開く
-    await invoke('open_preview_window');
+    try {
+      await invoke('open_preview_window');
+    } catch (e) {
+      console.error(e);
+      await message(translateRustError(e), { kind: 'error' });
+      return;
+    }
 
     // データを送る (ウィンドウの準備待ち時間を少し入れる)
     setTimeout(() => this.sendDataToPreview(shouldTruncate), 200);
@@ -3273,7 +3284,13 @@ ${instructionFiller}
     }
 
     // Rust側でウィンドウ作成 (visible: false)
-    await invoke('open_markdown_preview');
+    try {
+      await invoke('open_markdown_preview');
+    } catch (e) {
+      console.error(e);
+      await message(translateRustError(e), { kind: 'error' });
+      return;
+    }
 
     // ウィンドウのロード待ちをしてからデータを送る
     setTimeout(() => this.sendDataToMarkdownPreview(shouldTruncate), 200);
@@ -3556,6 +3573,7 @@ ${instructionFiller}
       this.updatePreviewsOnSave();
     } catch (error) {
       console.error(`Failed to save file: ${activeTab.path}`, error);
+      alert(t('editor.app.saveFailed', { error: translateRustError(error) }));
     }
   }
 
@@ -3616,7 +3634,7 @@ ${instructionFiller}
 
     } catch (error) {
       console.error(`Failed to save file as:`, error);
-      await message(t('editor.app.saveFailed', { error: String(error) }), { kind: 'error' });
+      await message(t('editor.app.saveFailed', { error: translateRustError(error) }), { kind: 'error' });
     }
   }
 

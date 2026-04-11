@@ -37,5 +37,15 @@
   },
   "status": {
     "noFile": "(None)"
+  },
+  "windows": {
+    "settings": "Settings",
+    "export": "Export / Print",
+    "preview": "Preview",
+    "markdown": "Markdown Preview",
+    "shortcut": "Shortcuts",
+    "ideaProcessor": "Idea Processor",
+    "aiChat": "AI Chat",
+    "terminal": "Terminal"
   }
 }

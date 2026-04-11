@@ -1,9 +1,9 @@
 <!DOCTYPE html>
-<html lang="ja">
+<html lang="en">
 
 <head>
     <meta charset="UTF-8">
-    <title>AI Chat</title>
+    <title data-i18n="aiChat.windowTitle">AI Chat</title>
     <link rel="stylesheet" href="/src/ai_chat.css">
 </head>
 
@@ -21,13 +21,13 @@
 
 
             <div class="top-right-buttons">
-                <button id="ai-clear-log-btn" title="ログのクリア (Ctrl+Shift+C)"></button>
-                <button id="ai-save-overwrite-btn" title="上書き保存 (Ctrl+S)"></button>
-                <button id="ai-save-log-btn" title="別名保存"></button>
-                <button id="ai-load-log-btn" title="読み込み (Ctrl+O)"></button>
+                <button id="ai-clear-log-btn" data-i18n-title="aiChat.tooltip.clearLog" title="Clear log (Ctrl+Shift+C)"></button>
+                <button id="ai-save-overwrite-btn" data-i18n-title="aiChat.tooltip.saveOverwrite" title="Save (Ctrl+S)"></button>
+                <button id="ai-save-log-btn" data-i18n-title="aiChat.tooltip.saveAs" title="Save As..."></button>
+                <button id="ai-load-log-btn" data-i18n-title="aiChat.tooltip.load" title="Load (Ctrl+O)"></button>
                 <!-- 最大化ボタン等はTauriのAPIで実装が必要だが一旦ボタンだけ配置 -->
-                <button id="ai-fullscreen-btn" title="最大化 (F11)"></button>
-                <button id="ai-close-btn" title="閉じる (Ctrl+Shift+A)"></button>
+                <button id="ai-fullscreen-btn" data-i18n-title="aiChat.tooltip.fullscreen" title="Maximize (F11)"></button>
+                <button id="ai-close-btn" data-i18n-title="aiChat.tooltip.close" title="Close (Ctrl+Shift+A)"></button>
             </div>
         </div>
 
@@ -35,8 +35,8 @@
         <div id="chat-container">
             <div id="chat-log"></div>
             <form id="chat-form">
-                <textarea id="message-input" rows="2" spellcheck="false" placeholder="Enter a prompt..."></textarea>
-                <button id="send-btn" type="submit">Run</button>
+                <textarea id="message-input" rows="2" spellcheck="false" data-i18n-placeholder="aiChat.placeholder" placeholder="Enter a prompt..."></textarea>
+                <button id="send-btn" type="submit" data-i18n="aiChat.run">Run</button>
             </form>
         </div>
 

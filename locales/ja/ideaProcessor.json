@@ -1,1 +1,163 @@
-{}
+{
+  "windowTitle": "Idea Processor",
+  "tooltip": {
+    "newFile": "新規ファイル (Ctrl+N)",
+    "createGroup": "グループ作成 (Ctrl+G)",
+    "maximizeWindow": "最大化 (F11/Cmd+Ctrl+F)",
+    "close": "閉じる (Ctrl+I)",
+    "toggleDarkMode": "ダークモード切替 (Ctrl+T)",
+    "showHideOutline": "アウトライン表示/非表示 (Ctrl+Shift+O)",
+    "export": "エクスポート...",
+    "toggleAlwaysOnTop": "常に最前面に固定",
+    "zoomReset": "ズームリセット",
+    "initializeWindow": "ウィンドウ位置・ズーム初期化 (Ctrl+R)",
+    "saveAs": "名前を付けて保存...",
+    "load": "読み込み (Ctrl+O)",
+    "activateAI": "AIを起動 (Ctrl+Shift+F)",
+    "storyArchetype": "ストーリーテンプレート",
+    "collapseAll": "すべて折りたたむ",
+    "expandAll": "すべて展開"
+  },
+  "menu": {
+    "export": {
+      "title": "エクスポート...",
+      "html": "HTMLとしてエクスポート",
+      "markdown": "Markdownとしてエクスポート",
+      "png": "PNG画像としてエクスポート",
+      "pdf": "PDFとしてエクスポート",
+      "sendToEditor": "エディタに送信"
+    },
+    "template": {
+      "title": "ストーリーテンプレート",
+      "greimas": "行為者モデル",
+      "herosJourney": "英雄の旅",
+      "beatSheet": "ビートシート",
+      "threeActStructure": "三幕構成"
+    }
+  },
+  "ai": {
+    "selectorTrigger": "Gemini (Cloud)",
+    "expandNodeTitle": "AIで拡張するノードを選択してください",
+    "missingParentGroup": "このノードには親グループが設定されていません。",
+    "templateGroupNotFound": "親テンプレートグループが見つかりません。",
+    "notTemplateRoot": "親グループがテンプレートのルートとして設定されていません。",
+    "greimasNotSupported": "行為者モデルは構造設計用であり、自動テキスト補完には対応していません。",
+    "cannotModifyCoreLink": "テンプレートのコアリンクは変更できません。",
+    "selectNodeToExpand": "AIで拡張するノードを1つ選択してください。"
+  },
+  "dialog": {
+    "unsavedChanges": {
+      "loadTitle": "確認",
+      "loadMessage": "変更が保存されていません。破棄して開きますか？",
+      "newTitle": "確認",
+      "newMessage": "変更が保存されていません。破棄して新規作成しますか？",
+      "closeTitle": "保存確認",
+      "closeMessage": "無題のファイルに変更があります。保存して閉じますか？\n(「いいえ」を選択すると変更は破棄されます)",
+      "saveLabel": "保存する",
+      "discardLabel": "保存しない（破棄）"
+    }
+  },
+  "alert": {
+    "saveFailed": "保存に失敗しました: ",
+    "loadFailed": "読み込みに失敗しました： ",
+    "markdownExportFailed": "Markdownの書き出しに失敗しました。",
+    "editorSendFailed": "エディタへの送信に失敗しました。",
+    "noContentToExport": "書き出すコンテンツがありません。",
+    "imageExportFailed": "画像の書き出しに失敗しました。",
+    "htmlExportFailed": "HTMLの書き出しに失敗しました。",
+    "noApiKey": "{{api}} API Key が設定されていません。"
+  },
+  "template": {
+    "greimas": {
+      "groupName": "行為者モデル",
+      "nodes": {
+        "sujet": "主体",
+        "objet": "対象",
+        "destinateur": "送り手",
+        "destinataire": "受け手",
+        "adjuvant": "援助者",
+        "opposant": "敵対者"
+      },
+      "placeholders": {
+        "sujet": "主人公",
+        "objet": "主人公の目的",
+        "destinateur": "依頼人など",
+        "destinataire": "利益を得る存在",
+        "adjuvant": "仲間や道具",
+        "opposant": "妨害する者"
+      }
+    },
+    "herosJourney": {
+      "groupName": "英雄の旅 (Hero's Journey)",
+      "steps": {
+        "1": "1. 日常の世界",
+        "2": "2. 冒険への誘い",
+        "3": "3. 冒険の拒絶",
+        "4": "4. 賢者との出会い",
+        "5": "5. 第一関門突破",
+        "6": "6. 試練、仲間、敵",
+        "7": "7. 最も危険な場所",
+        "8": "8. 最大の試練",
+        "9": "9. 報酬",
+        "10": "10. 帰路",
+        "11": "11. 復活",
+        "12": "12. 帰還"
+      },
+      "placeholders": {
+        "1": "主人公の日常",
+        "2": "事件の発生",
+        "3": "ためらい",
+        "4": "導き手",
+        "5": "決意",
+        "6": "新しい世界",
+        "7": "核心へ",
+        "8": "死と再生",
+        "9": "手に入れたもの",
+        "10": "日常への帰還路",
+        "11": "最後の戦い",
+        "12": "変化した日常"
+      }
+    },
+    "beatSheet": {
+      "groupName": "エッセンシャル・ビートシート",
+      "beats": {
+        "1": "1. オープニング",
+        "2": "2. 事件の発生",
+        "3": "3. 決意",
+        "4": "4. 新しい世界",
+        "5": "5. 挫折",
+        "6": "6. 絶望",
+        "7": "7. 転機",
+        "8": "8. 反撃",
+        "9": "9. クライマックス",
+        "10": "10. 最後の障害",
+        "11": "11. 決着",
+        "12": "12. エンディング"
+      }
+    },
+    "threeAct": {
+      "groupName": "三幕構成",
+      "acts": {
+        "1": "第一幕：発端",
+        "2": "第二幕：葛藤",
+        "3": "第三幕：結末"
+      }
+    }
+  },
+  "placeholder": {
+    "contentEditor": "＜ここに本文を入力＞"
+  },
+  "default": {
+    "newNode": "New Node",
+    "groupName": "グループ名",
+    "linkStart": "起点",
+    "linkEnd": "終点",
+    "alchemyPrompt": "これらの要素を組み合わせた新しいプロット展開",
+    "missingLinkPrompt": "この2つの間を繋ぐ出来事や展開",
+    "aiPromptInput": "何を生成させますか？"
+  },
+  "pinButton": {
+    "pinned": "固定を解除",
+    "unpinned": "最前面に固定"
+  }
+}

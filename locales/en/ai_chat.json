@@ -1,0 +1,67 @@
+{
+  "windowTitle": "AI Chat",
+  "placeholder": "Enter a prompt...",
+  "run": "Run",
+  "tooltip": {
+    "clearLog": "Clear log (Ctrl+Shift+C)",
+    "saveOverwrite": "Save (Ctrl+S)",
+    "saveAs": "Save As...",
+    "load": "Load (Ctrl+O)",
+    "fullscreen": "Maximize (F11)",
+    "close": "Close (Ctrl+Shift+A)"
+  },
+  "notification": {
+    "switchTo": "Switched to {{name}}",
+    "loaded": "Loaded!",
+    "saved": "Saved!",
+    "sentToEditor": "Sent to Editor!",
+    "copied": "Copied!",
+    "newSession": "New chat session started.",
+    "loadError": "Load Error",
+    "saveFailed": "Save failed"
+  },
+  "dialog": {
+    "saveConfirmTitle": "Confirm Save",
+    "saveConfirmMsg": "The chat log has not been saved. Save and close?\n(Choosing \"No\" will discard changes.)",
+    "saveOk": "Save",
+    "saveCancel": "Don't Save (Discard)",
+    "clearConfirmTitle": "MirrorShard AI",
+    "clearConfirmMsg": "Are you sure you want to clear all chat logs?",
+    "unsavedMsg": "The chat log has not been saved. Save before creating a new session?\n(Choosing \"No\" will discard the current content.)",
+    "unsavedOk": "Save",
+    "unsavedCancel": "Don't Save (Discard)",
+    "deleteConfirmTitle": "Confirm Deletion",
+    "deleteConfirmMsg": "Delete this message and all following?",
+    "loadFailed": "Load failed",
+    "editOk": "OK",
+    "editCancel": "Cancel"
+  },
+  "action": {
+    "edit": "Edit",
+    "delete": "Delete",
+    "regenerate": "Regenerate",
+    "copy": "Copy",
+    "newChat": "New Chat (Clear)",
+    "loadLog": "Load Log...",
+    "saveLog": "Save Log...",
+    "sendToEditor": "Send to Editor",
+    "closeWindow": "Close Window"
+  },
+  "error": {
+    "noApiKey": "Error: {{api}} API Key is not set.",
+    "geminiNotInitialized": "Error: Gemini session not initialized.",
+    "geminiError": "Error: {{detail}}",
+    "cohereNoApiKey": "Error: Cohere API Key is not set.",
+    "cohereError": "Error: {{detail}}",
+    "streamError": "Error: {{detail}}"
+  },
+  "apiName": {
+    "gemini": "Gemini",
+    "groq": "Groq",
+    "cohere": "Cohere",
+    "mistral": "Mistral",
+    "local": "Local LLM",
+    "geminiFull": "Gemini (Cloud)",
+    "localFull": "Local AI"
+  }
+}

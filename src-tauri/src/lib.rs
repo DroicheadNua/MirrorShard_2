@@ -115,7 +115,7 @@ async fn open_silly_tavern(
     let st_path = st_path_setting.unwrap_or_default();
 
     if st_path.is_empty() || !std::path::Path::new(&st_path).exists() {
-        return Err("SillyTavernのパスが設定されていないか、フォルダが見つかりません。設定画面でパスを指定してください。".to_string());
+        return Err("ERR_ST_PATH_NOT_FOUND".to_string());
     }
 
     // 3. サーバー起動
@@ -152,7 +152,7 @@ async fn open_silly_tavern(
             .stdout(std::process::Stdio::null())
             .stderr(std::process::Stdio::null())
             .spawn()
-            .map_err(|e| format!("起動失敗: {}", e))?;
+            .map_err(|e| format!("ERR_ST_SPAWN:{}", e))?;
 
         *lock = Some(child);
 
@@ -173,7 +173,7 @@ async fn open_silly_tavern(
         }
 
         if !ready {
-            return Err("SillyTavernサーバーの起動待ち時間を超えました。".to_string());
+            return Err("ERR_ST_STARTUP_TIMEOUT".to_string());
         }
     }
 
@@ -281,7 +281,7 @@ async fn open_opencode(app: AppHandle, state: State<'_, OpenCodeProcess>) -> Res
             .stdout(Stdio::null())
             .stderr(Stdio::null())
             .spawn()
-            .map_err(|e| format!("起動失敗: {}", e))?;
+            .map_err(|e| format!("ERR_OPENCODE_SPAWN:{}", e))?;
 
         *lock = Some(child);
         std::thread::sleep(std::time::Duration::from_millis(2000));
@@ -679,7 +679,7 @@ async fn export_with_pandoc(
     // 1. Pandocのパス決定 (設定値 -> デフォルト探索)
     let pandoc_exe = resolve_pandoc_path(pandoc_path_setting);
     if pandoc_exe.is_none() {
-        return Err("Pandoc not found. Please install Pandoc or set path in settings.".to_string());
+        return Err("ERR_PANDOC_NOT_FOUND".to_string());
     }
     let pandoc_exe = pandoc_exe.unwrap();
 
@@ -746,12 +746,12 @@ async fn export_with_pandoc(
         "docx" => {
             cmd.arg("-o").arg(&output_path);
         }
-        _ => return Err("Unsupported format".to_string()),
+        _ => return Err("ERR_UNSUPPORTED_FORMAT".to_string()),
     }
     // 実行
     let output = cmd
         .output()
-        .map_err(|e| format!("Failed to execute pandoc: {}", e))?;
+        .map_err(|e| format!("ERR_PANDOC_EXEC:{}", e))?;
 
     if output.status.success() {
         if format == "docx" {
@@ -761,7 +761,7 @@ async fn export_with_pandoc(
         Ok(())
     } else {
         let stderr = String::from_utf8_lossy(&output.stderr);
-        Err(format!("Pandoc Error: {}", stderr))
+        Err(format!("ERR_PANDOC_ERROR:{}", stderr))
     }
 }
 
@@ -845,11 +845,11 @@ async fn export_epub(
         } else {
             "image/jpeg"
         };
-        let file = fs::File::open(cp).map_err(|e| format!("Failed to open cover image: {}", e))?;
+        let file = fs::File::open(cp).map_err(|e| format!("ERR_COVER_OPEN:{}", e))?;
 
         builder
             .add_cover_image("images/cover.jpg", file, mime)
-            .map_err(|e| format!("Failed to add cover image: {}", e))?;
+            .map_err(|e| format!("ERR_COVER_ADD:{}", e))?;
 
         let cover_xhtml = r#"<?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE html>
@@ -983,6 +983,85 @@ async fn get_app_language() -> Result<String, String> {
         }
     }
     Ok("ja".to_string())
+}
+
+#[tauri::command]
+async fn get_window_title(window_key: String) -> Result<String, String> {
+    let titles: std::collections::HashMap<&str, std::collections::HashMap<&str, &str>> = [
+        (
+            "settings",
+            [
+                ("ja", "設定"),
+                ("en", "Settings"),
+            ]
+            .into(),
+        ),
+        (
+            "export",
+            [
+                ("ja", "エクスポート / 印刷"),
+                ("en", "Export / Print"),
+            ]
+            .into(),
+        ),
+        (
+            "preview",
+            [
+                ("ja", "プレビュー"),
+                ("en", "Preview"),
+            ]
+            .into(),
+        ),
+        (
+            "markdown",
+            [
+                ("ja", "Markdownプレビュー"),
+                ("en", "Markdown Preview"),
+            ]
+            .into(),
+        ),
+        (
+            "shortcut",
+            [
+                ("ja", "ショートカット"),
+                ("en", "Shortcuts"),
+            ]
+            .into(),
+        ),
+        (
+            "idea_processor",
+            [
+                ("ja", "アイデアプロセッサ"),
+                ("en", "Idea Processor"),
+            ]
+            .into(),
+        ),
+        (
+            "ai_chat",
+            [
+                ("ja", "AIチャット"),
+                ("en", "AI Chat"),
+            ]
+            .into(),
+        ),
+        (
+            "terminal",
+            [
+                ("ja", "ターミナル"),
+                ("en", "Terminal"),
+            ]
+            .into(),
+        ),
+    ]
+    .into();
+
+    let lang = get_app_language().await.unwrap_or_else(|_| "ja".to_string());
+
+    titles
+        .get(window_key.as_str())
+        .and_then(|langs| langs.get(lang.as_str()))
+        .map(|s| s.to_string())
+        .ok_or_else(|| "".to_string())
 }
 
 #[tauri::command]
@@ -1290,7 +1369,7 @@ async fn read_file(path: String) -> Result<FileData, String> {
 
     // 4. ★★★ それ以外はエラーとして弾く ★★★
     // 無理やり開いてデータ破壊するリスクを避ける
-    Err("Unsupported encoding detected. MirrorShard only supports UTF-8 and Shift_JIS.".to_string())
+    Err("ERR_UNSUPPORTED_ENCODING".to_string())
 }
 
 #[tauri::command]
@@ -1434,6 +1513,7 @@ pub fn run() {
             open_opencode,
             open_silly_tavern,
             get_app_language,
+            get_window_title,
         ])
         // ウィンドウのライフサイクルイベントを監視する
         .on_window_event(|window, event| match event {

@@ -133,6 +133,7 @@
   <script type="module">
     import { invoke } from '@tauri-apps/api/core';
     import { listen } from '@tauri-apps/api/event';
+    import { getCurrentWindow } from '@tauri-apps/api/window';
     import { initI18n, t } from '/src/i18n.ts';
 
     (async () => {
@@ -148,6 +149,9 @@
         if (key) el.innerHTML = t(key);
       });
 
+      const title = await invoke('get_window_title', { windowKey: 'shortcut' }).catch(() => '');
+      if (title) { await getCurrentWindow().setTitle(title); }
+
       // 言語変更同期
       listen('app:language-changed', async (event) => {
         await initI18n(event.payload === 'en' ? 'en' : 'ja');
@@ -159,6 +163,8 @@
           const key = el.getAttribute('data-i18n-html');
           if (key) el.innerHTML = t(key);
         });
+        const newTitle = await invoke('get_window_title', { windowKey: 'shortcut' }).catch(() => '');
+        if (newTitle) { await getCurrentWindow().setTitle(newTitle); }
       });
     })();
   </script>

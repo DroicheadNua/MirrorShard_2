@@ -102,11 +102,15 @@
             const locale = await invoke('get_app_language').catch(() => 'ja');
             await initI18n(locale === 'en' ? 'en' : 'ja');
             applyTranslationsToDOM();
+            const title = await invoke('get_window_title', { windowKey: 'export' }).catch(() => '');
+            if (title) { await getCurrentWindow().setTitle(title); }
 
             // 言語変更同期
             listen('app:language-changed', async (event) => {
                 await initI18n(event.payload === 'en' ? 'en' : 'ja');
                 applyTranslationsToDOM();
+                const newTitle = await invoke('get_window_title', { windowKey: 'export' }).catch(() => '');
+                if (newTitle) { await getCurrentWindow().setTitle(newTitle); }
             });
 
             // データ受信

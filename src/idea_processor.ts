@@ -1,6 +1,7 @@
 import { listen, emit } from '@tauri-apps/api/event';
 import { getCurrentWindow } from '@tauri-apps/api/window';
 import { invoke } from '@tauri-apps/api/core';
+import { initI18n, t, applyTranslationsToDOM, translateRustError } from './i18n';
 import { type } from '@tauri-apps/plugin-os';
 // import { resolveResource } from '@tauri-apps/api/path';
 import { convertFileSrc } from '@tauri-apps/api/core';
@@ -359,7 +360,7 @@ function createNodeFromData(data: any) {
   const isMac = navigator.userAgent.includes('Mac OS X');
   const textNode = new Konva.Text({
     name: 'text',
-    text: data.title || 'New Node',
+    text: data.title || t('ideaProcessor.default.newNode'),
     fontSize: 16,
     fontFamily: getKonvaFontFamily(),
     fill: colors.text, // テーマに合わせた文字色（ライトなら黒系）
@@ -922,10 +923,11 @@ function startConnection(node: Konva.Group) {
 // 6. ノード・リンク作成ロジック (Core Logic)
 // =================================================================
 
-function createNewNode(x: number, y: number, textStr = 'New Node', contentStr = '', isInteractive = true) {
+function createNewNode(x: number, y: number, textStr?: string, contentStr = '', isInteractive = true) {
+  const nodeTitle = textStr !== undefined ? textStr : t('ideaProcessor.default.newNode');
   const id = `node_${generateUUID()}`;
   const node = createNodeFromData({
-    id, x, y, width: 200, height: 60, title: textStr,
+    id, x, y, width: 200, height: 60, title: nodeTitle,
     contentText: contentStr
   });
   updateAllNodesAppearance();
@@ -944,7 +946,8 @@ function createNewNode(x: number, y: number, textStr = 'New Node', contentStr = 
 }
 
 // --- グループノードの作成 ---
-function createGroupNode(x: number, y: number, titleStr = 'グループ名') {
+function createGroupNode(x: number, y: number, titleStr?: string) {
+  const groupTitle = titleStr !== undefined ? titleStr : t('ideaProcessor.default.groupName');
   const id = `group_${generateUUID()}`;
   const colors = getCurrentThemeColors();
 
@@ -976,7 +979,7 @@ function createGroupNode(x: number, y: number, titleStr = 'グループ名') {
   // グループタイトル
   const titleText = new Konva.Text({
     name: 'group-title',
-    text: titleStr,
+    text: groupTitle,
     y: -25, // 枠の上に配置
     fontSize: 14,
     fontFamily: getKonvaFontFamily(),
@@ -1542,7 +1545,7 @@ function generateTemplate(templateName: string) {
 
   // --- 1. グレマスの行為者モデル ---
   if (templateName === 'greimas') {
-    const group = createGroupNode(offsetX + 110, offsetY + 100, '行為者モデル');
+    const group = createGroupNode(offsetX + 110, offsetY + 100, t('ideaProcessor.template.greimas.groupName'));
     group.setAttr('isTemplateRoot', true);
     group.setAttr('archetype', 'greimas');
     const bg = group.findOne('.group-bg') as Konva.Rect;
@@ -1552,12 +1555,13 @@ function generateTemplate(templateName: string) {
     // ノード定義 (相対座標を考慮して配置)
     const startX = offsetX;
     const startY = offsetY;
-    const sujet = createTemplateNode({ x: startX + 400, y: startY + 320, title: '主体', placeholder: '主人公' });
-    const objet = createTemplateNode({ x: startX + 400, y: startY + 170, title: '対象', placeholder: '主人公の目的' });
-    const destinateur = createTemplateNode({ x: startX + 170, y: startY + 170, title: '送り手', placeholder: '依頼人など' });
-    const destinataire = createTemplateNode({ x: startX + 630, y: startY + 170, title: '受け手', placeholder: '利益を得る存在' });
-    const adjuvant = createTemplateNode({ x: startX + 170, y: startY + 320, title: '援助者', placeholder: '仲間や道具' });
-    const opposant = createTemplateNode({ x: startX + 630, y: startY + 320, title: '敵対者', placeholder: '妨害する者' });
+    const gp = 'ideaProcessor.template.greimas';
+    const sujet = createTemplateNode({ x: startX + 400, y: startY + 320, title: t(gp + '.nodes.sujet'), placeholder: t(gp + '.placeholders.sujet') });
+    const objet = createTemplateNode({ x: startX + 400, y: startY + 170, title: t(gp + '.nodes.objet'), placeholder: t(gp + '.placeholders.objet') });
+    const destinateur = createTemplateNode({ x: startX + 170, y: startY + 170, title: t(gp + '.nodes.destinateur'), placeholder: t(gp + '.placeholders.destinateur') });
+    const destinataire = createTemplateNode({ x: startX + 630, y: startY + 170, title: t(gp + '.nodes.destinataire'), placeholder: t(gp + '.placeholders.destinataire') });
+    const adjuvant = createTemplateNode({ x: startX + 170, y: startY + 320, title: t(gp + '.nodes.adjuvant'), placeholder: t(gp + '.placeholders.adjuvant') });
+    const opposant = createTemplateNode({ x: startX + 630, y: startY + 320, title: t(gp + '.nodes.opposant'), placeholder: t(gp + '.placeholders.opposant') });
 
     // グループへの登録
     const nodes = [sujet, objet, destinateur, destinataire, adjuvant, opposant];
@@ -1580,7 +1584,7 @@ function generateTemplate(templateName: string) {
 
   // --- 2. 英雄の旅 (Hero's Journey) ---
   else if (templateName === 'heros-journey') {
-    const group = createGroupNode(offsetX + 50, offsetY + 50, "英雄の旅 (Hero's Journey)");
+    const group = createGroupNode(offsetX + 50, offsetY + 50, t('ideaProcessor.template.herosJourney.groupName'));
     group.setAttr('isTemplateRoot', true);
     group.setAttr('archetype', 'heros-journey');
     const bg = group.findOne('.group-bg') as Konva.Rect;
@@ -1593,19 +1597,20 @@ function generateTemplate(templateName: string) {
     const rx = 380;
     const ry = 280;
 
+    const hj = 'ideaProcessor.template.herosJourney';
     const journeyData = [
-      { title: '1. 日常の世界', placeholder: '主人公の日常' },
-      { title: '2. 冒険への誘い', placeholder: '事件の発生' },
-      { title: '3. 冒険の拒絶', placeholder: 'ためらい' },
-      { title: '4. 賢者との出会い', placeholder: '導き手' },
-      { title: '5. 第一関門突破', placeholder: '決意' },
-      { title: '6. 試練、仲間、敵', placeholder: '新しい世界' },
-      { title: '7. 最も危険な場所', placeholder: '核心へ' },
-      { title: '8. 最大の試練', placeholder: '死と再生' },
-      { title: '9. 報酬', placeholder: '手に入れたもの' },
-      { title: '10. 帰路', placeholder: '日常への帰還路' },
-      { title: '11. 復活', placeholder: '最後の戦い' },
-      { title: '12. 帰還', placeholder: '変化した日常' },
+      { title: t(hj + '.steps.1'), placeholder: t(hj + '.placeholders.1') },
+      { title: t(hj + '.steps.2'), placeholder: t(hj + '.placeholders.2') },
+      { title: t(hj + '.steps.3'), placeholder: t(hj + '.placeholders.3') },
+      { title: t(hj + '.steps.4'), placeholder: t(hj + '.placeholders.4') },
+      { title: t(hj + '.steps.5'), placeholder: t(hj + '.placeholders.5') },
+      { title: t(hj + '.steps.6'), placeholder: t(hj + '.placeholders.6') },
+      { title: t(hj + '.steps.7'), placeholder: t(hj + '.placeholders.7') },
+      { title: t(hj + '.steps.8'), placeholder: t(hj + '.placeholders.8') },
+      { title: t(hj + '.steps.9'), placeholder: t(hj + '.placeholders.9') },
+      { title: t(hj + '.steps.10'), placeholder: t(hj + '.placeholders.10') },
+      { title: t(hj + '.steps.11'), placeholder: t(hj + '.placeholders.11') },
+      { title: t(hj + '.steps.12'), placeholder: t(hj + '.placeholders.12') },
     ];
 
     const createdNodes: Konva.Group[] = [];
@@ -1632,20 +1637,21 @@ function generateTemplate(templateName: string) {
 
   // --- 3. ビートシート (Beat Sheet) ---
   else if (templateName === 'beat-sheet') {
-    const group = createGroupNode(offsetX + 50, offsetY + 50, "エッセンシャル・ビートシート");
+    const group = createGroupNode(offsetX + 50, offsetY + 50, t('ideaProcessor.template.beatSheet.groupName'));
     group.setAttr('isTemplateRoot', true);
     group.setAttr('archetype', 'beat-sheet');
     const bg = group.findOne('.group-bg') as Konva.Rect;
     const handle = group.findOne('.resize-handle') as Konva.Circle;
     if (bg) { bg.width(1050); bg.height(550); handle.x(1050); handle.y(550); }
 
+    const bs = 'ideaProcessor.template.beatSheet';
     const beatData = [
-      { title: '1. オープニング', placeholder: '' }, { title: '2. 事件の発生', placeholder: '' },
-      { title: '3. 決意', placeholder: '' }, { title: '4. 新しい世界', placeholder: '' },
-      { title: '5. 挫折', placeholder: '' }, { title: '6. 絶望', placeholder: '' },
-      { title: '7. 転機', placeholder: '' }, { title: '8. 反撃', placeholder: '' },
-      { title: '9. クライマックス', placeholder: '' }, { title: '10. 最後の障害', placeholder: '' },
-      { title: '11. 決着', placeholder: '' }, { title: '12. エンディング', placeholder: '' },
+      { title: t(bs + '.beats.1'), placeholder: '' }, { title: t(bs + '.beats.2'), placeholder: '' },
+      { title: t(bs + '.beats.3'), placeholder: '' }, { title: t(bs + '.beats.4'), placeholder: '' },
+      { title: t(bs + '.beats.5'), placeholder: '' }, { title: t(bs + '.beats.6'), placeholder: '' },
+      { title: t(bs + '.beats.7'), placeholder: '' }, { title: t(bs + '.beats.8'), placeholder: '' },
+      { title: t(bs + '.beats.9'), placeholder: '' }, { title: t(bs + '.beats.10'), placeholder: '' },
+      { title: t(bs + '.beats.11'), placeholder: '' }, { title: t(bs + '.beats.12'), placeholder: '' },
     ];
     // 相対座標定義 (Electron版準拠 + オフセット)
     const positions = [
@@ -1676,17 +1682,18 @@ function generateTemplate(templateName: string) {
 
   // --- 4. 三幕構成 ---
   else if (templateName === 'three-act-structure') {
-    const group = createGroupNode(offsetX + 100, offsetY + 100, "三幕構成");
+    const group = createGroupNode(offsetX + 100, offsetY + 100, t('ideaProcessor.template.threeAct.groupName'));
     group.setAttr('isTemplateRoot', true);
     group.setAttr('archetype', 'three-act-structure');
     const bg = group.findOne('.group-bg') as Konva.Rect;
     const handle = group.findOne('.resize-handle') as Konva.Circle;
     if (bg) { bg.width(800); bg.height(250); handle.x(800); handle.y(250); }
 
+    const ta = 'ideaProcessor.template.threeAct';
     const actData = [
-      { title: '第一幕：発端', placeholder: '' },
-      { title: '第二幕：葛藤', placeholder: '' },
-      { title: '第三幕：結末', placeholder: '' },
+      { title: t(ta + '.acts.1'), placeholder: '' },
+      { title: t(ta + '.acts.2'), placeholder: '' },
+      { title: t(ta + '.acts.3'), placeholder: '' },
     ];
 
     const createdNodes: Konva.Group[] = [];
@@ -1734,7 +1741,7 @@ function openContentEditor(nodeGroup: Konva.Group) {
   let content = nodeGroup.getAttr('contentText') || '';
 
   // プレースホルダー処理 (テンプレートなどで設定されている場合)
-  const placeholder = nodeGroup.getAttr('placeholder') || '＜ここに本文を入力＞';
+  const placeholder = nodeGroup.getAttr('placeholder') || t('ideaProcessor.placeholder.contentEditor');
   let isInitialContent = false;
   contentEditor.placeholder = placeholder;
 
@@ -2637,7 +2644,7 @@ async function saveToMrsd(forceSaveAs = false) {
 
   } catch (e) {
     console.error('Save failed:', e);
-    alert('保存に失敗しました: ' + e);
+    alert(t('ideaProcessor.alert.saveFailed') + '\n' + translateRustError(e));
   }
 }
 
@@ -2647,7 +2654,7 @@ async function saveByBtn() { await saveToMrsd(true) }
 async function loadFromMrsd(targetPath?: string) {
   // 手動ロードで、未保存の変更がある場合のみ確認
   if (!targetPath && isDirty) {
-    const yes = await ask('変更が保存されていません。破棄して開きますか？', { title: '確認', kind: 'warning' });
+    const yes = await ask(t('ideaProcessor.dialog.unsavedChanges.loadMessage'), { title: t('ideaProcessor.dialog.unsavedChanges.loadTitle'), kind: 'warning' });
     if (!yes) return;
   }
 
@@ -2815,13 +2822,13 @@ async function loadFromMrsd(targetPath?: string) {
 
   } catch (e) {
     console.error('Load failed:', e);
-    alert('読み込みに失敗しました: ' + e);
+    alert(t('ideaProcessor.alert.loadFailed') + e);
   }
 }
 
 async function newFile() {
   if (isDirty) {
-    const yes = await ask('変更が保存されていません。破棄して新規作成しますか？', { title: '確認', kind: 'warning' });
+    const yes = await ask(t('ideaProcessor.dialog.unsavedChanges.newMessage'), { title: t('ideaProcessor.dialog.unsavedChanges.newTitle'), kind: 'warning' });
     if (!yes) return;
   }
 
@@ -3426,7 +3433,7 @@ async function exportAsMarkdown() {
       // 必要ならTauriのshellプラグインでフォルダを開く処理を追加
     } catch (e) {
       console.error(e);
-      alert('Markdownの書き出しに失敗しました。');
+      alert(t('ideaProcessor.alert.markdownExportFailed'));
     }
   }
 }
@@ -3440,7 +3447,7 @@ async function sendToEditor() {
     console.log('Sent content to editor.');
   } catch (e) {
     console.error(e);
-    alert('エディタへの送信に失敗しました。');
+    alert(t('ideaProcessor.alert.editorSendFailed'));
   }
 }
 
@@ -3452,7 +3459,7 @@ async function exportAsPng() {
   // 書き出し範囲の計算 (Electron版のロジックを流用)
   const allShapes = [...stage.find('.node-group'), ...stage.find('.container-group')];
   if (allShapes.length === 0) {
-    alert('書き出すコンテンツがありません。');
+    alert(t('ideaProcessor.alert.noContentToExport'));
     return;
   }
 
@@ -3521,7 +3528,7 @@ async function exportAsPng() {
         img.src = dataUrl;
       } catch (e) {
         console.error(e);
-        alert('画像の書き出しに失敗しました。');
+        alert(t('ideaProcessor.alert.imageExportFailed'));
       }
     }
   });
@@ -3535,7 +3542,7 @@ async function exportAsHtml() {
   // 2. 書き出し範囲の計算
   const allShapes = [...stage.find('.node-group'), ...stage.find('.container-group')];
   if (allShapes.length === 0) {
-    alert('書き出すコンテンツがありません。');
+    alert(t('ideaProcessor.alert.noContentToExport'));
     return;
   }
 
@@ -3613,7 +3620,7 @@ async function exportAsHtml() {
         img.src = dataUrl;
       } catch (e) {
         console.error(e);
-        alert('HTMLの書き出しに失敗しました。');
+        alert(t('ideaProcessor.alert.htmlExportFailed'));
       }
     }
   });
@@ -3625,7 +3632,7 @@ function exportAsPdf() {
 
   const allShapes = [...stage.find('.node-group'), ...stage.find('.container-group')];
   if (allShapes.length === 0) {
-    alert('書き出すコンテンツがありません。');
+    alert(t('ideaProcessor.alert.noContentToExport'));
     return;
   }
 
@@ -3765,7 +3772,7 @@ async function triggerFreeAssociation() {
   if (isAiThinking) return;
 
   if (!selectedShape || selectedShape.name() !== 'node-group') {
-    alert('AIで展開したいノードを1つ選択してください。');
+    alert(t('ideaProcessor.ai.selectNodeToExpand'));
     return;
   }
 
@@ -3784,12 +3791,12 @@ async function triggerFreeAssociation() {
 
   // ストアからユーザー設定のシステムプロンプトを取得
   const userSystemPrompt = await store?.get<string>('aiSystemPrompt') || "";
-  const baseSystemPrompt = "あなたは創造的なブレインストーミングのアシスタントです。余計な前置きや説明、マークダウンの装飾は一切出力せず、結果のテキストのみを出力してください。";
+  const baseSystemPrompt = t('prompts.ideaProcessor.expandNode');
   // プロンプトの合成
   const systemPrompt = userSystemPrompt
-    ? `${baseSystemPrompt}\n\n【追加指示】:\n${userSystemPrompt}`
+    ? `${baseSystemPrompt}\n\n${t('prompts.ideaProcessor.userInstructionPrefix')}${userSystemPrompt}`
     : baseSystemPrompt;
-  const prompt = `「${nodeTitle}」という言葉から連想される、あるいはそれに続く創造的なアイデアを3つ出力してください。\n条件：\n- 1つのアイデアにつき ${charLimit}文字以内 に収めること\n- 3つのアイデアを改行で区切って出力すること（箇条書きの「・」などは不要）`;
+  const prompt = t('prompts.ideaProcessor.freeAssociationPrompt', { nodeTitle, charLimit: String(charLimit) });
 
   // 状態更新とUIガード
   isAiThinking = true;
@@ -3847,7 +3854,7 @@ async function triggerFreeAssociation() {
         model = await store.get<string>('localLlmModel') || "local-model";
       }
 
-      if (ipAiApi !== 'local' && !apiKey) throw new Error(`${ipAiApi} API Key が設定されていません。`);
+      if (ipAiApi !== 'local' && !apiKey) throw new Error(t('ideaProcessor.alert.noApiKey', { api: ipAiApi }));
 
       // 互換API共通のフェッチ処理
       resultText = await fetchOpenAICompatible(url, apiKey, model, prompt, systemPrompt, apiMaxTokens);
@@ -3938,16 +3945,16 @@ async function triggerTemplateCompletion() {
 
   const parentId = currentNode.getAttr('parentId');
   if (!parentId) {
-    alert('このノードには親グループが設定されていません。');
+    alert(t('ideaProcessor.ai.missingParentGroup'));
     return;
   }
   const parentGroup = layer.findOne('#' + parentId) as Konva.Group;
   if (!parentGroup) {
-    alert('親テンプレートグループが見つかりません。');
+    alert(t('ideaProcessor.ai.templateGroupNotFound'));
     return;
   }
   if (!parentGroup.getAttr('isTemplateRoot')) {
-    alert('親グループがテンプレートルートとして設定されていません。');
+    alert(t('ideaProcessor.ai.notTemplateRoot'));
     return;
   }
 
@@ -3956,7 +3963,7 @@ async function triggerTemplateCompletion() {
 
   // 行為者モデル（分析用）は補完から除外
   if (archetype === 'greimas') {
-    alert('行為者モデル（Actantial model）は構造設計用のため、文章の自動補完には対応していません。');
+    alert(t('ideaProcessor.ai.greimasNotSupported'));
     return;
   }
   // 予期せぬエラー防止のため、身分証がない場合もガード
@@ -3964,17 +3971,20 @@ async function triggerTemplateCompletion() {
     return;
   }
 
+  const hj = 'ideaProcessor.template.herosJourney';
+  const bs = 'ideaProcessor.template.beatSheet';
+  const ta = 'ideaProcessor.template.threeAct';
   const ARCHETYPE_DEFINITIONS: Record<string, string[]> = {
     'heros-journey': [
-      '日常の世界', '冒険への誘い', '冒険の拒絶', '賢者との出会い', '第一関門突破',
-      '試練、仲間、敵', '最も危険な場所', '最大の試練', '報酬', '帰路', '復活', '宝物との帰還'
+      t(hj + '.steps.1'), t(hj + '.steps.2'), t(hj + '.steps.3'), t(hj + '.steps.4'), t(hj + '.steps.5'),
+      t(hj + '.steps.6'), t(hj + '.steps.7'), t(hj + '.steps.8'), t(hj + '.steps.9'), t(hj + '.steps.10'), t(hj + '.steps.11'), t(hj + '.steps.12')
     ],
     'beat-sheet': [
-      'オープニング', '事件の発生', '決意', '新しい世界', '挫折', '絶望',
-      '転機', '反撃', 'クライマックス', '最後の障害', '決着', 'エンディング'
+      t(bs + '.beats.1'), t(bs + '.beats.2'), t(bs + '.beats.3'), t(bs + '.beats.4'), t(bs + '.beats.5'), t(bs + '.beats.6'),
+      t(bs + '.beats.7'), t(bs + '.beats.8'), t(bs + '.beats.9'), t(bs + '.beats.10'), t(bs + '.beats.11'), t(bs + '.beats.12')
     ],
     'three-act-structure': [
-      '第一幕：発端', '第二幕：葛藤', '第三幕：結末'
+      t(ta + '.acts.1'), t(ta + '.acts.2'), t(ta + '.acts.3')
     ]
   };
 
@@ -4020,25 +4030,19 @@ async function triggerTemplateCompletion() {
 
   // --- 3. プロンプト構築 ---
   const userSystemPrompt = await store?.get<string>('aiSystemPrompt') || "";
-  const baseSystemPrompt = "あなたはプロの小説家です。物語の構造（アーキタイプ）を理解し、全体の流れに沿った執筆を行います。";
+  const baseSystemPrompt = t('prompts.ideaProcessor.templateCompletion');
   // プロンプトの合成
   const systemPrompt = userSystemPrompt
-    ? `${baseSystemPrompt}\n\n【追加指示】:\n${userSystemPrompt}`
+    ? `${baseSystemPrompt}\n\n${t('prompts.ideaProcessor.userInstructionPrefix')}${userSystemPrompt}`
     : baseSystemPrompt;
 
-  const prompt = `あなたは「${archetype}」という構造に沿って執筆しています。
-本来の構成：
-${archetypeStructure}
-
-現在の計画（各ノードのタイトル）：
-${currentStory}
-
-現在は 【第${currentStepNumber}ステップ】 を執筆中です。
-以下の続きを、文体やトーンを維持し、前後の流れと矛盾しないように執筆してください。
-出力は続きの文章のみとし、解説や挨拶は不要です。
-
-【これまでの文章】
-${contextText}`;
+  const prompt = t('prompts.ideaProcessor.templateCompletionPrompt', {
+    archetype,
+    archetypeStructure,
+    currentStory,
+    currentStepNumber: String(currentStepNumber),
+    contextText
+  });
 
   // 4. 通信準備とUIロック
   isAiThinking = true;
@@ -4096,7 +4100,7 @@ ${contextText}`;
         model = await store.get<string>('localLlmModel') || "local-model";
       }
 
-      if (ipAiApi !== 'local' && !apiKey) throw new Error(`${ipAiApi} API Key が設定されていません。`);
+      if (ipAiApi !== 'local' && !apiKey) throw new Error(t('ideaProcessor.alert.noApiKey', { api: ipAiApi }));
 
       // 互換API共通のフェッチ処理
       resultText = await fetchOpenAICompatible(url, apiKey, model, prompt, systemPrompt, maxTokens);
@@ -4278,9 +4282,9 @@ async function triggerNodeAlchemy() {
 
   // 0. ダイアログを表示してユーザーの指示を仰ぐ
   // ストアから前回の入力を取得（デフォルトは一般的な指示に）
-  const lastPrompt = await store.get<string>('lastAlchemyPrompt') || 'これらの要素を組み合わせた新しいプロット展開';
+  const lastPrompt = await store.get<string>('lastAlchemyPrompt') || t('ideaProcessor.default.alchemyPrompt');
 
-  const userInstruction = await showStringInput('何を生成させますか？', lastPrompt);
+  const userInstruction = await showStringInput(t('ideaProcessor.default.aiPromptInput'), lastPrompt);
 
   // キャンセルされた場合は処理を中断
   if (userInstruction === null) {
@@ -4331,22 +4335,21 @@ async function triggerNodeAlchemy() {
   }
 
   // --- 3. プロンプト構築と通信 ---
-  // AFAの文字数制限設定(faMaxTokens)を流用、または錬金術用に少し多めに解釈
-  const charLimit = await store.get<number>('faMaxTokens') || 200;
-  const apiMaxTokens = charLimit * 5;
-
   const userSystemPrompt = await store?.get<string>('aiSystemPrompt') || "";
-  const baseSystemPrompt = "あなたは創造的なブレインストーミングのアシスタントです。提示された複数の異なるアイデアや要素を踏まえて、ユーザーの指示に従って新しいアイデアを生み出してください。余計な前置きやマークダウンは不要です。";
+  const baseSystemPrompt = t('prompts.ideaProcessor.nodeAlchemy');
   // プロンプトの合成
   const systemPrompt = userSystemPrompt
-    ? `${baseSystemPrompt}\n\n【追加指示】:\n${userSystemPrompt}`
+    ? `${baseSystemPrompt}\n\n${t('prompts.ideaProcessor.userInstructionPrefix')}${userSystemPrompt}`
     : baseSystemPrompt;
 
   // ユーザーの入力を直接プロンプトに埋め込む
-  const prompt = `以下の複数の要素と矛盾なく調和する、新たな「${userInstruction}」を提案してください。
-出力は ${charLimit}文字以内 に収めてください。
-
-${combinedContext}`;
+  const charLimit = await store.get<number>('faMaxTokens') || 200;
+  const apiMaxTokens = charLimit * 5;
+  const prompt = t('prompts.ideaProcessor.nodeAlchemyPrompt', {
+    userInstruction,
+    charLimit: String(charLimit),
+    combinedContext
+  });
 
   // 通信準備とUIロック
   isAiThinking = true;
@@ -4397,7 +4400,7 @@ ${combinedContext}`;
         model = await store.get<string>('localLlmModel') || "local-model";
       }
 
-      if (ipAiApi !== 'local' && !apiKey) throw new Error(`${ipAiApi} API Key が設定されていません。`);
+      if (ipAiApi !== 'local' && !apiKey) throw new Error(t('ideaProcessor.alert.noApiKey', { api: ipAiApi }));
 
       resultText = await fetchOpenAICompatible(url, apiKey, model, prompt, systemPrompt, apiMaxTokens);
     }
@@ -4522,7 +4525,7 @@ async function triggerIpMissingLink() {
   const isBothTemplate = nodes && nodes[0].getAttr('isTemplateItem') && nodes[1].getAttr('isTemplateItem');
 
   if (isTemplateLink || isBothTemplate) {
-    alert('テンプレートの基幹リンクを改変することはできません。');
+    alert(t('ideaProcessor.ai.cannotModifyCoreLink'));
     return;
   }
 
@@ -4537,15 +4540,15 @@ async function triggerIpMissingLink() {
   const originalLabelText = labelNode ? labelNode.text() : '';
 
   // 2. 情報の抽出
-  const fromTitle = fromNode.findOne<Konva.Text>('.text')?.text() || '起点';
+  const fromTitle = fromNode.findOne<Konva.Text>('.text')?.text() || t('ideaProcessor.default.linkStart');
   const fromContent = fromNode.getAttr('contentText') || '';
 
-  const toTitle = toNode.findOne<Konva.Text>('.text')?.text() || '終点';
+  const toTitle = toNode.findOne<Konva.Text>('.text')?.text() || t('ideaProcessor.default.linkEnd');
   const toContent = toNode.getAttr('contentText') || '';
 
   // 3. ユーザーへの指示入力ダイアログ
-  const lastPrompt = await store.get<string>('lastMissingLinkPrompt') || 'この2つの間を繋ぐ出来事や展開';
-  const userInstruction = await showStringInput('何を生成させますか？', lastPrompt);
+  const lastPrompt = await store.get<string>('lastMissingLinkPrompt') || t('ideaProcessor.default.missingLinkPrompt');
+  const userInstruction = await showStringInput(t('ideaProcessor.default.aiPromptInput'), lastPrompt);
 
   if (userInstruction === null) return;
 
@@ -4555,12 +4558,11 @@ async function triggerIpMissingLink() {
   // 4. プロンプトの構築
   const charLimit = await store.get<number>('faMaxTokens') || 200;
   const apiMaxTokens = charLimit * 5;
-
   const userSystemPrompt = await store?.get<string>('aiSystemPrompt') || "";
-  const baseSystemPrompt = "あなたは創造的なプロットメイカーです。提示された「起点」と「終点」のギャップを埋める、論理的かつドラマチックな「ミッシングリンク（繋ぎの展開）」を提案してください。余計な前置きやマークダウンは不要です。";
+  const baseSystemPrompt = t('prompts.ideaProcessor.missingLink');
   // プロンプトの合成
   const systemPrompt = userSystemPrompt
-    ? `${baseSystemPrompt}\n\n【追加指示】:\n${userSystemPrompt}`
+    ? `${baseSystemPrompt}\n\n${t('prompts.ideaProcessor.userInstructionPrefix')}${userSystemPrompt}`
     : baseSystemPrompt;
 
   // --- 1. 線種と言語化のマッピング ---
@@ -4569,45 +4571,36 @@ async function triggerIpMissingLink() {
 
   switch (originalType) {
     case LinkType.ARROW:
-      relationTypeDesc = "一方通行の作用・影響";
-      relationFlowDesc = `「${fromTitle}」から「${toTitle}」へと働きかける関係性です。`;
+      relationTypeDesc = t('prompts.ideaProcessor.linkArrow');
+      relationFlowDesc = t('prompts.ideaProcessor.linkArrowFlow', { from: fromTitle, to: toTitle });
       break;
     case LinkType.DOUBLE_ARROW:
-      relationTypeDesc = "相互作用・対立";
-      relationFlowDesc = `「${fromTitle}」と「${toTitle}」が互いに影響し合う、あるいは対立する関係性です。`;
+      relationTypeDesc = t('prompts.ideaProcessor.linkDoubleArrow');
+      relationFlowDesc = t('prompts.ideaProcessor.linkDoubleArrowFlow', { from: fromTitle, to: toTitle });
       break;
     case LinkType.LINE:
-      relationTypeDesc = "関連・付随";
-      relationFlowDesc = `「${fromTitle}」と「${toTitle}」の間に何らかの繋がりがある状態です。`;
+      relationTypeDesc = t('prompts.ideaProcessor.linkLine');
+      relationFlowDesc = t('prompts.ideaProcessor.linkLineFlow', { from: fromTitle, to: toTitle });
       break;
   }
 
   // --- 2. ラベルがある場合の補足 ---
   const actionDesc = originalLabelText
-    ? `具体的な作用の内容: 「${originalLabelText}」`
-    : "具体的な作用の詳細は未定義です。";
+    ? t('prompts.ideaProcessor.linkActionDetail', { label: originalLabelText })
+    : t('prompts.ideaProcessor.linkActionUnspecified');
 
   // --- 3. プロンプトの組み立て（セクション化） ---
-  const prompt = `
-以下の2つの要素（起点と終点）の間に介在し、両者を繋ぐための「${userInstruction}」を提案してください。
-
-【起点】
-タイトル: ${fromTitle}
-内容: ${fromContent}
-
-【終点】
-タイトル: ${toTitle}
-内容: ${toContent}
-
-【現在の二者の関係性】
-タイプ: ${relationTypeDesc}
-概要: ${relationFlowDesc}
-${actionDesc}
-
-【指示】
-上記の「関係性」を踏まえ、起点から終点へと至るまでの論理的なミッシングリンク（繋ぎの展開）を執筆してください。
-出力は ${charLimit}文字以内 に収め、続きの文章のみを出力してください。
-`;
+  const prompt = t('prompts.ideaProcessor.missingLinkPrompt', {
+    userInstruction,
+    charLimit: String(charLimit),
+    fromTitle,
+    fromContent,
+    toTitle,
+    toContent,
+    relationTypeDesc,
+    relationFlowDesc,
+    actionDesc
+  });
 
   // 5. 新ノードの出現座標を計算（リンクの中点より少し上）
   let midX = (fromNode.x() + toNode.x()) / 2;
@@ -4670,7 +4663,7 @@ ${actionDesc}
         model = await store.get<string>('localLlmModel') || "local-model";
       }
 
-      if (ipAiApi !== 'local' && !apiKey) throw new Error(`${ipAiApi} API Key が設定されていません。`);
+      if (ipAiApi !== 'local' && !apiKey) throw new Error(t('ideaProcessor.alert.noApiKey', { api: ipAiApi }));
 
       resultText = await fetchOpenAICompatible(url, apiKey, model, prompt, systemPrompt, apiMaxTokens);
     }
@@ -5005,6 +4998,14 @@ function setupThemeListener() {
 
 // ■ 設定変更リスナー (settings-changed)
 function setupSettingsListener() {
+  listen('app:language-changed', async () => {
+    const lang = await invoke<string>('get_app_language');
+    await initI18n(lang === 'en' ? 'en' : 'ja');
+    applyTranslationsToDOM();
+    const title: string = await invoke<string>('get_window_title', { windowKey: 'idea_processor' }).catch((): string => '');
+    if (title) { const { getCurrentWindow } = await import('@tauri-apps/api/window'); await getCurrentWindow().setTitle(title); }
+  });
+
   listen('settings-changed', async (event: any) => {
     const p = event.payload;
 
@@ -5131,11 +5132,10 @@ async function IPClose() {
     // Tauriのダイアログは「はい/いいえ」。
     // Yes -> 保存して閉じる / No -> 破棄して閉じる / (ダイアログ外クリック等 -> キャンセル扱いしたいがTauriでは難しい)
     // ここでは「保存しますか？」と聞き、Yesなら保存フロー、Noなら破棄フローとする
-    const doSave = await ask('無題のファイルに変更があります。保存して閉じますか？\n（「いいえ」を選ぶと変更は破棄されます）', {
-      title: '保存確認',
-      kind: 'warning',
-      okLabel: '保存する',
-      cancelLabel: '保存しない（破棄）'
+    const doSave = await ask(t('ideaProcessor.dialog.unsavedChanges.closeMessage'), {
+      title: t('ideaProcessor.dialog.unsavedChanges.closeTitle'),
+      okLabel: t('ideaProcessor.dialog.unsavedChanges.saveLabel'),
+      cancelLabel: t('ideaProcessor.dialog.unsavedChanges.discardLabel')
     });
 
     if (doSave) {
@@ -5203,10 +5203,10 @@ async function IPToggleOnTop() {
   await getCurrentWindow().setAlwaysOnTop(isPinned);
   if (isPinned) {
     pinBtn.classList.add('active');
-    pinBtn.title = "固定を解除";
+    pinBtn.title = t('ideaProcessor.pinButton.pinned');
   } else {
     pinBtn.classList.remove('active');
-    pinBtn.title = "最前面に固定";
+    pinBtn.title = t('ideaProcessor.pinButton.unpinned');
   }
 }
 
@@ -5225,6 +5225,13 @@ async function createGroupNodeByButton() {
 // =================================================================
 
 document.addEventListener('DOMContentLoaded', async () => {
+  // 0. i18n初期化
+  const appLang = await invoke<string>('get_app_language');
+  await initI18n(appLang === 'en' ? 'en' : 'ja');
+  applyTranslationsToDOM();
+  const title: string = await invoke<string>('get_window_title', { windowKey: 'idea_processor' }).catch((): string => '');
+  if (title) { const { getCurrentWindow } = await import('@tauri-apps/api/window'); await getCurrentWindow().setTitle(title); }
+
   // 1. Konva等のセットアップ
   initializeIdeaProcessor();
 

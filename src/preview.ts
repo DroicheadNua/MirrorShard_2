@@ -7,7 +7,7 @@ import updateArticle from './scripts/ruby';
 import { resolveResource } from '@tauri-apps/api/path';
 import { convertFileSrc } from '@tauri-apps/api/core';
 import { type } from '@tauri-apps/plugin-os';
-import { initI18n, applyTranslationsToDOM, t } from './i18n';
+import { initI18n, applyTranslationsToDOM, t, translateRustError } from './i18n';
 
 interface PreviewPayload {
     text: string;
@@ -145,9 +145,11 @@ async function initPreview() {
         document.body.classList.add('is-mac');
     }
 
-    const locale = await invoke('get_app_language').catch(() => 'ja');
+    const locale: string = await invoke<string>('get_app_language').catch((): string => 'ja');
     await initI18n(locale === 'en' ? 'en' : 'ja');
     applyTranslationsToDOM();
+    const title: string = await invoke<string>('get_window_title', { windowKey: 'preview' }).catch((): string => '');
+    if (title) { const { getCurrentWindow } = await import('@tauri-apps/api/window'); await getCurrentWindow().setTitle(title); }
 
     // --- 更新ボタン ---
     refreshBtn?.addEventListener('click', async () => {
@@ -299,7 +301,7 @@ async function initPreview() {
 
         } catch (e) {
             console.error(e);
-            alert(`${t('preview.alert.exportFailed')}: ${e}`);
+            alert(`${t('preview.alert.exportFailed')}: ${translateRustError(e)}`);
         }
     }
 

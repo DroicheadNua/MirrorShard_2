@@ -12,5 +12,24 @@
     "nextSection": "【後半の文章】",
     "instruction": "【指示】",
     "instructionFiller": "上記の間を埋める文章を執筆してください。"
+  },
+  "ideaProcessor": {
+    "userInstructionPrefix": "【追加指示】:\n",
+    "expandNode": "あなたは創造的なブレインストーミングのアシスタントです。余計な前置きや説明、マークダウンの装飾は一切出力せず、結果のテキストのみを出力してください。",
+    "templateCompletion": "あなたはプロの小説家です。物語の構造（アーキタイプ）を理解し、全体の流れに沿った執筆を行います。",
+    "nodeAlchemy": "あなたは創造的なブレインストーミングのアシスタントです。提示された複数の異なるアイデアや要素を踏まえて、ユーザーの指示に従って新しいアイデアを生み出してください。余計な前置きやマークダウンは不要です。",
+    "missingLink": "あなたは創造的なプロットメイカーです。提示された「起点」と「終点」のギャップを埋める、論理的かつドラマチックな「ミッシングリンク（繋ぎの展開）」を提案してください。余計な前置きやマークダウンは不要です。",
+    "freeAssociationPrompt": "「{{nodeTitle}}」という言葉から連想される、あるいはそれに続く創造的なアイデアを3つ出力してください。\n条件：\n- 1つのアイデアにつき {{charLimit}}文字以内 に収めること\n- 3つのアイデアを改行で区切って出力すること（箇条書きの「・」などは不要）",
+    "templateCompletionPrompt": "あなたは「{{archetype}}」という構造に沿って執筆しています。\n本来の構成：\n{{archetypeStructure}}\n\n現在の計画（各ノードのタイトル）：\n{{currentStory}}\n\n現在は 【第{{currentStepNumber}}ステップ】 を執筆中です。\n以下の続きを、文体やトーンを維持し、前後の流れと矛盾しないように執筆してください。\n出力は続きの文章のみとし、解説や挨拶は不要です。\n\n【これまでの文章】\n{{contextText}}",
+    "nodeAlchemyPrompt": "以下の複数の要素と矛盾なく調和する、新たな「{{userInstruction}}」を提案してください。\n出力は {{charLimit}}文字以内 に収めてください。\n\n{{combinedContext}}",
+    "missingLinkPrompt": "\n以下の2つの要素（起点と終点）の間に介在し、両者を繋ぐための「{{userInstruction}}」を提案してください。\n\n【起点】\nタイトル: {{fromTitle}}\n内容: {{fromContent}}\n\n【終点】\nタイトル: {{toTitle}}\n内容: {{toContent}}\n\n【現在の二者の関係性】\nタイプ: {{relationTypeDesc}}\n概要: {{relationFlowDesc}}\n{{actionDesc}}\n\n【指示】\n上記の「関係性」を踏まえ、起点から終点へと至るまでの論理的なミッシングリンク（繋ぎの展開）を執筆してください。\n出力は {{charLimit}}文字以内 に収め、続きの文章のみを出力してください。\n",
+    "linkArrow": "一方通行の作用・影響",
+    "linkArrowFlow": "「{{from}}」から「{{to}}」へと働きかける関係性です。",
+    "linkDoubleArrow": "相互作用・対立",
+    "linkDoubleArrowFlow": "「{{from}}」と「{{to}}」が互いに影響し合う、あるいは対立する関係性です。",
+    "linkLine": "関連・付随",
+    "linkLineFlow": "「{{from}}」と「{{to}}」の間に何らかの繋がりがある状態です。",
+    "linkActionDetail": "具体的な作用の内容: 「{{label}}」",
+    "linkActionUnspecified": "具体的な作用の詳細は未定義です。"
   }
 }

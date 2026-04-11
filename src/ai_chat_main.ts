@@ -1,5 +1,6 @@
 // src/ai-chat-main.ts
 import { AiChat, ChatSettings } from "./ai_chat";
+import { initI18n, t, applyTranslationsToDOM } from "./i18n";
 import { Store } from "@tauri-apps/plugin-store";
 import { save, open, ask } from "@tauri-apps/plugin-dialog";
 import { writeText } from "@tauri-apps/plugin-clipboard-manager";
@@ -126,7 +127,7 @@ async function renderAiSelector() {
                     await store.set('selectedApiType', newType);
                     await store.save();
                 }
-                showNotification(`Switched to ${newText}`);
+                showNotification(t('aiChat.notification.switchTo', { name: newText }));
 
                 // UIの更新
                 if (apiTrigger) apiTrigger.textContent = newText;
@@ -204,6 +205,13 @@ async function init() {
         setupEventListeners();
         setupSettingsListener();
         setupThemeListener();
+        listen('app:language-changed', async () => {
+            const lang = await invoke<string>('get_app_language');
+            await initI18n(lang === 'en' ? 'en' : 'ja');
+            applyTranslationsToDOM();
+            const title: string = await invoke<string>('get_window_title', { windowKey: 'ai_chat' }).catch((): string => '');
+            if (title) { const { getCurrentWindow } = await import('@tauri-apps/api/window'); await getCurrentWindow().setTitle(title); }
+        });
         await applyGlowEffect();
 
         // 前回セッションのロード
@@ -219,16 +227,22 @@ async function init() {
 
     const appWindow = getCurrentWindow();
 
+    const appLang = await invoke<string>('get_app_language');
+    await initI18n(appLang === 'en' ? 'en' : 'ja');
+    applyTranslationsToDOM();
+    const title: string = await invoke<string>('get_window_title', { windowKey: 'ai_chat' }).catch((): string => '');
+    if (title) { await appWindow.setTitle(title); }
+
     appWindow.onCloseRequested(async (event) => {
         if (isChatDirty) {
             // 一旦ウィンドウが閉じるのをストップ
             event.preventDefault();
 
-            const yes = await ask('チャットログが保存されていません。保存して閉じますか？\n（「いいえ」を選ぶと破棄されます）', {
-                title: '保存の確認',
+            const yes = await ask(t('aiChat.dialog.saveConfirmMsg'), {
+                title: t('aiChat.dialog.saveConfirmTitle'),
                 kind: 'warning',
-                okLabel: '保存する',
-                cancelLabel: '保存しない（破棄）'
+                okLabel: t('aiChat.dialog.saveOk'),
+                cancelLabel: t('aiChat.dialog.saveCancel')
             });
 
             if (yes) {
@@ -499,24 +513,17 @@ function setupEventListeners() {
         // メニューの構築
         const menu = await Menu.new({
             items: [
-                await MenuItem.new({ text: 'New Chat (Clear)', action: clearLog }),
+                await MenuItem.new({ text: t('aiChat.action.newChat'), action: clearLog }),
                 await PredefinedMenuItem.new({ item: 'Separator' }),
-                await MenuItem.new({ text: 'Load Log...', action: loadLog }),
-                await MenuItem.new({ text: 'Save Log...', action: saveLogOverwrite }),
+                await MenuItem.new({ text: t('aiChat.action.loadLog'), action: loadLog }),
+                await MenuItem.new({ text: t('aiChat.action.saveLog'), action: saveLogOverwrite }),
                 await PredefinedMenuItem.new({ item: 'Separator' }),
-
-                // メインエディタに送る
-                await MenuItem.new({ text: 'Send to Editor', action: sendToEditor }),
-
+                await MenuItem.new({ text: t('aiChat.action.sendToEditor'), action: sendToEditor }),
                 await PredefinedMenuItem.new({ item: 'Separator' }),
-
-                // コピー/ペースト (OS標準機能を呼び出すか、自前実装)
-                // TauriのPredefinedMenuItemを使うとOS標準の挙動になる
                 await PredefinedMenuItem.new({ item: 'Copy' }),
                 await PredefinedMenuItem.new({ item: 'Paste' }),
-
                 await PredefinedMenuItem.new({ item: 'Separator' }),
-                await MenuItem.new({ text: 'Close Window', action: () => getCurrentWindow().close() })
+                await MenuItem.new({ text: t('aiChat.action.closeWindow'), action: () => getCurrentWindow().close() })
             ]
         });
 
@@ -664,10 +671,10 @@ function addMessageToLog(role: string, content: string, index: number) {
             <img class="message-icon" src="${currentIcon}">
             <div class="message-actions">
                 ${role === 'user'
-            ? `<button class="action-btn btn-edit" onclick="window.editMsg(${index})" title="編集"></button>
-                       <button class="action-btn btn-delete" onclick="window.deleteMsg(${index})" title="削除"></button>`
-            : `<button class="action-btn btn-regenerate" onclick="window.regenMsg(${index})" title="再生成"></button>
-                       <button class="action-btn btn-copy" onclick="window.copyMsg(${index})" title="コピー"></button>`
+            ? `<button class="action-btn btn-edit" onclick="window.editMsg(${index})" title="${t('aiChat.action.edit')}"></button>
+                       <button class="action-btn btn-delete" onclick="window.deleteMsg(${index})" title="${t('aiChat.action.delete')}"></button>`
+            : `<button class="action-btn btn-regenerate" onclick="window.regenMsg(${index})" title="${t('aiChat.action.regenerate')}"></button>
+                       <button class="action-btn btn-copy" onclick="window.copyMsg(${index})" title="${t('aiChat.action.copy')}"></button>`
         }
             </div>
         </div>
@@ -845,7 +852,7 @@ async function loadLogFile(path: string) {
         // 読み込み成功時のみ通知（自動ロード時はうるさいので抑制しても良い）
         if (document.activeElement !== document.body) {
             // 簡易判定: ユーザー操作中（フォーカスがある）なら通知
-            showNotification('Loaded!');
+            showNotification(t('aiChat.notification.loaded'));
         }
         isChatDirty = false;
 
@@ -859,7 +866,7 @@ async function loadLogFile(path: string) {
         // 自動ロードでの失敗時はアラートを出さない（ファイル移動・削除の可能性があるため）
         // 明示的な操作のときだけ出すのが理想ですが、一旦コンソールのみに
         // alert(`Load failed: ${e}`); 
-        showNotification(`Load Error: ${String(e).substring(0, 30)}...`);
+        showNotification(t('aiChat.notification.loadError') + ': ' + String(e).substring(0, 30) + '...');
     }
 }
 
@@ -881,7 +888,7 @@ async function saveLogOverwrite() {
             await store.save();
         }
     } catch (e) {
-        alert('Save failed: ' + e);
+        alert(t('aiChat.dialog.saveFailed') + ': ' + String(e));
     }
 }
 
@@ -890,24 +897,24 @@ async function saveLogAs() {
     if (!path) return;
     currentFilePath = path;
     await saveLogOverwrite();
-    showNotification('Saved!');
+    showNotification(t('aiChat.notification.saved'));
 }
 
 async function clearLog() {
     // 1. そもそも消去していいかどうかの大前提の確認
-    const initialConfirm = await ask('現在のチャットログをすべて消去しますか？', {
-        title: 'MirrorShard AI',
+    const initialConfirm = await ask(t('aiChat.dialog.clearConfirmMsg'), {
+        title: t('aiChat.dialog.clearConfirmTitle'),
         kind: 'warning'
     });
     if (!initialConfirm) return;
 
     // 2. 消去はOKだが、未保存がある場合の救済措置
     if (isChatDirty) {
-        const doSave = await ask('チャットログが保存されていません。保存してから新規作成しますか？\n（「いいえ」を選ぶと現在の内容は破棄されます）', {
-            title: '保存の確認',
+        const doSave = await ask(t('aiChat.dialog.unsavedMsg'), {
+            title: t('aiChat.dialog.saveConfirmTitle'),
             kind: 'warning',
-            okLabel: '保存する',
-            cancelLabel: '保存しない（破棄）'
+            okLabel: t('aiChat.dialog.unsavedOk'),
+            cancelLabel: t('aiChat.dialog.unsavedCancel')
         });
 
         if (doSave) {
@@ -931,7 +938,7 @@ async function clearLog() {
         await store.save();
     }
 
-    showNotification("New chat session started.");
+    showNotification(t('aiChat.notification.newSession'));
 }
 
 async function loadLog() {
@@ -958,7 +965,7 @@ async function sendToEditor() {
         content: textContent
     });
 
-    showNotification("Sent to Editor!");
+    showNotification(t('aiChat.notification.sentToEditor'));
 }
 
 // --- グローバル操作関数 ---
@@ -993,12 +1000,15 @@ async function sendToEditor() {
     btnContainer.style.justifyContent = 'flex-end';
 
     const saveBtn = document.createElement('button');
-    saveBtn.textContent = 'OK';
     saveBtn.className = 'cyber-button';
 
     const cancelBtn = document.createElement('button');
-    cancelBtn.textContent = 'Cancel';
     cancelBtn.className = 'cyber-button';
+
+    const editOkText = t('aiChat.dialog.editOk') || 'OK';
+    const editCancelText = t('aiChat.dialog.editCancel') || 'Cancel';
+    saveBtn.textContent = editOkText;
+    cancelBtn.textContent = editCancelText;
 
     saveBtn.onclick = async () => {
         const newText = textarea.value.trim();
@@ -1027,8 +1037,8 @@ async function sendToEditor() {
 
 (window as any).deleteMsg = async (idx: number) => {
     if (isProcessing) return;
-    const yes = await ask("Delete this message and all following?", {
-        title: 'Confirm Deletion', kind: 'warning'
+    const yes = await ask(t('aiChat.dialog.deleteConfirmMsg'), {
+        title: t('aiChat.dialog.deleteConfirmTitle'), kind: 'warning'
     });
     if (!yes) return;
     chatHistory = chatHistory.slice(0, idx);
@@ -1049,7 +1059,7 @@ async function sendToEditor() {
 (window as any).copyMsg = async (idx: number) => {
     const content = chatHistory[idx].content;
     await writeText(content);
-    showNotification("Copied!");
+    showNotification(t('aiChat.notification.copied'));
 };
 
 init();

@@ -41,7 +41,18 @@
     "loadFailed": "Could not read file.\nDetails: {{detail}}",
     "fileNotFound": "File Not Found",
     "fileNotFoundDetail": "The linked file does not exist.\nPath: {{path}}",
-    "encodingError": "Could not read file.\nThe file may use an unsupported encoding (only UTF-8 and Shift-JIS are supported).\n\nDetails: {{detail}}"
+    "encodingError": "Could not read file.\nThe file may use an unsupported encoding (only UTF-8 and Shift-JIS are supported).\n\nDetails: {{detail}}",
+    "rust": {
+      "ERR_ST_PATH_NOT_FOUND": "SillyTavern path is not set or the folder cannot be found. Please specify the path in Settings.",
+      "ERR_ST_STARTUP_TIMEOUT": "SillyTavern server startup timed out.",
+      "ERR_PANDOC_NOT_FOUND": "Pandoc not found. Please install Pandoc or set the path in Settings.",
+      "ERR_UNSUPPORTED_FORMAT": "Unsupported format.",
+      "ERR_PANDOC_EXEC": "Failed to execute Pandoc: {{detail}}",
+      "ERR_PANDOC_ERROR": "Pandoc Error: {{detail}}",
+      "ERR_COVER_OPEN": "Failed to open cover image: {{detail}}",
+      "ERR_COVER_ADD": "Failed to add cover image: {{detail}}",
+      "ERR_UNSUPPORTED_ENCODING": "Unsupported encoding detected. MirrorShard only supports UTF-8 and Shift_JIS."
+    }
   },
   "languageDefault": "English"
 }

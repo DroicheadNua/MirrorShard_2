@@ -12,5 +12,24 @@
     "nextSection": "【Ending】",
     "instruction": "【Instruction】",
     "instructionFiller": "Write the passage that fills the gap above."
+  },
+  "ideaProcessor": {
+    "userInstructionPrefix": "【Additional instructions】:\n",
+    "expandNode": "You are a creative brainstorming assistant. Do not include any prefacing, explanations, or markdown formatting in your output—output only the resulting text.",
+    "templateCompletion": "You are a professional novelist. You understand story structure (archetypes) and write in alignment with the overall narrative flow.",
+    "nodeAlchemy": "You are a creative brainstorming assistant. Based on the multiple different ideas and elements provided, generate new ideas as instructed by the user. No prefacing or markdown is needed.",
+    "missingLink": "You are a creative plot maker. Suggest logical and dramatic \"missing links\" (bridging developments) that fill the gap between the provided \"Start\" and \"End\" points. No prefacing or markdown is needed.",
+    "freeAssociationPrompt": "Generate 3 creative ideas that are associated with or can follow from the term \"{{nodeTitle}}\".\nRequirements:\n- Each idea must be within {{charLimit}} characters\n- Separate the 3 ideas with line breaks (no bullet points like \"•\" or other markers)",
+    "templateCompletionPrompt": "You are writing in the structure of \"{{archetype}}\".\nThe archetype structure:\n{{archetypeStructure}}\n\nCurrent plan (each node's title):\n{{currentStory}}\n\nYou are currently writing Step {{currentStepNumber}}.\nContinue writing while maintaining the style and tone, and without contradicting the surrounding flow.\nOutput only the continuation text—do not include explanations or greetings.\n\n【Previous text】\n{{contextText}}",
+    "nodeAlchemyPrompt": "Suggest a new \"{{userInstruction}}\" that harmonizes without contradicting the multiple elements below.\nKeep the output within {{charLimit}} characters.\n\n{{combinedContext}}",
+    "missingLinkPrompt": "\nSuggest a \"{{userInstruction}}\" that serves as an intermediary between the following two elements (Start and End), connecting them.\n\n【Start】\nTitle: {{fromTitle}}\nContent: {{fromContent}}\n\n【End】\nTitle: {{toTitle}}\nContent: {{toContent}}\n\n【Current Relationship Between the Two】\nType: {{relationTypeDesc}}\nOverview: {{relationFlowDesc}}\n{{actionDesc}}\n\n【Instruction】\nBased on the above \"relationship,\" write a logical and dramatic missing link (bridging development) from the Start to the End.\nKeep the output within {{charLimit}} characters, and output only the continuation text.\n",
+    "linkArrow": "One-way action / influence",
+    "linkArrowFlow": "A relationship where \"{{from}}\" acts upon or influences \"{{to}}\".",
+    "linkDoubleArrow": "Interaction / opposition",
+    "linkDoubleArrowFlow": "A relationship where \"{{from}}\" and \"{{to}}\" mutually influence each other, or stand in opposition.",
+    "linkLine": "Association / accompaniment",
+    "linkLineFlow": "A state where there is some connection between \"{{from}}\" and \"{{to}}\".",
+    "linkActionDetail": "Specific action details: \"{{label}}\"",
+    "linkActionUnspecified": "No specific action defined."
   }
 }

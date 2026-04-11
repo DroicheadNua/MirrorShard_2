@@ -7,7 +7,7 @@ import { writeText } from '@tauri-apps/plugin-clipboard-manager';
 import { save } from '@tauri-apps/plugin-dialog';
 import { writeTextFile } from '@tauri-apps/plugin-fs';
 import { Store } from '@tauri-apps/plugin-store';
-import { initI18n, applyTranslationsToDOM, t } from './i18n';
+import { initI18n, applyTranslationsToDOM, t, translateRustError } from './i18n';
 
 interface MarkdownPayload {
     text: string;
@@ -159,9 +159,11 @@ async function renderContent() {
 async function init() {
     const store = await Store.load('.settings.dat');
 
-    const locale = await invoke('get_app_language').catch(() => 'ja');
+    const locale: string = await invoke<string>('get_app_language').catch((): string => 'ja');
     await initI18n(locale === 'en' ? 'en' : 'ja');
     applyTranslationsToDOM();
+    const title: string = await invoke<string>('get_window_title', { windowKey: 'markdown' }).catch((): string => '');
+    if (title) { const { getCurrentWindow } = await import('@tauri-apps/api/window'); await getCurrentWindow().setTitle(title); }
 
     useHardBreaks = await store.get<boolean>('mdHardBreaks') ?? false;
 
@@ -277,7 +279,12 @@ async function init() {
 
     // --- 閉じる ---
     closeBtn?.addEventListener('click', async () => {
-        invoke('open_markdown_preview');
+        try {
+            await invoke('open_markdown_preview');
+        } catch (e) {
+            console.error(e);
+            alert(translateRustError(e));
+        }
     });
 
     // --- 最前面固定切り替え ---
@@ -388,14 +395,19 @@ async function init() {
     });
 
     // --- ショートカットキー ---
-    document.addEventListener('keydown', (e) => {
+    document.addEventListener('keydown', async (e) => {
         const isCtrlOrCmd = e.ctrlKey || e.metaKey;
         const isShift = e.shiftKey;
         const key = e.key.toLowerCase();
 
         if (isCtrlOrCmd && key === 'm' && !isShift) {
             e.preventDefault();
-            invoke('open_markdown_preview');
+            try {
+                await invoke('open_markdown_preview');
+            } catch (err) {
+                console.error(err);
+                alert(translateRustError(err));
+            }
         }
         if (isCtrlOrCmd && key === 't' && !isShift) {
             e.preventDefault();

@@ -1,0 +1,67 @@
+{
+  "windowTitle": "AI Chat",
+  "placeholder": "プロンプトを入力...",
+  "run": "送信",
+  "tooltip": {
+    "clearLog": "ログのクリア (Ctrl+Shift+C)",
+    "saveOverwrite": "上書き保存 (Ctrl+S)",
+    "saveAs": "別名保存",
+    "load": "読み込み (Ctrl+O)",
+    "fullscreen": "最大化 (F11)",
+    "close": "閉じる (Ctrl+Shift+A)"
+  },
+  "notification": {
+    "switchTo": "{{name}} に切り替えました",
+    "loaded": "読み込み完了",
+    "saved": "保存完了",
+    "sentToEditor": "エディタに送信完了",
+    "copied": "コピー完了",
+    "newSession": "新しいチャットセッションを開始しました。",
+    "loadError": "読み込みエラー",
+    "saveFailed": "保存に失敗しました"
+  },
+  "dialog": {
+    "saveConfirmTitle": "保存の確認",
+    "saveConfirmMsg": "チャットログが保存されていません。保存して閉じますか？\n（「いいえ」を選ぶと破棄されます）",
+    "saveOk": "保存する",
+    "saveCancel": "保存しない（破棄）",
+    "clearConfirmTitle": "MirrorShard AI",
+    "clearConfirmMsg": "現在のチャットログをすべて消去しますか？",
+    "unsavedMsg": "チャットログが保存されていません。保存してから新規作成しますか？\n（「いいえ」を選ぶと現在の内容は破棄されます）",
+    "unsavedOk": "保存する",
+    "unsavedCancel": "保存しない（破棄）",
+    "deleteConfirmTitle": "削除の確認",
+    "deleteConfirmMsg": "このメッセージとそれに続くすべてのメッセージを削除しますか？",
+    "loadFailed": "読み込みに失敗しました",
+    "editOk": "OK",
+    "editCancel": "キャンセル"
+  },
+  "action": {
+    "edit": "編集",
+    "delete": "削除",
+    "regenerate": "再生成",
+    "copy": "コピー",
+    "newChat": "新規チャット（クリア）",
+    "loadLog": "ログを読み込む...",
+    "saveLog": "ログを保存...",
+    "sendToEditor": "エディタに送る",
+    "closeWindow": "ウィンドウを閉じる"
+  },
+  "error": {
+    "noApiKey": "エラー: {{api}} APIキーが設定されていません。",
+    "geminiNotInitialized": "エラー: Geminiセッションが初期化されていません。",
+    "geminiError": "エラー: {{detail}}",
+    "cohereNoApiKey": "エラー: Cohere APIキーが設定されていません。",
+    "cohereError": "エラー: {{detail}}",
+    "streamError": "エラー: {{detail}}"
+  },
+  "apiName": {
+    "gemini": "Gemini",
+    "groq": "Groq",
+    "cohere": "Cohere",
+    "mistral": "Mistral",
+    "local": "Local LLM",
+    "geminiFull": "Gemini (Cloud)",
+    "localFull": "Local AI"
+  }
+}

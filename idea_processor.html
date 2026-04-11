@@ -1,9 +1,9 @@
 <!DOCTYPE html>
-<html lang="ja">
+<html lang="en">
 
 <head>
   <meta charset="UTF-8">
-  <title>Idea Processor</title>
+  <title data-i18n="ideaProcessor.windowTitle">Idea Processor</title>
   <!-- ここでCSSを読み込む -->
   <link rel="stylesheet" href="/src/idea_processor.css">
 </head>
@@ -12,35 +12,35 @@
   <div id="ip-wrapper">
     <div data-tauri-drag-region id="ip-title-bar">
       <div class="top-right-buttons">
-        <button id="ip-new-file-button" title="New File (Ctrl+N)"></button>
-        <button id="ip-create-group-button" title="Create Group (Ctrl+G)"></button>
-        <button id="ip-fullscreen-btn" title="Maximize Window (F11/Cmd+Ctrl+F)"></button>
-        <button id="ip-close-btn" title="Close (Ctrl+I)"></button>
+        <button id="ip-new-file-button" data-i18n-title="ideaProcessor.tooltip.newFile" title="New File (Ctrl+N)"></button>
+        <button id="ip-create-group-button" data-i18n-title="ideaProcessor.tooltip.createGroup" title="Create Group (Ctrl+G)"></button>
+        <button id="ip-fullscreen-btn" data-i18n-title="ideaProcessor.tooltip.maximizeWindow" title="Maximize Window (F11/Cmd+Ctrl+F)"></button>
+        <button id="ip-close-btn" data-i18n-title="ideaProcessor.tooltip.close" title="Close (Ctrl+I)"></button>
         <div class="export-container">
-          <button id="ip-theme-toggle-btn" title="Toggle Dark Mode (Ctrl+T)"></button>
-          <button id="ip-toggle-outline-btn" title="Show/Hide Outline (Ctrl+Shift+O)"></button>
-          <button id="ip-export-button" title="Export..."></button>
+          <button id="ip-theme-toggle-btn" data-i18n-title="ideaProcessor.tooltip.toggleDarkMode" title="Toggle Dark Mode (Ctrl+T)"></button>
+          <button id="ip-toggle-outline-btn" data-i18n-title="ideaProcessor.tooltip.showHideOutline" title="Show/Hide Outline (Ctrl+Shift+O)"></button>
+          <button id="ip-export-button" data-i18n-title="ideaProcessor.tooltip.export" title="Export..."></button>
           <div id="ip-export-menu" class="hidden">
-            <div class="export-item" data-format="html">Export as HTML</div>
-            <div class="export-item" data-format="md">Export as Markdown</div>
-            <div class="export-item" data-format="png">Export as PNG Image</div>
-            <div class="export-item" data-format="pdf">Print / Export as PDF</div>
-            <div class="export-item" data-format="send-to-editor">Send to Editor</div>
+            <div class="export-item" data-format="html" data-i18n="ideaProcessor.menu.export.html">Export as HTML</div>
+            <div class="export-item" data-format="md" data-i18n="ideaProcessor.menu.export.markdown">Export as Markdown</div>
+            <div class="export-item" data-format="png" data-i18n="ideaProcessor.menu.export.png">Export as PNG Image</div>
+            <div class="export-item" data-format="pdf" data-i18n="ideaProcessor.menu.export.pdf">Print / Export as PDF</div>
+            <div class="export-item" data-format="send-to-editor" data-i18n="ideaProcessor.menu.export.sendToEditor">Send to Editor</div>
           </div>
-          <button id="ip-toggle-on-top-btn" title="Toggle Always on Top"></button>
+          <button id="ip-toggle-on-top-btn" data-i18n-title="ideaProcessor.tooltip.toggleAlwaysOnTop" title="Toggle Always on Top"></button>
         </div>
-        <button id="ip-zoom-reset-btn" title="Zoom Reset"></button>
-        <button id="ip-reset-window-btn" title="Initialize Window Position & Zoom (Ctrl+R)"></button>
-        <button id="ip-save-as-button" title="Save As..."></button>
-        <button id="ip-load-button" title="Load (Ctrl+O)"></button>
+        <button id="ip-zoom-reset-btn" data-i18n-title="ideaProcessor.tooltip.zoomReset" title="Zoom Reset"></button>
+        <button id="ip-reset-window-btn" data-i18n-title="ideaProcessor.tooltip.initializeWindow" title="Initialize Window Position & Zoom (Ctrl+R)"></button>
+        <button id="ip-save-as-button" data-i18n-title="ideaProcessor.tooltip.saveAs" title="Save As..."></button>
+        <button id="ip-load-button" data-i18n-title="ideaProcessor.tooltip.load" title="Load (Ctrl+O)"></button>
         <div class="template-container">
-          <button id="ip-ai-btn" title="Activate AI (Ctrl+Shift+F)"></button>
-          <button id="ip-template-button" title="Story Archetype"></button>
+          <button id="ip-ai-btn" data-i18n-title="ideaProcessor.tooltip.activateAI" title="Activate AI (Ctrl+Shift+F)"></button>
+          <button id="ip-template-button" data-i18n-title="ideaProcessor.tooltip.storyArchetype" title="Story Archetype"></button>
           <div id="ip-template-menu" class="hidden">
-            <div class="template-item" data-template="greimas">Actantial model</div>
-            <div class="template-item" data-template="heros-journey">Hero's Journey</div>
-            <div class="template-item" data-template="beat-sheet">Beat Sheet</div>
-            <div class="template-item" data-template="three-act-structure">Three-Act Structure</div>
+            <div class="template-item" data-template="greimas" data-i18n="ideaProcessor.menu.template.greimas">Actantial model</div>
+            <div class="template-item" data-template="heros-journey" data-i18n="ideaProcessor.menu.template.herosJourney">Hero's Journey</div>
+            <div class="template-item" data-template="beat-sheet" data-i18n="ideaProcessor.menu.template.beatSheet">Beat Sheet</div>
+            <div class="template-item" data-template="three-act-structure" data-i18n="ideaProcessor.menu.template.threeActStructure">Three-Act Structure</div>
             <!-- 将来的には、ここに他のテンプレートを追加していく -->
           </div>
         </div>
@@ -48,7 +48,7 @@
       <!-- AIセレクタ -->
       <div id="ip-ai-selector-container">
         <div class="custom-select-wrapper">
-          <button id="ip-ai-display" class="custom-select-trigger">Gemini (Cloud)</button>
+          <button id="ip-ai-display" class="custom-select-trigger" data-i18n="ideaProcessor.ai.selectorTrigger">Gemini (Cloud)</button>
           <div id="ip-ai-options" class="custom-options">
           </div>
         </div>
@@ -57,8 +57,8 @@
     <div id="ip-main-container">
       <div id="ip-outline-pane" class="hidden">
         <div id="ip-outline-controls">
-          <button id="outline-collapse-all" title="Collapse All">↑</button>
-          <button id="outline-expand-all" title="expand-all">↓</button>
+          <button id="outline-collapse-all" data-i18n-title="ideaProcessor.tooltip.collapseAll" title="Collapse All">↑</button>
+          <button id="outline-expand-all" data-i18n-title="ideaProcessor.tooltip.expandAll" title="Expand All">↓</button>
         </div>
         <div id="ip-outline-content"></div>
       </div>

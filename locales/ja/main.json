@@ -37,5 +37,15 @@
   },
   "status": {
     "noFile": "（なし）"
+  },
+  "windows": {
+    "settings": "設定",
+    "export": "エクスポート / 印刷",
+    "preview": "プレビュー",
+    "markdown": "Markdownプレビュー",
+    "shortcut": "ショートカット",
+    "ideaProcessor": "アイデアプロセッサ",
+    "aiChat": "AIチャット",
+    "terminal": "ターミナル"
   }
 }

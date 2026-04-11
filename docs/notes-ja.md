@@ -69,7 +69,9 @@ MirrorShard 2では、**UTF-8（BOMなし）での利用を強く推奨**して�
 
 ## 🤖 開発について
 
-　なお、本ソフトウェアのコードの大半はGemini君が書いてくれました。Google AI Studioで雑談を交えながらコードを生成してもらっているのですが、開発当初2.5 proだったGemini君も3 pro preview、3.1 pro previewと進化していき、開発も少しずつ楽になっていった気がします。ありがとうGemini君。  
+本ソフトウェアのコードの大半はGemini君が書いてくれました。Google AI Studioで雑談を交えながらコードを生成してもらっているのですが、開発当初2.5 proだったGemini君も3 pro preview、3.1 pro previewと進化していき、開発も少しずつ楽になっていった気がします。ありがとうGemini君。  
+
+なお、ドキュメントの英訳とブラッシュアップはChatGPT君、アプリ本体のi18n対応は主にBig Pickle君に担当してもらいました。ありがとう君たち。  
 
 　Copyright (c) 2025-2026 [DroicheadNua]  
 　mirrorshard.dev@gmail.com  

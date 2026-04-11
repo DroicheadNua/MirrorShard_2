@@ -1,1 +1,163 @@
-{}
+{
+  "windowTitle": "Idea Processor",
+  "tooltip": {
+    "newFile": "New File (Ctrl+N)",
+    "createGroup": "Create Group (Ctrl+G)",
+    "maximizeWindow": "Maximize Window (F11/Cmd+Ctrl+F)",
+    "close": "Close (Ctrl+I)",
+    "toggleDarkMode": "Toggle Dark Mode (Ctrl+T)",
+    "showHideOutline": "Show/Hide Outline (Ctrl+Shift+O)",
+    "export": "Export...",
+    "toggleAlwaysOnTop": "Toggle Always on Top",
+    "zoomReset": "Zoom Reset",
+    "initializeWindow": "Initialize Window Position & Zoom (Ctrl+R)",
+    "saveAs": "Save As...",
+    "load": "Load (Ctrl+O)",
+    "activateAI": "Activate AI (Ctrl+Shift+F)",
+    "storyArchetype": "Story Archetype",
+    "collapseAll": "Collapse All",
+    "expandAll": "Expand All"
+  },
+  "menu": {
+    "export": {
+      "title": "Export...",
+      "html": "Export as HTML",
+      "markdown": "Export as Markdown",
+      "png": "Export as PNG Image",
+      "pdf": "Print / Export as PDF",
+      "sendToEditor": "Send to Editor"
+    },
+    "template": {
+      "title": "Story Archetype",
+      "greimas": "Actantial model",
+      "herosJourney": "Hero's Journey",
+      "beatSheet": "Beat Sheet",
+      "threeActStructure": "Three-Act Structure"
+    }
+  },
+  "ai": {
+    "selectorTrigger": "Gemini (Cloud)",
+    "expandNodeTitle": "Select a node to expand with AI",
+    "missingParentGroup": "This node does not have a parent group set.",
+    "templateGroupNotFound": "Parent template group not found.",
+    "notTemplateRoot": "Parent group is not set as template root.",
+    "greimasNotSupported": "The Actantial model is for structural design and does not support automatic text completion.",
+    "cannotModifyCoreLink": "Cannot modify the template's core links.",
+    "selectNodeToExpand": "Please select 1 node to expand with AI."
+  },
+  "dialog": {
+    "unsavedChanges": {
+      "loadTitle": "Confirmation",
+      "loadMessage": "Changes have not been saved. Discard and open?",
+      "newTitle": "Confirmation",
+      "newMessage": "Changes have not been saved. Discard and create new?",
+      "closeTitle": "Save Confirmation",
+      "closeMessage": "Untitled file has unsaved changes. Save and close?\n(Selecting 'No' will discard changes)",
+      "saveLabel": "Save",
+      "discardLabel": "Don't Save (Discard)"
+    }
+  },
+  "alert": {
+    "saveFailed": "Failed to save: ",
+    "loadFailed": "Failed to load: ",
+    "markdownExportFailed": "Failed to export Markdown.",
+    "editorSendFailed": "Failed to send to editor.",
+    "noContentToExport": "No content to export.",
+    "imageExportFailed": "Failed to export image.",
+    "htmlExportFailed": "Failed to export HTML.",
+    "noApiKey": "{{api}} API Key is not set."
+  },
+  "template": {
+    "greimas": {
+      "groupName": "Actantial Model",
+      "nodes": {
+        "sujet": "Subject",
+        "objet": "Object",
+        "destinateur": "Sender",
+        "destinataire": "Receiver",
+        "adjuvant": "Helper",
+        "opposant": "Opponent"
+      },
+      "placeholders": {
+        "sujet": "Protagonist",
+        "objet": "Protagonist's goal",
+        "destinateur": "Client, etc.",
+        "destinataire": "Entity receiving benefit",
+        "adjuvant": "Allies and tools",
+        "opposant": "Antagonist"
+      }
+    },
+    "herosJourney": {
+      "groupName": "Hero's Journey",
+      "steps": {
+        "1": "1. The Ordinary World",
+        "2": "2. Call to Adventure",
+        "3": "3. Refusal of the Call",
+        "4": "4. Meeting the Mentor",
+        "5": "5. Crossing the Threshold",
+        "6": "6. Tests, Allies, Enemies",
+        "7": "7. The Approach",
+        "8": "8. The Ordeal",
+        "9": "9. The Reward",
+        "10": "10. The Road Back",
+        "11": "11. Resurrection",
+        "12": "12. Return with the Elixir"
+      },
+      "placeholders": {
+        "1": "Protagonist's everyday life",
+        "2": "Inciting incident",
+        "3": "Hesitation",
+        "4": "Guide/Mentor",
+        "5": "Decision",
+        "6": "New world",
+        "7": "Into the heart",
+        "8": "Death and rebirth",
+        "9": "What was gained",
+        "10": "Road back to ordinary",
+        "11": "Final battle",
+        "12": "Changed ordinary world"
+      }
+    },
+    "beatSheet": {
+      "groupName": "Essential Beat Sheet",
+      "beats": {
+        "1": "1. Opening Image",
+        "2": "2. Inciting Incident",
+        "3": "3. Debate",
+        "4": "4. Break into Two",
+        "5": "5. B Story",
+        "6": "6. Fun and Games",
+        "7": "7. Midpoint",
+        "8": "8. Bad Guys Close In",
+        "9": "9. All Is Lost",
+        "10": "10. Dark Night of the Soul",
+        "11": "11. Break into Three",
+        "12": "12. Finale"
+      }
+    },
+    "threeAct": {
+      "groupName": "Three-Act Structure",
+      "acts": {
+        "1": "Act I: Setup",
+        "2": "Act II: Confrontation",
+        "3": "Act III: Resolution"
+      }
+    }
+  },
+  "placeholder": {
+    "contentEditor": "<Enter content here>"
+  },
+  "default": {
+    "newNode": "New Node",
+    "groupName": "Group Name",
+    "linkStart": "Start",
+    "linkEnd": "End",
+    "alchemyPrompt": "Generate a new plot development combining these elements",
+    "missingLinkPrompt": "Events or developments connecting these two",
+    "aiPromptInput": "What would you like to generate?"
+  },
+  "pinButton": {
+    "pinned": "Unpin",
+    "unpinned": "Pin to Front"
+  }
+}

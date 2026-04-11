@@ -8,7 +8,7 @@ let translations: Record<string, any> = {};
 export async function initI18n(locale: Locale) {
     currentLocale = locale;
     try {
-        const [common, editor, ideaProcessor, settings, prompts, main, shortcut, markdown, export_, preview] = await Promise.all([
+        const [common, editor, ideaProcessor, settings, prompts, main, shortcut, markdown, export_, preview, aiChat] = await Promise.all([
             import(`../locales/${locale}/common.json`),
             import(`../locales/${locale}/editor.json`),
             import(`../locales/${locale}/ideaProcessor.json`),
@@ -19,6 +19,7 @@ export async function initI18n(locale: Locale) {
             import(`../locales/${locale}/markdown.json`),
             import(`../locales/${locale}/export.json`),
             import(`../locales/${locale}/preview.json`),
+            import(`../locales/${locale}/ai_chat.json`),
         ]);
 
         translations = {
@@ -31,7 +32,8 @@ export async function initI18n(locale: Locale) {
             shortcut: shortcut.default,
             markdown: markdown.default,
             export: export_.default,
-            preview: preview.default
+            preview: preview.default,
+            aiChat: aiChat.default
         };
     } catch (e) {
         console.error(`[i18n] Failed to load translations for ${locale}`, e);
@@ -63,6 +65,21 @@ export function t(key: string, params?: Record<string, string | number>): string
 
 export function getCurrentLocale(): Locale {
     return currentLocale;
+}
+
+export function translateRustError(err: unknown): string {
+    const errStr = err instanceof Error ? err.message : String(err);
+    const colonIdx = errStr.indexOf(':');
+    const code = colonIdx >= 0 ? errStr.substring(0, colonIdx) : errStr;
+    const detail = colonIdx >= 0 ? errStr.substring(colonIdx + 1).trim() : '';
+
+    if (code.startsWith('ERR_')) {
+        const translated = t(`editor.errors.rust.${code}`, { detail });
+        if (translated !== `editor.errors.rust.${code}`) {
+            return translated;
+        }
+    }
+    return errStr;
 }
 
 function setText(el: Element, key: string) {

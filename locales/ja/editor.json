@@ -41,7 +41,18 @@
     "loadFailed": "ファイルを読み込めませんでした。\n詳細: {{detail}}",
     "fileNotFound": "ファイルが見つかりません",
     "fileNotFoundDetail": "リンク先のファイルが存在しません。\nパス: {{path}}",
-    "encodingError": "ファイルを読み込めませんでした。\n対応していないエンコード（UTF-8, Shift-JIS以外）の可能性があります。\n\n詳細: {{detail}}"
+    "encodingError": "ファイルを読み込めませんでした。\n対応していないエンコード（UTF-8, Shift-JIS以外）の可能性があります。\n\n詳細: {{detail}}",
+    "rust": {
+      "ERR_ST_PATH_NOT_FOUND": "SillyTavernのパスが設定されていないか、フォルダが見つかりません。設定画面でパスを指定してください。",
+      "ERR_ST_STARTUP_TIMEOUT": "SillyTavernサーバーの起動待ち時間を超えました。",
+      "ERR_PANDOC_NOT_FOUND": "Pandocが見つかりません。インストールするか、設定画面でパスを指定してください。",
+      "ERR_UNSUPPORTED_FORMAT": "サポートされていないフォーマットです。",
+      "ERR_PANDOC_EXEC": "Pandocの実行に失敗しました: {{detail}}",
+      "ERR_PANDOC_ERROR": "Pandocエラー: {{detail}}",
+      "ERR_COVER_OPEN": "表紙画像を開けませんでした: {{detail}}",
+      "ERR_COVER_ADD": "表紙画像を追加できませんでした: {{detail}}",
+      "ERR_UNSUPPORTED_ENCODING": "サポートされていないエンコードが検出されました。MirrorShardがサポートしているのはUTF-8とShift_JISのみです。"
+    }
   },
   "languageDefault": "英語"
 }
