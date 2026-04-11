@@ -3,7 +3,7 @@
 
 <head>
   <meta charset="utf-8">
-  <title>Shortcuts</title>
+  <title data-i18n="shortcut.h1">Shortcut Keys</title>
   <link rel="stylesheet" href="/src/shortcut.css">
 </head>
 
@@ -11,126 +11,143 @@
   <div id="shortcut-wrapper">
     <div data-tauri-drag-region id="sc-title-bar"></div>
     <div class="content">
-      <h1>Shortcut Keys</h1>
-      <p class="toggle-key">Press F1 to Toggle</p>
+      <h1 data-i18n="shortcut.h1">Shortcut Keys</h1>
+      <p class="toggle-key" data-i18n="shortcut.toggleHint">Press F1 to Toggle</p>
 
-      <h2>File Operations</h2>
+      <h2 data-i18n="shortcut.fileOperations">File Operations</h2>
       <dl>
         <dt><code>Ctrl + N</code></dt>
-        <dd>新規ファイル</dd>
+        <dd data-i18n="shortcut.shortcuts.newFile">新規ファイル</dd>
         <dt><code>Ctrl + O</code></dt>
-        <dd>ファイルを開く</dd>
+        <dd data-i18n="shortcut.shortcuts.openFile">ファイルを開く</dd>
         <dt><code>Ctrl + Shift + O</code></dt>
-        <dd>選択中のファイルの場所でフォルダを開く</dd>
+        <dd data-i18n="shortcut.shortcuts.openFolder">選択中のファイルの場所でフォルダを開く</dd>
         <dt><code>Ctrl + S</code></dt>
-        <dd>ファイルを保存</dd>
+        <dd data-i18n="shortcut.shortcuts.saveFile">ファイルを保存</dd>
         <dt><code>Ctrl + Q</code></dt>
-        <dd>アプリを終了</dd>
+        <dd data-i18n="shortcut.shortcuts.exitApp">アプリを終了</dd>
       </dl>
 
-      <h2>View</h2>
+      <h2 data-i18n="shortcut.view">View</h2>
       <dl>
         <dt><code>Ctrl + P</code></dt>
-        <dd>縦書きプレビュー</dd>
+        <dd data-i18n="shortcut.shortcuts.verticalPreview">縦書きプレビュー</dd>
         <dt><code>Ctrl + M</code></dt>
-        <dd>マークダウンプレビュー</dd>
+        <dd data-i18n="shortcut.shortcuts.markdownPreview">マークダウンプレビュー</dd>
         <dt><code>Ctrl + Shift + A</code></dt>
-        <dd>AIチャット</dd>
+        <dd data-i18n="shortcut.shortcuts.aiChat">AIチャット</dd>
         <dt><code>Ctrl + I</code></dt>
-        <dd>アイデアプロセッサ</dd>
+        <dd data-i18n="shortcut.shortcuts.ideaProcessor">アイデアプロセッサ</dd>
         <dt><code>Ctrl + Shift + K</code></dt>
-        <dd>OpenCode</dd>
+        <dd data-i18n="shortcut.shortcuts.openCode">OpenCode</dd>
         <dt><code>Ctrl + Shift + J</code></dt>
-        <dd>SillyTavern</dd>
+        <dd data-i18n="shortcut.shortcuts.sillyTavern">SillyTavern</dd>
         <dt><code>Ctrl + T</code></dt>
-        <dd>ダークモード切替</dd>
+        <dd data-i18n="shortcut.shortcuts.toggleDark">ダークモード切替</dd>
         <dt><code>Ctrl + Shift + C</code></dt>
-        <dd>ZENモード切替</dd>
+        <dd data-i18n="shortcut.shortcuts.toggleZen">ZENモード切替</dd>
         <dt><code>Ctrl + L</code></dt>
-        <dd>スポットライトモード/解除</dd>
+        <dd data-i18n="shortcut.shortcuts.spotlight">スポットライトモード/解除</dd>
         <dt><code>Ctrl + K</code></dt>
-        <dd>コードエディタモード/解除</dd>
+        <dd data-i18n="shortcut.shortcuts.codeEditor">コードエディタモード/解除</dd>
         <dt><code>Ctrl + H</code></dt>
-        <dd>最小化</dd>
+        <dd data-i18n="shortcut.shortcuts.minimize">最小化</dd>
         <dt><code>F11</code></dt>
-        <dd>フルスクリーン切替※Win/Linux</dd>
+        <dd data-i18n="shortcut.shortcuts.toggleFullscreen">フルスクリーン切替※Win/Linux</dd>
         <dt><code>F1</code></dt>
-        <dd>ショートカットキー一覧</dd>
+        <dd data-i18n="shortcut.shortcuts.shortcutList">ショートカットキー一覧</dd>
         <dt><code>Ctrl + Tab</code></dt>
-        <dd>文書切替</dd>
+        <dd data-i18n="shortcut.shortcuts.switchDoc">文書切替</dd>
         <dt><code>Ctrl + Shift + Tab</code></dt>
-        <dd>文書切替（逆順）</dd>
+        <dd data-i18n="shortcut.shortcuts.switchDocReverse">文書切替（逆順）</dd>
         <dt><code>Shift + Tab</code></dt>
-        <dd>UIボタン選択（サイクル）</dd>
+        <dd data-i18n="shortcut.shortcuts.uiCycle">UIボタン選択（サイクル）</dd>
         <dt><code>Ctrl + Shift + E</code></dt>
-        <dd>降雪エフェクトON/OFF</dd>
+        <dd data-i18n="shortcut.shortcuts.snowEffect">降雪エフェクトON/OFF</dd>
       </dl>
 
-      <h2>Editing & Settings</h2>
+      <h2 data-i18n="shortcut.editingSettings">Editing & Settings</h2>
       <dl>
         <dt><code>Ctrl + +</code></dt>
-        <dd>フォントサイズ拡大</dd>
+        <dd data-i18n="shortcut.shortcuts.fontIncrease">フォントサイズ拡大</dd>
         <dt><code>Ctrl + -</code></dt>
-        <dd>フォントサイズ縮小</dd>
+        <dd data-i18n="shortcut.shortcuts.fontDecrease">フォントサイズ縮小</dd>
         <dt><code>Ctrl + 0</code></dt>
-        <dd>フォントサイズリセット</dd>
+        <dd data-i18n="shortcut.shortcuts.fontReset">フォントサイズリセット</dd>
         <dt><code>Ctrl + Shift + F</code></dt>
-        <dd>フォント切替</dd>
+        <dd data-i18n="shortcut.shortcuts.fontSwitch">フォント切替</dd>
         <dt><code>Ctrl + Shift + P</code></dt>
-        <dd>BGM再生/停止</dd>
+        <dd data-i18n="shortcut.shortcuts.bgmToggle">BGM再生/停止</dd>
         <dt><code>Ctrl + Shift + T</code></dt>
-        <dd>タイプ音 ON/OFF</dd>
+        <dd data-i18n="shortcut.shortcuts.typeSoundToggle">タイプ音 ON/OFF</dd>
         <dt><code>F2</code></dt>
-        <dd>設定</dd>
+        <dd data-i18n="shortcut.shortcuts.settings">設定</dd>
         <dt><code>Ctrl + E</code></dt>
-        <dd>エクスポート</dd>
+        <dd data-i18n="shortcut.shortcuts.export">エクスポート</dd>
         <dt><code>Ctrl + @</code></dt>
-        <dd>ターミナルを開く/閉じる</dd>
+        <dd data-i18n="shortcut.shortcuts.terminalToggle">ターミナルを開く/閉じる</dd>
         <dt><code>Ctrl + Shift + @</code></dt>
-        <dd>選択中のファイルの場所でターミナルを開く</dd>
+        <dd data-i18n="shortcut.shortcuts.terminalHere">選択中のファイルの場所でターミナルを開く</dd>
       </dl>
 
-      <h2>Standard Editing</h2>
+      <h2 data-i18n="shortcut.standardEditing">Standard Editing</h2>
       <dl>
         <dt><code>Ctrl + Z</code></dt>
-        <dd>元に戻す (Undo)</dd>
+        <dd data-i18n="shortcut.shortcuts.undo">元に戻す (Undo)</dd>
         <dt><code>Ctrl + Y</code></dt>
-        <dd>やり直し (Redo) ※Win/Linux</dd>
+        <dd data-i18n="shortcut.shortcuts.redo">やり直し (Redo) ※Win/Linux</dd>
         <dt><code>Ctrl + Shift + Z</code></dt>
-        <dd>やり直し (Redo) ※Mac</dd>
+        <dd data-i18n="shortcut.shortcuts.redoMac">やり直し (Redo) ※Mac</dd>
         <dt><code>Ctrl + X</code></dt>
-        <dd>切り取り (Cut)</dd>
+        <dd data-i18n="shortcut.shortcuts.cut">切り取り (Cut)</dd>
         <dt><code>Ctrl + C</code></dt>
-        <dd>コピー (Copy)</dd>
+        <dd data-i18n="shortcut.shortcuts.copy">コピー (Copy)</dd>
         <dt><code>Ctrl + V</code></dt>
-        <dd>貼り付け (Paste)</dd>
+        <dd data-i18n="shortcut.shortcuts.paste">貼り付け (Paste)</dd>
         <dt><code>Ctrl + A</code></dt>
-        <dd>すべて選択 (Select All)</dd>
+        <dd data-i18n="shortcut.shortcuts.selectAll">すべて選択 (Select All)</dd>
         <dt><code>Ctrl + F</code></dt>
-        <dd>検索 (Find)</dd>
+        <dd data-i18n="shortcut.shortcuts.find">検索 (Find)</dd>
         <dt><code>ESC</code></dt>
-        <dd>検索ウィンドウを閉じる</dd>
+        <dd data-i18n="shortcut.shortcuts.closeFind">検索ウィンドウを閉じる</dd>
         <dt><code>Ctrl + ↑</code></dt>
-        <dd>文書頭にジャンプ</dd>
+        <dd data-i18n="shortcut.shortcuts.jumpDocStart">文書頭にジャンプ</dd>
         <dt><code>Ctrl + ↓</code></dt>
-        <dd>文書末にジャンプ</dd>
+        <dd data-i18n="shortcut.shortcuts.jumpDocEnd">文書末にジャンプ</dd>
         <dt><code>Alt + Enter</code></dt>
-        <dd>AIで文章を生成/コードを補完</dd>
+        <dd data-i18n="shortcut.shortcuts.aiGenerate">AIで文章を生成/コードを補完</dd>
         <dt><code>Alt + Shift + Enter</code></dt>
-        <dd>カーソル位置の前後をつなぐ文章を生成</dd>
+        <dd data-i18n="shortcut.shortcuts.aiMissingLink">カーソル位置の前後をつなぐ文章を生成</dd>
         <dt><code>ESC</code></dt>
-        <dd>AIタスクを中断</dd>
+        <dd data-i18n="shortcut.shortcuts.abortAi">AIタスクを中断</dd>
         <dt><code>Alt + Shift + F</code></dt>
-        <dd>簡易フォーマッタ（コードエディタモード時のみ）</dd>
+        <dd data-i18n="shortcut.shortcuts.simpleFormatter">簡易フォーマッタ（コードエディタモード時のみ）</dd>
       </dl>
 
       <hr>
-      <p class="mac-only">
-        macOSでは、<code>Ctrl</code>キーの代わりに<code>Cmd (⌘)</code>キーを使用してください。<br>
-        (フルスクリーン切替は <code>Cmd + Ctrl + F</code> です)
+      <p class="mac-only" data-i18n-html="shortcut.macNote">
+        macOSでは、<code>Ctrl</code>キーの代わりに<code>Cmd (⌘)</code>キーを使用してください。<br>(フルスクリーン切替は <code>Cmd + Ctrl + F</code> です)
       </p>
     </div>
   </div>
+  <script type="module">
+    import { invoke } from '@tauri-apps/api/core';
+    import { initI18n, t } from '/src/i18n.ts';
+
+    (async () => {
+      const locale = await invoke('get_app_language').catch(() => 'ja');
+      await initI18n(locale === 'en' ? 'en' : 'ja');
+
+      document.querySelectorAll('[data-i18n]').forEach(el => {
+        const key = el.getAttribute('data-i18n');
+        if (key) el.textContent = t(key);
+      });
+      document.querySelectorAll('[data-i18n-html]').forEach(el => {
+        const key = el.getAttribute('data-i18n-html');
+        if (key) el.innerHTML = t(key);
+      });
+    })();
+  </script>
   <script type="module">
     import { getCurrentWindow } from '@tauri-apps/api/window';
     document.addEventListener('keydown', (e) => {
@@ -148,7 +165,6 @@
       if (isCtrlOrCmd && key === 'r' && isShift) { e.preventDefault(); }
     });
 
-    // --- 右クリックメニューの無効化 ---
     document.addEventListener('contextmenu', (e) => {
       e.preventDefault();
     });

@@ -157,9 +157,9 @@ class App {
   private isLoading = false;
 
   private dynamicFontTheme: any;
-  private readonly serifFont = '"Yu Mincho", "Hiragino Mincho ProN", serif';
-  private readonly sansSerifFont = '"Tsukushi A Round Gothic","Hiragino Sans","Meiryo","Yu Gothic",sans-serif';
-  private readonly monospaceFont = '"BIZ UDゴシック", "Osaka-Mono", monospace';
+  private readonly serifFont = '"Palatino Linotype", "Book Antiqua", Palatino, "Times New Roman", "Yu Mincho", "Hiragino Mincho ProN", serif';
+  private readonly sansSerifFont = '"Verdana", "Arial", "Helvetica", "Tsukushi A Round Gothic", "Hiragino Sans", "Meiryo", "Yu Gothic", sans-serif';
+  private readonly monospaceFont = '"Menlo", "Monaco", "Consolas", "Courier New", "BIZ UDゴシック", "Osaka-Mono", monospace';
   private fontList = [this.serifFont, this.sansSerifFont, this.monospaceFont];
   private languageCompartment = new Compartment();
 
@@ -1488,6 +1488,7 @@ ${instructionFiller}
       if (s.appLanguage) {
         await initI18n(s.appLanguage as 'ja' | 'en');
         applyTranslationsToDOM();
+        emit('app:language-changed', s.appLanguage);
       }
 
       // エディタ設定の更新

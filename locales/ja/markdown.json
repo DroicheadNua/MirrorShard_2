@@ -1,0 +1,16 @@
+{
+  "pin": "最前面に固定",
+  "pinRelease": "固定を解除",
+  "copySuccess": "HTMLソースをコピーしました",
+  "saveSuccess": "HTMLを保存しました",
+  "saveFailed": "保存に失敗しました",
+  "noFile": "ファイルを保存してから実行してください。",
+  "tooltip": {
+    "copyHtml": "HTMLソースをコピー",
+    "saveHtml": "HTMLとして保存",
+    "devtools": "DevToolsを開く(F12)",
+    "openBrowser": "ブラウザで開く",
+    "refresh": "更新(Ctrl+R)",
+    "close": "閉じる"
+  }
+}

@@ -8,7 +8,7 @@ body {
     overflow-y: hidden;
     overflow-x: hidden;
     background-color: transparent;
-    font-family: 'Hiragino Sans', 'BIZ UDPGothic', 'Yu Gothic', 'Meiryo', sans-serif;
+    font-family: "Verdana", "Arial", "Helvetica", "Hiragino Sans", "BIZ UDPGothic", "Yu Gothic", "Meiryo", sans-serif;
     border-radius: 6px;
 }
 

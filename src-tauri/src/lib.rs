@@ -957,6 +957,35 @@ fn get_mac_file_event(state: State<MacFileBuffer>) -> Option<String> {
 }
 
 #[tauri::command]
+async fn get_app_language() -> Result<String, String> {
+    let store_path = if cfg!(target_os = "macos") {
+        std::env::var("HOME")
+            .map(|h| std::path::PathBuf::from(h).join("Library/Application Support/com.DroicheadNua.mirrorshard2/.settings.dat"))
+            .map_err(|_| "Could not find HOME directory")?
+    } else if cfg!(target_os = "windows") {
+        std::env::var("LOCALAPPDATA")
+            .map(|p| std::path::PathBuf::from(p).join("com.DroicheadNua.mirrorshard2/.settings.dat"))
+            .map_err(|_| "Could not find LOCALAPPDATA")?
+    } else {
+        std::env::var("HOME")
+            .map(|h| std::path::PathBuf::from(h).join(".local/share/com.DroicheadNua.mirrorshard2/.settings.dat"))
+            .map_err(|_| "Could not find HOME directory")?
+    };
+
+    if store_path.exists() {
+        let content = std::fs::read(&store_path).map_err(|e| e.to_string())?;
+        if let Ok(json_str) = String::from_utf8(content) {
+            if let Ok(data) = serde_json::from_str::<serde_json::Value>(&json_str) {
+                if let Some(lang) = data.get("appLanguage").and_then(|v| v.as_str()) {
+                    return Ok(lang.to_string());
+                }
+            }
+        }
+    }
+    Ok("ja".to_string())
+}
+
+#[tauri::command]
 async fn read_binary_file(path: String) -> Result<Vec<u8>, String> {
     std::fs::read(path).map_err(|e| e.to_string())
 }
@@ -1404,6 +1433,7 @@ pub fn run() {
             force_save_chat_log,
             open_opencode,
             open_silly_tavern,
+            get_app_language,
         ])
         // ウィンドウのライフサイクルイベントを監視する
         .on_window_event(|window, event| match event {

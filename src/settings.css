@@ -343,14 +343,14 @@ textarea.setting-textarea {
     color: #eee;
     border: 1px solid #555;
     resize: vertical;
-    font-family: 'Menlo', 'Monaco', 'Consolas', 'BIZ UDGothic', monospace;
+    font-family: 'Menlo', 'Monaco', 'Consolas', 'Courier New', 'BIZ UDゴシック', 'Osaka-Mono', monospace;
     border-radius: 4px;
 }
 
 textarea.setting-textarea::placeholder {
     opacity: 0.8;
     font-style: oblique;
-    font-family: 'Hiragino Mincho ProN', 'Yu Mincho', 'YuMincho', serif;
+    font-family: "Palatino Linotype", "Book Antiqua", Palatino, "Times New Roman", "Hiragino Mincho ProN", "Yu Mincho", "YuMincho", serif;
 }
 
 .color-preview {

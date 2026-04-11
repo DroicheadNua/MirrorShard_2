@@ -1,0 +1,16 @@
+{
+  "pin": "Pin to Top",
+  "pinRelease": "Unpin",
+  "copySuccess": "HTML Source Copied!",
+  "saveSuccess": "HTML Saved!",
+  "saveFailed": "Save Failed",
+  "noFile": "Save the file first before executing.",
+  "tooltip": {
+    "copyHtml": "Copy HTML Source",
+    "saveHtml": "Save as HTML",
+    "devtools": "Open DevTools (F12)",
+    "openBrowser": "Open in Browser",
+    "refresh": "Refresh (Ctrl+R)",
+    "close": "Close"
+  }
+}

@@ -7,6 +7,7 @@ import { writeText } from '@tauri-apps/plugin-clipboard-manager';
 import { save } from '@tauri-apps/plugin-dialog';
 import { writeTextFile } from '@tauri-apps/plugin-fs';
 import { Store } from '@tauri-apps/plugin-store';
+import { initI18n, applyTranslationsToDOM, t } from './i18n';
 
 interface MarkdownPayload {
     text: string;
@@ -157,6 +158,11 @@ async function renderContent() {
 
 async function init() {
     const store = await Store.load('.settings.dat');
+
+    const locale = await invoke('get_app_language').catch(() => 'ja');
+    await initI18n(locale === 'en' ? 'en' : 'ja');
+    applyTranslationsToDOM();
+
     useHardBreaks = await store.get<boolean>('mdHardBreaks') ?? false;
 
     // モードの復元
@@ -224,6 +230,12 @@ async function init() {
         document.body.classList.toggle('dark-mode');
     });
 
+    // 言語変更同期
+    await listen<string>('app:language-changed', async (event) => {
+        await initI18n(event.payload === 'en' ? 'en' : 'ja');
+        applyTranslationsToDOM();
+    });
+
     await listen('settings-changed', () => {
         emit('markdown-request-update');
     });
@@ -278,10 +290,10 @@ async function init() {
         // ボタンの見た目を切り替え
         if (isPinned) {
             pinBtn.classList.add('active');
-            pinBtn.title = "固定を解除";
+            pinBtn.title = t('markdown.pinRelease');
         } else {
             pinBtn.classList.remove('active');
-            pinBtn.title = "最前面に固定";
+            pinBtn.title = t('markdown.pin');
         }
     });
 
@@ -290,7 +302,7 @@ async function init() {
         if (contentDiv) {
             const html = contentDiv.innerHTML;
             await writeText(html);
-            alert("HTML Source Copied!");
+            alert(t('markdown.copySuccess'));
         }
     });
 
@@ -312,11 +324,11 @@ async function init() {
             const htmlContent = contentDiv.innerHTML;
 
             await writeTextFile(path, htmlContent);
-            alert("HTML Saved!");
+            alert(t('markdown.saveSuccess'));
 
         } catch (e) {
             console.error(e);
-            alert(`Save Failed: ${e}`);
+            alert(`${t('markdown.saveFailed')}: ${e}`);
         }
     });
 
@@ -326,7 +338,7 @@ async function init() {
             // Tauriプラグインではなく、自作のRustコマンドを叩く
             await invoke('open_in_browser', { path: currentFilePath });
         } else {
-            alert("ファイルを保存してから実行してください。");
+            alert(t('markdown.noFile'));
         }
     });
 
