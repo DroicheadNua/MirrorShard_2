@@ -1,0 +1,152 @@
+{
+  "general": {"title": "Settings"},
+  "windowTitle": "Settings",
+  "closeWindow": "Close (F2)",
+  "tab": {"general": "General", "ai": "AI Settings", "code": "Code Editor"},
+  "apply": "Apply",
+  "language": {"label": "Language"},
+  "languageOption": {"ja": "Japanese", "en": "English"},
+  "editorMaxWidth": {
+    "label": "Editor max width (characters)",
+    "note": "Enter 0 to follow window width."
+  },
+  "lineHeight": {"label": "Line height"},
+  "editorPaddingX": {"label": "Editor horizontal padding"},
+  "kinsoku": {"label": "Kinsoku processing"},
+  "lineBreak": {"normal": "Normal", "strict": "Strict"},
+  "bgImage": {
+    "label": "Background Image",
+    "select": "Select",
+    "default": "Default",
+    "none": "None",
+    "selectTitle": "Select Background Image",
+    "noFile": "(None)"
+  },
+  "bgMusic": {
+    "label": "BGM",
+    "select": "Select",
+    "default": "Default",
+    "selectTitle": "Select BGM",
+    "noFile": "(None)"
+  },
+  "wordBreak": {
+    "label": "Word Wrap",
+    "breakAll": "Character level (Japanese friendly)",
+    "normal": "Word level (English friendly)"
+  },
+  "font": {"label": "Font", "defaultOption": "Default"},
+  "pandoc": {
+    "label": "Pandoc Path (required for vertical export)",
+    "placeholder": "e.g. C:\\Program Files\\Pandoc\\pandoc.exe",
+    "browse": "Path"
+  },
+  "appearance": {
+    "title": "Editor Appearance",
+    "align": {
+      "label": "Alignment",
+      "center": "Center (Default)",
+      "left": "Left",
+      "right": "Right"
+    },
+    "blur": {"label": "Glass Blur Intensity"},
+    "color": {
+      "text": "Text Color",
+      "window": "Window Background",
+      "uiText": "UI Text Color",
+      "editorBg": "Editor Background",
+      "selection": "Selection Color",
+      "scrollbar": "Scrollbar Color",
+      "heading": "Heading Color",
+      "glow": "Glow Color",
+      "glowStrength": "Strength",
+      "useUiBg": "Apply to sidebar etc."
+    },
+    "glow": "Glow"
+  },
+  "themes": {
+    "label": "Theme Presets",
+    "reset": "Reset",
+    "save": "Save",
+    "delete": "Delete"
+  },
+  "markdown": {
+    "title": "Markdown Preview",
+    "hardBreaks": "Hard Breaks (Enter for newline)",
+    "note": "If off, line breaks follow the official Markdown spec (two spaces at end or a blank line). Some previews (Astro and others) may render differently."
+  },
+  "terminal": {
+    "title": "Terminal Settings",
+    "shellPathLabel": "Shell Path",
+    "shellPathPlaceholder": "(Auto Detect)",
+    "startupDirLabel": "Startup Directory",
+    "startupDirPlaceholder": "(User Home)",
+    "browse": "Path",
+    "selectDirTitle": "Select Folder",
+    "selectShellTitle": "Select Shell"
+  },
+  "code": {
+    "title": "Code Editor Settings",
+    "languageLabel": "Syntax Highlight Language",
+    "fontLabel": "Font",
+    "fontSizeLabel": "Font Size",
+    "wordWrapLabel": "Word Wrap"
+  },
+  "ai": {
+    "cloud": "Cloud AI",
+    "gemini": "Gemini",
+    "geminiKeyLabel": "Gemini API Key",
+    "geminiKeyPlaceholder": "AIzaSy...",
+    "geminiModelLabel": "Gemini Model",
+    "groq": "Groq",
+    "groqKeyLabel": "Groq API Key",
+    "groqKeyPlaceholder": "gsk_...",
+    "groqModelLabel": "Groq Model",
+    "cohere": "Cohere",
+    "cohereKeyLabel": "Cohere API Key",
+    "cohereKeyPlaceholder": "...",
+    "cohereModelLabel": "Cohere Model",
+    "mistral": "Mistral",
+    "mistralKeyLabel": "Mistral API Key",
+    "mistralKeyPlaceholder": "...",
+    "mistralModelLabel": "Mistral Model",
+    "enableGroq": "Enable Groq",
+    "enableCohere": "Enable Cohere",
+    "enableMistral": "Enable mistral",
+    "modelPlaceholder": "<Enter model name>",
+    "localLlm": "Local LLM",
+    "localLlmUrlLabel": "Endpoint URL",
+    "localLlmUrlPlaceholder": "http://127.0.0.1:1234/v1/chat/completions",
+    "localLlmModelLabel": "Model Name (Required for Ollama)",
+    "localLlmModelPlaceholder": "※Ignored when using LM Studio",
+    "sillyTavern": "SillyTavern",
+    "sillyTavernPathLabel": "SillyTavern Path (Folder)",
+    "sillyTavernPathPlaceholder": "C:\\path\\to\\SillyTavern",
+    "sillyTavernBrowse": "Path",
+    "sillyTavernNote": "Specify the SillyTavern installation folder.",
+    "behavior": "Behavior",
+    "maxTokensLabel": "Max response length (100–100000)",
+    "faMaxTokensLabel": "AI association response length (10–1000)",
+    "contextLimitLabel": "Context length (1000–100000)",
+    "thinkingOverlay": "AI thinking effect",
+    "contextNote1": "※This is the context length passed to the local AI. Recommended: 2000–3000.",
+    "contextNote2": "※Gemini is always limited to max 4000 regardless of this setting.",
+    "contextNote3": "※An error occurs if this value + system prompt length exceeds the model's max context.",
+    "systemPromptLabel": "System Prompt (role instructions for AI)",
+    "manualEntry": "Manual entry",
+    "systemPromptPlaceholder": "You are an excellent writing assistant...",
+    "userProfile": "User Profile",
+    "userNameLabel": "Name",
+    "userNamePlaceholder": "User",
+    "aiProfile": "AI Profile",
+    "aiNameLabel": "Name",
+    "aiNamePlaceholder": "AI",
+    "iconLabel": "Icon:",
+    "iconSelect": "Select",
+    "iconClear": "Clear",
+    "defaultIcon": "(Default)"
+  },
+  "alerts": {
+    "settingsSaveFailed": "Failed to save settings: {{err}}",
+    "settingsScreenError": "Settings screen error: {{error}}"
+  }
+}

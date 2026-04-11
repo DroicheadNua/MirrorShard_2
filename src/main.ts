@@ -1,4 +1,5 @@
 import './styles.css';
+import { initI18n, applyTranslationsToDOM } from './i18n';
 import { invoke } from '@tauri-apps/api/core';
 import { Store } from '@tauri-apps/plugin-store';
 import { EditorState, Compartment, RangeSetBuilder, Transaction } from '@codemirror/state';
@@ -1418,6 +1419,12 @@ ${nextContext}
     const storePromise = Store.load('.settings.dat');
 
     this.store = await storePromise;
+
+    // i18nの初期化 (appLanguage設定を読んで翻訳を適用)
+    const appLanguage = await this.store.get<string>('appLanguage') || 'ja';
+    await initI18n(appLanguage as 'ja' | 'en');
+    applyTranslationsToDOM();
+
     // 5. 起動時にファイルが指定されたか確認
     // Windows/Linux: CLI引数を確認
     let fileToOpen = await invoke<string | null>('get_initial_file');
@@ -1476,6 +1483,12 @@ ${nextContext}
     await listen('settings-changed', async (event: any) => {
       console.log("Received settings-changed payload:", event.payload);
       const s = event.payload;
+
+      // 言語変更があればi18nを再初期化
+      if (s.appLanguage) {
+        await initI18n(s.appLanguage as 'ja' | 'en');
+        applyTranslationsToDOM();
+      }
 
       // エディタ設定の更新
       if (s.editorMaxWidth !== undefined) {

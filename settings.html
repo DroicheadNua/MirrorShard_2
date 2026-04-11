@@ -1,11 +1,10 @@
-<!-- settings.html -->
 <!DOCTYPE html>
 <html lang="ja">
 
 <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>設定</title>
+    <title data-i18n="settings.windowTitle">設定</title>
     <link rel="stylesheet" href="/src/settings.css">
 </head>
 
@@ -13,134 +12,152 @@
     <div id="settings-wrapper">
         <div data-tauri-drag-region class="settings-titlebar">
             <div data-tauri-drag-region class="settings-window-controls">
-                <button id="settings-btn-close" title="閉じる (F2)"></button>
+                <button id="settings-btn-close" data-i18n="settings.closeWindow" data-i18n-attr="title" title="閉じる (F2)"></button>
             </div>
         </div>
         <div data-tauri-drag-region id="settings-container">
             <div class="tabs">
-                <button class="tab-btn active" data-tab="tab-general">一般</button>
-                <button class="tab-btn" data-tab="tab-ai">AI設定</button>
-                <button class="tab-btn" data-tab="tab-code">コードエディタ</button>
+                <button class="tab-btn active" data-tab="tab-general" data-i18n="settings.tab.general">一般</button>
+                <button class="tab-btn" data-tab="tab-ai" data-i18n="settings.tab.ai">AI設定</button>
+                <button class="tab-btn" data-tab="tab-code" data-i18n="settings.tab.code">コードエディタ</button>
                 <hr class="separator" style="color: transparent;border: none;">
-                <button id="save-settings-btn">適用</button>
+                <button id="save-settings-btn" data-i18n="settings.apply">適用</button>
             </div>
+
             <!-- ===== タブ1: 一般設定 ===== -->
             <div id="tab-general" class="tab-content active">
 
                 <div class="setting-item">
-                    <label style="display: flex; gap: 10px; align-items: center;">エディタの最大幅 (半角文字数):
-                        <!-- ★ type="number" に変更 -->
-                        <input type="number" id="editor-width-input" min="20" max="200" step="1">
-                        <p class="setting-note">※0を入力するとウィンドウ幅に追従します。
-                        </p>
-                    </label>
-                    <label for="line-height-input">行の高さ:</label>
+                    <label for="app-language" data-i18n="settings.language.label">言語 (Language)</label>
+                    <select id="app-language">
+                        <option value="ja" data-i18n="settings.languageOption.ja">日本語</option>
+                        <option value="en" data-i18n="settings.languageOption.en">English</option>
+                    </select>
+                </div>
+
+                <div class="setting-item">
+                    <label for="editor-width-input" data-i18n="settings.editorMaxWidth.label">エディタの最大幅 (半角文字数)</label>
+                    <input type="number" id="editor-width-input" min="20" max="200" step="1">
+                    <p class="setting-note" data-i18n="settings.editorMaxWidth.note">※0を入力するとウィンドウ幅に追従します。</p>
+                </div>
+
+                <div class="setting-item">
+                    <label for="line-height-input" data-i18n="settings.lineHeight.label">行の高さ</label>
                     <input type="number" id="line-height-input" min="1.0" max="3.0" step="0.1">
                 </div>
+
                 <div class="setting-item">
-                    <label for="editor-padding-x">エディタ左右余白:</label>
+                    <label for="editor-padding-x" data-i18n="settings.editorPaddingX.label">エディタ左右余白</label>
                     <input type="number" id="editor-padding-x" min="0" max="200" step="1">
-                    <span style="margin-left: 5px;">px</span>
+                    <span>px</span>
                 </div>
+
                 <div class="setting-item">
-                    <label for="line-break-select">禁則処理:</label>
+                    <label for="line-break-select" data-i18n="settings.kinsoku.label">禁則処理</label>
                     <select id="line-break-select">
-                        <option value="normal">標準</option>
-                        <option value="strict">厳格</option>
+                        <option value="normal" data-i18n="settings.lineBreak.normal">標準</option>
+                        <option value="strict" data-i18n="settings.lineBreak.strict">厳格</option>
                     </select>
                 </div>
+
                 <div class="setting-item">
-                    <label>背景画像:</label>
-                    <button id="btn-select-bg-image">Select</button>
-                    <button id="btn-clear-bg-image">Default</button>
-                    <button id="btn-none-bg-image">なし</button>
+                    <label data-i18n="settings.bgImage.label">背景画像</label>
+                    <button id="btn-select-bg-image" data-i18n="settings.bgImage.select">選択</button>
+                    <button id="btn-clear-bg-image" data-i18n="settings.bgImage.default">標準</button>
+                    <button id="btn-none-bg-image" data-i18n="settings.bgImage.none">なし</button>
                     <span id="current-bg-image-path"></span>
                 </div>
+
                 <div class="setting-item">
-                    <label>BGM:</label>
-                    <button id="btn-select-bgm">Select</button>
-                    <button id="btn-clear-bgm">Default</button>
+                    <label data-i18n="settings.bgMusic.label">BGM</label>
+                    <button id="btn-select-bgm" data-i18n="settings.bgMusic.select">選択</button>
+                    <button id="btn-clear-bgm" data-i18n="settings.bgMusic.default">標準</button>
                     <span id="current-bgm-path"></span>
                 </div>
+
                 <div class="setting-item">
-                    <label for="word-break-select">折り返し設定:</label>
+                    <label for="word-break-select" data-i18n="settings.wordBreak.label">折り返し設定</label>
                     <select id="word-break-select">
-                        <option value="break-all">文字単位 (日本語向け)</option>
-                        <option value="normal">単語単位 (英語向け)</option>
+                        <option value="break-all" data-i18n="settings.wordBreak.breakAll">文字単位 (日本語向け)</option>
+                        <option value="normal" data-i18n="settings.wordBreak.normal">単語単位 (英語向け)</option>
                     </select>
                 </div>
+
                 <div class="setting-item">
-                    <label for="font-family-select">フォント:</label>
+                    <label for="font-family-select" data-i18n="settings.font.label">フォント</label>
                     <select id="font-family-select"></select>
                 </div>
+
                 <div class="setting-item">
-                    <label style="display: flex; gap: 5px;">Pandoc Path(縦書きエクスポートに必要):
-                        <input type="text" id="pandoc-path" style="flex-grow: 1;margin: auto;"
-                            placeholder="例：C:\Program Files\Pandoc\pandoc.exe"></input>
-                        <button id="btn-select-pandoc" style="margin: auto;">参照...</button>
-                    </label>
+                    <label for="pandoc-path" data-i18n="settings.pandoc.label">Pandoc Path (縦書きエクスポートに必要)</label>
+                    <input type="text" id="pandoc-path"
+                        data-i18n-placeholder="settings.pandoc.placeholder" placeholder="例：C:\Program Files\Pandoc\pandoc.exe">
+                    <button id="btn-select-pandoc" data-i18n="settings.pandoc.browse">参照...</button>
                 </div>
 
                 <hr>
-                <h3>エディタ外観</h3>
+                <h3 data-i18n="settings.appearance.title">エディタ外観</h3>
+
                 <div class="setting-item">
-                    <label>配置:</label>
+                    <label for="editor-align-select" data-i18n="settings.appearance.align.label">配置</label>
                     <select id="editor-align-select">
-                        <option value="center">中央 (デフォルト)</option>
-                        <option value="left">左寄せ</option>
-                        <option value="right">右寄せ</option>
+                        <option value="center" data-i18n="settings.appearance.align.center">中央 (標準)</option>
+                        <option value="left" data-i18n="settings.appearance.align.left">左寄せ</option>
+                        <option value="right" data-i18n="settings.appearance.align.right">右寄せ</option>
                     </select>
                 </div>
 
                 <div class="setting-item">
-                    <label>すりガラス強度 (Blur):</label>
+                        <label for="editor-blur-range" data-i18n="settings.appearance.blur.label">すりガラス強度 (Blur)</label>
                     <input type="range" id="editor-blur-range" min="0" max="20" value="0">
                     <span id="blur-val">0px</span>
                 </div>
 
                 <div class="setting-item">
-                    <div style="display: flex; gap: 10px; align-items: center;margin-bottom: 5px;">
-                        <label for="picker-text-color">文字色</label>
+                    <div style="display:flex;gap:10px;align-items:center;margin-bottom:5px;">
+                        <label for="picker-text-color" data-i18n="settings.appearance.color.text">文字色</label>
                         <div id="picker-text-color" class="color-preview"></div>
-                        <input type="text" id="input-text-color" style="flex-grow: 1;" placeholder="#1e1e1e" />
-                        <label for="picker-window-bg">ウィンドウ背景色</label>
+                        <input type="text" id="input-text-color" style="flex-grow:1;" placeholder="#1e1e1e">
+                    </div>
+                    <div style="display:flex;gap:10px;align-items:center;margin-bottom:5px;">
+                        <label for="picker-window-bg" data-i18n="settings.appearance.color.window">ウィンドウ背景色</label>
                         <div id="picker-window-bg" class="color-preview"></div>
-                        <input type="text" id="input-window-bg" style="flex-grow: 1;" placeholder="#ffffff" />
+                        <input type="text" id="input-window-bg" style="flex-grow:1;" placeholder="#ffffff">
                     </div>
-
-                    <div style="display: flex; gap: 10px; align-items: center;margin-bottom: 5px;">
-                        <label for="picker-ui-text-color">UI文字色</label>
+                    <div style="display:flex;gap:10px;align-items:center;margin-bottom:5px;">
+                        <label for="picker-ui-text-color" data-i18n="settings.appearance.color.uiText">UI文字色</label>
                         <div id="picker-ui-text-color" class="color-preview"></div>
-                        <input type="text" id="input-ui-text-color" style="flex-grow: 1;" placeholder="#1e1e1e" />
-                        <label for="picker-editor-bg">エディタ背景色</label>
+                        <input type="text" id="input-ui-text-color" style="flex-grow:1;" placeholder="#1e1e1e">
+                    </div>
+                    <div style="display:flex;gap:10px;align-items:center;margin-bottom:5px;">
+                        <label for="picker-editor-bg" data-i18n="settings.appearance.color.editorBg">エディタ背景色</label>
                         <div id="picker-editor-bg" class="color-preview"></div>
-                        <input type="text" id="input-editor-bg" style="flex-grow: 1;"
-                            placeholder="rgba(255, 255, 255, 0)" />
+                        <input type="text" id="input-editor-bg" style="flex-grow:1;" placeholder="rgba(255,255,255,0)">
                     </div>
-
-                    <div style="display: flex; gap: 10px; align-items: center;margin-bottom: 5px;">
-                        <label for="picker-selection-color">選択色</label>
+                    <div style="display:flex;gap:10px;align-items:center;margin-bottom:5px;">
+                        <label for="picker-selection-color" data-i18n="settings.appearance.color.selection">選択色</label>
                         <div id="picker-selection-color" class="color-preview"></div>
-                        <input type="text" id="input-selection-color" style="flex-grow: 1;" placeholder="#1e1e1e" />
-                        <label for="picker-scrollbar-color">スクロールバー色</label>
-                        <div id="picker-scrollbar-color" class="color-preview"></div>
-                        <input type="text" id="input-scrollbar-color" style="flex-grow: 1;"
-                            placeholder="rgba(255, 255, 255, 0)" />
+                        <input type="text" id="input-selection-color" style="flex-grow:1;" placeholder="#1e1e1e">
                     </div>
-
-                    <div style="display: flex; gap: 10px; align-items: center;margin-bottom: 5px;">
-                        <label for="picker-heading-color">見出し色</label>
+                    <div style="display:flex;gap:10px;align-items:center;margin-bottom:5px;">
+                        <label for="picker-scrollbar-color" data-i18n="settings.appearance.color.scrollbar">スクロールバー色</label>
+                        <div id="picker-scrollbar-color" class="color-preview"></div>
+                        <input type="text" id="input-scrollbar-color" style="flex-grow:1;" placeholder="rgba(255,255,255,0)">
+                    </div>
+                    <div style="display:flex;gap:10px;align-items:center;margin-bottom:5px;">
+                        <label for="picker-heading-color" data-i18n="settings.appearance.color.heading">見出し色</label>
                         <div id="picker-heading-color" class="color-preview"></div>
-                        <input type="text" id="input-heading-color" style="flex-grow: 1;" placeholder="#0550AE" />
-                        <label for="picker-glow-color">グロー色:</label>
+                        <input type="text" id="input-heading-color" style="flex-grow:1;" placeholder="#0550AE">
+                    </div>
+                    <div style="display:flex;gap:10px;align-items:center;margin-bottom:5px;">
+                        <label for="picker-glow-color" data-i18n="settings.appearance.color.glow">グロー色</label>
                         <div id="picker-glow-color" class="color-preview"></div>
-                        <input type="text" id="input-glow-color" style="flex-grow: 1;"
-                            placeholder="rgba(0, 255, 65, 0.5)" />
+                        <input type="text" id="input-glow-color" style="flex-grow:1;" placeholder="rgba(0,255,65,0.5)">
                     </div>
                 </div>
 
                 <div class="setting-item">
-                    <label for="unified-theme-select">テーマプリセット</label>
+                    <label for="unified-theme-select" data-i18n="settings.themes.label">テーマプリセット</label>
                     <select id="unified-theme-select">
                         <optgroup label="System Presets" id="system-presets-group">
                             <option value="sys:default">Default (White)</option>
@@ -150,212 +167,265 @@
                             <option value="sys:depth">Glowing Depth</option>
                         </optgroup>
                         <optgroup label="User Themes" id="user-themes-group">
-                            <!-- ここに動的に追加される -->
                         </optgroup>
                     </select>
-                    <button id="btn-reset-custom">Reset</button>
-                    <button id="btn-save-user-theme">Save</button>
-                    <button id="btn-delete-user-theme">Delete</button>
+                    <button id="btn-reset-custom" data-i18n="settings.themes.reset">Reset</button>
+                    <button id="btn-save-user-theme" data-i18n="settings.themes.save">Save</button>
+                    <button id="btn-delete-user-theme" data-i18n="settings.themes.delete">Delete</button>
                 </div>
 
                 <div class="setting-item">
-                    <div style="display: flex; gap: 10px; align-items: center;margin-bottom: 5px;">
-                        <input type="checkbox" id="check-enable-glow"> グロー
-                        <label for="input-glow-radius">強さ: <span id="glow-radius-val">5px</span></label>
-                        <input type="range" id="input-glow-radius" min="1" max="10" step="1" value="5" />
-                        <input type="checkbox" id="use-ui-bg"> サイドバー等にも背景を適用
+                    <div style="display:flex;gap:10px;align-items:center;margin-bottom:5px;">
+                        <input type="checkbox" id="check-enable-glow">
+                        <label for="check-enable-glow" data-i18n="settings.appearance.glow">グロー</label>
+                        <label for="input-glow-radius" data-i18n="settings.appearance.color.glowStrength">強さ</label>: <span id="glow-radius-val">5px</span>
+                        <input type="range" id="input-glow-radius" min="1" max="10" step="1" value="5">
+                    </div>
+                    <div style="display:flex;gap:10px;align-items:center;margin-bottom:5px;">
+                        <input type="checkbox" id="use-ui-bg">
+                        <label for="use-ui-bg" data-i18n="settings.appearance.color.useUiBg">サイドバー等にも背景を適用</label>
                     </div>
                 </div>
             </div>
-            <!-- タブ2: AI設定 -->
-            <div id="tab-ai" class="tab-content">
-                <div class="ai-setting-group">
-                    <h4>Cloud AI</h4>
 
-                    <!-- Gemini設定 -->
-                    <label style="display: flex; gap: 5px;">
-                        Gemini API Key
-                        <input type="password" id="gemini-api-key" placeholder="AIzaSy..."
-                            style="flex-grow: 1;margin: auto;" />
-                    </label>
-                    <label style="display: flex; gap: 5px;">
-                        Gemini Model
-                        <input type="text" id="gemini-model" placeholder="<モデル名を入力>"
-                            style="flex-grow: 1;margin: auto;" />
-                        <select id="gemini-model-preset" style="flex-grow: 0;margin: auto;"
-                            onchange="document.getElementById('gemini-model').value = this.value;">
+            <!-- ===== タブ2: AI設定 ===== -->
+            <div id="tab-ai" class="tab-content">
+
+                <div class="ai-setting-group">
+                    <h4 data-i18n="settings.ai.cloud">Cloud AI</h4>
+
+                    <!-- Gemini -->
+                    <div class="setting-item">
+                        <label for="gemini-api-key" data-i18n="settings.ai.geminiKeyLabel">Gemini API Key</label>
+                        <input type="password" id="gemini-api-key"
+                            data-i18n-placeholder="settings.ai.geminiKeyPlaceholder" placeholder="AIzaSy...">
+                    </div>
+                    <div class="setting-item">
+                        <label for="gemini-model" data-i18n="settings.ai.geminiModelLabel">Gemini Model</label>
+                        <input type="text" id="gemini-model"
+                            data-i18n-placeholder="settings.ai.modelPlaceholder" placeholder="<モデル名を入力>">
+                        <select id="gemini-model-preset"
+                            onchange="document.getElementById('gemini-model').value=this.value">
                             <option value="gemini-3.1-flash-lite-preview">Gemini 3.1 Flash-Lite Preview</option>
                             <option value="gemini-3-flash-preview">Gemini 3 Flash Preview</option>
                             <option value="gemini-2.5-flash">Gemini 2.5 Flash</option>
                             <option value="gemini-2.5-pro">Gemini 2.5 Pro</option>
-                            <option value="">手動入力</option>
+                            <option value="" data-i18n="settings.ai.manualEntry">手動入力</option>
                         </select>
-                    </label>
+                    </div>
+                </div>
 
-                    <hr style="margin: 10px 0; border: 0; border-top: 1px solid var(--ui-text-color); opacity: 0.3;">
+                <hr style="margin:10px 0;border:0;border-top:1px solid var(--ui-text-color);opacity:0.3;">
 
-                    <!-- Groq設定 -->
-                    <label style="display: flex; gap: 5px;">
-                        Groq API Key
-                        <input type="password" id="groq-api-key" placeholder="gsk_..."
-                            style="flex-grow: 1;margin: auto;" />
-                        <input type="checkbox" id="enable-groq"> Groq を有効にする
-                    </label>
-                    <label style="display: flex; gap: 5px;">
-                        Groq Model
-                        <input type="text" id="groq-model" placeholder="<モデル名を入力>" style="flex-grow: 1;margin: auto;" />
-                        <select id="groq-model-preset" style="flex-grow: 0;margin: auto;"
-                            onchange="document.getElementById('groq-model').value = this.value;">
+                <!-- Groq -->
+                <div class="ai-setting-group">
+                    <h4 data-i18n="settings.ai.groq">Groq</h4>
+                    <div class="setting-item">
+                        <label for="groq-api-key" data-i18n="settings.ai.groqKeyLabel">Groq API Key</label>
+                        <input type="password" id="groq-api-key"
+                            data-i18n-placeholder="settings.ai.groqKeyPlaceholder" placeholder="gsk_...">
+                    </div>
+                    <div class="setting-item">
+                        <label for="enable-groq" class="inline">
+                            <input type="checkbox" id="enable-groq">
+                            <span data-i18n="settings.ai.enableGroq">Groq を有効にする</span>
+                        </label>
+                    </div>
+                    <div class="setting-item">
+                        <label for="groq-model" data-i18n="settings.ai.groqModelLabel">Groq Model</label>
+                        <input type="text" id="groq-model"
+                            data-i18n-placeholder="settings.ai.modelPlaceholder" placeholder="<モデル名を入力>">
+                        <select id="groq-model-preset"
+                            onchange="document.getElementById('groq-model').value=this.value">
                             <option value="llama-3.3-70b-versatile">Llama 3.3 70B</option>
                             <option value="openai/gpt-oss-120b">GPT OSS 120B</option>
-                            <option value="">手動入力</option>
+                            <option value="" data-i18n="settings.ai.manualEntry">手動入力</option>
                         </select>
-                    </label>
+                    </div>
+                </div>
 
-                    <hr style="margin: 10px 0; border: 0; border-top: 1px solid var(--ui-text-color); opacity: 0.3;">
+                <hr style="margin:10px 0;border:0;border-top:1px solid var(--ui-text-color);opacity:0.3;">
 
-                    <!-- Cohere設定 -->
-                    <label style="display: flex; gap: 5px;">
-                        Cohere API Key
-                        <input type="password" id="cohere-api-key" placeholder="..."
-                            style="flex-grow: 1;margin: auto;" />
-                        <input type="checkbox" id="enable-cohere"> Cohere を有効にする
-                    </label>
-                    <label style="display: flex; gap: 5px;">
-                        Cohere Model
-                        <input type="text" id="cohere-model" placeholder="<モデル名を入力>"
-                            style="flex-grow: 1;margin: auto;" />
-                        <select id="cohere-model-preset" style="flex-grow: 0;margin: auto;"
-                            onchange="document.getElementById('cohere-model').value = this.value;">
+                <!-- Cohere -->
+                <div class="ai-setting-group">
+                    <h4 data-i18n="settings.ai.cohere">Cohere</h4>
+                    <div class="setting-item">
+                        <label for="cohere-api-key" data-i18n="settings.ai.cohereKeyLabel">Cohere API Key</label>
+                        <input type="password" id="cohere-api-key"
+                            data-i18n-placeholder="settings.ai.cohereKeyPlaceholder" placeholder="...">
+                    </div>
+                    <div class="setting-item">
+                        <label for="enable-cohere" class="inline">
+                            <input type="checkbox" id="enable-cohere">
+                            <span data-i18n="settings.ai.enableCohere">Cohere を有効にする</span>
+                        </label>
+                    </div>
+                    <div class="setting-item">
+                        <label for="cohere-model" data-i18n="settings.ai.cohereModelLabel">Cohere Model</label>
+                        <input type="text" id="cohere-model"
+                            data-i18n-placeholder="settings.ai.modelPlaceholder" placeholder="<モデル名を入力>">
+                        <select id="cohere-model-preset"
+                            onchange="document.getElementById('cohere-model').value=this.value">
                             <option value="command-a-03-2025">Command A</option>
                             <option value="command-r-plus-08-2024">Command R+</option>
                             <option value="c4ai-aya-expanse-32b">Aya Expanse</option>
                             <option value="c4ai-aya-vision-32b">Aya Vision</option>
-                            <option value="">手動入力</option>
+                            <option value="" data-i18n="settings.ai.manualEntry">手動入力</option>
                         </select>
-                    </label>
+                    </div>
+                </div>
 
-                    <hr style="margin: 10px 0; border: 0; border-top: 1px solid var(--ui-text-color); opacity: 0.3;">
+                <hr style="margin:10px 0;border:0;border-top:1px solid var(--ui-text-color);opacity:0.3;">
 
-                    <!-- Mistral設定 -->
-                    <label style="display: flex; gap: 5px;">
-                        Mistral API Key
-                        <input type="password" id="mistral-api-key" placeholder="..."
-                            style="flex-grow: 1;margin: auto;" />
-                        <input type="checkbox" id="enable-mistral"> mistral を有効にする
-                    </label>
-                    <label style="display: flex; gap: 5px;">
-                        Mistral Model
-                        <input type="text" id="mistral-model" placeholder="<モデル名を入力>"
-                            style="flex-grow: 1;margin: auto;" />
-                        <select id="mistral-model-preset" style="flex-grow: 0;margin: auto;"
-                            onchange="document.getElementById('mistral-model').value = this.value;">
+                <!-- Mistral -->
+                <div class="ai-setting-group">
+                    <h4 data-i18n="settings.ai.mistral">Mistral</h4>
+                    <div class="setting-item">
+                        <label for="mistral-api-key" data-i18n="settings.ai.mistralKeyLabel">Mistral API Key</label>
+                        <input type="password" id="mistral-api-key"
+                            data-i18n-placeholder="settings.ai.mistralKeyPlaceholder" placeholder="...">
+                    </div>
+                    <div class="setting-item">
+                        <label for="enable-mistral" class="inline">
+                            <input type="checkbox" id="enable-mistral">
+                            <span data-i18n="settings.ai.enableMistral">mistral を有効にする</span>
+                        </label>
+                    </div>
+                    <div class="setting-item">
+                        <label for="mistral-model" data-i18n="settings.ai.mistralModelLabel">Mistral Model</label>
+                        <input type="text" id="mistral-model"
+                            data-i18n-placeholder="settings.ai.modelPlaceholder" placeholder="<モデル名を入力>">
+                        <select id="mistral-model-preset"
+                            onchange="document.getElementById('mistral-model').value=this.value">
                             <option value="mistral-small-latest">Mistral Small 4</option>
                             <option value="mistral-large-latest">Mistral Large 3</option>
-                            <option value="">手動入力</option>
+                            <option value="" data-i18n="settings.ai.manualEntry">手動入力</option>
                         </select>
-                    </label>
-
+                    </div>
                 </div>
 
+                <hr style="margin:10px 0;border:0;border-top:1px solid var(--ui-text-color);opacity:0.3;">
+
+                <!-- Local LLM -->
                 <div class="ai-setting-group">
-                    <h4>Local LLM</h4>
-                    <label style="display: flex; gap: 5px;">
-                        Endpoint URL
-                        <input type="text" id="local-llm-url" placeholder="http://127.0.0.1:1234/v1/chat/completions"
-                            style="flex-grow: 1;margin: auto;" />
-                        <select id="local-llm-url-preset" style="flex-grow: 0;margin: auto;"
-                            onchange="document.getElementById('local-llm-url').value = this.value;">
-                            <!-- LM Studio Default -->
+                    <h4 data-i18n="settings.ai.localLlm">Local LLM</h4>
+                    <div class="setting-item">
+                        <label for="local-llm-url" data-i18n="settings.ai.localLlmUrlLabel">Endpoint URL</label>
+                        <input type="text" id="local-llm-url"
+                            data-i18n-placeholder="settings.ai.localLlmUrlPlaceholder"
+                            placeholder="http://127.0.0.1:1234/v1/chat/completions">
+                        <select id="local-llm-url-preset"
+                            onchange="document.getElementById('local-llm-url').value=this.value">
                             <option value="http://127.0.0.1:1234/v1/chat/completions">LM Studio (Default)</option>
-                            <!-- Ollama Default -->
                             <option value="http://127.0.0.1:11434/v1/chat/completions">Ollama (Default)</option>
-                            <!-- koboldcpp Default -->
                             <option value="http://localhost:5001/v1/chat/completions">koboldcpp (Default)</option>
-                            <option value="">手動入力</option>
+                            <option value="" data-i18n="settings.ai.manualEntry">手動入力</option>
                         </select>
-                    </label>
-                    <label style="display: flex; gap: 5px;">
-                        Model Name (Required for Ollama)
-                        <input type="text" id="local-llm-model" placeholder="※LM Studioの場合は無視されます"
-                            style="flex-grow: 1;margin: auto;" />
-                    </label>
+                    </div>
+                    <div class="setting-item">
+                        <label for="local-llm-model" data-i18n="settings.ai.localLlmModelLabel">Model Name (Required for Ollama)</label>
+                        <input type="text" id="local-llm-model"
+                            data-i18n-placeholder="settings.ai.localLlmModelPlaceholder"
+                            placeholder="※LM Studioの場合は無視されます">
+                    </div>
                 </div>
 
+                <!-- SillyTavern -->
                 <div class="ai-setting-group" id="silly-tavern-group">
-                    <label>SillyTavern Path (Folder)</label>
-                    <div style="display: flex; gap: 5px;">
-                        <input type="text" id="silly-tavern-path" placeholder="C:\path\to\SillyTavern"
-                            style="flex-grow: 1;">
-                        <button id="btn-select-silly-tavern" style="margin: auto;">参照...</button>
+                    <h4 data-i18n="settings.ai.sillyTavern">SillyTavern</h4>
+                    <div class="setting-item">
+                        <label for="silly-tavern-path" data-i18n="settings.ai.sillyTavernPathLabel">SillyTavern Path (Folder)</label>
+                        <input type="text" id="silly-tavern-path" style="flex-grow:1;"
+                            data-i18n-placeholder="settings.ai.sillyTavernPathPlaceholder"
+                            placeholder="C:\path\to\SillyTavern">
+                        <button id="btn-select-silly-tavern" data-i18n="settings.ai.sillyTavernBrowse">参照...</button>
                     </div>
-                    <small>※SillyTavernのインストール先フォルダを指定してください。</small>
+                    <small data-i18n="settings.ai.sillyTavernNote">
+                        ※SillyTavernのインストール先フォルダを指定してください。
+                    </small>
                 </div>
 
+                <hr style="margin:10px 0;border:0;border-top:1px solid var(--ui-text-color);opacity:0.3;">
+
+                <!-- Behavior -->
                 <div class="ai-setting-group">
-                    <h4>Behavior</h4>
-                    <label>
-                        最大応答長(100〜100000):
-                        <input type="number" id="ai-max-tokens" placeholder="2000" min="100" max="100000"
-                            style="width: 60px;" /><br>
-                        AI連想機能応答長(10〜1000):
-                        <input type="number" id="fa-max-tokens" placeholder="30" min="10" max="1000"
-                            style="width: 40px;" />
-                        <br />
-                        コンテキスト長(1000〜100000):
-                        <input type="number" id="ai-context-limit" placeholder="2000" min="1000" max="100000"
-                            style="width: 60px;" />
-                        <input type="checkbox" id="check-ai-thinking-overlay" checked />
-                        AI思考時の演出
-                        <span style="font-size: 0.7em; color: #111;"><br>
-                            ※ローカルAIに渡す文脈の長さ。通常は2000～3000程度を推奨<br>
-                            ※Geminiは設定にかかわらず最大4000になります。<br>
-                            ※この値＋システムプロンプトの長さが使用モデルの最大コンテクスト長を越えるとエラーになります<div class=""></div>
-                        </span><br>
-                    </label>
-                    <label>
-                        System Prompt (AIへの役割指示):
+                    <h4 data-i18n="settings.ai.behavior">Behavior</h4>
+                    <div class="setting-item">
+                        <label for="ai-max-tokens" data-i18n="settings.ai.maxTokensLabel">最大応答長 (100〜100000)</label>
+                        <input type="number" id="ai-max-tokens"
+                            placeholder="2000" min="100" max="100000" style="width:80px;">
+                    </div>
+                    <div class="setting-item">
+                        <label for="fa-max-tokens" data-i18n="settings.ai.faMaxTokensLabel">AI連想機能応答長 (10〜1000)</label>
+                        <input type="number" id="fa-max-tokens"
+                            placeholder="30" min="10" max="1000" style="width:60px;">
+                    </div>
+                    <div class="setting-item">
+                        <label for="ai-context-limit" data-i18n="settings.ai.contextLimitLabel">コンテキスト長 (1000〜100000)</label>
+                        <input type="number" id="ai-context-limit"
+                            placeholder="2000" min="1000" max="100000" style="width:80px;">
+                    </div>
+                    <div class="setting-item">
+                        <label for="check-ai-thinking-overlay" class="inline">
+                            <input type="checkbox" id="check-ai-thinking-overlay" checked>
+                            <span data-i18n="settings.ai.thinkingOverlay">AI思考時の演出</span>
+                        </label>
+                    </div>
+                    <p style="font-size:0.7em;color:#111;margin:5px 0;">
+                        <span data-i18n="settings.ai.contextNote1">※ローカルAIに渡す文脈の長さ。通常は2000～3000程度を推奨</span><br>
+                        <span data-i18n="settings.ai.contextNote2">※Geminiは設定にかかわらず最大4000になります。</span><br>
+                        <span data-i18n="settings.ai.contextNote3">※この値＋システムプロンプトの長さが使用モデルの最大コンテクスト長を越えるとエラーになります。</span>
+                    </p>
+                    <div class="setting-item">
+                        <label for="ai-system-prompt" data-i18n="settings.ai.systemPromptLabel">System Prompt (AIへの役割指示)</label>
                         <textarea id="ai-system-prompt" class="setting-textarea"
+                            data-i18n-placeholder="settings.ai.systemPromptPlaceholder"
                             placeholder="あなたは優秀な執筆アシスタントです..."></textarea>
-                    </label>
-                </div>
-
-                <div class="ai-setting-group">
-                    <h4>User Profile</h4>
-                    <label style="display: flex; gap: 5px;">
-                        Name
-                        <input type="text" id="user-name" placeholder="User" style="flex-grow: 1;margin: auto;" />
-                    </label>
-                    <div class="file-select-row">
-                        <span>Icon:</span>
-                        <span id="user-icon-path" class="path-display"
-                            style="font-size: 0.8em; color: #111;">(Default)</span>
-                        <button id="btn-select-user-icon">Select</button>
-                        <button id="btn-clear-user-icon">Clear</button>
                     </div>
                 </div>
 
+                <!-- User Profile -->
                 <div class="ai-setting-group">
-                    <h4>AI Profile</h4>
-                    <label style="display: flex; gap: 5px;">
-                        Name
-                        <input type="text" id="ai-name" placeholder="AI" style="flex-grow: 1;margin: auto;" />
-                    </label>
-                    <div class="file-select-row">
-                        <span>Icon:</span>
-                        <span id="ai-icon-path" class="path-display"
-                            style="font-size: 0.8em; color: #111;">(Default)</span>
-                        <button id="btn-select-ai-icon">Select</button>
-                        <button id="btn-clear-ai-icon">Clear</button>
+                    <h4 data-i18n="settings.ai.userProfile">User Profile</h4>
+                    <div class="setting-item">
+                        <label for="user-name" data-i18n="settings.ai.userNameLabel">Name</label>
+                        <input type="text" id="user-name"
+                            data-i18n-placeholder="settings.ai.userNamePlaceholder" placeholder="User">
+                    </div>
+                    <div class="setting-item">
+                        <span data-i18n="settings.ai.iconLabel">Icon:</span>
+                        <span id="user-icon-path" class="path-display" style="font-size:0.8em;color:#111;"
+                            data-i18n="settings.ai.defaultIcon">(Default)</span>
+                        <button id="btn-select-user-icon" data-i18n="settings.ai.iconSelect">Select</button>
+                        <button id="btn-clear-user-icon" data-i18n="settings.ai.iconClear">Clear</button>
+                    </div>
+                </div>
+
+                <!-- AI Profile -->
+                <div class="ai-setting-group">
+                    <h4 data-i18n="settings.ai.aiProfile">AI Profile</h4>
+                    <div class="setting-item">
+                        <label for="ai-name" data-i18n="settings.ai.aiNameLabel">Name</label>
+                        <input type="text" id="ai-name"
+                            data-i18n-placeholder="settings.ai.aiNamePlaceholder" placeholder="AI">
+                    </div>
+                    <div class="setting-item">
+                        <span data-i18n="settings.ai.iconLabel">Icon:</span>
+                        <span id="ai-icon-path" class="path-display" style="font-size:0.8em;color:#111;"
+                            data-i18n="settings.ai.defaultIcon">(Default)</span>
+                        <button id="btn-select-ai-icon" data-i18n="settings.ai.iconSelect">Select</button>
+                        <button id="btn-clear-ai-icon" data-i18n="settings.ai.iconClear">Clear</button>
                     </div>
                 </div>
             </div>
-            <!-- タブ3: コードエディタ設定 -->
+
+            <!-- ===== タブ3: コードエディタ設定 ===== -->
             <div id="tab-code" class="tab-content">
+
                 <div class="setting-group">
-                    <h4>Code Editor Settings</h4>
-                    <label>
-                        Syntax Highlight Language:
+                    <h4 data-i18n="settings.code.title">Code Editor Settings</h4>
+                    <div class="setting-item">
+                        <label for="code-language-select" data-i18n="settings.code.languageLabel">Syntax Highlight Language</label>
                         <select id="code-language-select">
                             <option value="html">HTML</option>
                             <option value="css">CSS</option>
@@ -363,46 +433,53 @@
                             <option value="markdown">Markdown</option>
                             <option value="rust">Rust</option>
                             <option value="python">Python</option>
-                            <!-- 必要なら他も追加 -->
                         </select>
-                    </label>
-                    <label style="display: flex; gap: 5px;">Font:
-                        <select id="code-font-family-select" style="flex-grow: 1;margin: auto;"></select>
-                    </label>
-                    <label style="display: flex; gap: 5px;">Font Size:
-                        <input type="number" id="code-font-size-input" min="8" max="72" value="14"
-                            style="width: 60px;" />
-                    </label>
-                    <label style="display: flex; gap: 5px;">Word Wrap (折り返し)
-                        <input type="checkbox" id="code-line-wrapping" />
-                    </label>
+                    </div>
+                    <div class="setting-item">
+                        <label for="code-font-family-select" data-i18n="settings.code.fontLabel">Font</label>
+                        <select id="code-font-family-select"></select>
+                    </div>
+                    <div class="setting-item">
+                        <label for="code-font-size-input" data-i18n="settings.code.fontSizeLabel">Font Size</label>
+                        <input type="number" id="code-font-size-input" min="8" max="72" value="14" style="width:60px;">
+                    </div>
+                    <div class="setting-item">
+                        <label for="code-line-wrapping" class="inline">
+                            <input type="checkbox" id="code-line-wrapping">
+                            <span data-i18n="settings.code.wordWrapLabel">Word Wrap (折り返し)</span>
+                        </label>
+                    </div>
                 </div>
 
                 <div class="setting-group" id="markdown-group">
-                    <h4>Markdown Preview</h4>
-                    <label>
-                        <input type="checkbox" id="check-md-hard-breaks" />
-                        Hard Breaks (Enter1回で改行する)
-                    </label>
-                    <p style="font-size: 0.8em; color: #333; margin-top: 5px;">
-                        ※オフの場合、公式Markdown仕様通り「末尾に半角スペース2つ」か「空行」で改行されます（Astro等でのプレビュー時はオフ推奨）。
+                    <h4 data-i18n="settings.markdown.title">Markdown Preview</h4>
+                    <div class="setting-item">
+                        <label for="check-md-hard-breaks" class="inline">
+                            <input type="checkbox" id="check-md-hard-breaks">
+                            <span data-i18n="settings.markdown.hardBreaks">Hard Breaks (Enterで改行します)</span>
+                        </label>
+                    </div>
+                    <p style="font-size:0.8em;color:#333;margin-top:5px;"
+                        data-i18n="settings.markdown.note">
+                        オフの場合、公式Markdown仕様通り「末尾に半角スペース2つ」か「空行」で改行されます（Astro等でのプレビュー時はオフ推奨）。
                     </p>
                 </div>
 
                 <div class="setting-group">
-                    <h4>Terminal Settings</h4>
-                    <label style="display: flex; gap: 5px;">Shell Path:
-                        <input type="text" id="shell-path" style="flex-grow: 1;margin: auto;"
-                            placeholder="(Auto Detect)" />
-                        <button id="btn-select-shell" style="margin: auto;">参照...</button>
-                    </label>
-                    <label style="display: flex; gap: 5px;">Startup Directory:
-                        <input type="text" id="terminal-cwd" style="flex-grow: 1;margin: auto;"
-                            placeholder="(User Home)" />
-                        <button id="btn-select-cwd" style="margin: auto;">参照...</button>
-                    </label>
+                    <h4 data-i18n="settings.terminal.title">Terminal Settings</h4>
+                    <div class="setting-item">
+                        <label for="shell-path" data-i18n="settings.terminal.shellPathLabel">Shell Path</label>
+                        <input type="text" id="shell-path"
+                            data-i18n-placeholder="settings.terminal.shellPathPlaceholder" placeholder="(Auto Detect)">
+                        <button id="btn-select-shell" data-i18n="settings.terminal.browse">参照...</button>
+                    </div>
+                    <div class="setting-item">
+                        <label for="terminal-cwd" data-i18n="settings.terminal.startupDirLabel">Startup Directory</label>
+                        <input type="text" id="terminal-cwd"
+                            data-i18n-placeholder="settings.terminal.startupDirPlaceholder" placeholder="(User Home)">
+                        <button id="btn-select-cwd" data-i18n="settings.terminal.browse">参照...</button>
+                    </div>
                 </div>
-
             </div>
         </div>
     </div>

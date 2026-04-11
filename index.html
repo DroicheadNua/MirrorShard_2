@@ -5,7 +5,7 @@
   <meta charset="UTF-8" />
   <link rel="stylesheet" href="/src/styles.css" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>MirrorShard v2</title>
+  <title data-i18n="main.window.title">MirrorShard v2</title>
 </head>
 
 <body>
@@ -13,22 +13,11 @@
     <!-- 1. 最上部のカスタムタイトルバー (ドラッグ領域) -->
     <div data-tauri-drag-region class="titlebar">
       <div data-tauri-drag-region class="titlebar-buttons">
-        <!-- ボタンは改行せずに書かないと無駄なスペースが空く -->
-        <button id="btn-zen-mode" title="ZENモード (Ctrl+Shift+C)"></button><button id="btn-save"
-          title="保存 (Ctrl+S)"></button><button id="btn-save-as" title="名前を付けて保存"></button><button id="btn-export"
-          title="エクスポート / 印刷 (Ctrl+E)"></button><button id="btn-open" title="開く (Ctrl+O)"></button><button id="btn-new"
-          title="新規作成 (Ctrl+N)"></button><button id="btn-bgm-toggle" title="BGM再生/停止 (Ctrl+Shift+P)"></button><button
-          id="btn-typesound" title="タイプ音 (Ctrl+Shift+T)"></button><button id="btn-spotlight"
-          title="スポットライトモード (Ctrl+L)"></button><button id="btn-toggle-theme" title="Dark Mode (Ctrl+T)"></button><button
-          id="btn-code" title="コードエディタモード (Ctrl+K)"></button><button id="btn-markdown"
-          title="Markdown/HTMLプレビュー (Ctrl+M)"></button><button id="btn-preview"
-          title="縦書きプレビュー (Ctrl+P)"></button><button id="btn-ai-chat" title="AIチャット (Ctrl+Shift+A)"></button><button
-          id="btn-idea-processor" title="アイデアプロセッサ (Ctrl+I)"></button>
+        <!-- ボタンは改行さずに書かないと無駄なスペースが空く -->
+        <button id="btn-zen-mode" data-i18n-title="main.toolbar.zenMode" title="ZENモード (Ctrl+Shift+C)"></button><button id="btn-save" data-i18n-title="main.toolbar.save" title="保存 (Ctrl+S)"></button><button id="btn-save-as" data-i18n-title="main.toolbar.saveAs" title="名前を付けて保存"></button><button id="btn-export" data-i18n-title="main.toolbar.export" title="エクスポート / 印刷 (Ctrl+E)"></button><button id="btn-open" data-i18n-title="main.toolbar.open" title="開く (Ctrl+O)"></button><button id="btn-new" data-i18n-title="main.toolbar.new" title="新規作成 (Ctrl+N)"></button><button id="btn-bgm-toggle" data-i18n-title="main.toolbar.bgm" title="BGM再生/停止 (Ctrl+Shift+P)"></button><button id="btn-typesound" data-i18n-title="main.toolbar.typeSound" title="タイプ音 (Ctrl+Shift+T)"></button><button id="btn-spotlight" data-i18n-title="main.toolbar.spotlight" title="スポットライトモード (Ctrl+L)"></button><button id="btn-toggle-theme" data-i18n-title="main.toolbar.theme" title="Dark Mode (Ctrl+T)"></button><button id="btn-code" data-i18n-title="main.toolbar.code" title="コードエディタモード (Ctrl+K)"></button><button id="btn-markdown" data-i18n-title="main.toolbar.markdown" title="Markdown/HTMLプレビュー (Ctrl+M)"></button><button id="btn-preview" data-i18n-title="main.toolbar.preview" title="縦書きプレビュー (Ctrl+P)"></button><button id="btn-ai-chat" data-i18n-title="main.toolbar.aiChat" title="AIチャット (Ctrl+Shift+A)"></button><button id="btn-idea-processor" data-i18n-title="main.toolbar.ideaProcessor" title="アイデアプロセッサ (Ctrl+I)"></button>
       </div>
       <div data-tauri-drag-region class="window-controls">
-        <button id="btn-settings" title="設定 (F2)"></button><button id="btn-minimize"
-          title="最小化 (Ctrl+H)"></button><button id="btn-fullscreen" title="フルスクリーン (F11)"></button><button
-          id="btn-close" title="閉じる (Ctrl+Q)"></button>
+        <button id="btn-settings" data-i18n-title="main.toolbar.settings" title="設定 (F2)"></button><button id="btn-minimize" data-i18n-title="main.toolbar.minimize" title="最小化 (Ctrl+H)"></button><button id="btn-fullscreen" data-i18n-title="main.toolbar.fullscreen" title="フルスクリーン (F11)"></button><button id="btn-close" data-i18n-title="main.toolbar.close" title="閉じる (Ctrl+Q)"></button>
       </div>
     </div>
 
@@ -56,26 +45,26 @@
             <!-- 記号挿入・アンドゥリドゥ用コンテナ -->
             <div class="outline-controls-2">
               <div class="symbol-controls">
-                <button id="btn-insert-ruby" title="ルビを挿入 (｜《》)"></button>
-                <button id="btn-insert-dash" title="ダッシュ (――)"></button>
-                <button id="btn-insert-ellipsis" title="三点リーダ (……)"></button>
+                <button id="btn-insert-ruby" data-i18n-title="main.sidebar.insertRuby" title="ルビを挿入 (｜《》)"></button>
+                <button id="btn-insert-dash" data-i18n-title="main.sidebar.insertDash" title="ダッシュ (――)"></button>
+                <button id="btn-insert-ellipsis" data-i18n-title="main.sidebar.insertEllipsis" title="三点リーダ (……)"></button>
               </div>
               <div class="history-controls">
-                <button id="btn-undo" title="元に戻す (Ctrl+Z)"></button>
-                <button id="btn-redo" title="やり直し (Ctrl+Y)"></button>
+                <button id="btn-undo" data-i18n-title="main.sidebar.undo" title="元に戻す (Ctrl+Z)"></button>
+                <button id="btn-redo" data-i18n-title="main.sidebar.redo" title="やり直し (Ctrl+Y)"></button>
               </div>
             </div>
             <div class="outline-controls">
               <!-- 左寄せのフォントコントロール -->
               <div class="font-controls">
-                <button id="btn-font-dec" title="文字を小さく"></button>
-                <button id="btn-font-reset" title="リセット"></button>
-                <button id="btn-font-inc" title="文字を大きく"></button>
+                <button id="btn-font-dec" data-i18n-title="main.sidebar.fontDec" title="文字を小さく"></button>
+                <button id="btn-font-reset" data-i18n-title="main.sidebar.fontReset" title="リセット"></button>
+                <button id="btn-font-inc" data-i18n-title="main.sidebar.fontInc" title="文字を大きく"></button>
               </div>
               <!-- 右寄せの開閉コントロール -->
               <div class="collapse-controls">
-                <button id="collapse-all-btn" title="すべて折りたたむ"></button>
-                <button id="expand-all-btn" title="すべて展開"></button>
+                <button id="collapse-all-btn" data-i18n-title="main.sidebar.collapseAll" title="すべて折りたたむ"></button>
+                <button id="expand-all-btn" data-i18n-title="main.sidebar.expandAll" title="すべて展開"></button>
               </div>
             </div>
             <div id="outline-container">

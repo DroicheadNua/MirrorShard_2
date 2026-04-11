@@ -1,0 +1,41 @@
+{
+  "window": {
+    "title": "MirrorShard v2"
+  },
+  "toolbar": {
+    "zenMode": "ZEN Mode (Ctrl+Shift+C)",
+    "save": "Save (Ctrl+S)",
+    "saveAs": "Save As",
+    "export": "Export / Print (Ctrl+E)",
+    "open": "Open (Ctrl+O)",
+    "new": "New (Ctrl+N)",
+    "bgm": "BGM Play/Stop (Ctrl+Shift+P)",
+    "typeSound": "Type Sound (Ctrl+Shift+T)",
+    "spotlight": "Spotlight Mode (Ctrl+L)",
+    "theme": "Dark Mode (Ctrl+T)",
+    "code": "Code Editor Mode (Ctrl+K)",
+    "markdown": "Markdown/HTML Preview (Ctrl+M)",
+    "preview": "Vertical Preview (Ctrl+P)",
+    "aiChat": "AI Chat (Ctrl+Shift+A)",
+    "ideaProcessor": "Idea Processor (Ctrl+I)",
+    "settings": "Settings (F2)",
+    "minimize": "Minimize (Ctrl+H)",
+    "fullscreen": "Fullscreen (F11)",
+    "close": "Close (Ctrl+Q)"
+  },
+  "sidebar": {
+    "insertRuby": "Insert Ruby (｜《》)",
+    "insertDash": "Dash (――)",
+    "insertEllipsis": "Ellipsis (……)",
+    "undo": "Undo (Ctrl+Z)",
+    "redo": "Redo (Ctrl+Y)",
+    "fontDec": "Decrease Font",
+    "fontReset": "Reset",
+    "fontInc": "Increase Font",
+    "collapseAll": "Collapse All",
+    "expandAll": "Expand All"
+  },
+  "status": {
+    "noFile": "(None)"
+  }
+}

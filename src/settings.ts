@@ -1,5 +1,6 @@
 // src/settings.ts
 import { Store } from '@tauri-apps/plugin-store';
+import { applyTranslationsToDOM, initI18n, t } from './i18n';
 import { emit } from '@tauri-apps/api/event';
 import { getCurrentWindow } from '@tauri-apps/api/window';
 import { open, ask } from '@tauri-apps/plugin-dialog';
@@ -52,6 +53,7 @@ async function setupSettings() {
         const editorPaddingXInput = document.querySelector('#editor-padding-x') as HTMLInputElement;
         const heightInput = document.querySelector('#line-height-input') as HTMLInputElement;
         const lineBreakSelect = document.querySelector('#line-break-select') as HTMLSelectElement;
+        const appLanguageSelect = document.querySelector('#app-language') as HTMLSelectElement;
 
         const bgPathDisplay = document.querySelector('#current-bg-image-path') as HTMLElement;
         const bgmPathDisplay = document.querySelector('#current-bgm-path') as HTMLElement;
@@ -96,7 +98,7 @@ async function setupSettings() {
         const groqApiKeyInput = document.querySelector('#groq-api-key') as HTMLInputElement;
         const cohereApiKeyInput = document.querySelector('#cohere-api-key') as HTMLInputElement;
         const mistralApiKeyInput = document.querySelector('#mistral-api-key') as HTMLInputElement;
-        const geminiModelInput = document.querySelector('#gemini-model') as HTMLInputElement;
+        const geminiModelInput = document.querySelector('#gemini-model') as HTMLInputElement | null;
         const groqModelInput = document.querySelector('#groq-model') as HTMLInputElement;
         const cohereModelInput = document.querySelector('#cohere-model') as HTMLInputElement;
         const mistralModelInput = document.querySelector('#mistral-model') as HTMLInputElement;
@@ -152,6 +154,19 @@ async function setupSettings() {
 
         const initLineBreak = await store.get<string>('editorLineBreak');
         if (lineBreakSelect) lineBreakSelect.value = initLineBreak ?? 'strict';
+
+        const initAppLanguage = await store.get<string>('appLanguage');
+        if (appLanguageSelect) appLanguageSelect.value = initAppLanguage ?? 'ja';
+        await initI18n((initAppLanguage as 'ja' | 'en') ?? 'ja');
+        applyTranslationsToDOM();
+
+        appLanguageSelect?.addEventListener('change', async () => {
+            const newLocale = appLanguageSelect.value as 'ja' | 'en';
+            await store.set('appLanguage', newLocale);
+            await store.save();
+            await initI18n(newLocale);
+            applyTranslationsToDOM();
+        });
 
         const initWordBreak = await store.get<string>('editorWordBreak');
         if (wordBreakSelect) wordBreakSelect.value = initWordBreak ?? 'break-all';
@@ -291,7 +306,7 @@ async function setupSettings() {
                 // UI更新 (パス表示)
                 const bgPathDisplay = document.getElementById('current-bg-image-path');
                 if (bgPathDisplay) {
-                    bgPathDisplay.textContent = newBgPath === 'nothing' ? '(なし)' : newBgPath;
+                    bgPathDisplay.textContent = newBgPath === 'nothing' ? t('settings.bgImage.none') : newBgPath;
                 }
 
                 // 2. .settings.dat (mainStore) への保存
@@ -405,7 +420,7 @@ async function setupSettings() {
                 await mainStore.save();
                 pendingBgPath = null;
                 const bgPathDisplay = document.getElementById('current-bg-image-path');
-                if (bgPathDisplay) bgPathDisplay.textContent = '(デフォルト)';
+                if (bgPathDisplay) bgPathDisplay.textContent = t('settings.bgImage.default');
                 await emit('settings-changed', {
                     userBackgroundImagePath: null
                 });
@@ -522,15 +537,17 @@ async function setupSettings() {
             glowRadiusVal.textContent = `${inputGlowRadius.value}px`;
         });
 
-        if (pendingBgPath) bgPathDisplay.textContent = pendingBgPath.split(/[/\\]/).pop() || '';
-        if (pendingBgmPath) bgmPathDisplay.textContent = pendingBgmPath.split(/[/\\]/).pop() || '';
+        bgPathDisplay.textContent = pendingBgPath ? pendingBgPath.split(/[/\\]/).pop() || '' : t('settings.bgImage.noFile');
+        bgmPathDisplay.textContent = pendingBgmPath ? pendingBgmPath.split(/[/\\]/).pop() || '' : t('settings.bgMusic.noFile');
 
         // AI Settings
         geminiApiKeyInput.value = await store.get<string>('geminiApiKey') || '';
         groqApiKeyInput.value = await store.get<string>('groqApiKey') || '';
         cohereApiKeyInput.value = await store.get<string>('cohereApiKey') || '';
         mistralApiKeyInput.value = await store.get<string>('mistralApiKey') || '';
-        geminiModelInput.value = await store.get<string>('geminiModel') || 'gemini-3.1-flash-lite-preview';
+        if (geminiModelInput) {
+            geminiModelInput.value = await store.get<string>('geminiModel') || 'gemini-3.1-flash-lite-preview';
+        }
         groqModelInput.value = await store.get<string>('groqModel') || 'llama-3.3-70b-versatile';
         cohereModelInput.value = await store.get<string>('cohereModel') || '';
         mistralModelInput.value = await store.get<string>('mistralModel') || '';
@@ -551,8 +568,9 @@ async function setupSettings() {
         if (modelPresetSelect) {
             // 保存されている値がプルダウンの選択肢に含まれているかチェック
             const options = Array.from(modelPresetSelect.options).map(o => o.value);
-            if (options.includes(geminiModelInput.value)) {
-                modelPresetSelect.value = geminiModelInput.value;
+            const currentVal = geminiModelInput ? geminiModelInput.value : null;
+            if (currentVal && options.includes(currentVal)) {
+                modelPresetSelect.value = currentVal;
             } else {
                 // 含まれていなければ「手動入力」等の空欄やデフォルト位置にする
                 // (HTML側で <option value="">手動入力</option> としている場合)
@@ -596,7 +614,7 @@ async function setupSettings() {
 
         document.querySelector('#btn-select-bg-image')?.addEventListener('click', async () => {
             const path = await open({
-                title: '背景画像を選択',
+                title: t('settings.bgImage.selectTitle'),
                 filters: [{ name: 'Images', extensions: ['png', 'jpg', 'jpeg', 'gif', 'webp'] }]
             });
 
@@ -619,7 +637,7 @@ async function setupSettings() {
             await store.delete('userBackgroundImagePath'); // 削除して保存
             await store.save();
 
-            bgPathDisplay.textContent = '(デフォルト)';
+            bgPathDisplay.textContent = t('settings.bgImage.default');
 
             // nullを通知してデフォルトに戻させる
             await emit('settings-changed', { userBackgroundImagePath: null });
@@ -629,13 +647,13 @@ async function setupSettings() {
             pendingBgPath = 'nothing';
             await store.set('userBackgroundImagePath', 'nothing');
             await store.save();
-            bgPathDisplay.textContent = '(なし)';
+            bgPathDisplay.textContent = t('settings.bgImage.none');
             await emit('settings-changed', { userBackgroundImagePath: 'nothing' });
         });
 
         document.querySelector('#btn-select-bgm')?.addEventListener('click', async () => {
             const path = await open({
-                title: 'BGMを選択',
+                title: t('settings.bgMusic.selectTitle'),
                 filters: [{ name: 'Audio', extensions: ['mp3', 'wav', 'ogg'] }]
             });
 
@@ -657,7 +675,7 @@ async function setupSettings() {
             await store.delete('userBgmPath');
             await store.save();
 
-            bgmPathDisplay.textContent = '(デフォルト)';
+            bgmPathDisplay.textContent = t('settings.bgMusic.default');
 
             // nullを通知
             await emit('settings-changed', { userBgmPath: null });
@@ -680,7 +698,7 @@ async function setupSettings() {
 
         document.querySelector('#btn-select-cwd')?.addEventListener('click', async () => {
             const path = await open({
-                title: 'ディレクトリを選択',
+                title: t('settings.terminal.selectDirTitle'),
                 directory: true,
                 properties: ['openDirectory']
             });
@@ -693,7 +711,7 @@ async function setupSettings() {
 
         document.querySelector('#btn-select-silly-tavern')?.addEventListener('click', async () => {
             const path = await open({
-                title: 'ディレクトリを選択',
+                title: t('settings.terminal.selectDirTitle'),
                 directory: true,
                 properties: ['openDirectory']
             });
@@ -708,7 +726,7 @@ async function setupSettings() {
             const osType = await type();
             const extensions = osType === 'windows' ? ['exe'] : [''];
             const path = await open({
-                title: 'シェルを選択',
+                title: t('settings.terminal.selectShellTitle'),
                 filters: [
                     { name: 'Executables', extensions: extensions },
                 ]
@@ -758,7 +776,7 @@ async function setupSettings() {
             // デフォルト選択肢
             const defaultOpt = document.createElement('option');
             defaultOpt.value = 'default';
-            defaultOpt.text = 'デフォルト (Ctrl+Shift+Fで切替)';
+            defaultOpt.text = t('settings.font.defaultOption');
             fontSelect.appendChild(defaultOpt);
 
             // システムフォント
@@ -783,6 +801,7 @@ async function setupSettings() {
                 const newPaddingX = isNaN(rawPaddingX) ? 10 : rawPaddingX;
                 const newHeight = parseFloat(heightInput.value);
                 const newLineBreak = lineBreakSelect.value;
+                const newAppLanguage = appLanguageSelect.value;
                 const newWordBreak = wordBreakSelect.value;
                 const fontSelect = document.querySelector('#font-family-select') as HTMLSelectElement;
                 const newUserFont = fontSelect ? fontSelect.value : 'default';
@@ -815,7 +834,7 @@ async function setupSettings() {
                 const newGroqApiKey = groqApiKeyInput.value.trim();
                 const newCohereApiKey = cohereApiKeyInput.value.trim();
                 const newMistralApiKey = mistralApiKeyInput.value.trim();
-                const newGeminiModel = geminiModelInput.value.trim();
+        const newGeminiModel = geminiModelInput ? geminiModelInput.value.trim() : '';
                 const newGroqModel = groqModelInput.value.trim();
                 const newCohereModel = cohereModelInput.value.trim();
                 const newMistralModel = mistralModelInput.value.trim();
@@ -835,6 +854,7 @@ async function setupSettings() {
                 await store.set('editorPaddingX', newPaddingX);
                 await store.set('editorLineHeight', newHeight);
                 await store.set('editorLineBreak', newLineBreak);
+                await store.set('appLanguage', newAppLanguage);
                 await store.set('editorWordBreak', newWordBreak);
                 await store.set('userFontFamily', newUserFont);
                 await store.set('editorAlign', newAlign);
@@ -908,6 +928,7 @@ async function setupSettings() {
                     editorPaddingX: newPaddingX,
                     editorLineHeight: newHeight,
                     editorLineBreak: newLineBreak,
+                    appLanguage: newAppLanguage,
                     userBackgroundImagePath: pendingBgPath,
                     userBgmPath: pendingBgmPath,
                     editorWordBreak: newWordBreak,
@@ -958,6 +979,8 @@ async function setupSettings() {
                     glowRadius: parseInt(inputGlowRadius.value),
                     showAiThinkingOverlay: newAiThinkingOverlay,
                 });
+                await initI18n(newAppLanguage as 'ja' | 'en');
+                applyTranslationsToDOM();
 
             } catch (err) {
                 alert(`設定の保存に失敗しました: ${err}`);

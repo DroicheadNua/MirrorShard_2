@@ -8,7 +8,7 @@ body {
     word-wrap: break-word;
     background-color: transparent;
     border-radius: 6px;
-    font-family: 'Hiragino Mincho ProN', 'Yu Mincho', 'YuMincho', serif;
+    font-family: 'Palatino Linotype', 'Book Antiqua', Palatino, 'Times New Roman', 'Hiragino Mincho ProN', 'Yu Mincho', 'YuMincho', serif;
     background-size: cover;
     background-position: center;
     background-repeat: no-repeat;
@@ -175,6 +175,15 @@ body {
     border-color: #333333;
     font-size: 12px;
     opacity: 0.5;
+    flex-shrink: 0;
+}
+
+.setting-item input[type="text"],
+.setting-item input[type="password"] {
+    width: auto;
+    min-width: 56px;
+    flex-grow: 1;
+    flex-shrink: 1;
 }
 
 .setting-item select {
@@ -195,8 +204,12 @@ body {
     width: 18px;
 }
 
+#app-language {
+    width: 120px;
+}
+
 #word-break-select {
-    width: 148px;
+    width: 180px;
 }
 
 #font-family-select {
@@ -205,6 +218,33 @@ body {
 
 #editor-align-select {
     width: 128px;
+}
+
+#unified-theme-select {
+    width: 200px;
+}
+
+#gemini-model-preset,
+#groq-model-preset,
+#cohere-model-preset,
+#mistral-model-preset,
+#local-llm-url-preset {
+    width: 160px;
+}
+
+#code-language-select,
+#code-font-family-select {
+    width: 200px;
+}
+
+#pandoc-path,
+#shell-path,
+#terminal-cwd,
+#local-llm-url,
+#silly-tavern-path {
+    flex-grow: 1;
+    flex-shrink: 1;
+    min-width: 300px;
 }
 
 body::-webkit-scrollbar {

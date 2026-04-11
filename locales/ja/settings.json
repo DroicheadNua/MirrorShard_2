@@ -1,0 +1,152 @@
+{
+  "general": {"title": "設定"},
+  "windowTitle": "設定",
+  "closeWindow": "閉じる (F2)",
+  "tab": {"general": "一般", "ai": "AI設定", "code": "コードエディタ"},
+  "apply": "適用",
+  "language": {"label": "言語 (Language)"},
+  "languageOption": {"ja": "日本語", "en": "English"},
+  "editorMaxWidth": {
+    "label": "エディタの最大幅 (半角文字数)",
+    "note": "※0を入力するとウィンドウ幅に追従します。"
+  },
+  "lineHeight": {"label": "行の高さ"},
+  "editorPaddingX": {"label": "エディタ左右余白"},
+  "kinsoku": {"label": "禁則処理"},
+  "lineBreak": {"normal": "標準", "strict": "厳格"},
+  "bgImage": {
+    "label": "背景画像",
+    "select": "選択",
+    "default": "標準",
+    "none": "なし",
+    "selectTitle": "背景画像を選択",
+    "noFile": "（なし）"
+  },
+  "bgMusic": {
+    "label": "BGM",
+    "select": "選択",
+    "default": "標準",
+    "selectTitle": "BGMを選択",
+    "noFile": "（なし）"
+  },
+  "wordBreak": {
+    "label": "折り返し設定",
+    "breakAll": "文字単位 (日本語向け)",
+    "normal": "単語単位 (英語向け)"
+  },
+  "font": {"label": "フォント", "defaultOption": "デフォルト"},
+  "pandoc": {
+    "label": "Pandoc Path (縦書きエクスポートに必要)",
+    "placeholder": "例：C:\\Program Files\\Pandoc\\pandoc.exe",
+    "browse": "参照..."
+  },
+  "appearance": {
+    "title": "エディタ外観",
+    "align": {
+      "label": "配置",
+      "center": "中央 (標準)",
+      "left": "左寄せ",
+      "right": "右寄せ"
+    },
+    "blur": {"label": "すりガラス強度 (Blur)"},
+    "color": {
+      "text": "文字色",
+      "window": "ウィンドウ背景色",
+      "uiText": "UI文字色",
+      "editorBg": "エディタ背景色",
+      "selection": "選択色",
+      "scrollbar": "スクロールバー色",
+      "heading": "見出し色",
+      "glow": "グロー色",
+      "glowStrength": "強さ",
+      "useUiBg": "サイドバー等にも背景を適用"
+    },
+    "glow": "グロー"
+  },
+  "themes": {
+    "label": "テーマプリセット",
+    "reset": "Reset",
+    "save": "Save",
+    "delete": "Delete"
+  },
+  "markdown": {
+    "title": "Markdown Preview",
+    "hardBreaks": "Hard Breaks (Enterで改行します)",
+    "note": "オフの場合、公式Markdown仕様通り「末尾に半角スペース2つ」か「空行」で改行されます（Astro等でのプレビュー時はオフ推奨）。"
+  },
+  "terminal": {
+    "title": "Terminal Settings",
+    "shellPathLabel": "Shell Path",
+    "shellPathPlaceholder": "(Auto Detect)",
+    "startupDirLabel": "Startup Directory",
+    "startupDirPlaceholder": "(User Home)",
+    "browse": "参照...",
+    "selectDirTitle": "フォルダを選択",
+    "selectShellTitle": "Shellを選択"
+  },
+  "code": {
+    "title": "Code Editor Settings",
+    "languageLabel": "Syntax Highlight Language",
+    "fontLabel": "Font",
+    "fontSizeLabel": "Font Size",
+    "wordWrapLabel": "Word Wrap (折り返し)"
+  },
+  "ai": {
+    "cloud": "Cloud AI",
+    "gemini": "Gemini",
+    "geminiKeyLabel": "Gemini API Key",
+    "geminiKeyPlaceholder": "AIzaSy...",
+    "geminiModelLabel": "Gemini Model",
+    "groq": "Groq",
+    "groqKeyLabel": "Groq API Key",
+    "groqKeyPlaceholder": "gsk_...",
+    "groqModelLabel": "Groq Model",
+    "cohere": "Cohere",
+    "cohereKeyLabel": "Cohere API Key",
+    "cohereKeyPlaceholder": "...",
+    "cohereModelLabel": "Cohere Model",
+    "mistral": "Mistral",
+    "mistralKeyLabel": "Mistral API Key",
+    "mistralKeyPlaceholder": "...",
+    "mistralModelLabel": "Mistral Model",
+    "enableGroq": "Groq を有効にする",
+    "enableCohere": "Cohere を有効にする",
+    "enableMistral": "mistral を有効にする",
+    "modelPlaceholder": "<モデル名を入力>",
+    "localLlm": "Local LLM",
+    "localLlmUrlLabel": "Endpoint URL",
+    "localLlmUrlPlaceholder": "http://127.0.0.1:1234/v1/chat/completions",
+    "localLlmModelLabel": "Model Name (Required for Ollama)",
+    "localLlmModelPlaceholder": "※LM Studioの場合は無視されます",
+    "sillyTavern": "SillyTavern",
+    "sillyTavernPathLabel": "SillyTavern Path (Folder)",
+    "sillyTavernPathPlaceholder": "C:\\path\\to\\SillyTavern",
+    "sillyTavernBrowse": "参照...",
+    "sillyTavernNote": "※SillyTavernのインストール先フォルダを指定してください。",
+    "behavior": "動作設定",
+    "maxTokensLabel": "最大応答長 (100〜100000)",
+    "faMaxTokensLabel": "AI連想機能応答長 (10〜1000)",
+    "contextLimitLabel": "コンテキスト長 (1000〜100000)",
+    "thinkingOverlay": "AI思考時の演出",
+    "contextNote1": "※ローカルAIに渡す文脈の長さ。通常は2000～3000程度を推奨",
+    "contextNote2": "※Geminiは設定にかかわらず最大4000になります。",
+    "contextNote3": "※この値＋システムプロンプトの長さが使用モデルの最大コンテクスト長を越えるとエラーになります。",
+    "systemPromptLabel": "System Prompt (AIへの役割指示)",
+    "manualEntry": "手動入力",
+    "systemPromptPlaceholder": "あなたは優秀な執筆アシスタントです...",
+    "userProfile": "User Profile",
+    "userNameLabel": "Name",
+    "userNamePlaceholder": "User",
+    "aiProfile": "AI Profile",
+    "aiNameLabel": "Name",
+    "aiNamePlaceholder": "AI",
+    "iconLabel": "Icon:",
+    "iconSelect": "Select",
+    "iconClear": "Clear",
+    "defaultIcon": "(Default)"
+  },
+  "alerts": {
+    "settingsSaveFailed": "設定の保存に失敗しました: {{err}}",
+    "settingsScreenError": "設定画面のエラー: {{error}}"
+  }
+}
