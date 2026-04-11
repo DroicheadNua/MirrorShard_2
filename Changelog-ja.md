@@ -10,6 +10,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added (新機能)  
 - 対応AI追加: CohereとMistralのAPIに対応。メインエディタ・AIチャット・アイデアプロセッサの全てで利用可能  
 - GeminiのモデルにGemini 3.1 Flash-Lite PreviewとGemini 3 Flash Previewを追加、デフォルトをGemini 3.1 Flash-Lite Previewに  
+- 英文ドキュメントを追加  
 
 ### Changed (変更点)    
 - メインエディタのAI翻訳機能を英→日・日→英のみの仕様から変更、任意の言語に翻訳できるように  
