@@ -4,7 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>縦書きプレビュー</title>
+    <title data-i18n="preview.windowTitle">縦書きプレビュー</title>
     <link rel="stylesheet" href="/src/preview.css">
 </head>
 
@@ -12,17 +12,17 @@
     <div id="preview-wrapper">
         <div data-tauri-drag-region class="preview-titlebar">
             <div class="preview-controls">
-                <button id="btn-pin" title="最前面に固定"></button>
+                <button id="btn-pin" data-i18n-title="preview.tooltip.pin" title="最前面に固定"></button>
                 <div class="dropdown-wrapper">
-                    <button id="btn-export-menu" title="エクスポート"></button>
+                    <button id="btn-export-menu" data-i18n-title="preview.tooltip.export" title="エクスポート"></button>
                     <div id="export-dropdown" class="dropdown-content">
-                        <div class="dropdown-item" data-action="epub">EPUB 出力</div>
-                        <div class="dropdown-item" data-action="html">HTML 出力</div>
+                        <div class="dropdown-item" data-action="epub" data-i18n="preview.dropdown.epub">EPUB 出力</div>
+                        <div class="dropdown-item" data-action="html" data-i18n="preview.dropdown.html">HTML 出力</div>
                     </div>
                 </div>
-                <button id="btn-refresh" title="更新"></button>
-                <button id="btn-fullscreen" title="フルスクリーン"></button>
-                <button id="btn-close" title="閉じる"></button>
+                <button id="btn-refresh" data-i18n-title="preview.tooltip.refresh" title="更新"></button>
+                <button id="btn-fullscreen" data-i18n-title="preview.tooltip.fullscreen" title="フルスクリーン"></button>
+                <button id="btn-close" data-i18n-title="preview.tooltip.close" title="閉じる"></button>
             </div>
         </div>
 
@@ -35,27 +35,27 @@
         <!-- EPUB設定モーダル -->
         <div id="epub-modal" class="modal-overlay" style="display: none;">
             <div class="modal-content">
-                <h3>EPUB Export Settings</h3>
+                <h3 data-i18n="preview.epub.modalTitle">EPUB Export Settings</h3>
                 <div class="modal-item">
-                    <label>Title:</label>
-                    <input type="text" id="epub-title" placeholder="作品名">
+                    <label data-i18n="preview.epub.title">Title:</label>
+                    <input type="text" id="epub-title" data-i18n-placeholder="preview.epub.titlePlaceholder" placeholder="作品名">
                 </div>
                 <div class="modal-item">
-                    <label>Author:</label>
-                    <input type="text" id="epub-author" placeholder="著者名" value="Author">
+                    <label data-i18n="preview.epub.author">Author:</label>
+                    <input type="text" id="epub-author" data-i18n-placeholder="preview.epub.authorPlaceholder" placeholder="著者名" value="Author">
                 </div>
                 <div class="modal-item">
-                    <label>Cover Image:</label>
+                    <label data-i18n="preview.epub.cover">Cover Image:</label>
                     <div style="display: flex; gap: 5px;">
-                        <input type="text" id="epub-cover-path" readonly placeholder="No image selected"
+                        <input type="text" id="epub-cover-path" readonly data-i18n-placeholder="preview.epub.coverPlaceholder" placeholder="No image selected"
                             style="flex-grow: 1;">
-                        <button id="btn-select-cover">Select</button>
+                        <button id="btn-select-cover" data-i18n="preview.epub.select">Select</button>
                         <button id="btn-clear-cover">×</button>
                     </div>
                 </div>
                 <div class="modal-buttons">
-                    <button id="btn-cancel-epub">Cancel</button>
-                    <button id="btn-exec-epub" class="primary">Export</button>
+                    <button id="btn-cancel-epub" data-i18n="preview.epub.cancel">Cancel</button>
+                    <button id="btn-exec-epub" class="primary" data-i18n="preview.epub.export">Export</button>
                 </div>
             </div>
         </div>

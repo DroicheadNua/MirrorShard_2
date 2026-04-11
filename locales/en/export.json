@@ -1,0 +1,38 @@
+{
+  "windowTitle": "Export",
+  "fontSelect": "Font",
+  "fontSerif": "Serif",
+  "fontSans": "Sans-serif",
+  "fontMono": "Monospace",
+  "lineHeight": "Line Height",
+  "tooltip": {
+    "print": "Print / Save as PDF (Ctrl+P)",
+    "docx": "Save as MS-Word (DOCX)",
+    "html": "Save as HTML",
+    "epub": "Save as EPUB",
+    "close": "Close (Ctrl+E)"
+  },
+  "epub": {
+    "modalTitle": "EPUB Export Settings",
+    "title": "Title:",
+    "titlePlaceholder": "Title",
+    "author": "Author:",
+    "authorPlaceholder": "Author",
+    "cover": "Cover Image (optional):",
+    "coverUnselected": "Not selected",
+    "select": "Select",
+    "cancel": "Cancel",
+    "save": "Save..."
+  },
+  "alert": {
+    "saved": "Saved successfully.",
+    "noContent": "No content to export.",
+    "docxSuccess": "DOCX export succeeded.",
+    "docxFailed": "DOCX export failed",
+    "epubSuccess": "EPUB file created.",
+    "epubFailed": "EPUB creation failed"
+  },
+  "dialog": {
+    "docxTitle": "Export as MS-Word (DOCX)"
+  }
+}

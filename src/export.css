@@ -82,7 +82,7 @@ body {
     box-sizing: border-box;
     flex-shrink: 0;
 
-    font-family: 'Hiragino Mincho ProN', 'Yu Mincho', 'YuMincho', serif;
+    font-family: "Palatino Linotype", "Book Antiqua", Palatino, "Times New Roman", "Hiragino Mincho ProN", "Yu Mincho", "YuMincho", serif;
     line-height: 1.8;
     word-wrap: break-word;
     overflow: visible;

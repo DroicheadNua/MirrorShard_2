@@ -1,10 +1,10 @@
 {
-  "h1": "Shortcut Keys",
-  "toggleHint": "Press F1 to Toggle",
-  "fileOperations": "File Operations",
-  "view": "View",
-  "editingSettings": "Editing & Settings",
-  "standardEditing": "Standard Editing",
+  "h1": "ショートカットキー",
+  "toggleHint": "F1で表示/非表示",
+  "fileOperations": "ファイル操作",
+  "view": "表示",
+  "editingSettings": "編集と設定",
+  "standardEditing": "標準編集",
   "macNote": "macOSでは、<code>Ctrl</code>キーの代わりに<code>Cmd (⌘)</code>キーを使用してください。<br>(フルスクリーン切替は <code>Cmd + Ctrl + F</code> です)",
   "shortcuts": {
     "newFile": "新規ファイル",

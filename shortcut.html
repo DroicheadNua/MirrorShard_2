@@ -132,6 +132,7 @@
   </div>
   <script type="module">
     import { invoke } from '@tauri-apps/api/core';
+    import { listen } from '@tauri-apps/api/event';
     import { initI18n, t } from '/src/i18n.ts';
 
     (async () => {
@@ -145,6 +146,19 @@
       document.querySelectorAll('[data-i18n-html]').forEach(el => {
         const key = el.getAttribute('data-i18n-html');
         if (key) el.innerHTML = t(key);
+      });
+
+      // 言語変更同期
+      listen('app:language-changed', async (event) => {
+        await initI18n(event.payload === 'en' ? 'en' : 'ja');
+        document.querySelectorAll('[data-i18n]').forEach(el => {
+          const key = el.getAttribute('data-i18n');
+          if (key) el.textContent = t(key);
+        });
+        document.querySelectorAll('[data-i18n-html]').forEach(el => {
+          const key = el.getAttribute('data-i18n-html');
+          if (key) el.innerHTML = t(key);
+        });
       });
     })();
   </script>

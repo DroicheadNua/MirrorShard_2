@@ -7,6 +7,7 @@ import updateArticle from './scripts/ruby';
 import { resolveResource } from '@tauri-apps/api/path';
 import { convertFileSrc } from '@tauri-apps/api/core';
 import { type } from '@tauri-apps/plugin-os';
+import { initI18n, applyTranslationsToDOM, t } from './i18n';
 
 interface PreviewPayload {
     text: string;
@@ -130,14 +131,23 @@ async function initPreview() {
     });
     // --- 設定変更の監視 (リアルタイムダークモード切替) ---
     await listen('settings-changed', () => {
-        // 引数は使わず、単にリクエストを飛ばすだけ
         emit('preview-request-update');
+    });
+
+    // --- 言語変更同期 ---
+    await listen<string>('app:language-changed', async (event) => {
+        await initI18n(event.payload === 'en' ? 'en' : 'ja');
+        applyTranslationsToDOM();
     });
 
     const osType = await type();
     if (osType === 'macos') {
         document.body.classList.add('is-mac');
     }
+
+    const locale = await invoke('get_app_language').catch(() => 'ja');
+    await initI18n(locale === 'en' ? 'en' : 'ja');
+    applyTranslationsToDOM();
 
     // --- 更新ボタン ---
     refreshBtn?.addEventListener('click', async () => {
@@ -164,10 +174,10 @@ async function initPreview() {
         // ボタンの見た目を切り替え
         if (isPinned) {
             pinBtn.classList.add('active');
-            pinBtn.title = "固定を解除";
+            pinBtn.title = t('preview.tooltip.pinRelease');
         } else {
             pinBtn.classList.remove('active');
-            pinBtn.title = "最前面に固定";
+            pinBtn.title = t('preview.tooltip.pin');
         }
     });
 
@@ -285,11 +295,11 @@ async function initPreview() {
                 metadata: finalMetadata
             });
 
-            alert(`${format.toUpperCase()} エクスポートが完了しました`);
+            alert(t('preview.alert.exportSuccess', { format: format.toUpperCase() }));
 
         } catch (e) {
             console.error(e);
-            alert(`エクスポートに失敗しました: ${e}`);
+            alert(`${t('preview.alert.exportFailed')}: ${e}`);
         }
     }
 

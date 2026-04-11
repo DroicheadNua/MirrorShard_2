@@ -1,0 +1,38 @@
+{
+  "windowTitle": "エクスポート",
+  "fontSelect": "フォント",
+  "fontSerif": "明朝 (Serif)",
+  "fontSans": "ゴシック (Sans)",
+  "fontMono": "等幅",
+  "lineHeight": "行間",
+  "tooltip": {
+    "print": "印刷 / PDF保存(Ctrl+P)",
+    "docx": "MS-Word (DOCX) 保存",
+    "html": "HTML保存",
+    "epub": "EPUB保存",
+    "close": "閉じる(Ctrl+E)"
+  },
+  "epub": {
+    "modalTitle": "EPUB出力設定",
+    "title": "タイトル:",
+    "titlePlaceholder": "作品名",
+    "author": "著者名:",
+    "authorPlaceholder": "著者名",
+    "cover": "表紙画像 (任意):",
+    "coverUnselected": "未選択",
+    "select": "選択",
+    "cancel": "キャンセル",
+    "save": "保存..."
+  },
+  "alert": {
+    "saved": "保存しました",
+    "noContent": "書き出すコンテンツがありません。",
+    "docxSuccess": "DOCXファイルの書き出しに成功しました。",
+    "docxFailed": "DOCXエクスポート失敗",
+    "epubSuccess": "EPUBファイルを作成しました",
+    "epubFailed": "EPUB作成に失敗しました"
+  },
+  "dialog": {
+    "docxTitle": "MS-Word (DOCX) として書き出し"
+  }
+}

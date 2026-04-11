@@ -8,7 +8,7 @@ let translations: Record<string, any> = {};
 export async function initI18n(locale: Locale) {
     currentLocale = locale;
     try {
-        const [common, editor, ideaProcessor, settings, prompts, main, shortcut, markdown] = await Promise.all([
+        const [common, editor, ideaProcessor, settings, prompts, main, shortcut, markdown, export_, preview] = await Promise.all([
             import(`../locales/${locale}/common.json`),
             import(`../locales/${locale}/editor.json`),
             import(`../locales/${locale}/ideaProcessor.json`),
@@ -17,6 +17,8 @@ export async function initI18n(locale: Locale) {
             import(`../locales/${locale}/main.json`),
             import(`../locales/${locale}/shortcut.json`),
             import(`../locales/${locale}/markdown.json`),
+            import(`../locales/${locale}/export.json`),
+            import(`../locales/${locale}/preview.json`),
         ]);
 
         translations = {
@@ -27,7 +29,9 @@ export async function initI18n(locale: Locale) {
             prompts: prompts.default,
             main: main.default,
             shortcut: shortcut.default,
-            markdown: markdown.default
+            markdown: markdown.default,
+            export: export_.default,
+            preview: preview.default
         };
     } catch (e) {
         console.error(`[i18n] Failed to load translations for ${locale}`, e);

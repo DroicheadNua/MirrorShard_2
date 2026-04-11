@@ -3,7 +3,7 @@
 
 <head>
     <meta charset="UTF-8">
-    <title>エクスポート</title>
+    <title data-i18n="export.windowTitle">エクスポート</title>
     <link rel="stylesheet" href="/src/export.css">
 </head>
 
@@ -16,9 +16,9 @@
             <div class="export-controls">
                 <!-- 設定コントロールを追加 -->
                 <select id="font-select" title="フォント" style="height: 22px;">
-                    <option value="serif">明朝 (Serif)</option>
-                    <option value="sans-serif">ゴシック (Sans)</option>
-                    <option value="monospace">等幅</option>
+                    <option value="serif" data-i18n="export.fontSerif">明朝 (Serif)</option>
+                    <option value="sans-serif" data-i18n="export.fontSans">ゴシック (Sans)</option>
+                    <option value="monospace" data-i18n="export.fontMono">等幅</option>
                     <!-- 必要ならシステムフォントもここに追加 -->
                 </select>
 
@@ -32,11 +32,11 @@
 
                 <span style="border-left: 1px solid #666; margin: 0 10px;"></span>
 
-                <button id="btn-print" title="印刷 / PDF保存(Ctrl+P)">🖨️</button>
-                <button id="btn-docx" title="MS-Word (DOCX) 保存">DOCX</button>
-                <button id="btn-html" title="HTML保存">HTML</button>
-                <button id="btn-epub" title="EPUB保存">EPUB</button>
-                <button id="btn-close" title="閉じる(Ctrl+E)">×</button>
+                <button id="btn-print" data-i18n-title="export.tooltip.print" title="印刷 / PDF保存(Ctrl+P)">🖨️</button>
+                <button id="btn-docx" data-i18n-title="export.tooltip.docx" title="MS-Word (DOCX) 保存">DOCX</button>
+                <button id="btn-html" data-i18n-title="export.tooltip.html" title="HTML保存">HTML</button>
+                <button id="btn-epub" data-i18n-title="export.tooltip.epub" title="EPUB保存">EPUB</button>
+                <button id="btn-close" data-i18n-title="export.tooltip.close" title="閉じる(Ctrl+E)">×</button>
             </div>
         </div>
 
@@ -49,30 +49,30 @@
         <!-- EPUB設定モーダル -->
         <div id="epub-modal" class="modal-overlay" style="display: none;">
             <div class="modal-content">
-                <h3>EPUB出力設定</h3>
+                <h3 data-i18n="export.epub.modalTitle">EPUB出力設定</h3>
 
                 <div class="modal-item">
-                    <label>タイトル:</label>
-                    <input type="text" id="epub-title" placeholder="作品名">
+                    <label data-i18n="export.epub.title">タイトル:</label>
+                    <input type="text" id="epub-title" data-i18n-placeholder="export.epub.titlePlaceholder" placeholder="作品名">
                 </div>
 
                 <div class="modal-item">
-                    <label>著者名:</label>
-                    <input type="text" id="epub-author" placeholder="著者名" value="Author">
+                    <label data-i18n="export.epub.author">著者名:</label>
+                    <input type="text" id="epub-author" data-i18n-placeholder="export.epub.authorPlaceholder" placeholder="著者名" value="Author">
                 </div>
 
                 <div class="modal-item">
-                    <label>表紙画像 (任意):</label>
+                    <label data-i18n="export.epub.cover">表紙画像 (任意):</label>
                     <div style="display: flex; gap: 5px;">
-                        <input type="text" id="epub-cover-path" readonly placeholder="未選択">
-                        <button id="btn-select-cover">選択</button>
+                        <input type="text" id="epub-cover-path" readonly data-i18n-placeholder="export.epub.coverUnselected" placeholder="未選択">
+                        <button id="btn-select-cover" data-i18n="export.epub.select">選択</button>
                         <button id="btn-clear-cover">×</button>
                     </div>
                 </div>
 
                 <div class="modal-buttons">
-                    <button id="btn-cancel-epub">キャンセル</button>
-                    <button id="btn-exec-epub" class="primary">保存...</button>
+                    <button id="btn-cancel-epub" data-i18n="export.epub.cancel">キャンセル</button>
+                    <button id="btn-exec-epub" class="primary" data-i18n="export.epub.save">保存...</button>
                 </div>
             </div>
         </div>
@@ -86,6 +86,7 @@
         import { open, save } from '@tauri-apps/plugin-dialog';
         import updateArticle from '/src/scripts/ruby.ts';
         import { Store } from '@tauri-apps/plugin-store';
+        import { initI18n, applyTranslationsToDOM, t } from '/src/i18n.ts';
 
         async function initExport() {
             const contentDiv = document.getElementById('content');
@@ -98,15 +99,22 @@
             const epubCoverPathInput = document.getElementById('epub-cover-path');
             let rawMarkdownText = "";
 
+            const locale = await invoke('get_app_language').catch(() => 'ja');
+            await initI18n(locale === 'en' ? 'en' : 'ja');
+            applyTranslationsToDOM();
+
+            // 言語変更同期
+            listen('app:language-changed', async (event) => {
+                await initI18n(event.payload === 'en' ? 'en' : 'ja');
+                applyTranslationsToDOM();
+            });
+
             // データ受信
             await listen('export-data', (event) => {
                 const { text } = event.payload;
                 if (contentDiv) {
-                    // 生テキストを保持
                     rawMarkdownText = text;
-                    // 1. 基本的な改行変換
                     contentDiv.innerHTML = text.replace(/\n/g, '<br>');
-                    // 2. ルビ変換を実行
                     updateArticle(contentDiv);
                     updateStyles();
                 }
@@ -119,8 +127,11 @@
                 const size = fontSizeInput.value;
                 const lh = lineHeightInput.value;
 
-                contentDiv.style.fontFamily = font === 'serif' ? '"Yu Mincho", serif' :
-                    font === 'sans-serif' ? '"Hiragino Sans", sans-serif' : 'monospace';
+                contentDiv.style.fontFamily = font === 'serif'
+                    ? '"Palatino Linotype", "Book Antiqua", Palatino, "Times New Roman", "Yu Mincho", serif'
+                    : font === 'sans-serif'
+                    ? '"Verdana", "Arial", "Helvetica", "Hiragino Sans", sans-serif'
+                    : '"Menlo", "Monaco", "Consolas", monospace';
                 contentDiv.style.fontSize = `${size}px`;
                 contentDiv.style.lineHeight = lh;
             }
@@ -142,7 +153,6 @@
             document.getElementById('btn-html')?.addEventListener('click', async () => {
                 const path = await save({ filters: [{ name: 'HTML', extensions: ['html'] }] });
                 if (path && contentDiv) {
-                    // プレビューと同じスタイルを埋め込む
                     const currentFont = contentDiv.style.fontFamily;
                     const currentSize = contentDiv.style.fontSize;
                     const currentLineHeight = contentDiv.style.lineHeight;
@@ -156,45 +166,40 @@
                     display: flex;
                     justify-content: center;
                 }
-                /* 紙面のスタイルを再現 */
                 .paper {
                     background-color: white;
                     color: black;
                     width: 210mm;
                     min-height: 297mm;
                     padding: 20mm;
-                    box-sizing: border-box; /* これが重要 */
+                    box-sizing: border-box;
                     margin: 0 auto;
                     box-shadow: 0 0 10px rgba(0,0,0,0.5);
-                    
-                    /* 現在の設定を反映 */
                     font-family: ${currentFont};
                     font-size: ${currentSize};
                     line-height: ${currentLineHeight};
                     word-wrap: break-word;
                 }
-                /* 印刷時の設定 */
                 @media print {
                     body { background: none; display: block; padding: 0; }
                     .paper { width: 100%; margin: 0; box-shadow: none; min-height: auto; }
                 }
             </style>`;
 
-                    // contentDivの中身を .paper クラスのdivで包む
                     const fullHtml = `<!DOCTYPE html><html><head><meta charset="UTF-8">${style}</head><body><div class="paper">${contentDiv.innerHTML}</div></body></html>`;
 
                     await invoke('write_file', { path, content: fullHtml, encoding: 'UTF-8' });
-                    alert('保存しました');
+                    alert(t('export.alert.saved'));
                 }
             });
 
             // --- MS-Word (DOCX) 保存 ---
             document.getElementById('btn-docx')?.addEventListener('click', async () => {
                 const text = rawMarkdownText;
-                if (!text || !text.trim()) { alert('書き出すコンテンツがありません。'); return; }
+                if (!text || !text.trim()) { alert(t('export.alert.noContent')); return; }
 
                 const path = await save({
-                    title: 'MS-Word (DOCX) として書き出し',
+                    title: t('export.dialog.docxTitle'),
                     defaultPath: 'Untitled.docx',
                     filters: [{ name: 'Word Document', extensions: ['docx'] }]
                 });
@@ -203,7 +208,6 @@
                     try {
                         const store = await Store.load('.settings.dat');
                         const pandocPath = await store.get('pandocPath');
-                        // \n を 「半角スペース2つ + \n」 に置換することで、Pandocに強制的に改行させる
                         const contentForPandoc = rawMarkdownText.replace(/\n/g, '  \n');
 
                         await invoke('export_with_pandoc', {
@@ -215,10 +219,10 @@
                             metadata: {}
                         });
 
-                        alert('DOCXファイルの書き出しに成功しました。');
+                        alert(t('export.alert.docxSuccess'));
                     } catch (e) {
                         console.error(e);
-                        alert(`DOCXエクスポート失敗:\n${e}`);
+                        alert(`${t('export.alert.docxFailed')}:\n${e}`);
                     }
                 }
             });
@@ -231,7 +235,7 @@
 
             // --- 表紙画像選択 ---
             document.getElementById('btn-select-cover')?.addEventListener('click', async () => {
-                const path = await window.__TAURI__.dialog.open({ // ※インポートに合わせて修正してください
+                const path = await open({
                     filters: [{ name: 'Image', extensions: ['jpg', 'jpeg', 'png'] }]
                 });
                 if (path) epubCoverPathInput.value = path;
@@ -252,9 +256,8 @@
                 const author = epubAuthorInput.value || "Author";
                 const coverPath = epubCoverPathInput.value || null;
 
-                epubModal.style.display = 'none'; // 先に閉じる
+                epubModal.style.display = 'none';
 
-                // 保存ダイアログ
                 const path = await save({
                     defaultPath: title + ".epub",
                     filters: [{ name: 'EPUB Book', extensions: ['epub'] }]
@@ -262,90 +265,65 @@
 
                 if (path && contentDiv) {
                     const fileName = path.split(/[/\\]/).pop() || 'Untitled';
-                    const title = fileName.replace(/\.[^/.]+$/, "");
+                    const epubTitle = fileName.replace(/\.[^/.]+$/, "");
 
-                    // 1. HTMLを行ごとに分解 (ルビタグ等は維持される)
-                    // MirrorShardは改行を <br> で表現している前提
                     const rawHtml = contentDiv.innerHTML;
-                    // <br> または <br/> または <br /> で分割
                     const lines = rawHtml.split(/<br\s*\/?>/i);
 
                     const sections = [];
-                    // 初期セクション
-                    let currentSection = { title: title, content: "" };
-                    let isFirstSectionEmpty = true; // 冒頭の空セクション判定用
+                    let currentSection = { title: epubTitle, content: "" };
+                    let isFirstSectionEmpty = true;
 
-                    // 2. 行ごとに解析
                     lines.forEach((line) => {
-                        // トリムして空行チェック（ただしルビタグなどがあるので慎重に）
                         const cleanLine = line.trim();
-
-                        // ★ Markdown見出しの判定 (# ＋ スペース ＋ 文字列)
-                        // HTMLタグが含まれている可能性があるので、タグを除去して判定するか、
-                        // 単純に先頭一致を見る。ここではシンプルに先頭一致を見る。
-                        // (ルビが見出しに含まれることは稀という前提)
                         const match = cleanLine.match(/^(#+)\s+(.*)/);
 
                         if (match) {
-                            // 見出しが見つかった
-
-                            // 前のセクションに中身があれば保存
                             if (!isFirstSectionEmpty || currentSection.content.trim() !== "") {
                                 sections.push(currentSection);
                             }
 
-                            const level = match[1].length; // # の数
-                            const headingText = match[2]; // 見出し本文
+                            const level = match[1].length;
+                            const headingText = match[2];
 
-                            // 新しいセクションを開始
                             currentSection = {
-                                title: headingText, // これが目次になる
-                                // 本文には <h1>見出し</h1> として追加
+                                title: headingText,
                                 content: `<h${level}>${headingText}</h${level}>`
                             };
                             isFirstSectionEmpty = false;
 
                         } else {
-                            // 通常の行
                             if (cleanLine !== "") {
-                                // 段落 <p> または単純な改行として追加
-                                // EPUB (XHTML) なので <br /> を付与
                                 currentSection.content += `<p>${line}</p>`;
                             }
                         }
                     });
 
-                    // 最後のセクションを保存
                     if (currentSection.content.trim() !== "") {
                         sections.push(currentSection);
                     }
 
-                    // 3. サニタイズ (XHTML化)
                     const sanitizedSections = sections.map(sec => {
                         return {
                             title: sec.title,
                             content: sec.content
                                 .replace(/&nbsp;/g, '&#160;')
-                                // <p>タグで囲んだので <br> 置換は不要かもしれないが、
-                                // lineの中に残っているタグがあれば閉じる処理が必要
                                 .replace(/<hr>/g, '<hr />')
                         };
                     });
 
-                    // Rustへ送信 (sanitizedSections を送る)
-
                     try {
                         await invoke('export_epub', {
                             path,
-                            title,
+                            title: epubTitle,
                             author,
                             coverPath,
                             sections: sanitizedSections,
                         });
-                        alert('EPUBファイルを作成しました');
+                        alert(t('export.alert.epubSuccess'));
                     } catch (e) {
                         console.error(e);
-                        alert('EPUB作成に失敗しました: ' + e);
+                        alert(`${t('export.alert.epubFailed')}: ${e}`);
                     }
                 }
             });
@@ -357,7 +335,6 @@
             // ショートカット
             document.addEventListener('keydown', (e) => {
                 const isCtrlOrCmd = e.ctrlKey || e.metaKey;
-                const isShift = e.shiftKey;
                 const key = e.key.toLowerCase();
                 if (isCtrlOrCmd && e.key.toLowerCase() === 'p') {
                     e.preventDefault();
@@ -368,7 +345,7 @@
                     getCurrentWindow().close();
                 }
                 if (isCtrlOrCmd && key === 'r') { e.preventDefault(); }
-                if (isCtrlOrCmd && key === 'r' && isShift) { e.preventDefault(); }
+                if (isCtrlOrCmd && key === 'r' && e.shiftKey) { e.preventDefault(); }
             });
 
             // --- 右クリックメニューの無効化 ---

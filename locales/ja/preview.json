@@ -1,0 +1,31 @@
+{
+  "windowTitle": "縦書きプレビュー",
+  "tooltip": {
+    "pin": "最前面に固定",
+    "pinRelease": "固定を解除",
+    "export": "エクスポート",
+    "refresh": "更新",
+    "fullscreen": "フルスクリーン",
+    "close": "閉じる"
+  },
+  "dropdown": {
+    "epub": "EPUB 出力",
+    "html": "HTML 出力"
+  },
+  "epub": {
+    "modalTitle": "EPUB 出力設定",
+    "title": "タイトル:",
+    "titlePlaceholder": "作品名",
+    "author": "著者:",
+    "authorPlaceholder": "著者名",
+    "cover": "表紙画像:",
+    "coverPlaceholder": "画像が選択されていません",
+    "select": "選択",
+    "cancel": "キャンセル",
+    "export": "エクスポート"
+  },
+  "alert": {
+    "exportSuccess": "{{format}} エクスポートが完了しました",
+    "exportFailed": "エクスポートに失敗しました"
+  }
+}

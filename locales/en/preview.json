@@ -1,0 +1,31 @@
+{
+  "windowTitle": "Vertical Preview",
+  "tooltip": {
+    "pin": "Pin to Top",
+    "pinRelease": "Unpin",
+    "export": "Export",
+    "refresh": "Refresh",
+    "fullscreen": "Fullscreen",
+    "close": "Close"
+  },
+  "dropdown": {
+    "epub": "EPUB Export",
+    "html": "HTML Export"
+  },
+  "epub": {
+    "modalTitle": "EPUB Export Settings",
+    "title": "Title:",
+    "titlePlaceholder": "Title",
+    "author": "Author:",
+    "authorPlaceholder": "Author",
+    "cover": "Cover Image:",
+    "coverPlaceholder": "No image selected",
+    "select": "Select",
+    "cancel": "Cancel",
+    "export": "Export"
+  },
+  "alert": {
+    "exportSuccess": "{{format}} export completed.",
+    "exportFailed": "Export failed."
+  }
+}

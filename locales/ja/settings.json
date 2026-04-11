@@ -1,19 +1,39 @@
 {
-  "general": {"title": "設定"},
+  "general": {
+    "title": "設定"
+  },
   "windowTitle": "設定",
   "closeWindow": "閉じる (F2)",
-  "tab": {"general": "一般", "ai": "AI設定", "code": "コードエディタ"},
+  "tab": {
+    "general": "一般",
+    "ai": "AI設定",
+    "code": "コードエディタ"
+  },
   "apply": "適用",
-  "language": {"label": "言語 (Language)"},
-  "languageOption": {"ja": "日本語", "en": "English"},
+  "language": {
+    "label": "言語 (Language)"
+  },
+  "languageOption": {
+    "ja": "日本語",
+    "en": "English"
+  },
   "editorMaxWidth": {
     "label": "エディタの最大幅 (半角文字数)",
     "note": "※0を入力するとウィンドウ幅に追従します。"
   },
-  "lineHeight": {"label": "行の高さ"},
-  "editorPaddingX": {"label": "エディタ左右余白"},
-  "kinsoku": {"label": "禁則処理"},
-  "lineBreak": {"normal": "標準", "strict": "厳格"},
+  "lineHeight": {
+    "label": "行の高さ"
+  },
+  "editorPaddingX": {
+    "label": "エディタ左右余白"
+  },
+  "kinsoku": {
+    "label": "禁則処理"
+  },
+  "lineBreak": {
+    "normal": "標準",
+    "strict": "厳格"
+  },
   "bgImage": {
     "label": "背景画像",
     "select": "選択",
@@ -34,9 +54,12 @@
     "breakAll": "文字単位 (日本語向け)",
     "normal": "単語単位 (英語向け)"
   },
-  "font": {"label": "フォント", "defaultOption": "デフォルト"},
+  "font": {
+    "label": "フォント",
+    "defaultOption": "デフォルト"
+  },
   "pandoc": {
-    "label": "Pandoc Path (縦書きエクスポートに必要)",
+    "label": "Pandocのパス (縦書きエクスポートに必要)",
     "placeholder": "例：C:\\Program Files\\Pandoc\\pandoc.exe",
     "browse": "参照..."
   },
@@ -48,7 +71,9 @@
       "left": "左寄せ",
       "right": "右寄せ"
     },
-    "blur": {"label": "すりガラス強度 (Blur)"},
+    "blur": {
+      "label": "すりガラス強度 (Blur)"
+    },
     "color": {
       "text": "文字色",
       "window": "ウィンドウ背景色",
@@ -65,61 +90,61 @@
   },
   "themes": {
     "label": "テーマプリセット",
-    "reset": "Reset",
-    "save": "Save",
-    "delete": "Delete"
+    "reset": "初期化",
+    "save": "保存",
+    "delete": "削除"
   },
   "markdown": {
-    "title": "Markdown Preview",
-    "hardBreaks": "Hard Breaks (Enterで改行します)",
+    "title": "Markdownプレビュー",
+    "hardBreaks": "ハードブレイク (Enterで改行します)",
     "note": "オフの場合、公式Markdown仕様通り「末尾に半角スペース2つ」か「空行」で改行されます（Astro等でのプレビュー時はオフ推奨）。"
   },
   "terminal": {
-    "title": "Terminal Settings",
-    "shellPathLabel": "Shell Path",
+    "title": "ターミナル",
+    "shellPathLabel": "Shellのパス",
     "shellPathPlaceholder": "(Auto Detect)",
-    "startupDirLabel": "Startup Directory",
+    "startupDirLabel": "スタートアップディレクトリ",
     "startupDirPlaceholder": "(User Home)",
     "browse": "参照...",
     "selectDirTitle": "フォルダを選択",
     "selectShellTitle": "Shellを選択"
   },
   "code": {
-    "title": "Code Editor Settings",
-    "languageLabel": "Syntax Highlight Language",
-    "fontLabel": "Font",
-    "fontSizeLabel": "Font Size",
-    "wordWrapLabel": "Word Wrap (折り返し)"
+    "title": "コードエディタ",
+    "languageLabel": "言語",
+    "fontLabel": "フォント",
+    "fontSizeLabel": "フォントサイズ",
+    "wordWrapLabel": "ワードラップ (折り返し)"
   },
   "ai": {
-    "cloud": "Cloud AI",
+    "cloud": "クラウドAI",
     "gemini": "Gemini",
-    "geminiKeyLabel": "Gemini API Key",
+    "geminiKeyLabel": "Gemini APIキー",
     "geminiKeyPlaceholder": "AIzaSy...",
-    "geminiModelLabel": "Gemini Model",
+    "geminiModelLabel": "Geminiモデル",
     "groq": "Groq",
-    "groqKeyLabel": "Groq API Key",
+    "groqKeyLabel": "Groq APIキー",
     "groqKeyPlaceholder": "gsk_...",
-    "groqModelLabel": "Groq Model",
+    "groqModelLabel": "Groqモデル",
     "cohere": "Cohere",
-    "cohereKeyLabel": "Cohere API Key",
+    "cohereKeyLabel": "Cohere APIキー",
     "cohereKeyPlaceholder": "...",
-    "cohereModelLabel": "Cohere Model",
+    "cohereModelLabel": "Cohereモデル",
     "mistral": "Mistral",
-    "mistralKeyLabel": "Mistral API Key",
+    "mistralKeyLabel": "Mistral APIキー",
     "mistralKeyPlaceholder": "...",
-    "mistralModelLabel": "Mistral Model",
+    "mistralModelLabel": "Mistralモデル",
     "enableGroq": "Groq を有効にする",
     "enableCohere": "Cohere を有効にする",
     "enableMistral": "mistral を有効にする",
     "modelPlaceholder": "<モデル名を入力>",
-    "localLlm": "Local LLM",
+    "localLlm": "ローカルLLM",
     "localLlmUrlLabel": "Endpoint URL",
     "localLlmUrlPlaceholder": "http://127.0.0.1:1234/v1/chat/completions",
-    "localLlmModelLabel": "Model Name (Required for Ollama)",
+    "localLlmModelLabel": "モデル名 (Ollamaの場合必須)",
     "localLlmModelPlaceholder": "※LM Studioの場合は無視されます",
     "sillyTavern": "SillyTavern",
-    "sillyTavernPathLabel": "SillyTavern Path (Folder)",
+    "sillyTavernPathLabel": "SillyTavernのパス",
     "sillyTavernPathPlaceholder": "C:\\path\\to\\SillyTavern",
     "sillyTavernBrowse": "参照...",
     "sillyTavernNote": "※SillyTavernのインストール先フォルダを指定してください。",
@@ -134,16 +159,16 @@
     "systemPromptLabel": "System Prompt (AIへの役割指示)",
     "manualEntry": "手動入力",
     "systemPromptPlaceholder": "あなたは優秀な執筆アシスタントです...",
-    "userProfile": "User Profile",
-    "userNameLabel": "Name",
+    "userProfile": "ユーザー設定",
+    "userNameLabel": "名前",
     "userNamePlaceholder": "User",
-    "aiProfile": "AI Profile",
-    "aiNameLabel": "Name",
+    "aiProfile": "アシスタント設定",
+    "aiNameLabel": "名前",
     "aiNamePlaceholder": "AI",
-    "iconLabel": "Icon:",
-    "iconSelect": "Select",
-    "iconClear": "Clear",
-    "defaultIcon": "(Default)"
+    "iconLabel": "アイコン",
+    "iconSelect": "選択",
+    "iconClear": "クリア",
+    "defaultIcon": "(デフォルト)"
   },
   "alerts": {
     "settingsSaveFailed": "設定の保存に失敗しました: {{err}}",
