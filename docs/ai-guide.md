@@ -1,192 +1,338 @@
-※まだドラフト
+# **MirrorShard 2 – AI Guide**
 
-# MirrorShard 2 AI Guide
-
-This document explains how to use the AI features in MirrorShard 2.
-
-If you are new to the application, we recommend starting with the Quick Guide first.
+> *Note: This document may include features that are still under development.  
+> Some features may differ from the currently distributed build.*
 
 ---
 
-# Table of Contents
+# **Table of Contents**
 
-1. Getting Started (API Setup)
+1. AI Setup
 2. Choosing and Switching AI
 3. Features
-4. External Integrations
-5. Notes & Limitations
+4. External Tools Integration
+5. Notes and Limitations
 6. Design Philosophy
 
 ---
 
-# 1. Getting Started (API Setup)
+# **1. AI Setup**
 
-To use AI features, you need an API key.
+## ■ What is an API Key?
 
-### Gemini (Recommended for beginners)
+An API key is a secret token that allows MirrorShard to communicate with an AI service on your behalf.
 
-1. Go to: https://aistudio.google.com/
-2. Sign in with your Google account
+**Important:**
+
+* Keep your API key private
+* Do not share it with others
+
+---
+
+## ■ Recommended for Beginners: Gemini
+
+Gemini is the easiest to set up and provides high-quality responses.
+
+### Setup Steps
+
+1. Go to:
+   [https://aistudio.google.com/](https://aistudio.google.com/)
+
+2. Log in with your Google account
+
 3. Click **"Get API Key"**
+
 4. Select **"Create API key in new project"**
+
 5. Copy the generated API key
 
-In MirrorShard:
+6. Open MirrorShard and press **F2** (Settings)
 
-1. Press **F2** to open Settings
-2. Go to the **AI Settings** tab
-3. Paste your API key into **Gemini API Key**
+7. Go to **AI Settings** tab
 
----
-
-# 2. Choosing and Switching AI
-
-MirrorShard supports multiple AI providers:
-
-- Gemini (Cloud)
-- Groq (Cloud)
-- Cohere
-- Mistral
-- Local AI (LM Studio / Ollama / etc.)
-
-### Which one should I use?
-
-- **Gemini**: Best overall quality
-- **Groq**: Very fast responses
-- **Mistral**: More diverse/non-English bias
-- **Local AI**: Full privacy and control
-
-### Switching AI
-
-- Main Editor: Use the AI selector in the sidebar
-- Chat Window: Use the selector in the top-left
-- Idea Processor: Use the selector in the top-right
+8. Paste the API key into **"Gemini API Key"**
 
 ---
 
-# 3. Features
+## ■ Other Cloud AI (Groq, Cohere, Mistral)
 
-## 3.1 AI Writing Assistance
+To use other cloud AI services:
 
-Press **Alt + Enter** to let AI continue your text.
+* Create an API key on their official website
+* Enter it in MirrorShard settings
 
-- Uses previous context
-- Output is appended at cursor position
-- Press **ESC** to cancel
+**Note:**
+Some services may require billing setup or phone verification.
 
 ---
 
-## 3.2 Missing Link Completion
+## ■ Local AI (Recommended for Privacy / Offline Use)
+
+Local AI runs entirely on your own machine.
+
+---
+
+### ● LM Studio (GUI-based)
+
+1. Launch LM Studio
+2. Open the **Developer** tab
+3. Download and load a model
+4. Start the server (**Status: Running**)
+5. Enable **CORS** in settings
+
+MirrorShard setup:
+
+* Use default endpoint:
+  `http://127.0.0.1:1234/v1/chat/completions`
+
+---
+
+### ● Ollama (Lightweight CLI)
+
+1. Install Ollama:
+   [https://ollama.com/](https://ollama.com/)
+
+2. Pull a model:
+
+```
+ollama pull llama3
+```
+
+3. MirrorShard settings:
+
+* Endpoint URL:
+  `http://127.0.0.1:11434/v1/chat/completions`
+
+* Model Name:
+  e.g. `llama3`
+
+---
+
+Other local AI backends such as koboldcpp are also supported, as long as they provide an OpenAI-compatible API endpoint.
+
+---
+
+# **2. Choosing and Switching AI**
+
+### ■ Recommended Usage
+
+* **Beginners:** Gemini
+* **Fast responses:** Groq
+* **Privacy / offline:** Local AI
+
+---
+
+### ■ Switching AI
+
+* **Main Editor:** AI selector in the sidebar
+* **Chat Window:** Top-left selector
+* **Idea Processor:** Selector below top-right buttons
+
+---
+
+# **3. Features**
+
+---
+
+## ■ 1. AI Writing Assistance
+
+### Continue Writing
+
+Press **Alt + Enter**
+
+* AI continues text based on context
+* Press **ESC** to cancel
+
+---
+
+### Missing Link Completion
 
 Press **Alt + Shift + Enter**
 
-- AI fills the gap between two parts of text
+* AI fills the gap between two parts of text
 
 ---
 
-## 3.3 Text Processing (Right-click menu)
+### Text Processing (Right Click)
 
-- Translate
-- Summarize
-- Rewrite
+* Translate
+* Summarize
+* Rewrite
 
-Results are inserted after the selected text.
-
----
-
-## 3.4 Code Completion (Local AI only)
-
-Available in Code Editor Mode (**Ctrl + K**)
-
-- Uses FIM (Fill-in-the-middle)
-- Requires local model (e.g. qwen2.5-coder)
+Output is inserted after selected text.
 
 ---
 
-## 3.5 AI Chat Window
+## ■ 2. Code Completion (Code Mode Only)
+
+Press **Ctrl + K** to enable Code Mode
+
+Then press **Alt + Enter**
+
+* Uses FIM (Fill-in-the-Middle)
+* Local AI only
+
+**Recommended models:**
+
+* qwen2.5-coder
+* similar coding models
+
+---
+
+## ■ 3. AI Chat Window
 
 Open with **Ctrl + Shift + A**
 
-- Chat with AI freely
-- Save / load chat logs
-- Edit / regenerate responses
+Features:
+
+* Free conversation with AI
+* Save / load chat logs
+* Edit / regenerate responses
+* Export logs
 
 ---
 
-## 3.6 Idea Processor (AI Features)
-
-Includes:
-
-- AI Free Association
-- Missing Link Generation
-- Node Alchemy
-- Template Completion
+## ■ 4. Idea Processor AI Features
 
 ---
 
-# 4. External Integrations
+### AFA (AI Free Association)
 
-## OpenCode
+* Select a node
+* Press **Ctrl + Shift + F**
 
-If installed, press **Ctrl + Shift + K** to open.
-
-## SillyTavern
-
-If installed, press **Ctrl + Shift + J** to open.
+→ Generates 3 related ideas
 
 ---
 
-# 5. Notes & Limitations
+### Missing Link (Idea Graph)
 
-## API Usage & Costs
+* Select a connection
+* Activate AI
 
-Using cloud AI (e.g. Gemini) may incur costs depending on your account.
-
-We recommend checking official pricing pages before use.
-
----
-
-## Context Handling
-
-MirrorShard sends context **only when you request it**.
-
-Unlike some AI editors:
-- No background monitoring
-- No automatic text streaming
+→ Generates content between nodes
 
 ---
 
-## Response Length Issues
+### Node Alchemy
 
-If responses are too short:
-- Increase **Max Tokens** (recommended: 3000–5000)
+* Select multiple nodes
+* Activate AI
 
----
-
-## Local AI Notes
-
-- Requires running LM Studio / Ollama
-- May be slower on low-end machines
-- No cloud restrictions
+→ Combines ideas into a new node
 
 ---
 
-# 6. Design Philosophy
+### Template Completion
 
-MirrorShard is designed with the principle:
+* Works inside story templates
+* AI expands structured content
 
-**"AI should never act without explicit user intent."**
+---
 
-AI is only invoked when the user triggers it.
+# **4. External Tools Integration**
 
-This means:
-- No background processing
-- No hidden data transmission
-- Full user control
+---
 
-While this may result in slightly slower responses,
-it prioritizes:
+## ■ OpenCode
 
-- Privacy
-- Transparency
-- User agency
+If installed:
+
+* Open with **Ctrl + Shift + K**
+
+Refer to OpenCode documentation for usage.
+
+---
+
+## ■ SillyTavern
+
+If installed:
+
+* Open with **Ctrl + Shift + J**
+
+Recommended setting in `config.yaml`:
+
+```
+browserLaunch:
+  enabled: false
+```
+
+---
+
+# **5. Notes and Limitations**
+
+---
+
+## ■ ⚠️ API Usage Costs
+
+Using cloud AI (Gemini, etc.) may incur charges depending on your account settings.
+
+* Free tier: limited usage
+* Paid plan: usage-based billing
+
+**The developer is not responsible for any charges incurred.**
+
+Check official pricing pages before use.
+
+---
+
+## ■ Context Behavior
+
+* Context is sent **only when you trigger AI manually**
+* MirrorShard does NOT monitor your text in the background
+
+---
+
+## ■ Long Text Limitations
+
+Very large texts (hundreds of thousands of tokens) may cause performance issues.
+
+---
+
+## ■ Truncated Responses
+
+If responses are cut off:
+
+→ Increase **Max Tokens** in settings
+
+---
+
+## ■ Short Responses (Gemini / Thinking Models)
+
+Some models use internal reasoning ("thinking").
+
+If Max Tokens is too low:
+
+→ Output may be extremely short
+
+**Recommended:**
+Set Max Tokens to **3000–5000+**
+
+---
+
+# **6. Design Philosophy**
+
+MirrorShard follows a strict principle:
+
+**"Never let AI take control away from the user."**
+
+* AI is only triggered by explicit user action
+* No background monitoring
+* No automatic suggestions
+
+This design prioritizes:
+
+* User control
+* Privacy
+* System performance
+
+---
+
+## ■ Summary
+
+MirrorShard is designed as:
+
+> A tool where **humans lead, AI assists**
+
+---
+

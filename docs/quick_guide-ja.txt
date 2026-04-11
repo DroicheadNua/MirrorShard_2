@@ -9,10 +9,13 @@ MirrorShardは、アイデアプロセッサとAI機能を備え、アイデア�
 ────────────────────
 
 Windows：
-「MirrorShard.2_x64_ja-JP.msi」をダブルクリックしてインストールしてください。
+「MirrorShard 2_1.7.0_x64_ja-JP.msi」をダブルクリックしてインストールしてください。
 
 Mac：
-「MirrorShard.2_aarch64.dmg」を開き、アプリケーションフォルダへドラッグしてください。
+「MirrorShard 2_1.7.0_aarch64.dmg」を開き、アプリケーションフォルダへドラッグしてください。
+
+Linux：
+配布バイナリ（「MirrorShard 2_1.7.0_amd64.deb」「MirrorShard 2-1.7.0-1.x86_64.rpm」「MirrorShard 2_1.7.0_arm64.deb」）を利用するか、ソースコードからビルドしてご利用ください。
 
 ────────────────────
 ■ 使用前の準備
