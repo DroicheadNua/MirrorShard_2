@@ -103,9 +103,3 @@ Export your work into multiple formats.
 * **Log Viewer**
   Analyze large AI logs without performance issues.
 
----
-
-## 🌐 Notes
-
-* The current UI is primarily in Japanese.
-* English UI support is planned for future releases.

@@ -6,9 +6,13 @@
 
 > From idea graph to structured draft — in one AI-powered outliner.
 
+🌐 **Now available in English.**
+
 ---
 
 ## 🎥 Demo
+
+Watch MirrorShard in action:
 
 ### Idea Expansion
 
@@ -50,6 +54,16 @@ Generate ideas, connect them, and turn them into a draft — all in one place.
 
 👉 [Latest Release](https://github.com/DroicheadNua/MirrorShard_2/releases/latest)
 
+Prebuilt binaries are available for Windows, macOS, and Linux.
+
+---
+
+## 🚀 Quick Start
+
+New to MirrorShard? Start here:
+
+👉 [docs/quick_guide.md](docs/quick_guide.md)
+
 ---
 
 ## 📚 Documentation
@@ -57,13 +71,6 @@ Generate ideas, connect them, and turn them into a draft — all in one place.
 Full feature list and usage:
 
 👉 [docs/features.md](docs/features.md)
-
----
-
-## 🌐 Language Status
-
-The current UI is primarily in Japanese.
-An English UI is planned for a future release.
 
 ---
 

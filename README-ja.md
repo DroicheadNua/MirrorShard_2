@@ -96,6 +96,14 @@ https://droicheadnua.github.io/MirrorShard-Official/
 
 ---
 
+## 🚀 使い方
+
+最初に、下記のクイックガイドをご覧ください。
+
+👉 [docs/quick_guide-ja.md](docs/quick_guide-ja.md)
+
+---
+
 ## ⚠️ 注意事項
 
 - テキストファイルは **UTF-8（BOMなし）推奨** です  
