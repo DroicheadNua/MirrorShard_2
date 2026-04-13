@@ -15,7 +15,9 @@
     "aiTranslate": "AI: Translate",
     "aiSummarize": "AI: Summarize",
     "aiRewrite": "AI: Rewrite",
-    "importGeminiLog": "Import Gemini Log"
+    "importGeminiLog": "Import Gemini Log",
+    "openTerminalHere": "Open Terminal Here (Ctrl+Shift+@)",
+    "openFolderHere": "Open Folder Here (Ctrl+Shift+O)"
   },
   "preview": {
     "truncated": "... (truncated)",

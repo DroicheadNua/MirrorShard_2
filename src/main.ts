@@ -2628,7 +2628,7 @@ ${instructionFiller}
 
           // この場所でターミナルを開く
           await MenuItem.new({
-            text: 'Open Terminal Here (Ctrl+Shift+@)',
+            text: t('editor.menu.openTerminalHere'),
             action: async () => {
               this.openTerminalHere();
             }
@@ -2636,7 +2636,7 @@ ${instructionFiller}
 
           // この場所でフォルダを開く
           await MenuItem.new({
-            text: 'Open Folder Here (Ctrl+Shift+O)',
+            text: t('editor.menu.openFolderHere'),
             enabled: !!this.activeTabPath, // ファイルを開いている時だけ有効
             action: async () => {
               this.openFolderHere();
