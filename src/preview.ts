@@ -44,6 +44,8 @@ async function initPreview() {
     const btnCancelEpub = document.getElementById('btn-cancel-epub');
     const btnExecEpub = document.getElementById('btn-exec-epub');
 
+    const store = await Store.load('.settings.dat');
+
     // --- メインからのデータ受信 ---
     await listen<PreviewPayload>('preview-update-data', async (event) => {
         const { text, isDarkMode, cursorLine, fontFamily, fontSize, lineHeight } = event.payload;
@@ -145,8 +147,8 @@ async function initPreview() {
         document.body.classList.add('is-mac');
     }
 
-    const locale: string = await invoke<string>('get_app_language').catch((): string => 'ja');
-    await initI18n(locale === 'en' ? 'en' : 'ja');
+    const appLang = (await store.get('appLanguage')) ?? 'ja';
+    await initI18n(appLang === 'en' ? 'en' : 'ja');
     applyTranslationsToDOM();
     const title: string = await invoke<string>('get_window_title', { windowKey: 'preview' }).catch((): string => '');
     if (title) { const { getCurrentWindow } = await import('@tauri-apps/api/window'); await getCurrentWindow().setTitle(title); }
@@ -267,7 +269,6 @@ async function initPreview() {
             });
             if (!path) return;
 
-            const store = await Store.load('.settings.dat');
             const pandocPath = await store.get<string>('pandocPath');
 
             // テキスト整形 (既存ロジック)

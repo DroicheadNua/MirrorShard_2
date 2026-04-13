@@ -29,13 +29,14 @@ The following features are **not available** on Linux:
 
 The following issues have been observed during testing:
 
+- Rendering artifacts may appear when using a transparent background  
+  (cleared after redraw, e.g., scrolling; does not occur with opaque backgrounds)
+
 ### MX Linux (X11 / Xfce)
 - Inline input does not work; IME falls back to over-the-spot mode  
   (composition text is shown in the IME window instead of the editor)
 
 ### Fedora (Wayland / GNOME, VM)
-- Inline input works, but rendering artifacts may appear when using a transparent background  
-  (cleared after redraw, e.g., scrolling; does not occur with opaque backgrounds)
 - Window resize cursor does not change when hovering over edges  
   (resizing is still possible, but less intuitive)
 

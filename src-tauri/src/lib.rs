@@ -749,9 +749,7 @@ async fn export_with_pandoc(
         _ => return Err("ERR_UNSUPPORTED_FORMAT".to_string()),
     }
     // 実行
-    let output = cmd
-        .output()
-        .map_err(|e| format!("ERR_PANDOC_EXEC:{}", e))?;
+    let output = cmd.output().map_err(|e| format!("ERR_PANDOC_EXEC:{}", e))?;
 
     if output.status.success() {
         if format == "docx" {
@@ -960,15 +958,23 @@ fn get_mac_file_event(state: State<MacFileBuffer>) -> Option<String> {
 async fn get_app_language() -> Result<String, String> {
     let store_path = if cfg!(target_os = "macos") {
         std::env::var("HOME")
-            .map(|h| std::path::PathBuf::from(h).join("Library/Application Support/com.DroicheadNua.mirrorshard2/.settings.dat"))
+            .map(|h| {
+                std::path::PathBuf::from(h)
+                    .join("Library/Application Support/com.DroicheadNua.mirrorshard2/.settings.dat")
+            })
             .map_err(|_| "Could not find HOME directory")?
     } else if cfg!(target_os = "windows") {
-        std::env::var("LOCALAPPDATA")
-            .map(|p| std::path::PathBuf::from(p).join("com.DroicheadNua.mirrorshard2/.settings.dat"))
-            .map_err(|_| "Could not find LOCALAPPDATA")?
+        std::env::var("APPDATA")
+            .map(|p| {
+                std::path::PathBuf::from(p).join("com.DroicheadNua.mirrorshard2/.settings.dat")
+            })
+            .map_err(|_| "Could not find APPDATA")?
     } else {
         std::env::var("HOME")
-            .map(|h| std::path::PathBuf::from(h).join(".local/share/com.DroicheadNua.mirrorshard2/.settings.dat"))
+            .map(|h| {
+                std::path::PathBuf::from(h)
+                    .join(".local/share/com.DroicheadNua.mirrorshard2/.settings.dat")
+            })
             .map_err(|_| "Could not find HOME directory")?
     };
 
@@ -988,74 +994,35 @@ async fn get_app_language() -> Result<String, String> {
 #[tauri::command]
 async fn get_window_title(window_key: String) -> Result<String, String> {
     let titles: std::collections::HashMap<&str, std::collections::HashMap<&str, &str>> = [
-        (
-            "settings",
-            [
-                ("ja", "設定"),
-                ("en", "Settings"),
-            ]
-            .into(),
-        ),
+        ("settings", [("ja", "設定"), ("en", "Settings")].into()),
         (
             "export",
-            [
-                ("ja", "エクスポート / 印刷"),
-                ("en", "Export / Print"),
-            ]
-            .into(),
+            [("ja", "エクスポート / 印刷"), ("en", "Export / Print")].into(),
         ),
-        (
-            "preview",
-            [
-                ("ja", "プレビュー"),
-                ("en", "Preview"),
-            ]
-            .into(),
-        ),
+        ("preview", [("ja", "プレビュー"), ("en", "Preview")].into()),
         (
             "markdown",
-            [
-                ("ja", "Markdownプレビュー"),
-                ("en", "Markdown Preview"),
-            ]
-            .into(),
+            [("ja", "Markdownプレビュー"), ("en", "Markdown Preview")].into(),
         ),
         (
             "shortcut",
-            [
-                ("ja", "ショートカット"),
-                ("en", "Shortcuts"),
-            ]
-            .into(),
+            [("ja", "ショートカット"), ("en", "Shortcuts")].into(),
         ),
         (
             "idea_processor",
-            [
-                ("ja", "アイデアプロセッサ"),
-                ("en", "Idea Processor"),
-            ]
-            .into(),
+            [("ja", "アイデアプロセッサ"), ("en", "Idea Processor")].into(),
         ),
-        (
-            "ai_chat",
-            [
-                ("ja", "AIチャット"),
-                ("en", "AI Chat"),
-            ]
-            .into(),
-        ),
+        ("ai_chat", [("ja", "AIチャット"), ("en", "AI Chat")].into()),
         (
             "terminal",
-            [
-                ("ja", "ターミナル"),
-                ("en", "Terminal"),
-            ]
-            .into(),
+            [("ja", "ターミナル"), ("en", "Terminal")].into(),
         ),
     ]
     .into();
 
-    let lang = get_app_language().await.unwrap_or_else(|_| "ja".to_string());
+    let lang = get_app_language()
+        .await
+        .unwrap_or_else(|_| "ja".to_string());
 
     titles
         .get(window_key.as_str())

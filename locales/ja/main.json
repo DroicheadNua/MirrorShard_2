@@ -12,7 +12,7 @@
     "bgm": "BGM再生/停止 (Ctrl+Shift+P)",
     "typeSound": "タイプ音 (Ctrl+Shift+T)",
     "spotlight": "スポットライトモード (Ctrl+L)",
-    "theme": "Dark Mode (Ctrl+T)",
+    "theme": "ダークモード (Ctrl+T)",
     "code": "コードエディタモード (Ctrl+K)",
     "markdown": "Markdown/HTMLプレビュー (Ctrl+M)",
     "preview": "縦書きプレビュー (Ctrl+P)",

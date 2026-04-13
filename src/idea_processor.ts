@@ -4732,6 +4732,11 @@ async function setupWindowFeatures(): Promise<boolean> {
   // ストアの初期化
   store = await Store.load('.settings.dat');
 
+  // i18n初期化
+  const appLang = (await store.get('appLanguage')) ?? 'ja';
+  await initI18n(appLang === 'en' ? 'en' : 'ja');
+  applyTranslationsToDOM();
+
   // 1. 各種ボタンのイベント登録
   setupUIButtons();
   setupOutlineEvents();
@@ -4998,9 +5003,9 @@ function setupThemeListener() {
 
 // ■ 設定変更リスナー (settings-changed)
 function setupSettingsListener() {
-  listen('app:language-changed', async () => {
-    const lang = await invoke<string>('get_app_language');
-    await initI18n(lang === 'en' ? 'en' : 'ja');
+  listen('app:language-changed', async (event) => {
+    console.log("listen!");
+    await initI18n(event.payload === 'en' ? 'en' : 'ja');
     applyTranslationsToDOM();
     const title: string = await invoke<string>('get_window_title', { windowKey: 'idea_processor' }).catch((): string => '');
     if (title) { const { getCurrentWindow } = await import('@tauri-apps/api/window'); await getCurrentWindow().setTitle(title); }
@@ -5225,28 +5230,23 @@ async function createGroupNodeByButton() {
 // =================================================================
 
 document.addEventListener('DOMContentLoaded', async () => {
-  // 0. i18n初期化
-  const appLang = await invoke<string>('get_app_language');
-  await initI18n(appLang === 'en' ? 'en' : 'ja');
-  applyTranslationsToDOM();
-  const title: string = await invoke<string>('get_window_title', { windowKey: 'idea_processor' }).catch((): string => '');
-  if (title) { const { getCurrentWindow } = await import('@tauri-apps/api/window'); await getCurrentWindow().setTitle(title); }
-
-  // 1. Konva等のセットアップ
-  initializeIdeaProcessor();
-
-  // 2. ウィンドウ機能のセットアップと、前回ファイルの自動ロードを完全に待機する
-  const isFileLoaded = await setupWindowFeatures();
-
-  // 3. もしファイルがロードされていなかった（完全な新規起動）場合のみ、空の履歴を作る
-  if (!isFileLoaded) {
-    history = [];
-    historyIndex = -1;
-    recordHistory('Initial Empty State');
-    isDirty = false; // 初期状態はクリーン
+  const title: string = await invoke<string>('get_window_title', {
+    windowKey: 'idea_processor'
+  }).catch((): string => '');
+  if (title) {
+    const { getCurrentWindow } = await import('@tauri-apps/api/window');
+    await getCurrentWindow().setTitle(title);
   }
-
-  // 4. 準備完了を通知
+  // 1. Konva等のセットアップ 
+  initializeIdeaProcessor();
+  // 2. ウィンドウ機能のセットアップと、前回ファイルの自動ロードを完全に待機する 
+  const isFileLoaded = await setupWindowFeatures();
+  // 3. もしファイルがロードされていなかった（完全な新規起動）場合のみ、空の履歴を作る 
+  if (!isFileLoaded) {
+    history = []; historyIndex = -1; recordHistory('Initial Empty State'); isDirty = false; // 初期状態はクリーン 
+  }
+  // 4. 準備完了を通知 
   console.log('[Tauri] Sending idea-processor-ready...');
   await emit('idea-processor-ready');
 });
+

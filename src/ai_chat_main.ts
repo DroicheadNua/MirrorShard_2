@@ -205,9 +205,11 @@ async function init() {
         setupEventListeners();
         setupSettingsListener();
         setupThemeListener();
-        listen('app:language-changed', async () => {
-            const lang = await invoke<string>('get_app_language');
-            await initI18n(lang === 'en' ? 'en' : 'ja');
+        const appLang = (await store.get('appLanguage')) ?? 'ja';
+        await initI18n(appLang === 'en' ? 'en' : 'ja');
+        applyTranslationsToDOM();
+        listen('app:language-changed', async (event) => {
+            await initI18n(event.payload === 'en' ? 'en' : 'ja');
             applyTranslationsToDOM();
             const title: string = await invoke<string>('get_window_title', { windowKey: 'ai_chat' }).catch((): string => '');
             if (title) { const { getCurrentWindow } = await import('@tauri-apps/api/window'); await getCurrentWindow().setTitle(title); }
@@ -227,9 +229,7 @@ async function init() {
 
     const appWindow = getCurrentWindow();
 
-    const appLang = await invoke<string>('get_app_language');
-    await initI18n(appLang === 'en' ? 'en' : 'ja');
-    applyTranslationsToDOM();
+
     const title: string = await invoke<string>('get_window_title', { windowKey: 'ai_chat' }).catch((): string => '');
     if (title) { await appWindow.setTitle(title); }
 

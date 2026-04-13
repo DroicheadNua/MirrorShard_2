@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [1.7.1] - 2026-4-XX  
+
+### Changed
+- Optimized build configuration
+
+### Fixed
+- Fixed an issue where language settings were not correctly applied to some windows on Windows
+- Minor documentation updates
+
+
 ## [1.7.0] - 2026-04-12
 
 ### Added

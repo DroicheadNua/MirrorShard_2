@@ -53,18 +53,21 @@
 
                 <div class="modal-item">
                     <label data-i18n="export.epub.title">タイトル:</label>
-                    <input type="text" id="epub-title" data-i18n-placeholder="export.epub.titlePlaceholder" placeholder="作品名">
+                    <input type="text" id="epub-title" data-i18n-placeholder="export.epub.titlePlaceholder"
+                        placeholder="作品名">
                 </div>
 
                 <div class="modal-item">
                     <label data-i18n="export.epub.author">著者名:</label>
-                    <input type="text" id="epub-author" data-i18n-placeholder="export.epub.authorPlaceholder" placeholder="著者名" value="Author">
+                    <input type="text" id="epub-author" data-i18n-placeholder="export.epub.authorPlaceholder"
+                        placeholder="著者名" value="Author">
                 </div>
 
                 <div class="modal-item">
                     <label data-i18n="export.epub.cover">表紙画像 (任意):</label>
                     <div style="display: flex; gap: 5px;">
-                        <input type="text" id="epub-cover-path" readonly data-i18n-placeholder="export.epub.coverUnselected" placeholder="未選択">
+                        <input type="text" id="epub-cover-path" readonly
+                            data-i18n-placeholder="export.epub.coverUnselected" placeholder="未選択">
                         <button id="btn-select-cover" data-i18n="export.epub.select">選択</button>
                         <button id="btn-clear-cover">×</button>
                     </div>
@@ -99,8 +102,9 @@
             const epubCoverPathInput = document.getElementById('epub-cover-path');
             let rawMarkdownText = "";
 
-            const locale = await invoke('get_app_language').catch(() => 'ja');
-            await initI18n(locale === 'en' ? 'en' : 'ja');
+            const store = await Store.load('.settings.dat');
+            const appLang = (await store.get('appLanguage')) ?? 'ja';
+            await initI18n(appLang === 'en' ? 'en' : 'ja');
             applyTranslationsToDOM();
             const title = await invoke('get_window_title', { windowKey: 'export' }).catch(() => '');
             if (title) { await getCurrentWindow().setTitle(title); }
@@ -134,8 +138,8 @@
                 contentDiv.style.fontFamily = font === 'serif'
                     ? '"Palatino Linotype", "Book Antiqua", Palatino, "Times New Roman", "Yu Mincho", serif'
                     : font === 'sans-serif'
-                    ? '"Verdana", "Arial", "Helvetica", "Hiragino Sans", sans-serif'
-                    : '"Menlo", "Monaco", "Consolas", monospace';
+                        ? '"Verdana", "Arial", "Helvetica", "Hiragino Sans", sans-serif'
+                        : '"Menlo", "Monaco", "Consolas", monospace';
                 contentDiv.style.fontSize = `${size}px`;
                 contentDiv.style.lineHeight = lh;
             }
@@ -210,7 +214,6 @@
 
                 if (path) {
                     try {
-                        const store = await Store.load('.settings.dat');
                         const pandocPath = await store.get('pandocPath');
                         const contentForPandoc = rawMarkdownText.replace(/\n/g, '  \n');
 

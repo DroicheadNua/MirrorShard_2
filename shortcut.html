@@ -135,10 +135,12 @@
     import { listen } from '@tauri-apps/api/event';
     import { getCurrentWindow } from '@tauri-apps/api/window';
     import { initI18n, t } from '/src/i18n.ts';
+    import { Store } from '@tauri-apps/plugin-store';
 
     (async () => {
-      const locale = await invoke('get_app_language').catch(() => 'ja');
-      await initI18n(locale === 'en' ? 'en' : 'ja');
+      const store = await Store.load('.settings.dat');
+      const appLang = (await store.get('appLanguage')) ?? 'ja';
+      await initI18n(appLang === 'en' ? 'en' : 'ja');
 
       document.querySelectorAll('[data-i18n]').forEach(el => {
         const key = el.getAttribute('data-i18n');

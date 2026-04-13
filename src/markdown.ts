@@ -159,8 +159,8 @@ async function renderContent() {
 async function init() {
     const store = await Store.load('.settings.dat');
 
-    const locale: string = await invoke<string>('get_app_language').catch((): string => 'ja');
-    await initI18n(locale === 'en' ? 'en' : 'ja');
+    const appLang = (await store.get('appLanguage')) ?? 'ja';
+    await initI18n(appLang === 'en' ? 'en' : 'ja');
     applyTranslationsToDOM();
     const title: string = await invoke<string>('get_window_title', { windowKey: 'markdown' }).catch((): string => '');
     if (title) { const { getCurrentWindow } = await import('@tauri-apps/api/window'); await getCurrentWindow().setTitle(title); }
