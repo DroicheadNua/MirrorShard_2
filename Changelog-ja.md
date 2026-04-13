@@ -9,6 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added (新機能)  
 - i18nに対応し、英語インターフェースを実装。設定画面から切り替えが可能  
+- Linux版（deb・rpm）およびRaspberry Pi版（deb）の配布を再開  
 - 対応AI追加: CohereとMistralのAPIに対応。メインエディタ・AIチャット・アイデアプロセッサの全てで利用可能  
 - GeminiのモデルにGemini 3.1 Flash-Lite PreviewとGemini 3 Flash Previewを追加、デフォルトをGemini 3.1 Flash-Lite Previewに  
 - 英文ドキュメントを追加  

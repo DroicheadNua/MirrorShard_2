@@ -12,6 +12,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 
 * Added i18n support and implemented an English UI (switchable from settings)
+* Resumed distribution of Linux and Raspberry Pi builds
 * Added support for new AI providers: Cohere and Mistral (available in main editor, AI chat, and idea processor)
 * Added Gemini models: Gemini 3.1 Flash-Lite Preview and Gemini 3 Flash Preview (default set to 3.1 Flash-Lite Preview)
 * Added English documentation
