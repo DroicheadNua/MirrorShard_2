@@ -7,7 +7,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
-## [1.7.1] - 2026-4-XX  
+## [1.7.1] - 2026-4-14  
 
 ### Changed
 - Optimized build configuration
