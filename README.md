@@ -12,15 +12,17 @@
 
 ## 🎥 Demo
 
+Videos below demonstrate the English UI.
+
 Watch MirrorShard in action:
 
 ### Idea Expansion
 
-https://github.com/user-attachments/assets/2d22c7e3-ff4d-4958-a1e6-ae4c5e4361b5
+https://github.com/user-attachments/assets/e19ec70f-4132-4859-8c04-04a1d44b9b06
 
 ### Send to Editor
 
-https://github.com/user-attachments/assets/291d7852-6d6e-4040-899c-efd4a500f360
+https://github.com/user-attachments/assets/fd28d3cb-3e05-4efb-8bd1-f551d77f3c31
 
 ---
 
