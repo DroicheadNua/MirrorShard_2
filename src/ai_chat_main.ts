@@ -493,10 +493,25 @@ function setupEventListeners() {
     });
 
     // 画面クリックで閉じる
-    document.addEventListener('click', () => {
+    document.addEventListener('click', (e) => {
         apiOptions?.classList.remove('open');
-    });
 
+        // リンククリックのインターセプト
+        const target = (e.target as HTMLElement).closest('a');
+        if (target && target.href) {
+            const url = target.href;
+            // 外部リンクの判定（http等で始まる場合）
+            if (url.startsWith('http') || url.startsWith('https')) {
+                e.preventDefault(); // 遷移を即座に停止
+                e.stopPropagation(); // 他のリスナーへの伝播も停止
+
+                // TauriのShell機能で開く
+                import('@tauri-apps/plugin-shell').then(({ open }) => {
+                    open(url).catch(err => console.error(err));
+                });
+            }
+        }
+    }, true);
     chatForm.addEventListener('submit', async (e) => {
         e.preventDefault();
         const text = messageInput.value.trim();

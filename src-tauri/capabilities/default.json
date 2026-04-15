@@ -61,6 +61,7 @@
     "fs:allow-exists",
     "fs:allow-write-file",
     "fs:allow-read-dir",
-    "core:webview:allow-print"
+    "core:webview:allow-print",
+    "shell:allow-open"
   ]
 }

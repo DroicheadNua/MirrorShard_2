@@ -10,6 +10,19 @@
   ],
   "permissions": [
     "window-state:default",
-    "cli:default"
+    "cli:default",
+    {
+      "identifier": "shell:allow-open",
+      "allow": [
+        {
+          "schemes": [
+            "http",
+            "https",
+            "mailto",
+            "tel"
+          ]
+        }
+      ]
+    }
   ]
 }

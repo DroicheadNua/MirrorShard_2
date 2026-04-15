@@ -6,6 +6,19 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 
+## [1.8.0] - 2026-4-XX  
+
+### Added (新機能)  
+
+
+### Changed (変更点)    
+ 
+
+### Fixed (修正点)   
+- AIチャットウィンドウでURLを踏んだときにページ推移してしまっていたので、標準ブラウザで開くようにした  
+
+
+
 ## [1.7.1] - 2026-4-14  
 
 ### Added (新機能)  

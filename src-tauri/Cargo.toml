@@ -32,6 +32,7 @@ opener = "0.8.4"
 portable-pty = "0.9"
 zip = "8.3.0"
 regex = "1.12.3"
+tauri-plugin-shell = "2"
 
 [target.'cfg(not(any(target_os = "android", target_os = "ios")))'.dependencies]
 tauri-plugin-window-state = "2"
