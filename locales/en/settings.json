@@ -1,19 +1,39 @@
 {
-  "general": {"title": "Settings"},
+  "general": {
+    "title": "Settings"
+  },
   "windowTitle": "Settings",
   "closeWindow": "Close (F2)",
-  "tab": {"general": "General", "ai": "AI Settings", "code": "Code Editor"},
+  "tab": {
+    "general": "General",
+    "ai": "AI Settings",
+    "code": "Code Editor"
+  },
   "apply": "Apply",
-  "language": {"label": "Language"},
-  "languageOption": {"ja": "Japanese", "en": "English"},
+  "language": {
+    "label": "Language"
+  },
+  "languageOption": {
+    "ja": "Japanese",
+    "en": "English"
+  },
   "editorMaxWidth": {
     "label": "Editor max width (characters)",
     "note": "Enter 0 to follow window width."
   },
-  "lineHeight": {"label": "Line height"},
-  "editorPaddingX": {"label": "Editor horizontal padding"},
-  "kinsoku": {"label": "Kinsoku processing"},
-  "lineBreak": {"normal": "Normal", "strict": "Strict"},
+  "lineHeight": {
+    "label": "Line height"
+  },
+  "editorPaddingX": {
+    "label": "Editor horizontal padding"
+  },
+  "kinsoku": {
+    "label": "Kinsoku processing"
+  },
+  "lineBreak": {
+    "normal": "Normal",
+    "strict": "Strict"
+  },
   "bgImage": {
     "label": "Background Image",
     "select": "Select",
@@ -34,7 +54,10 @@
     "breakAll": "Character level (Japanese friendly)",
     "normal": "Word level (English friendly)"
   },
-  "font": {"label": "Font", "defaultOption": "Default"},
+  "font": {
+    "label": "Font",
+    "defaultOption": "Default"
+  },
   "pandoc": {
     "label": "Pandoc Path (required for vertical export)",
     "placeholder": "e.g. C:\\Program Files\\Pandoc\\pandoc.exe",
@@ -48,7 +71,9 @@
       "left": "Left",
       "right": "Right"
     },
-    "blur": {"label": "Glass Blur Intensity"},
+    "blur": {
+      "label": "Glass Blur Intensity"
+    },
     "color": {
       "text": "Text Color",
       "window": "Window Background",
@@ -108,6 +133,9 @@
     "mistral": "Mistral",
     "mistralKeyLabel": "Mistral API Key",
     "mistralKeyPlaceholder": "...",
+    "mistralAgentLabel": "Mistral Agent ID",
+    "mistralAgentPlaceholder": "ag_...",
+    "mistralNote": "*When using Agent, the model specified in Agent takes precedence.",
     "mistralModelLabel": "Mistral Model",
     "enableGroq": "Enable Groq",
     "enableCohere": "Enable Cohere",

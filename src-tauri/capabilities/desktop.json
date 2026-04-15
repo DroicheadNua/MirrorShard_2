@@ -6,7 +6,7 @@
     "linux"
   ],
   "windows": [
-    "main"
+    "*"
   ],
   "permissions": [
     "window-state:default",
@@ -23,6 +23,19 @@
           ]
         }
       ]
-    }
+    },
+    "http:default",
+    {
+      "identifier": "http:allow-fetch",
+      "allow": [
+        {
+          "url": "https://*.blob.core.windows.net/*"
+        },
+        {
+          "url": "https://api.mistral.ai/*"
+        }
+      ]
+    },
+    "dialog:default"
   ]
 }

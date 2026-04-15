@@ -98,6 +98,7 @@ async function setupSettings() {
         const groqApiKeyInput = document.querySelector('#groq-api-key') as HTMLInputElement;
         const cohereApiKeyInput = document.querySelector('#cohere-api-key') as HTMLInputElement;
         const mistralApiKeyInput = document.querySelector('#mistral-api-key') as HTMLInputElement;
+        const mistralAgentIDInput = document.querySelector('#mistral-agent-id') as HTMLInputElement;
         const geminiModelInput = document.querySelector('#gemini-model') as HTMLInputElement | null;
         const groqModelInput = document.querySelector('#groq-model') as HTMLInputElement;
         const cohereModelInput = document.querySelector('#cohere-model') as HTMLInputElement;
@@ -549,6 +550,7 @@ async function setupSettings() {
         groqApiKeyInput.value = await store.get<string>('groqApiKey') || '';
         cohereApiKeyInput.value = await store.get<string>('cohereApiKey') || '';
         mistralApiKeyInput.value = await store.get<string>('mistralApiKey') || '';
+        mistralAgentIDInput.value = await store.get<string>('mistralAgentID') || '';
         if (geminiModelInput) {
             geminiModelInput.value = await store.get<string>('geminiModel') || 'gemini-3.1-flash-lite-preview';
         }
@@ -838,7 +840,8 @@ async function setupSettings() {
                 const newGroqApiKey = groqApiKeyInput.value.trim();
                 const newCohereApiKey = cohereApiKeyInput.value.trim();
                 const newMistralApiKey = mistralApiKeyInput.value.trim();
-        const newGeminiModel = geminiModelInput ? geminiModelInput.value.trim() : '';
+                const newMistralAgentID = mistralAgentIDInput.value.trim();
+                const newGeminiModel = geminiModelInput ? geminiModelInput.value.trim() : '';
                 const newGroqModel = groqModelInput.value.trim();
                 const newCohereModel = cohereModelInput.value.trim();
                 const newMistralModel = mistralModelInput.value.trim();
@@ -890,6 +893,7 @@ async function setupSettings() {
                 if (newGroqApiKey) await store.set('groqApiKey', newGroqApiKey);
                 if (newCohereApiKey) await store.set('cohereApiKey', newCohereApiKey);
                 if (newMistralApiKey) await store.set('mistralApiKey', newMistralApiKey);
+                if (newMistralAgentID) await store.set('mistralAgentID', newMistralAgentID);
                 await store.set('groqModel', newGroqModel);
                 await store.set('cohereModel', newCohereModel);
                 await store.set('mistralModel', newMistralModel);
@@ -948,6 +952,7 @@ async function setupSettings() {
                     groqApiKey: newGroqApiKey,
                     cohereApiKey: newCohereApiKey,
                     mistralApiKey: newMistralApiKey,
+                    mistralAgentID: newMistralAgentID,
                     geminiModel: newGeminiModel,
                     groqModel: newGroqModel,
                     cohereModel: newCohereModel,

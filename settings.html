@@ -12,7 +12,8 @@
     <div id="settings-wrapper">
         <div data-tauri-drag-region class="settings-titlebar">
             <div data-tauri-drag-region class="settings-window-controls">
-                <button id="settings-btn-close" data-i18n="settings.closeWindow" data-i18n-attr="title" title="閉じる (F2)"></button>
+                <button id="settings-btn-close" data-i18n="settings.closeWindow" data-i18n-attr="title"
+                    title="閉じる (F2)"></button>
             </div>
         </div>
         <div data-tauri-drag-region id="settings-container">
@@ -90,8 +91,8 @@
 
                 <div class="setting-item">
                     <label for="pandoc-path" data-i18n="settings.pandoc.label">Pandoc Path (縦書きエクスポートに必要)</label>
-                    <input type="text" id="pandoc-path"
-                        data-i18n-placeholder="settings.pandoc.placeholder" placeholder="例：C:\Program Files\Pandoc\pandoc.exe">
+                    <input type="text" id="pandoc-path" data-i18n-placeholder="settings.pandoc.placeholder"
+                        placeholder="例：C:\Program Files\Pandoc\pandoc.exe">
                     <button id="btn-select-pandoc" data-i18n="settings.pandoc.browse">参照...</button>
                 </div>
 
@@ -108,7 +109,7 @@
                 </div>
 
                 <div class="setting-item">
-                        <label for="editor-blur-range" data-i18n="settings.appearance.blur.label">すりガラス強度 (Blur)</label>
+                    <label for="editor-blur-range" data-i18n="settings.appearance.blur.label">すりガラス強度 (Blur)</label>
                     <input type="range" id="editor-blur-range" min="0" max="20" value="0">
                     <span id="blur-val">0px</span>
                 </div>
@@ -140,9 +141,11 @@
                         <input type="text" id="input-selection-color" style="flex-grow:1;" placeholder="#1e1e1e">
                     </div>
                     <div style="display:flex;gap:10px;align-items:center;margin-bottom:5px;">
-                        <label for="picker-scrollbar-color" data-i18n="settings.appearance.color.scrollbar">スクロールバー色</label>
+                        <label for="picker-scrollbar-color"
+                            data-i18n="settings.appearance.color.scrollbar">スクロールバー色</label>
                         <div id="picker-scrollbar-color" class="color-preview"></div>
-                        <input type="text" id="input-scrollbar-color" style="flex-grow:1;" placeholder="rgba(255,255,255,0)">
+                        <input type="text" id="input-scrollbar-color" style="flex-grow:1;"
+                            placeholder="rgba(255,255,255,0)">
                     </div>
                     <div style="display:flex;gap:10px;align-items:center;margin-bottom:5px;">
                         <label for="picker-heading-color" data-i18n="settings.appearance.color.heading">見出し色</label>
@@ -178,7 +181,8 @@
                     <div style="display:flex;gap:10px;align-items:center;margin-bottom:5px;">
                         <input type="checkbox" id="check-enable-glow">
                         <label for="check-enable-glow" data-i18n="settings.appearance.glow">グロー</label>
-                        <label for="input-glow-radius" data-i18n="settings.appearance.color.glowStrength">強さ</label>: <span id="glow-radius-val">5px</span>
+                        <label for="input-glow-radius" data-i18n="settings.appearance.color.glowStrength">強さ</label>:
+                        <span id="glow-radius-val">5px</span>
                         <input type="range" id="input-glow-radius" min="1" max="10" step="1" value="5">
                     </div>
                     <div style="display:flex;gap:10px;align-items:center;margin-bottom:5px;">
@@ -202,8 +206,8 @@
                     </div>
                     <div class="setting-item">
                         <label for="gemini-model" data-i18n="settings.ai.geminiModelLabel">Gemini Model</label>
-                        <input type="text" id="gemini-model"
-                            data-i18n-placeholder="settings.ai.modelPlaceholder" placeholder="<モデル名を入力>">
+                        <input type="text" id="gemini-model" data-i18n-placeholder="settings.ai.modelPlaceholder"
+                            placeholder="<モデル名を入力>">
                         <select id="gemini-model-preset"
                             onchange="document.getElementById('gemini-model').value=this.value">
                             <option value="gemini-3.1-flash-lite-preview">Gemini 3.1 Flash-Lite Preview</option>
@@ -222,8 +226,8 @@
                     <h4 data-i18n="settings.ai.groq">Groq</h4>
                     <div class="setting-item">
                         <label for="groq-api-key" data-i18n="settings.ai.groqKeyLabel">Groq API Key</label>
-                        <input type="password" id="groq-api-key"
-                            data-i18n-placeholder="settings.ai.groqKeyPlaceholder" placeholder="gsk_...">
+                        <input type="password" id="groq-api-key" data-i18n-placeholder="settings.ai.groqKeyPlaceholder"
+                            placeholder="gsk_...">
                     </div>
                     <div class="setting-item">
                         <label for="enable-groq" class="inline">
@@ -233,8 +237,8 @@
                     </div>
                     <div class="setting-item">
                         <label for="groq-model" data-i18n="settings.ai.groqModelLabel">Groq Model</label>
-                        <input type="text" id="groq-model"
-                            data-i18n-placeholder="settings.ai.modelPlaceholder" placeholder="<モデル名を入力>">
+                        <input type="text" id="groq-model" data-i18n-placeholder="settings.ai.modelPlaceholder"
+                            placeholder="<モデル名を入力>">
                         <select id="groq-model-preset"
                             onchange="document.getElementById('groq-model').value=this.value">
                             <option value="llama-3.3-70b-versatile">Llama 3.3 70B</option>
@@ -262,8 +266,8 @@
                     </div>
                     <div class="setting-item">
                         <label for="cohere-model" data-i18n="settings.ai.cohereModelLabel">Cohere Model</label>
-                        <input type="text" id="cohere-model"
-                            data-i18n-placeholder="settings.ai.modelPlaceholder" placeholder="<モデル名を入力>">
+                        <input type="text" id="cohere-model" data-i18n-placeholder="settings.ai.modelPlaceholder"
+                            placeholder="<モデル名を入力>">
                         <select id="cohere-model-preset"
                             onchange="document.getElementById('cohere-model').value=this.value">
                             <option value="command-a-03-2025">Command A</option>
@@ -286,6 +290,11 @@
                             data-i18n-placeholder="settings.ai.mistralKeyPlaceholder" placeholder="...">
                     </div>
                     <div class="setting-item">
+                        <label for="mistral-agent-id" data-i18n="settings.ai.mistralAgentLabel">Mistral Agent ID</label>
+                        <input type="password" id="mistral-agent-id"
+                            data-i18n-placeholder="settings.ai.mistralAgentPlaceholder" placeholder="...">
+                    </div>
+                    <div class="setting-item">
                         <label for="enable-mistral" class="inline">
                             <input type="checkbox" id="enable-mistral">
                             <span data-i18n="settings.ai.enableMistral">mistral を有効にする</span>
@@ -293,14 +302,18 @@
                     </div>
                     <div class="setting-item">
                         <label for="mistral-model" data-i18n="settings.ai.mistralModelLabel">Mistral Model</label>
-                        <input type="text" id="mistral-model"
-                            data-i18n-placeholder="settings.ai.modelPlaceholder" placeholder="<モデル名を入力>">
+                        <input type="text" id="mistral-model" data-i18n-placeholder="settings.ai.modelPlaceholder"
+                            placeholder="<モデル名を入力>">
                         <select id="mistral-model-preset"
                             onchange="document.getElementById('mistral-model').value=this.value">
                             <option value="mistral-small-latest">Mistral Small 4</option>
                             <option value="mistral-large-latest">Mistral Large 3</option>
                             <option value="" data-i18n="settings.ai.manualEntry">手動入力</option>
                         </select>
+                        <br>
+                        <small data-i18n="settings.ai.mistralNote">
+                            ※Agent使用時は、Agentでのモデル指定が優先されます。
+                        </small>
                     </div>
                 </div>
 
@@ -311,8 +324,7 @@
                     <h4 data-i18n="settings.ai.localLlm">Local LLM</h4>
                     <div class="setting-item">
                         <label for="local-llm-url" data-i18n="settings.ai.localLlmUrlLabel">Endpoint URL</label>
-                        <input type="text" id="local-llm-url"
-                            data-i18n-placeholder="settings.ai.localLlmUrlPlaceholder"
+                        <input type="text" id="local-llm-url" data-i18n-placeholder="settings.ai.localLlmUrlPlaceholder"
                             placeholder="http://127.0.0.1:1234/v1/chat/completions">
                         <select id="local-llm-url-preset"
                             onchange="document.getElementById('local-llm-url').value=this.value">
@@ -323,7 +335,8 @@
                         </select>
                     </div>
                     <div class="setting-item">
-                        <label for="local-llm-model" data-i18n="settings.ai.localLlmModelLabel">Model Name (Required for Ollama)</label>
+                        <label for="local-llm-model" data-i18n="settings.ai.localLlmModelLabel">Model Name (Required for
+                            Ollama)</label>
                         <input type="text" id="local-llm-model"
                             data-i18n-placeholder="settings.ai.localLlmModelPlaceholder"
                             placeholder="※LM Studioの場合は無視されます">
@@ -334,7 +347,8 @@
                 <div class="ai-setting-group" id="silly-tavern-group">
                     <h4 data-i18n="settings.ai.sillyTavern">SillyTavern</h4>
                     <div class="setting-item">
-                        <label for="silly-tavern-path" data-i18n="settings.ai.sillyTavernPathLabel">SillyTavern Path (Folder)</label>
+                        <label for="silly-tavern-path" data-i18n="settings.ai.sillyTavernPathLabel">SillyTavern Path
+                            (Folder)</label>
                         <input type="text" id="silly-tavern-path" style="flex-grow:1;"
                             data-i18n-placeholder="settings.ai.sillyTavernPathPlaceholder"
                             placeholder="C:\path\to\SillyTavern">
@@ -352,18 +366,19 @@
                     <h4 data-i18n="settings.ai.behavior">Behavior</h4>
                     <div class="setting-item">
                         <label for="ai-max-tokens" data-i18n="settings.ai.maxTokensLabel">最大応答長 (100〜100000)</label>
-                        <input type="number" id="ai-max-tokens"
-                            placeholder="2000" min="100" max="100000" style="width:80px;">
+                        <input type="number" id="ai-max-tokens" placeholder="2000" min="100" max="100000"
+                            style="width:80px;">
                     </div>
                     <div class="setting-item">
                         <label for="fa-max-tokens" data-i18n="settings.ai.faMaxTokensLabel">AI連想機能応答長 (10〜1000)</label>
-                        <input type="number" id="fa-max-tokens"
-                            placeholder="30" min="10" max="1000" style="width:60px;">
+                        <input type="number" id="fa-max-tokens" placeholder="30" min="10" max="1000"
+                            style="width:60px;">
                     </div>
                     <div class="setting-item">
-                        <label for="ai-context-limit" data-i18n="settings.ai.contextLimitLabel">コンテキスト長 (1000〜100000)</label>
-                        <input type="number" id="ai-context-limit"
-                            placeholder="2000" min="1000" max="100000" style="width:80px;">
+                        <label for="ai-context-limit" data-i18n="settings.ai.contextLimitLabel">コンテキスト長
+                            (1000〜100000)</label>
+                        <input type="number" id="ai-context-limit" placeholder="2000" min="1000" max="100000"
+                            style="width:80px;">
                     </div>
                     <div class="setting-item">
                         <label for="check-ai-thinking-overlay" class="inline">
@@ -374,10 +389,12 @@
                     <p style="font-size:0.7em;color:#111;margin:5px 0;">
                         <span data-i18n="settings.ai.contextNote1">※ローカルAIに渡す文脈の長さ。通常は2000～3000程度を推奨</span><br>
                         <span data-i18n="settings.ai.contextNote2">※Geminiは設定にかかわらず最大4000になります。</span><br>
-                        <span data-i18n="settings.ai.contextNote3">※この値＋システムプロンプトの長さが使用モデルの最大コンテクスト長を越えるとエラーになります。</span>
+                        <span
+                            data-i18n="settings.ai.contextNote3">※この値＋システムプロンプトの長さが使用モデルの最大コンテクスト長を越えるとエラーになります。</span>
                     </p>
                     <div class="setting-item">
-                        <label for="ai-system-prompt" data-i18n="settings.ai.systemPromptLabel">System Prompt (AIへの役割指示)</label>
+                        <label for="ai-system-prompt" data-i18n="settings.ai.systemPromptLabel">System Prompt
+                            (AIへの役割指示)</label>
                         <textarea id="ai-system-prompt" class="setting-textarea"
                             data-i18n-placeholder="settings.ai.systemPromptPlaceholder"
                             placeholder="あなたは優秀な執筆アシスタントです..."></textarea>
@@ -389,8 +406,8 @@
                     <h4 data-i18n="settings.ai.userProfile">User Profile</h4>
                     <div class="setting-item">
                         <label for="user-name" data-i18n="settings.ai.userNameLabel">Name</label>
-                        <input type="text" id="user-name"
-                            data-i18n-placeholder="settings.ai.userNamePlaceholder" placeholder="User">
+                        <input type="text" id="user-name" data-i18n-placeholder="settings.ai.userNamePlaceholder"
+                            placeholder="User">
                     </div>
                     <div class="setting-item">
                         <span data-i18n="settings.ai.iconLabel">Icon:</span>
@@ -406,8 +423,8 @@
                     <h4 data-i18n="settings.ai.aiProfile">AI Profile</h4>
                     <div class="setting-item">
                         <label for="ai-name" data-i18n="settings.ai.aiNameLabel">Name</label>
-                        <input type="text" id="ai-name"
-                            data-i18n-placeholder="settings.ai.aiNamePlaceholder" placeholder="AI">
+                        <input type="text" id="ai-name" data-i18n-placeholder="settings.ai.aiNamePlaceholder"
+                            placeholder="AI">
                     </div>
                     <div class="setting-item">
                         <span data-i18n="settings.ai.iconLabel">Icon:</span>
@@ -425,7 +442,8 @@
                 <div class="setting-group">
                     <h4 data-i18n="settings.code.title">Code Editor Settings</h4>
                     <div class="setting-item">
-                        <label for="code-language-select" data-i18n="settings.code.languageLabel">Syntax Highlight Language</label>
+                        <label for="code-language-select" data-i18n="settings.code.languageLabel">Syntax Highlight
+                            Language</label>
                         <select id="code-language-select">
                             <option value="html">HTML</option>
                             <option value="css">CSS</option>
@@ -459,8 +477,7 @@
                             <span data-i18n="settings.markdown.hardBreaks">Hard Breaks (Enterで改行します)</span>
                         </label>
                     </div>
-                    <p style="font-size:0.8em;color:#333;margin-top:5px;"
-                        data-i18n="settings.markdown.note">
+                    <p style="font-size:0.8em;color:#333;margin-top:5px;" data-i18n="settings.markdown.note">
                         オフの場合、公式Markdown仕様通り「末尾に半角スペース2つ」か「空行」で改行されます（Astro等でのプレビュー時はオフ推奨）。
                     </p>
                 </div>
@@ -474,7 +491,8 @@
                         <button id="btn-select-shell" data-i18n="settings.terminal.browse">参照...</button>
                     </div>
                     <div class="setting-item">
-                        <label for="terminal-cwd" data-i18n="settings.terminal.startupDirLabel">Startup Directory</label>
+                        <label for="terminal-cwd" data-i18n="settings.terminal.startupDirLabel">Startup
+                            Directory</label>
                         <input type="text" id="terminal-cwd"
                             data-i18n-placeholder="settings.terminal.startupDirPlaceholder" placeholder="(User Home)">
                         <button id="btn-select-cwd" data-i18n="settings.terminal.browse">参照...</button>

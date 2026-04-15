@@ -11,6 +11,7 @@ export interface ChatSettings {
     cohereApiKey?: string;
     cohereModel?: string;
     mistralApiKey?: string;
+    mistralAgentID?: string;
     mistralModel?: string;
     localUrl?: string;
     localModel?: string;
@@ -80,7 +81,11 @@ export class AiChat {
                 apiKey = this.currentSettings.groqApiKey || "";
                 model = this.currentSettings.groqModel || "llama-3.3-70b-versatile";
             } else if (apiType === 'mistral') {
-                url = "https://api.mistral.ai/v1/chat/completions";
+                const isAgent = !!this.currentSettings.mistralAgentID;
+                // Agent IDがあれば専用エンドポイントへ、なければ通常エンドポイントへ
+                url = isAgent
+                    ? "https://api.mistral.ai/v1/agents/completions"
+                    : "https://api.mistral.ai/v1/chat/completions";
                 apiKey = this.currentSettings.mistralApiKey || "";
                 model = this.currentSettings.mistralModel || "mistral-small-latest";
             } else if (apiType === 'local') {
@@ -94,7 +99,7 @@ export class AiChat {
                 return;
             }
 
-            await this.sendToOpenAICompatibleStream(url, apiKey, model, history);
+            await this.sendToOpenAICompatibleStream(url, apiKey, model, history, this.currentSettings.mistralAgentID);
         }
     }
 
@@ -208,7 +213,8 @@ export class AiChat {
     }
 
     // 汎用ストリーミング関数
-    private async sendToOpenAICompatibleStream(url: string, apiKey: string, model: string, history: any[]) {
+    private async sendToOpenAICompatibleStream(url: string, apiKey: string, model: string, history: any[], agentId?: string) {
+        const apiType = this.currentSettings.apiType;
         const messages = [];
         if (this.currentSettings.systemPrompt) {
             messages.push({ role: "system", content: this.currentSettings.systemPrompt });
@@ -221,17 +227,27 @@ export class AiChat {
             headers["Authorization"] = `Bearer ${apiKey}`;
         }
 
+        // リクエストボディを動的に構築
+        const requestBody: any = {
+            messages: messages,
+            stream: true,
+            max_tokens: maxTokens,
+        };
+
+        // 「今の設定がMistral」かつ「Agent IDがある」時だけ agent_id を使う
+        if (apiType === 'mistral' && agentId) {
+            requestBody.agent_id = agentId;
+        } else {
+            // それ以外（Groq, LM Studio等）は model を使う
+            requestBody.model = model;
+            requestBody.temperature = 0.7;
+        }
+
         try {
             const response = await fetch(url, {
                 method: "POST",
                 headers: headers,
-                body: JSON.stringify({
-                    model: model,
-                    messages: messages,
-                    stream: true,
-                    max_tokens: maxTokens,
-                    temperature: 0.7
-                })
+                body: JSON.stringify(requestBody)
             });
 
             if (!response.ok) {
@@ -259,13 +275,23 @@ export class AiChat {
                     if (trimmed.startsWith("data: ")) {
                         try {
                             const json = JSON.parse(trimmed.substring(6));
-                            const delta = json.choices?.[0]?.delta?.content;
+                            const delta = json.choices?.[0]?.delta;
+
                             if (delta) {
-                                fullText += delta;
-                                // 暴走停止ガード
-                                if (fullText.length > maxTokens * 4) {
-                                    reader.cancel();
-                                    break;
+                                // 1. 通常のテキスト（content）がある場合
+                                if (typeof delta.content === 'string') {
+                                    fullText += delta.content;
+                                }
+
+                                // 2. ツール呼び出し（tool_calls）がある場合
+                                if (Array.isArray(delta.tool_calls)) {
+                                    for (const call of delta.tool_calls) {
+                                        const args = call.function?.arguments;
+                                        // ここも string であることを厳密にチェック
+                                        if (typeof args === 'string') {
+                                            fullText += args;
+                                        }
+                                    }
                                 }
                                 this.onUpdate(fullText, false);
                             }

@@ -9,6 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [1.8.0] - 2026-4-XX  
 
 ### Added (新機能)  
+- AIチャットウィンドウに画像生成機能を追加（※Mistral使用時のみ。要Agent ID）  
 
 
 ### Changed (変更点)    

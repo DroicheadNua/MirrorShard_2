@@ -1378,6 +1378,7 @@ pub fn run() {
         // std::env::set_var("GDK_BACKEND", "x11");
     }
     tauri::Builder::default()
+        .plugin(tauri_plugin_http::init())
         .plugin(tauri_plugin_shell::init())
         .plugin(tauri_plugin_os::init())
         .plugin(tauri_plugin_cli::init())

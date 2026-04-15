@@ -10,6 +10,7 @@ import { emit, listen } from "@tauri-apps/api/event";
 import { convertFileSrc, invoke } from "@tauri-apps/api/core";
 import { type } from "@tauri-apps/plugin-os";
 import { Menu, MenuItem, PredefinedMenuItem } from "@tauri-apps/api/menu";
+import { fetch as tauriFetch } from '@tauri-apps/plugin-http';
 
 // --- 型定義 ---
 interface ChatMessage {
@@ -58,6 +59,64 @@ const osType = await type();
 
 const aiChat = new AiChat(onAiUpdate);
 
+async function downloadAndSaveImage(url: string) {
+    try {
+        const filePath = await save({
+            filters: [{ name: 'Image', extensions: ['jpg', 'png'] }],
+            defaultPath: `mistral_image_${Date.now()}.jpg`
+        });
+
+        if (!filePath) return;
+
+        // ブラウザの fetch ではなく tauriFetch を使うことで CORS をバイパス
+        const response = await tauriFetch(url, {
+            method: 'GET',
+            connectTimeout: 10000
+        });
+
+        const arrayBuffer = await response.arrayBuffer();
+        const uint8Array = new Uint8Array(arrayBuffer);
+
+        // 既存の関数を再利用
+        await invoke('force_save_file', {
+            path: filePath,
+            content: Array.from(uint8Array) // RustのVec<u8>に渡す
+        });
+
+    } catch (err) {
+        console.error("Save failed:", err);
+        // 最終手段としてブラウザで開く
+        const { open } = await import('@tauri-apps/plugin-shell');
+        await open(url);
+    }
+}
+
+/**
+ * AIのメッセージを解析し、画像JSONをHTMLに変換してからMarkdownパースする
+ */
+function formatAiMessage(text: string): string {
+    if (text === '...') return '...';
+
+    let processedText = text;
+
+    // A. 画像生成プロンプトのJSON {"prompt": "..."} を非表示にする（任意）
+    // もしプロンプトを表示させたければここをコメントアウト
+    processedText = processedText.replace(/\{"prompt":\s*"[\s\S]*?"\}/g, '');
+
+    // B. 画像URLのJSONを、背景色が同期した画像ブロックに置換
+    // ボタンを廃止し、画像そのものが「保存ボタン」を兼ねる
+    processedText = processedText.replace(/\{"url":\s*"(https?:\/\/[^"]+)"\}/g, (_, url) => {
+        return `
+<div class="ai-generated-image-container" style="display: block; margin: 0; border: none; border-radius: 12px; overflow: hidden; background: transparent;">
+    <img src="${url}" class="generated-img" data-url="${url}" 
+         style="width: 100%; height: auto; cursor: pointer; display: block;" 
+         title="Click to download (Open in Browser)" />
+</div>`;
+    });
+
+    return marked.parse(processedText) as string;
+}
+
 function onAiUpdate(text: string, isFinal: boolean) {
     const lastMsgIdx = chatHistory.length - 1;
     if (lastMsgIdx >= 0 && chatHistory[lastMsgIdx].role === 'assistant') {
@@ -68,7 +127,7 @@ function onAiUpdate(text: string, isFinal: boolean) {
 
     const bubble = document.querySelector(`[data-message-id='${lastMsgIdx}'] .message-bubble`);
     if (bubble) {
-        bubble.innerHTML = marked.parse(text) as string;
+        bubble.innerHTML = formatAiMessage(text);
     } else {
         addMessageToLog('assistant', text, lastMsgIdx);
     }
@@ -154,6 +213,7 @@ async function init() {
         const cohereKey = await store.get<string>('cohereApiKey');
         const cohereModel = await store.get<string>('cohereModel');
         const mistralKey = await store.get<string>('mistralApiKey');
+        const mistralAgent = await store.get<string>('mistralAgentID');
         const mistralModel = await store.get<string>('mistralModel');
         const localUrl = await store.get<string>('localLlmUrl');
         const sysPrompt = await store.get<string>('aiSystemPrompt');
@@ -173,6 +233,7 @@ async function init() {
             cohereApiKey: cohereKey || undefined,
             cohereModel: cohereModel || undefined,
             mistralApiKey: mistralKey || undefined,
+            mistralAgentID: mistralAgent || undefined,
             mistralModel: mistralModel || undefined,
             localUrl: localUrl || undefined,
             systemPrompt: sysPrompt || undefined,
@@ -397,6 +458,7 @@ function setupSettingsListener() {
         aiSettings.cohereApiKey = p.cohereApiKey ?? aiSettings.cohereApiKey;
         aiSettings.cohereModel = p.cohereModel ?? aiSettings.cohereModel;
         aiSettings.mistralApiKey = p.mistralApiKey ?? aiSettings.mistralApiKey;
+        aiSettings.mistralAgentID = p.mistralAgentID ?? aiSettings.mistralAgentID;
         aiSettings.mistralModel = p.mistralModel ?? aiSettings.mistralModel;
         aiSettings.localUrl = p.localLlmUrl ?? aiSettings.localUrl;
         aiSettings.localModel = p.localLlmModel ?? aiSettings.localModel;
@@ -492,26 +554,34 @@ function setupEventListeners() {
         apiOptions?.classList.toggle('open');
     });
 
-    // 画面クリックで閉じる
-    document.addEventListener('click', (e) => {
+    document.addEventListener('click', async (e) => {
+        // 画面クリックでメニューを閉じる
         apiOptions?.classList.remove('open');
 
-        // リンククリックのインターセプト
-        const target = (e.target as HTMLElement).closest('a');
-        if (target && target.href) {
-            const url = target.href;
-            // 外部リンクの判定（http等で始まる場合）
-            if (url.startsWith('http') || url.startsWith('https')) {
-                e.preventDefault(); // 遷移を即座に停止
-                e.stopPropagation(); // 他のリスナーへの伝播も停止
+        const targetEl = e.target as HTMLElement;
 
-                // TauriのShell機能で開く
-                import('@tauri-apps/plugin-shell').then(({ open }) => {
-                    open(url).catch(err => console.error(err));
-                });
+        // 1. 画像保存ボタン、または画像そのものがクリックされた場合
+        const imgBtn = targetEl.closest('.save-img-btn');
+        const genImg = targetEl.closest('.generated-img');
+
+        if (imgBtn || genImg) {
+            const url = (imgBtn || genImg)?.getAttribute('data-url');
+            if (url) {
+                e.preventDefault();
+                downloadAndSaveImage(url);
             }
+            return;
         }
-    }, true);
+
+        // 2. 通常のリンククリックのインターセプト
+        const link = targetEl.closest('a');
+        if (link && link.href && link.href.startsWith('http')) {
+            e.preventDefault();
+            const { open } = await import('@tauri-apps/plugin-shell');
+            await open(link.href);
+        }
+    }, true); // キャプチャフェーズで確実に捕まえる
+
     chatForm.addEventListener('submit', async (e) => {
         e.preventDefault();
         const text = messageInput.value.trim();
@@ -671,7 +741,7 @@ function addMessageToLog(role: string, content: string, index: number) {
 
     let htmlContent = "";
     if (role === 'assistant') {
-        htmlContent = content === '...' ? '...' : (marked.parse(content) as string);
+        htmlContent = formatAiMessage(content);
     } else {
         const escaped = content.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
         htmlContent = escaped.replace(/\n/g, '<br>');
