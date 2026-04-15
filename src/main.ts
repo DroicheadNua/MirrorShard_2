@@ -1268,6 +1268,128 @@ ${instructionFiller}
     }
   }
 
+  private async visualizeSelection() {
+    if (this.isAiProcessing) return;
+
+    const selection = this.editorView.state.selection.main;
+    if (selection.empty) {
+      await message(t('editor.noSelection'), { kind: 'info' });
+      return;
+    }
+
+    const selectedText = this.editorView.state.sliceDoc(selection.from, selection.to);
+    const mistralAgent = await this.store.get<string>('mistralAgentID');
+
+    if (this.mainAiApi !== 'mistral' || !mistralAgent) {
+      await message(t('editor.ai.mistralAgentRequired'), { kind: 'warning' });
+      return;
+    }
+
+    // --- A. プロンプトとUIの状態準備 ---
+    const imageSystemPrompt = await this.store.get<string>('imageSystemPrompt') || "";
+    const baseSystemPrompt = t('prompts.systemPrompt.visualize');
+    const userPrefix = t('prompts.template.userInstructionPrefix');
+
+    const systemPrompt = imageSystemPrompt
+      ? `${baseSystemPrompt}\n\n${userPrefix}\n${imageSystemPrompt}`
+      : baseSystemPrompt;
+
+    this.isAiProcessing = true;
+    this.aiAbortController = new AbortController();
+    this.aiThinkingMode = "[Visualize]";
+    this.setAiLoading(true);
+
+    try {
+      // --- B. Mistral Agent へのリクエスト ---
+      const apiKey = await this.store.get<string>('mistralApiKey');
+      const response = await fetch("https://api.mistral.ai/v1/agents/completions", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${apiKey}`
+        },
+        body: JSON.stringify({
+          agent_id: mistralAgent,
+          messages: [
+            { role: "system", content: systemPrompt },
+            { role: "user", content: selectedText }
+          ]
+        }),
+        signal: this.aiAbortController.signal // ESC等での中断に対応
+      });
+
+      if (!response.ok) throw new Error(`API Error: ${response.status}`);
+
+      const json = await response.json();
+      const content = json.choices?.[0]?.message?.content || "";
+      const urlMatch = content.match(/https?:\/\/[^\s"']+/);
+
+      if (!urlMatch) throw new Error("No image URL found in response.");
+      const imageUrl = urlMatch[0];
+
+      // --- C. 保存処理 ---
+      await this.handleImageGenerationResult(imageUrl);
+
+    } catch (e: any) {
+      if (e.name === 'AbortError') {
+        console.log("AI Visualize aborted by user.");
+      } else {
+        this.handleAiError(e);
+      }
+    } finally {
+      this.aiThinkingMode = "";
+      this.setAiLoading(false);
+      this.isAiProcessing = false;
+      this.aiAbortController = null;
+    }
+  }
+
+  private async handleImageGenerationResult(url: string) {
+    // Storeから取得（undefined の場合は null に変換して型を合わせる）
+    let savePath: string | null = (await this.store.get<string>('imageAutoSavePath')) ?? null;
+
+    // A. 保存先の決定
+    if (!savePath || savePath.trim() === "") {
+      savePath = await save({
+        title: t('editor.ai.saveImageTitle'),
+        defaultPath: `illustration_${Date.now()}.jpg`,
+        filters: [{ name: 'Images', extensions: ['jpg'] }]
+      });
+    } else {
+      const separator = savePath.includes('/') ? '/' : '\\';
+      savePath = savePath.endsWith(separator)
+        ? `${savePath}ms_img_${Date.now()}.jpg`
+        : `${savePath}${separator}ms_img_${Date.now()}.jpg`;
+    }
+
+    if (!savePath) return; // キャンセル時
+
+    // B. ダウンロード (Lazy Loading)
+    const { fetch: tauriFetch } = await import('@tauri-apps/plugin-http');
+    const res = await tauriFetch(url, { method: 'GET' });
+    const arrayBuffer = await res.arrayBuffer();
+    const uint8Array = new Uint8Array(arrayBuffer);
+
+    // C. 保存 (既存の invoke 経由)
+    await invoke('force_save_file', {
+      path: savePath,
+      content: Array.from(uint8Array)
+    });
+
+    // D. 完了通知 (Lazy Loading)
+    const { ask } = await import('@tauri-apps/plugin-dialog');
+
+    const confirmed = await ask(t('editor.ai.imageSavedSuccess', { path: savePath }), {
+      title: "MirrorShard AI",
+      okLabel: t('common.open'),
+      cancelLabel: t('common.close')
+    });
+
+    if (confirmed) {
+      await open(savePath);
+    }
+  }
+
   // コード用の拡張機能セットを返すヘルパー
   private createCodeExtensions(): Extension[] {
     const isMac = this.currentOs === 'macos';
@@ -2618,6 +2740,11 @@ ${instructionFiller}
             text: t('editor.menu.aiRewrite'),
             enabled: hasSelection,
             action: () => this.runAiEdit('rewrite')
+          }),
+          await MenuItem.new({
+            text: t('editor.menu.aiVisualize'),
+            enabled: hasSelection && this.mainAiApi === 'mistral',
+            action: () => this.visualizeSelection()
           }),
           await PredefinedMenuItem.new({ item: 'Separator' }),
           await MenuItem.new({

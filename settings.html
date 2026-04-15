@@ -314,6 +314,18 @@
                         <small data-i18n="settings.ai.mistralNote">
                             ※Agent使用時は、Agentでのモデル指定が優先されます。
                         </small>
+                        <br>
+                        <div class="setting-item">
+                            <label for="image-auto-save-path" data-i18n="settings.ai.imageAutoSavePath">画像の自動保存フォルダ
+                            </label>
+                            <input type="text" id="image-auto-save-path" style="flex-grow:1;" placeholder="">
+                            <button id="btn-select-auto-save" data-i18n="settings.ai.browse">参照...</button>
+                        </div>
+                        <div class="setting-item">
+                            <label for="image-system-prompt" data-i18n="settings.ai.imageSystemPromptLabel">画像生成のプロンプト
+                            </label>
+                            <textarea id="image-system-prompt" class="setting-textarea" placeholder=""></textarea>
+                        </div>
                     </div>
                 </div>
 
@@ -352,7 +364,7 @@
                         <input type="text" id="silly-tavern-path" style="flex-grow:1;"
                             data-i18n-placeholder="settings.ai.sillyTavernPathPlaceholder"
                             placeholder="C:\path\to\SillyTavern">
-                        <button id="btn-select-silly-tavern" data-i18n="settings.ai.sillyTavernBrowse">参照...</button>
+                        <button id="btn-select-silly-tavern" data-i18n="settings.ai.browse">参照...</button>
                     </div>
                     <small data-i18n="settings.ai.sillyTavernNote">
                         ※SillyTavernのインストール先フォルダを指定してください。

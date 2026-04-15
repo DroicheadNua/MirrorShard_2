@@ -90,6 +90,7 @@ async function setupSettings() {
         const useUiBgCheck = document.querySelector('#use-ui-bg') as HTMLInputElement;
         const pandocPath = document.querySelector('#pandoc-path') as HTMLInputElement;
         const sillyTavernPath = document.querySelector('#silly-tavern-path') as HTMLInputElement;
+        const imageAutoSavePath = document.querySelector('#image-auto-save-path') as HTMLInputElement;
         const shellPath = document.querySelector('#shell-path') as HTMLInputElement;
         const terminalDefaultCwd = document.querySelector('#terminal-cwd') as HTMLInputElement;
 
@@ -108,6 +109,7 @@ async function setupSettings() {
         const enableMistral = document.querySelector('#enable-mistral') as HTMLInputElement;
         const localLlmUrlInput = document.querySelector('#local-llm-url') as HTMLInputElement;
         const aiSystemPromptInput = document.querySelector('#ai-system-prompt') as HTMLTextAreaElement;
+        const imageSystemPromptInput = document.querySelector('#image-system-prompt') as HTMLTextAreaElement;
         const aiMaxTokensInput = document.querySelector('#ai-max-tokens') as HTMLInputElement;
         const faMaxTokensInput = document.querySelector('#fa-max-tokens') as HTMLInputElement;
         const aiContextLimitInput = document.querySelector('#ai-context-limit') as HTMLInputElement;
@@ -497,6 +499,9 @@ async function setupSettings() {
         const sillyTavern = await store.get<string>('sillyTavernPath') ?? '';
         if (sillyTavernPath) sillyTavernPath.value = sillyTavern;
 
+        const imageAutoSave = await store.get<string>('imageAutoSavePath') ?? '';
+        if (imageAutoSavePath) imageAutoSavePath.value = imageAutoSave;
+
         const shell = await store.get<string>('shellPath') ?? '';
         if (shellPath) shellPath.value = shell;
 
@@ -562,6 +567,7 @@ async function setupSettings() {
         enableMistral.checked = await store.get<boolean>('enableMistral') ?? false;
         localLlmUrlInput.value = await store.get<string>('localLlmUrl') || 'http://127.0.0.1:1234/v1/chat/completions';
         aiSystemPromptInput.value = await store.get<string>('aiSystemPrompt') || '';
+        imageSystemPromptInput.value = await store.get<string>('imageSystemPrompt') || '';
         aiMaxTokensInput.value = (await store.get<number>('aiMaxTokens') || 2000).toString();
         faMaxTokensInput.value = (await store.get<number>('faMaxTokens') || 30).toString();
         aiContextLimitInput.value = (await store.get<number>('aiContextLimit') || 2000).toString();
@@ -728,6 +734,19 @@ async function setupSettings() {
             }
         });
 
+        document.querySelector('#btn-select-auto-save')?.addEventListener('click', async () => {
+            const path = await open({
+                title: t('settings.terminal.selectDirTitle'),
+                directory: true,
+                properties: ['openDirectory']
+            });
+
+            if (path && typeof path === 'string') {
+                const input = document.querySelector('#image-auto-save-path') as HTMLInputElement;
+                if (input) input.value = path;
+            }
+        });
+
         document.querySelector('#btn-select-shell')?.addEventListener('click', async () => {
             const osType = await type();
             const extensions = osType === 'windows' ? ['exe'] : [''];
@@ -815,6 +834,7 @@ async function setupSettings() {
                 const newAlign = alignSelect.value;
                 const newPandocPath = pandocPath.value;
                 const newSillyTavernPath = sillyTavernPath.value;
+                const newImageAutoSavePath = imageAutoSavePath.value;
                 const newShellPath = shellPath.value;
                 const newTerminalDefaultCwd = terminalDefaultCwd.value;
                 const newCodeLanguage = codeLanguageSelect.value;
@@ -850,6 +870,7 @@ async function setupSettings() {
                 const newEnableMistral = enableMistral.checked;
                 const newLocalUrl = localLlmUrlInput.value.trim();
                 const newSystemPrompt = aiSystemPromptInput.value;
+                const newImageSystemPrompt = imageSystemPromptInput.value;
                 const newAiMaxTokens = parseInt(aiMaxTokensInput.value, 10) || 2000;
                 const newFaMaxTokens = parseInt(faMaxTokensInput.value, 10) || 30;
                 const newAiContextLimit = parseInt(aiContextLimitInput.value, 10) || 2000;
@@ -868,6 +889,7 @@ async function setupSettings() {
                 await store.set('editorBlur', newBlur);
                 await store.set('pandocPath', newPandocPath);
                 await store.set('sillyTavernPath', newSillyTavernPath);
+                await store.set('imageAutoSavePath', newImageAutoSavePath);
                 await store.set('shellPath', newShellPath);
                 await store.set('terminalDefaultCwd', newTerminalDefaultCwd);
                 await store.set('codeLanguage', newCodeLanguage);
@@ -902,6 +924,7 @@ async function setupSettings() {
                 await store.set('enableMistral', newEnableMistral);
                 await store.set('localLlmUrl', newLocalUrl);
                 await store.set('aiSystemPrompt', newSystemPrompt);
+                await store.set('imageSystemPrompt', newImageSystemPrompt);
                 const currentApiType = await store.get<string>('selectedApiType');
                 if (!currentApiType) {
                     await store.set('selectedApiType', 'gemini');
@@ -946,6 +969,7 @@ async function setupSettings() {
                     useUiBg: newUseUiBg,
                     pandocPath: newPandocPath,
                     sillyTavernPath: newSillyTavernPath,
+                    imageAutoSavePath: newImageAutoSavePath,
                     shellPath: newShellPath,
                     terminalDefaultCwd: newTerminalDefaultCwd,
                     geminiApiKey: newGeminiApiKey,
@@ -962,6 +986,7 @@ async function setupSettings() {
                     enableMistral: newEnableMistral,
                     localLlmUrl: newLocalUrl,
                     aiSystemPrompt: newSystemPrompt,
+                    imageSystemPrompt: newImageSystemPrompt,
                     selectedApiType: currentApiType || 'gemini',
                     aiMaxTokens: newAiMaxTokens,
                     faMaxTokens: newFaMaxTokens,

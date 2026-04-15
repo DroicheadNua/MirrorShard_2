@@ -15,9 +15,15 @@
     "aiTranslate": "AI: Translate",
     "aiSummarize": "AI: Summarize",
     "aiRewrite": "AI: Rewrite",
+    "aiVisualize": "AI: Visualize Selection (Mistral Agent)",
     "importGeminiLog": "Import Gemini Log",
     "openTerminalHere": "Open Terminal Here (Ctrl+Shift+@)",
     "openFolderHere": "Open Folder Here (Ctrl+Shift+O)"
+  },
+  "ai": {
+    "imageSavedSuccess": "Image saved successfully:\n{{path}}",
+    "saveImageTitle": "Save Generated Image",
+    "mistralAgentRequired": "Image generation requires Mistral API and a configured Agent ID."
   },
   "preview": {
     "truncated": "... (truncated)",

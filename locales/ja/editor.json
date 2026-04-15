@@ -15,9 +15,15 @@
     "aiTranslate": "AI: 翻訳",
     "aiSummarize": "AI: 要約",
     "aiRewrite": "AI: リライト",
+    "aiVisualize": "AI: 画像を生成 (Mistral Agent)",
     "importGeminiLog": "Geminiログをインポート",
     "openTerminalHere": "この場所でターミナルを開く (Ctrl+Shift+@)",
     "openFolderHere": "この場所でフォルダを開く (Ctrl+Shift+O)"
+  },
+  "ai": {
+    "imageSavedSuccess": "画像を保存しました:\n{{path}}",
+    "saveImageTitle": "生成された画像を保存",
+    "mistralAgentRequired": "画像生成にはMistralのAPI設定とAgent IDが必要です。"
   },
   "preview": {
     "truncated": "……以降は省略されました",

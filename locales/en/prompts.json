@@ -4,7 +4,8 @@
     "missingLink": "You are a writing assistant.\nWrite a natural passage that connects the \"Beginning\" and \"Ending\" sections provided below.\nMatch the style and tone of the surrounding text.\nDo not repeat the end of the beginning or the start of the ending—write only what happens in between.\nOutput only the connecting passage—do not include greetings or explanations.",
     "translate": "You are a professional translator. Translate the text below into natural \"{{lang}}\". Output only the translation—do not include explanations or greetings.",
     "summarize": "You are an excellent editor. Summarize the text below in the same language as the input, within approximately {{length}} characters. Capture all key points concisely and clearly. Output only the summary.",
-    "rewrite": "You are a professional editor. Rewrite the text below into a clearer, more readable version while preserving the original meaning. Polish the expression without changing the content. Output only the rewritten text."
+    "rewrite": "You are a professional editor. Rewrite the text below into a clearer, more readable version while preserving the original meaning. Polish the expression without changing the content. Output only the rewritten text.",
+    "visualize": "Generate a single image that represents the provided text. Use only the image generation tool; no explanations, greetings, or prompt output is required."
   },
   "template": {
     "userInstructionPrefix": "【Additional instructions】:",
