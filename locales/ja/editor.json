@@ -42,7 +42,8 @@
     "geminiImportFailed": "Geminiログのインポートに失敗しました。\n{{error}}",
     "closeTab": "タブを閉じる",
     "closeTabUnsaved": "'{{filename}}' は保存されていません。変更を破棄しますか？",
-    "sillytavernFailed": "SillyTavernの起動に失敗しました: {{error}}"
+    "sillytavernFailed": "SillyTavernの起動に失敗しました: {{error}}",
+    "sdFailed": "Stable Diffusionの起動に失敗しました: {{error}}"
   },
   "errors": {
     "loadError": "読み込みエラー",

@@ -241,10 +241,11 @@ body {
 #shell-path,
 #terminal-cwd,
 #local-llm-url,
-#silly-tavern-path {
+#silly-tavern-path,
+#sd-path {
     flex-grow: 1;
     flex-shrink: 1;
-    min-width: 300px;
+    min-width: 250px;
 }
 
 body::-webkit-scrollbar {

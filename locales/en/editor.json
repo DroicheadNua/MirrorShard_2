@@ -42,7 +42,8 @@
     "geminiImportFailed": "Failed to import Gemini log.\n{{error}}",
     "closeTab": "Close Tab",
     "closeTabUnsaved": "'{{filename}}' is unsaved. Discard changes?",
-    "sillytavernFailed": "Failed to launch SillyTavern: {{error}}"
+    "sillytavernFailed": "Failed to launch SillyTavern: {{error}}",
+    "sdFailed": "Failed to launch Stable Diffusion: {{error}}"
   },
   "errors": {
     "loadError": "Read Error",

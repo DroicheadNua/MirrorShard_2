@@ -34,6 +34,7 @@ async function setupSettings() {
         const wrapper = document.querySelector('#settings-wrapper') as HTMLElement;
         const body = document.querySelector('body') as HTMLElement;
         const st = document.querySelector('#silly-tavern-group') as HTMLElement;
+        const sd = document.querySelector('#sd-group') as HTMLElement;
         const md = document.querySelector('#markdown-group') as HTMLElement;
         const osType = await type();
         if (osType !== 'macos') {
@@ -42,6 +43,7 @@ async function setupSettings() {
         }
         if (osType === 'linux') {
             st.style.display = 'none';
+            sd.style.display = 'none';
             md.style.display = 'none';
         }
 
@@ -90,6 +92,7 @@ async function setupSettings() {
         const useUiBgCheck = document.querySelector('#use-ui-bg') as HTMLInputElement;
         const pandocPath = document.querySelector('#pandoc-path') as HTMLInputElement;
         const sillyTavernPath = document.querySelector('#silly-tavern-path') as HTMLInputElement;
+        const sdPath = document.querySelector('#sd-path') as HTMLInputElement;
         const imageAutoSavePath = document.querySelector('#image-auto-save-path') as HTMLInputElement;
         const shellPath = document.querySelector('#shell-path') as HTMLInputElement;
         const terminalDefaultCwd = document.querySelector('#terminal-cwd') as HTMLInputElement;
@@ -499,6 +502,9 @@ async function setupSettings() {
         const sillyTavern = await store.get<string>('sillyTavernPath') ?? '';
         if (sillyTavernPath) sillyTavernPath.value = sillyTavern;
 
+        const stableDiffusion = await store.get<string>('sdWebUIPath') ?? '';
+        if (sdPath) sdPath.value = stableDiffusion;
+
         const imageAutoSave = await store.get<string>('imageAutoSavePath') ?? '';
         if (imageAutoSavePath) imageAutoSavePath.value = imageAutoSave;
 
@@ -734,6 +740,19 @@ async function setupSettings() {
             }
         });
 
+        document.querySelector('#btn-select-sd')?.addEventListener('click', async () => {
+            const path = await open({
+                title: t('settings.terminal.selectDirTitle'),
+                directory: true,
+                properties: ['openDirectory']
+            });
+
+            if (path && typeof path === 'string') {
+                const input = document.querySelector('#sd-path') as HTMLInputElement;
+                if (input) input.value = path;
+            }
+        });
+
         document.querySelector('#btn-select-auto-save')?.addEventListener('click', async () => {
             const path = await open({
                 title: t('settings.terminal.selectDirTitle'),
@@ -834,6 +853,7 @@ async function setupSettings() {
                 const newAlign = alignSelect.value;
                 const newPandocPath = pandocPath.value;
                 const newSillyTavernPath = sillyTavernPath.value;
+                const newSDPath = sdPath.value;
                 const newImageAutoSavePath = imageAutoSavePath.value;
                 const newShellPath = shellPath.value;
                 const newTerminalDefaultCwd = terminalDefaultCwd.value;
@@ -889,6 +909,7 @@ async function setupSettings() {
                 await store.set('editorBlur', newBlur);
                 await store.set('pandocPath', newPandocPath);
                 await store.set('sillyTavernPath', newSillyTavernPath);
+                await store.set('sdWebUIPath', newSDPath);
                 await store.set('imageAutoSavePath', newImageAutoSavePath);
                 await store.set('shellPath', newShellPath);
                 await store.set('terminalDefaultCwd', newTerminalDefaultCwd);
@@ -969,6 +990,7 @@ async function setupSettings() {
                     useUiBg: newUseUiBg,
                     pandocPath: newPandocPath,
                     sillyTavernPath: newSillyTavernPath,
+                    sdWebUIPath: newSDPath,
                     imageAutoSavePath: newImageAutoSavePath,
                     shellPath: newShellPath,
                     terminalDefaultCwd: newTerminalDefaultCwd,

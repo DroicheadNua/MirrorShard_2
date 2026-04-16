@@ -13,7 +13,7 @@ use std::path::{Path, PathBuf};
 use std::process::{Child, Command, Stdio};
 use std::sync::{Arc, Mutex};
 use std::thread;
-use tauri::{AppHandle, Emitter, Manager, State, WindowEvent};
+use tauri::{AppHandle, Emitter, Manager, State};
 use tauri_plugin_cli::CliExt;
 use tauri_plugin_window_state::{Builder, StateFlags};
 use zip::{write::SimpleFileOptions, ZipArchive, ZipWriter};
@@ -21,6 +21,8 @@ use zip::{write::SimpleFileOptions, ZipArchive, ZipWriter};
 struct OpenCodeProcess(Mutex<Option<Child>>);
 
 struct SillyTavernProcess(Mutex<Option<Child>>);
+
+struct StableDiffusionProcess(Mutex<Option<Child>>);
 
 // PTYの入力側を保持する構造体
 struct TerminalState {
@@ -56,15 +58,17 @@ struct MacFileBuffer(Mutex<Option<String>>);
 
 // 共通のツリーキルヘルパー関数
 fn kill_child_tree(child: &mut Child) {
-    let _pid = child.id();
+    let pid = child.id();
     #[cfg(target_os = "windows")]
     {
         use std::os::windows::process::CommandExt;
-        // /T で大元のcmdと子分のnodeを両方殺し、0x08000000 でtaskkill自体の窓も出さない
-        let _ = Command::new("taskkill")
-            .args(["/F", "/T", "/PID", &_pid.to_string()])
+        // /F (強制) /T (ツリー全体) に加え、
+        // 万が一のために python.exe 自体を狙い撃ちするのではなく、
+        // このプロセスグループに属するものをすべて殺す
+        let _ = std::process::Command::new("taskkill")
+            .args(["/F", "/T", "/PID", &pid.to_string()])
             .creation_flags(0x08000000)
-            .spawn(); // 完了を待たずに投げっぱなし（フリーズ回避）
+            .status();
     }
     #[cfg(not(target_os = "windows"))]
     let _ = child.kill();
@@ -97,6 +101,122 @@ fn resolve_node_path() -> String {
 
     // 見つからない場合や Windows はデフォルトに期待
     "node".to_string()
+}
+
+#[tauri::command]
+async fn open_stable_diffusion(
+    app: tauri::AppHandle,
+    state: State<'_, StableDiffusionProcess>,
+    sd_path_setting: Option<String>,
+) -> Result<String, String> {
+    // --- 1. トグル処理：既にウィンドウがある場合は「閉じて、殺す」 ---
+    if let Some(win) = app.get_webview_window("stable_diffusion") {
+        let _ = win.close();
+        let mut lock = state.inner().0.lock().unwrap();
+        if let Some(mut child) = lock.take() {
+            kill_child_tree(&mut child);
+        }
+        return Ok("closed".to_string());
+    }
+
+    // --- 2. パスと実行ファイルの決定（A1111 / Forge 判定） ---
+    let sd_path = sd_path_setting.unwrap_or_default();
+    let base_path = std::path::Path::new(&sd_path);
+    if !base_path.exists() {
+        return Err("ERR_SD_PATH_NOT_FOUND".to_string());
+    }
+
+    #[cfg(target_os = "windows")]
+    let batch_file = if base_path.join("run.bat").exists() {
+        "run.bat" // Forge
+    } else {
+        "webui-user.bat" // A1111
+    };
+
+    #[cfg(not(target_os = "windows"))]
+    let sh_file = if base_path.join("webui.sh").exists() {
+        "./webui.sh"
+    } else if base_path.join("webui/webui.sh").exists() {
+        "./webui/webui.sh"
+    } else {
+        "./webui.sh"
+    };
+
+    // --- 3. ウィンドウを「即座に」作成（loading_sd.htmlを表示） ---
+    let window = tauri::WebviewWindowBuilder::new(
+        &app,
+        "stable_diffusion",
+        tauri::WebviewUrl::App("loading_sd.html".into()), // 予め用意した軽量HTML
+    )
+    .title("Stable Diffusion WebUI (Loading...)")
+    .inner_size(1300.0, 900.0)
+    .build()
+    .map_err(|e| e.to_string())?;
+
+    // --- 4. サーバー起動（ロックをかけて既存プロセスを事前掃除） ---
+    {
+        let mut lock = state.inner().0.lock().unwrap();
+
+        // 起動前に残っている古いチャイルドがいれば確実に殺す
+        if let Some(mut child) = lock.take() {
+            kill_child_tree(&mut child);
+        }
+
+        #[cfg(target_os = "windows")]
+        let mut cmd = {
+            use std::os::windows::process::CommandExt;
+            let mut c = std::process::Command::new("cmd");
+            c.args(["/C", &format!("{} --api --nowebui-assets", batch_file)]);
+            c.creation_flags(0x08000000); // 窓を出さない
+            c.env("SD_WEBUI_RESTARTING", "1"); // ブラウザ自動起動抑制
+            c
+        };
+
+        #[cfg(not(target_os = "windows"))]
+        let mut cmd = {
+            let mut c = std::process::Command::new(sh_file);
+            c.args(["--api", "--skip-python-version-check"]);
+            c
+        };
+
+        cmd.current_dir(base_path);
+
+        let child = cmd
+            .stdout(std::process::Stdio::null())
+            .stderr(std::process::Stdio::null())
+            .spawn()
+            .map_err(|e| format!("ERR_SD_SPAWN:{}", e))?;
+
+        *lock = Some(child);
+    }
+
+    // --- 5. バックグラウンドスレッドでポート監視を開始（10分タイムアウト） ---
+    let window_clone = window.clone();
+    std::thread::spawn(move || {
+        let addr = "127.0.0.1:7860";
+        // 1200回 × 500ms = 600秒 (10分)
+        for _ in 0..1200 {
+            if std::net::TcpStream::connect_timeout(
+                &addr.parse().unwrap(),
+                std::time::Duration::from_millis(500),
+            )
+            .is_ok()
+            {
+                // ポートが空いたら、ウィンドウを本番のURLに切り替え、タイトルを更新
+                let _ = window_clone.eval("window.location.href = 'http://127.0.0.1:7860'");
+                let _ = window_clone.set_title("Stable Diffusion WebUI");
+                return;
+            }
+
+            // ユーザーがロード中にウィンドウを閉じたら監視を終了
+            if window_clone.is_closable().is_err() {
+                return;
+            }
+            std::thread::sleep(std::time::Duration::from_millis(500));
+        }
+    });
+
+    Ok("opened".to_string())
 }
 
 #[tauri::command]
@@ -1391,6 +1511,7 @@ pub fn run() {
         })
         .manage(OpenCodeProcess(Mutex::new(None)))
         .manage(SillyTavernProcess(Mutex::new(None)))
+        .manage(StableDiffusionProcess(Mutex::new(None)))
         .setup(|app| {
             // ---  起動時引数を解析し、状態に書き込む ---
             if let Ok(matches) = app.cli().matches() {
@@ -1425,15 +1546,6 @@ pub fn run() {
             }
         }))
         .plugin(tauri_plugin_clipboard_manager::init())
-        .on_window_event(|window, event| {
-            if let WindowEvent::CloseRequested { api, .. } = event {
-                // メインウィンドウが閉じられようとした時だけ、フロントに問い合わせる
-                if window.label() == "main" {
-                    api.prevent_close();
-                    window.emit("tauri://ask-before-close", ()).unwrap();
-                }
-            }
-        })
         .plugin(
             Builder::new()
                 .with_state_flags(
@@ -1481,28 +1593,47 @@ pub fn run() {
             force_save_chat_log,
             open_opencode,
             open_silly_tavern,
+            open_stable_diffusion,
             get_app_language,
             get_window_title,
         ])
-        // ウィンドウのライフサイクルイベントを監視する
         .on_window_event(|window, event| match event {
+            // 1. メインウィンドウの終了確認
+            tauri::WindowEvent::CloseRequested { api, .. } => {
+                if window.label() == "main" {
+                    api.prevent_close();
+                    window.emit("tauri://ask-before-close", ()).unwrap();
+                }
+            }
+            // 2. 各ウィンドウが破棄された時のプロセス清掃
             tauri::WindowEvent::Destroyed => {
                 let label = window.label();
-                if label == "opencode" {
-                    let state = window.state::<OpenCodeProcess>();
-                    if let Ok(mut lock) = state.inner().0.lock() {
-                        if let Some(mut child) = lock.take() {
-                            kill_child_tree(&mut child);
+                match label {
+                    "opencode" => {
+                        let state = window.state::<OpenCodeProcess>();
+                        if let Ok(mut lock) = state.inner().0.lock() {
+                            if let Some(mut child) = lock.take() {
+                                kill_child_tree(&mut child);
+                            }
                         }
                     }
-                } else if label == "silly_tavern" {
-                    // ★ 追加
-                    let state = window.state::<SillyTavernProcess>();
-                    if let Ok(mut lock) = state.inner().0.lock() {
-                        if let Some(mut child) = lock.take() {
-                            kill_child_tree(&mut child);
+                    "silly_tavern" => {
+                        let state = window.state::<SillyTavernProcess>();
+                        if let Ok(mut lock) = state.inner().0.lock() {
+                            if let Some(mut child) = lock.take() {
+                                kill_child_tree(&mut child);
+                            }
                         }
                     }
+                    "stable_diffusion" => {
+                        let state = window.state::<StableDiffusionProcess>();
+                        if let Ok(mut lock) = state.inner().0.lock() {
+                            if let Some(mut child) = lock.take() {
+                                kill_child_tree(&mut child);
+                            }
+                        }
+                    }
+                    _ => {}
                 }
             }
             _ => {}
@@ -1511,13 +1642,23 @@ pub fn run() {
         .expect("error while building tauri application")
         .run(|app_handle, event| match event {
             tauri::RunEvent::Exit => {
-                // 両方のプロセスを一掃
+                // 外部ツールのプロセスを一掃
                 if let Ok(mut lock) = app_handle.state::<OpenCodeProcess>().inner().0.lock() {
                     if let Some(mut child) = lock.take() {
                         kill_child_tree(&mut child);
                     }
                 }
                 if let Ok(mut lock) = app_handle.state::<SillyTavernProcess>().inner().0.lock() {
+                    if let Some(mut child) = lock.take() {
+                        kill_child_tree(&mut child);
+                    }
+                }
+                if let Ok(mut lock) = app_handle
+                    .state::<StableDiffusionProcess>()
+                    .inner()
+                    .0
+                    .lock()
+                {
                     if let Some(mut child) = lock.take() {
                         kill_child_tree(&mut child);
                     }

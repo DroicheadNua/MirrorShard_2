@@ -17,7 +17,9 @@
     "markdown",
     "terminal",
     "idea_processor",
-    "opencode"
+    "opencode",
+    "stable_diffusion",
+    "loading_sd"
   ],
   "permissions": [
     "core:default",

@@ -168,6 +168,7 @@ class App {
   private isAiProcessing = false; // AI動作中フラグ
   private aiAbortController: AbortController | null = null;// 通信中断用
   private aiThinkingMode = "";
+  private isSdStarting = false;
 
   private isCodeMode = false;
   private currentCodeLanguage = 'html';
@@ -3027,6 +3028,10 @@ ${instructionFiller}
       e.preventDefault();
       this.openSillyTavern();
     }
+    if (isCtrlOrCmd && key === 'w' && isShift) {
+      e.preventDefault();
+      this.openStableDiffusion();
+    }
     if ((isCtrlOrCmd && key === '`' && !isShift) || (isCtrlOrCmd && key === '@' && !isShift)) {
       e.preventDefault();
       e.stopPropagation();
@@ -4012,6 +4017,42 @@ ${instructionFiller}
     } catch (e) {
       this.setAiLoading(false);
       await message(t('editor.app.sillytavernFailed', { error: String(e) }), { kind: 'error' });
+    }
+  }
+
+  private async openStableDiffusion() {
+    if (this.currentOs === 'linux') return;
+
+    const { getAllWebviewWindows } = await import('@tauri-apps/api/webviewWindow');
+    const windows = await getAllWebviewWindows();
+    const existingWin = windows.find(w => w.label === "stable_diffusion");
+
+    if (existingWin) {
+      // ウィンドウがある＝閉じる動作へ
+      await invoke('open_stable_diffusion');
+      this.isSdStarting = false;
+      return;
+    }
+
+    // ウィンドウがないのにフラグが立っている場合、以前の起動が失敗か中断されているのでリセット
+    if (this.isSdStarting) {
+      // ここでフラグを強制リセットして再試行を許可する
+      this.isSdStarting = false;
+    }
+
+    this.isSdStarting = true;
+    this.aiThinkingMode = "Stable Diffusion Activating...";
+    this.setAiLoading(true);
+    setTimeout(() => this.setAiLoading(false), 3000);
+
+    const sdPath = await this.store.get<string>('sdWebUIPath');
+
+    // invokeはすぐに返ってくる（Rust側でスレッドを分けたため）
+    try {
+      await invoke('open_stable_diffusion', { sdPathSetting: sdPath || null });
+    } catch (e) {
+      this.isSdStarting = false;
+      await message(t('editor.app.sdFailed', { error: String(e) }), { kind: 'error' });
     }
   }
 
