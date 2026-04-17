@@ -215,6 +215,7 @@ async function init() {
         const mistralKey = await store.get<string>('mistralApiKey');
         const mistralAgent = await store.get<string>('mistralAgentID');
         const mistralModel = await store.get<string>('mistralModel');
+        const enableAgents = await store.get<boolean>('enableMistralAgents');
         const localUrl = await store.get<string>('localLlmUrl');
         const sysPrompt = await store.get<string>('aiSystemPrompt');
         const maxTokens = await store.get<number>('aiMaxTokens') || 2000;
@@ -237,7 +238,8 @@ async function init() {
             mistralModel: mistralModel || undefined,
             localUrl: localUrl || undefined,
             systemPrompt: sysPrompt || undefined,
-            maxTokens: maxTokens
+            maxTokens: maxTokens,
+            enableMistralAgents: enableAgents || false,
         };
 
         if (apiTrigger) {
@@ -464,6 +466,7 @@ function setupSettingsListener() {
         aiSettings.localModel = p.localLlmModel ?? aiSettings.localModel;
         aiSettings.systemPrompt = p.aiSystemPrompt ?? aiSettings.systemPrompt;
         aiSettings.maxTokens = p.aiMaxTokens ?? aiSettings.maxTokens;
+        aiSettings.enableMistralAgents = p.enableMistralAgents ?? aiSettings.enableMistralAgents;
 
         // 外観設定のリアルタイム反映
         const root = document.documentElement.style;

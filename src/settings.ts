@@ -110,6 +110,7 @@ async function setupSettings() {
         const enableGroq = document.querySelector('#enable-groq') as HTMLInputElement;
         const enableCohere = document.querySelector('#enable-cohere') as HTMLInputElement;
         const enableMistral = document.querySelector('#enable-mistral') as HTMLInputElement;
+        const enableMistralAgents = document.querySelector('#enable-mistral-agents') as HTMLInputElement;
         const localLlmUrlInput = document.querySelector('#local-llm-url') as HTMLInputElement;
         const aiSystemPromptInput = document.querySelector('#ai-system-prompt') as HTMLTextAreaElement;
         const imageSystemPromptInput = document.querySelector('#image-system-prompt') as HTMLTextAreaElement;
@@ -571,6 +572,7 @@ async function setupSettings() {
         enableGroq.checked = await store.get<boolean>('enableGroq') ?? false;
         enableCohere.checked = await store.get<boolean>('enableCohere') ?? false;
         enableMistral.checked = await store.get<boolean>('enableMistral') ?? false;
+        enableMistralAgents.checked = await store.get<boolean>('enableMistralAgents') ?? false;
         localLlmUrlInput.value = await store.get<string>('localLlmUrl') || 'http://127.0.0.1:1234/v1/chat/completions';
         aiSystemPromptInput.value = await store.get<string>('aiSystemPrompt') || '';
         imageSystemPromptInput.value = await store.get<string>('imageSystemPrompt') || '';
@@ -741,10 +743,13 @@ async function setupSettings() {
         });
 
         document.querySelector('#btn-select-sd')?.addEventListener('click', async () => {
+            const osType = await type();
+            const extensions = osType === 'windows' ? ['bat'] : ['sh'];
             const path = await open({
                 title: t('settings.terminal.selectDirTitle'),
-                directory: true,
-                properties: ['openDirectory']
+                filters: [
+                    { name: 'Executables', extensions: extensions },
+                ]
             });
 
             if (path && typeof path === 'string') {
@@ -888,6 +893,7 @@ async function setupSettings() {
                 const newEnableGroq = enableGroq.checked;
                 const newEnableCohere = enableCohere.checked;
                 const newEnableMistral = enableMistral.checked;
+                const newEnableMistralAgents = enableMistralAgents.checked;
                 const newLocalUrl = localLlmUrlInput.value.trim();
                 const newSystemPrompt = aiSystemPromptInput.value;
                 const newImageSystemPrompt = imageSystemPromptInput.value;
@@ -943,6 +949,7 @@ async function setupSettings() {
                 await store.set('enableGroq', newEnableGroq);
                 await store.set('enableCohere', newEnableCohere);
                 await store.set('enableMistral', newEnableMistral);
+                await store.set('enableMistralAgents', newEnableMistralAgents);
                 await store.set('localLlmUrl', newLocalUrl);
                 await store.set('aiSystemPrompt', newSystemPrompt);
                 await store.set('imageSystemPrompt', newImageSystemPrompt);
@@ -1006,6 +1013,7 @@ async function setupSettings() {
                     enableGroq: newEnableGroq,
                     enableCohere: newEnableCohere,
                     enableMistral: newEnableMistral,
+                    enableMistralAgents: newEnableMistralAgents,
                     localLlmUrl: newLocalUrl,
                     aiSystemPrompt: newSystemPrompt,
                     imageSystemPrompt: newImageSystemPrompt,

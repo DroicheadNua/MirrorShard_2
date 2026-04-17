@@ -299,6 +299,10 @@
                             <input type="checkbox" id="enable-mistral">
                             <span data-i18n="settings.ai.enableMistral">mistral を有効にする</span>
                         </label>
+                        <label for="enable-mistral-agents" class="inline">
+                            <input type="checkbox" id="enable-mistral-agents">
+                            <span data-i18n="settings.ai.enableMistralAgents">mistral agentsを有効にする</span>
+                        </label>
                     </div>
                     <div class="setting-item">
                         <label for="mistral-model" data-i18n="settings.ai.mistralModelLabel">Mistral Model</label>
@@ -377,15 +381,14 @@
                 <div class="ai-setting-group" id="sd-group">
                     <h4 data-i18n="settings.ai.sd">Stable Diffusion</h4>
                     <div class="setting-item">
-                        <label for="sd-path" data-i18n="settings.ai.sdPathLabel">Stable Diffusion Path
-                            (Folder)</label>
+                        <label for="sd-path" data-i18n="settings.ai.sdPathLabel">Stable Diffusion Path</label>
                         <input type="text" id="sd-path" style="flex-grow:1;"
                             data-i18n-placeholder="settings.ai.sdPathPlaceholder"
-                            placeholder="C:\path\to\StableDiffusion">
+                            placeholder="webui-user.bat / run.bat (win), webui.sh (others)">
                         <button id="btn-select-sd" data-i18n="settings.ai.browse">参照...</button>
                     </div>
                     <small data-i18n="settings.ai.sdNote">
-                        ※Stable Diffusionのインストール先フォルダを指定してください。
+                        ※Windowsは .bat、Mac/Linuxは .sh ファイルを選択してください。
                     </small>
                 </div>
 

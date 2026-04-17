@@ -6,13 +6,16 @@ use epub_builder::{EpubBuilder, EpubContent, ReferenceType, ZipLibrary};
 use font_kit::source::SystemSource;
 use portable_pty::{native_pty_system, CommandBuilder, MasterPty, PtySize};
 use regex::Regex;
+use serde::Serialize;
+use std::collections::HashMap;
 use std::fs;
 use std::fs::File;
 use std::io::{Read, Write};
+use std::net::TcpStream;
 use std::path::{Path, PathBuf};
 use std::process::{Child, Command, Stdio};
-use std::sync::{Arc, Mutex};
-use std::thread;
+use std::sync::Mutex;
+use std::time::Duration;
 use tauri::{AppHandle, Emitter, Manager, State};
 use tauri_plugin_cli::CliExt;
 use tauri_plugin_window_state::{Builder, StateFlags};
@@ -22,13 +25,20 @@ struct OpenCodeProcess(Mutex<Option<Child>>);
 
 struct SillyTavernProcess(Mutex<Option<Child>>);
 
-struct StableDiffusionProcess(Mutex<Option<Child>>);
-
 // PTYの入力側を保持する構造体
-struct TerminalState {
-    writer: Arc<Mutex<Option<Box<dyn Write + Send>>>>,
-    master: Arc<Mutex<Option<Box<dyn MasterPty + Send>>>>,
+struct PtySession {
+    writer: Box<dyn Write + Send>,
+    master: Box<dyn MasterPty + Send>,
 }
+
+struct TerminalState(Mutex<HashMap<String, PtySession>>);
+
+#[derive(Clone, Serialize)]
+struct TerminalPayload {
+    id: String,
+    data: String,
+}
+
 // --- FileEntry構造体の定義 ---
 #[derive(serde::Serialize, Clone)] // Cloneを追加すると後で便利
 struct FileEntry {
@@ -55,6 +65,52 @@ struct SecondInstanceFile(Mutex<Option<String>>);
 // Mac用のファイルパス保持場所
 struct MacFileBuffer(Mutex<Option<String>>);
 // --- Tauriコマンドの定義 ---
+
+#[tauri::command]
+async fn start_sd_port_monitor(app: tauri::AppHandle) {
+    std::thread::spawn(move || {
+        let addr = "127.0.0.1:7860";
+        println!("Rust: Monitoring port 7860...");
+
+        for i in 0..600 {
+            // 10分間
+            // 1. ポート疎通確認
+            if TcpStream::connect_timeout(&addr.parse().unwrap(), Duration::from_millis(500))
+                .is_ok()
+            {
+                println!("Rust: SD Port detected! Spawning window...");
+
+                // 2. 準備ができたら、Rust側から直接ウィンドウを生成
+                let app_handle = app.clone();
+                let _ = app.run_on_main_thread(move || {
+                    // 既に開いていないかチェック
+                    if app_handle
+                        .get_webview_window("stable_diffusion_ui")
+                        .is_none()
+                    {
+                        let _ = tauri::WebviewWindowBuilder::new(
+                            &app_handle,
+                            "stable_diffusion_ui",
+                            tauri::WebviewUrl::External("http://127.0.0.1:7860".parse().unwrap()),
+                        )
+                        .title("Stable Diffusion WebUI")
+                        .inner_size(1300.0, 900.0)
+                        .build();
+                    }
+                });
+                return; // 監視終了
+            }
+
+            // 3. 2秒待機
+            std::thread::sleep(Duration::from_secs(2));
+
+            // 定期的に「まだ生きてるよ」とログを出す
+            if i % 5 == 0 {
+                println!("Rust: Still waiting for SD... (attempt {})", i);
+            }
+        }
+    });
+}
 
 // 共通のツリーキルヘルパー関数
 fn kill_child_tree(child: &mut Child) {
@@ -104,14 +160,15 @@ fn resolve_node_path() -> String {
 }
 
 #[tauri::command]
-async fn open_stable_diffusion(
+async fn open_silly_tavern(
     app: tauri::AppHandle,
-    state: State<'_, StableDiffusionProcess>,
-    sd_path_setting: Option<String>,
+    state: tauri::State<'_, SillyTavernProcess>,
+    st_path_setting: Option<String>,
 ) -> Result<String, String> {
-    // --- 1. トグル処理：既にウィンドウがある場合は「閉じて、殺す」 ---
-    if let Some(win) = app.get_webview_window("stable_diffusion") {
+    // 1. トグル処理
+    if let Some(win) = app.get_webview_window("silly_tavern") {
         let _ = win.close();
+        // 以前のプロセスを殺す
         let mut lock = state.inner().0.lock().unwrap();
         if let Some(mut child) = lock.take() {
             kill_child_tree(&mut child);
@@ -119,130 +176,46 @@ async fn open_stable_diffusion(
         return Ok("closed".to_string());
     }
 
-    // --- 2. パスと実行ファイルの決定（A1111 / Forge 判定） ---
-    let sd_path = sd_path_setting.unwrap_or_default();
-    let base_path = std::path::Path::new(&sd_path);
-    if !base_path.exists() {
-        return Err("ERR_SD_PATH_NOT_FOUND".to_string());
-    }
-
-    #[cfg(target_os = "windows")]
-    let batch_file = if base_path.join("run.bat").exists() {
-        "run.bat" // Forge
-    } else {
-        "webui-user.bat" // A1111
-    };
-
-    #[cfg(not(target_os = "windows"))]
-    let sh_file = if base_path.join("webui.sh").exists() {
-        "./webui.sh"
-    } else if base_path.join("webui/webui.sh").exists() {
-        "./webui/webui.sh"
-    } else {
-        "./webui.sh"
-    };
-
-    // --- 3. ウィンドウを「即座に」作成（loading_sd.htmlを表示） ---
-    let window = tauri::WebviewWindowBuilder::new(
-        &app,
-        "stable_diffusion",
-        tauri::WebviewUrl::App("loading_sd.html".into()), // 予め用意した軽量HTML
-    )
-    .title("Stable Diffusion WebUI (Loading...)")
-    .inner_size(1300.0, 900.0)
-    .build()
-    .map_err(|e| e.to_string())?;
-
-    // --- 4. サーバー起動（ロックをかけて既存プロセスを事前掃除） ---
-    {
-        let mut lock = state.inner().0.lock().unwrap();
-
-        // 起動前に残っている古いチャイルドがいれば確実に殺す
-        if let Some(mut child) = lock.take() {
-            kill_child_tree(&mut child);
-        }
-
-        #[cfg(target_os = "windows")]
-        let mut cmd = {
-            use std::os::windows::process::CommandExt;
-            let mut c = std::process::Command::new("cmd");
-            c.args(["/C", &format!("{} --api --nowebui-assets", batch_file)]);
-            c.creation_flags(0x08000000); // 窓を出さない
-            c.env("SD_WEBUI_RESTARTING", "1"); // ブラウザ自動起動抑制
-            c
-        };
-
-        #[cfg(not(target_os = "windows"))]
-        let mut cmd = {
-            let mut c = std::process::Command::new(sh_file);
-            c.args(["--api", "--skip-python-version-check"]);
-            c
-        };
-
-        cmd.current_dir(base_path);
-
-        let child = cmd
-            .stdout(std::process::Stdio::null())
-            .stderr(std::process::Stdio::null())
-            .spawn()
-            .map_err(|e| format!("ERR_SD_SPAWN:{}", e))?;
-
-        *lock = Some(child);
-    }
-
-    // --- 5. バックグラウンドスレッドでポート監視を開始（10分タイムアウト） ---
-    let window_clone = window.clone();
-    std::thread::spawn(move || {
-        let addr = "127.0.0.1:7860";
-        // 1200回 × 500ms = 600秒 (10分)
-        for _ in 0..1200 {
-            if std::net::TcpStream::connect_timeout(
-                &addr.parse().unwrap(),
-                std::time::Duration::from_millis(500),
-            )
-            .is_ok()
-            {
-                // ポートが空いたら、ウィンドウを本番のURLに切り替え、タイトルを更新
-                let _ = window_clone.eval("window.location.href = 'http://127.0.0.1:7860'");
-                let _ = window_clone.set_title("Stable Diffusion WebUI");
-                return;
-            }
-
-            // ユーザーがロード中にウィンドウを閉じたら監視を終了
-            if window_clone.is_closable().is_err() {
-                return;
-            }
-            std::thread::sleep(std::time::Duration::from_millis(500));
-        }
-    });
-
-    Ok("opened".to_string())
-}
-
-#[tauri::command]
-async fn open_silly_tavern(
-    app: tauri::AppHandle,
-    state: State<'_, SillyTavernProcess>,
-    st_path_setting: Option<String>, // 引数でパスを受け取る
-) -> Result<(), String> {
-    // 1. ウィンドウのトグル処理
-    if let Some(win) = app.get_webview_window("silly_tavern") {
-        let _ = win.close();
-        return Ok(());
-    }
-
-    // 2. パスの決定
+    // 2. パス判定
     let st_path = st_path_setting.unwrap_or_default();
-
     if st_path.is_empty() || !std::path::Path::new(&st_path).exists() {
         return Err("ERR_ST_PATH_NOT_FOUND".to_string());
     }
 
-    // 3. サーバー起動
+    // 3. ウィンドウを「即座に」作成
+    let mut builder = tauri::WebviewWindowBuilder::new(
+        &app,
+        "silly_tavern",
+        tauri::WebviewUrl::App("loading.html".into()), // 共通ロード画面
+    )
+    .title("SillyTavern (Loading...)")
+    .inner_size(1200.0, 900.0)
+    // ★ Mac特有のIME変換確定誤爆を防ぐスクリプトをここで注入
+    .initialization_script(
+        r#"
+        let isComposing = false;
+        document.addEventListener('compositionstart', () => { isComposing = true; }, true);
+        document.addEventListener('compositionend', () => { setTimeout(() => { isComposing = false; }, 50); }, true);
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter' && isComposing) {
+                e.stopPropagation();
+                e.stopImmediatePropagation();
+            }
+        }, true);
+    "#,
+    );
+
+    // Windows/Mac用の視覚効果 (必要であれば)
+    #[cfg(target_os = "windows")]
+    {
+        builder = builder.theme(Some(tauri::Theme::Dark));
+    }
+
+    let window = builder.build().map_err(|e| e.to_string())?;
+
+    // 4. サーバープロセス起動
     {
         let mut lock = state.inner().0.lock().unwrap();
-
-        // 以前のプロセスが残っていれば念のため殺しておく
         if let Some(mut child) = lock.take() {
             kill_child_tree(&mut child);
         }
@@ -255,92 +228,48 @@ async fn open_silly_tavern(
             c.creation_flags(0x08000000);
             c
         };
-
         #[cfg(not(target_os = "windows"))]
         let mut cmd = {
-            let node_exe = resolve_node_path();
-            println!("Mac: node実体 ({}) を使って起動します", node_exe);
-
-            let mut c = std::process::Command::new(node_exe);
+            let mut c = std::process::Command::new(resolve_node_path());
             c.arg("server.js");
             c
         };
 
         cmd.current_dir(&st_path);
-
+        // 出力はnullに捨ててバッファ詰まりを防止
         let child = cmd
             .stdout(std::process::Stdio::null())
             .stderr(std::process::Stdio::null())
             .spawn()
             .map_err(|e| format!("ERR_ST_SPAWN:{}", e))?;
-
         *lock = Some(child);
+    }
 
-        // 4. ポート監視 (SillyTavernの標準 8000 番を待機)
+    // 5. バックグラウンド監視
+    let window_clone = window.clone();
+    std::thread::spawn(move || {
         let addr = "127.0.0.1:8000";
-        let mut ready = false;
-        for _ in 0..100 {
+        for _ in 0..150 {
+            // 約30秒
             if std::net::TcpStream::connect_timeout(
                 &addr.parse().unwrap(),
-                std::time::Duration::from_millis(100),
+                std::time::Duration::from_millis(200),
             )
             .is_ok()
             {
-                ready = true;
-                break;
+                // 準備ができたらリダイレクト
+                let _ = window_clone.eval("window.location.href = 'http://127.0.0.1:8000'");
+                let _ = window_clone.set_title("SillyTavern");
+                return;
             }
+            if window_clone.is_closable().is_err() {
+                return;
+            } // 窓が閉じられたら監視終了
             std::thread::sleep(std::time::Duration::from_millis(200));
         }
+    });
 
-        if !ready {
-            return Err("ERR_ST_STARTUP_TIMEOUT".to_string());
-        }
-    }
-
-    // 5. ウィンドウ生成
-    let builder = tauri::WebviewWindowBuilder::new(
-        &app,
-        "silly_tavern",
-        tauri::WebviewUrl::External("http://127.0.0.1:8000".parse().unwrap()),
-    )
-    .title("SillyTavern")
-    .inner_size(1200.0, 900.0)
-    // Mac特有のIME変換確定(Enter)の誤爆を防ぐJSを注入
-    .initialization_script(
-        r#"
-        let isComposing = false;
-        
-        // 変換開始を検知
-        document.addEventListener('compositionstart', () => { 
-            isComposing = true; 
-        }, true);
-        
-        // 変換終了を検知（WebViewのラグを吸収するため、フラグ解除をわずかに遅らせる）
-        document.addEventListener('compositionend', () => { 
-            setTimeout(() => { isComposing = false; }, 50); 
-        }, true);
-        
-        // キーボード入力をSillyTavernが受け取る「前」に横取りする（capture: true）
-        document.addEventListener('keydown', (e) => {
-            // 変換中（または変換直後）のEnterキーなら、イベントを握り潰す
-            if (e.key === 'Enter' && isComposing) {
-                e.stopPropagation();
-                e.stopImmediatePropagation();
-            }
-        }, true);
-    "#,
-    )
-    .decorations(true);
-
-    let window = builder.build().map_err(|e| e.to_string())?;
-    #[cfg(target_os = "windows")]
-    {
-        use tauri::Theme;
-        let _ = window.set_theme(Some(Theme::Dark));
-    }
-    window.show().unwrap();
-
-    Ok(())
+    Ok("opened".to_string())
 }
 
 #[tauri::command]
@@ -461,19 +390,42 @@ fn toggle_devtools(window: tauri::WebviewWindow) {
 
 // 1. Terminalを開くコマンド
 #[tauri::command]
-async fn open_terminal_window(app: AppHandle) {
-    if let Some(window) = app.get_webview_window("terminal") {
-        // すでに存在する場合は閉じる。
-        // close() の結果を待たずに、既存のインスタンスを葬る
-        let _ = window.close();
+async fn open_terminal_window(app: tauri::AppHandle, id: Option<String>) -> Result<(), String> {
+    let input_id = id.unwrap_or_else(|| "main".to_string());
+
+    // 1. 最終的な「ユニークなセッションID」を決定する
+    let session_id = if input_id == "sd" {
+        "terminal_sd".to_string()
     } else {
-        // ウィンドウ作成（設定は他と同じ）
-        let builder = tauri::WebviewWindowBuilder::new(
-            &app,
-            "terminal",
-            tauri::WebviewUrl::App("terminal.html".into()),
+        // 通常のターミナルの場合は、呼び出すたびに完全に固有のIDを作る
+        format!(
+            "terminal_main_{}",
+            std::time::SystemTime::now()
+                .duration_since(std::time::UNIX_EPOCH)
+                .unwrap()
+                .as_millis()
         )
-        .title("")
+    };
+
+    // 2. ラベルとセッションIDを同一にする
+    let label = &session_id;
+
+    // SD用(固定ID)の場合のみ、既に開いていればフォーカス
+    if input_id == "sd" {
+        if let Some(win) = app.get_webview_window(label) {
+            let _ = win.set_focus();
+            return Ok(());
+        }
+    }
+
+    // 3. URLパラメータにも「ユニークなID」を渡す
+    let url = format!("terminal.html?id={}", session_id);
+    let builder = tauri::WebviewWindowBuilder::new(&app, label, tauri::WebviewUrl::App(url.into()))
+        .title(if input_id == "sd" {
+            "Stable Diffusion Console"
+        } else {
+            "Terminal"
+        })
         .inner_size(640.0, 480.0)
         .min_inner_size(640.0, 480.0)
         .resizable(true)
@@ -482,19 +434,20 @@ async fn open_terminal_window(app: AppHandle) {
         .visible(false)
         .devtools(false);
 
-        #[cfg(any(windows, target_os = "macos"))]
-        let builder = builder.effects(tauri::utils::config::WindowEffectsConfig {
-            effects: vec![],
-            state: None,
-            radius: Some(24.0),
-            color: None,
-        });
+    #[cfg(any(windows, target_os = "macos"))]
+    let builder = builder.effects(tauri::utils::config::WindowEffectsConfig {
+        effects: vec![],
+        state: None,
+        radius: Some(24.0),
+        color: None,
+    });
 
-        #[cfg(debug_assertions)]
-        let _ = builder.devtools(true).build();
-        #[cfg(not(debug_assertions))]
-        let _ = builder.build();
-    }
+    #[cfg(debug_assertions)]
+    let _ = builder.devtools(true).build().map_err(|e| e.to_string())?;
+    #[cfg(not(debug_assertions))]
+    let _ = builder.build().map_err(|e| e.to_string())?;
+
+    Ok(())
 }
 
 // 2. PTY初期化 (terminal.ts から呼ばれる)
@@ -502,6 +455,7 @@ async fn open_terminal_window(app: AppHandle) {
 fn init_pty(
     app: AppHandle,
     state: State<TerminalState>,
+    id: String,
     rows: u16,
     cols: u16,
     shell_path: Option<String>,
@@ -509,12 +463,8 @@ fn init_pty(
 ) -> Result<(), String> {
     // 新しい PTY を作る前に、既存の状態を確実にクリアする
     {
-        let mut w = state.writer.lock().unwrap();
-        *w = None;
-    }
-    {
-        let mut m = state.master.lock().unwrap();
-        *m = None;
+        let mut sessions = state.0.lock().unwrap();
+        sessions.remove(&id);
     }
     let pty_system = native_pty_system();
 
@@ -528,17 +478,15 @@ fn init_pty(
         .map_err(|e| e.to_string())?;
 
     // シェルの決定
-    let cmd = if let Some(path) = shell_path {
-        if path.is_empty() {
-            default_shell()
-        } else {
-            path
-        }
+    let actual_shell = if id == "terminal_sd" && cfg!(target_os = "windows") {
+        println!("Forcing cmd.exe for SD session");
+        "cmd.exe".to_string()
     } else {
-        default_shell()
+        // 通常はユーザー設定（shell_path）を使う
+        shell_path.unwrap_or_else(|| default_shell())
     };
 
-    let mut cmd_builder = CommandBuilder::new(cmd);
+    let mut cmd_builder = CommandBuilder::new(actual_shell);
 
     // CWDの設定
     if let Some(dir) = cwd {
@@ -563,47 +511,49 @@ fn init_pty(
     // take_writer は &mut self を取るので、先に reader をクローンするか、順序に注意
     let writer = pair.master.take_writer().map_err(|e| e.to_string())?;
 
-    // 2. Readerの取得 (★修正: SlaveではなくMasterから取得)
+    // 2. Readerの取得 (SlaveではなくMasterから取得)
     let mut reader = pair.master.try_clone_reader().map_err(|e| e.to_string())?;
 
-    // ----------------
-
-    // Stateに保存
-    *state.writer.lock().unwrap() = Some(writer);
-    *state.master.lock().unwrap() = Some(pair.master);
+    // セッションの保存
+    {
+        let mut sessions = state.0.lock().unwrap();
+        sessions.insert(
+            id.clone(),
+            PtySession {
+                writer,
+                master: pair.master,
+            },
+        );
+    }
 
     // 読み取りスレッド開始
     let app_clone = app.clone();
-
-    thread::spawn(move || {
+    let id_for_read = id.clone();
+    std::thread::spawn(move || {
         let mut buffer = [0u8; 1024];
         loop {
             match reader.read(&mut buffer) {
                 Ok(n) if n > 0 => {
                     let output = String::from_utf8_lossy(&buffer[..n]).to_string();
-                    let _ = app_clone.emit("terminal-data", output);
+                    let _ = app_clone.emit(
+                        "terminal-data",
+                        TerminalPayload {
+                            id: id_for_read.clone(),
+                            data: output,
+                        },
+                    );
                 }
-                _ => {
-                    // 自動で閉じようとせず、単にループを抜けてスレッドを終了させる
-                    println!("PTY Reader thread finished.");
-                    break;
-                }
+                _ => break,
             }
         }
     });
 
     // プロセス終了監視スレッド
     let app_clone_exit = app.clone();
-    thread::spawn(move || {
-        // child.wait() はプロセスが終了するまでここでブロック（待機）する
+    let id_for_exit = id.clone();
+    std::thread::spawn(move || {
         let _ = child.wait();
-
-        println!("Shell process exited!");
-
-        // 終了したらフロントエンドに通知してウィンドウを閉じさせる
-        if let Some(window) = app_clone_exit.get_webview_window("terminal") {
-            let _ = window.emit("terminal-exit", ());
-        }
+        let _ = app_clone_exit.emit("terminal-exit", id_for_exit);
     });
 
     Ok(())
@@ -611,17 +561,19 @@ fn init_pty(
 
 // 3. 入力送信
 #[tauri::command]
-fn write_pty(state: State<TerminalState>, data: String) {
-    if let Some(writer) = state.writer.lock().unwrap().as_mut() {
-        let _ = write!(writer, "{}", data);
+fn write_pty(state: State<TerminalState>, id: String, data: String) {
+    let mut sessions = state.0.lock().unwrap();
+    if let Some(session) = sessions.get_mut(&id) {
+        let _ = write!(session.writer, "{}", data);
     }
 }
 
 // 4. リサイズ
 #[tauri::command]
-fn resize_pty(state: State<TerminalState>, rows: u16, cols: u16) {
-    if let Some(master) = state.master.lock().unwrap().as_mut() {
-        let _ = master.resize(PtySize {
+fn resize_pty(state: State<TerminalState>, id: String, rows: u16, cols: u16) {
+    let mut sessions = state.0.lock().unwrap();
+    if let Some(session) = sessions.get_mut(&id) {
+        let _ = session.master.resize(PtySize {
             rows,
             cols,
             pixel_width: 0,
@@ -1505,13 +1457,10 @@ pub fn run() {
         .manage(MacFileBuffer(Mutex::new(None)))
         .manage(InitialFile(Mutex::new(None))) // 最初の起動用
         .manage(SecondInstanceFile(Mutex::new(None))) // 2回目以降の起動用
-        .manage(TerminalState {
-            writer: Arc::new(Mutex::new(None)),
-            master: Arc::new(Mutex::new(None)),
-        })
+        // TerminalStateの初期化 (HashMap)
+        .manage(TerminalState(Mutex::new(HashMap::new())))
         .manage(OpenCodeProcess(Mutex::new(None)))
         .manage(SillyTavernProcess(Mutex::new(None)))
-        .manage(StableDiffusionProcess(Mutex::new(None)))
         .setup(|app| {
             // ---  起動時引数を解析し、状態に書き込む ---
             if let Ok(matches) = app.cli().matches() {
@@ -1593,9 +1542,9 @@ pub fn run() {
             force_save_chat_log,
             open_opencode,
             open_silly_tavern,
-            open_stable_diffusion,
             get_app_language,
             get_window_title,
+            start_sd_port_monitor,
         ])
         .on_window_event(|window, event| match event {
             // 1. メインウィンドウの終了確認
@@ -1625,11 +1574,12 @@ pub fn run() {
                             }
                         }
                     }
-                    "stable_diffusion" => {
-                        let state = window.state::<StableDiffusionProcess>();
-                        if let Ok(mut lock) = state.inner().0.lock() {
-                            if let Some(mut child) = lock.take() {
-                                kill_child_tree(&mut child);
+                    _ if label.starts_with("terminal_") => {
+                        if let Some(state) = window.try_state::<TerminalState>() {
+                            if let Ok(mut sessions) = state.0.lock() {
+                                // ラベル名 = HashMapのキー なので、そのまま消す
+                                sessions.remove(label);
+                                println!("PTY session removed for: {}", label);
                             }
                         }
                     }
@@ -1653,14 +1603,10 @@ pub fn run() {
                         kill_child_tree(&mut child);
                     }
                 }
-                if let Ok(mut lock) = app_handle
-                    .state::<StableDiffusionProcess>()
-                    .inner()
-                    .0
-                    .lock()
-                {
-                    if let Some(mut child) = lock.take() {
-                        kill_child_tree(&mut child);
+                // ターミナルセッションを一掃
+                if let Some(state) = app_handle.try_state::<TerminalState>() {
+                    if let Ok(mut sessions) = state.0.lock() {
+                        sessions.clear(); // HashMapを空にすれば全セッションがDropされる
                     }
                 }
             }

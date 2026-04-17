@@ -15,19 +15,21 @@ async function init() {
 
     const store = await Store.load('.settings.dat');
     const shellPath = await store.get<string>('shellPath');
+    const params = new URLSearchParams(window.location.search);
+    const sessionId = params.get('id') || 'main';
 
     // ★ CWDの決定ロジック
-    // 1. "Open Here" で指定された一時パス
-    let cwd = await store.get<string>('terminalTempCwd');
-
-    // 2. もし一時パスがなければ、設定画面で指定されたデフォルトCWD (あれば)
-    if (!cwd) {
-        cwd = await store.get<string>('terminalDefaultCwd');
+    let cwd: string | null = null;
+    if (sessionId === 'terminal_sd') {
+        // main.ts が保存した「SDスクリプトの親フォルダ」を取得
+        cwd = await store.get<string>('terminalTempCwd_sd') || null;
+    } else {
+        cwd = (await store.get<string>('terminalTempCwd')) || (await store.get<string>('terminalDefaultCwd')) || null;
     }
 
-    console.log("Terminal CWD:", cwd);
+    console.log(`[${sessionId}] Terminal CWD:`, cwd);
 
-    // 一時パスは使い終わったら消しておく（次回通常起動時に影響させないため）
+    // 一時パスの掃除
     if (await store.get('terminalTempCwd')) {
         await store.set('terminalTempCwd', null);
         await store.save();
@@ -93,7 +95,7 @@ async function init() {
             // xtermが計算した行・列をPTYに同期させる
             // これをしないと、xtermは狭くてもPTYが広いと思って文字を送り続け、表示が崩れます
             if (term.cols > 0 && term.rows > 0) {
-                invoke('resize_pty', { rows: term.rows, cols: term.cols });
+                invoke('resize_pty', { id: sessionId, rows: term.rows, cols: term.cols });
             }
         } catch (e) {
             console.error("Fit error:", e);
@@ -105,18 +107,21 @@ async function init() {
     // 2. PTY初期化 (Rustへ)
     try {
         await invoke('init_pty', {
+            id: sessionId,
             rows: term.rows,
             cols: term.cols,
             shellPath: shellPath || "",
-            cwd: cwd || null
+            cwd: cwd
         });
     } catch (e) {
         term.write('\r\n\x1b[31mFailed to initialize PTY: ' + e + '\x1b[0m\r\n');
     }
 
     // 3. データ受信 (Rust -> xterm)
-    await listen<string>('terminal-data', (event) => {
-        term.write(event.payload);
+    await listen<{ id: string, data: string }>('terminal-data', (event) => {
+        if (event.payload.id === sessionId) {
+            term.write(event.payload.data);
+        }
     });
 
     await listen('settings-changed', (event: any) => {
@@ -138,14 +143,20 @@ async function init() {
     });
 
     // シェル終了通知を受け取る
-    await listen('terminal-exit', () => {
-        console.log("Shell exited, closing window...");
-        getCurrentWindow().close();
+    await listen<string>('terminal-exit', (event) => {
+        const exitedId = event.payload;
+        console.log(`terminal-exit received for: ${exitedId}`);
+
+        // 届いたIDが自分の sessionId と一致する場合のみ、自分を閉じる
+        if (exitedId === sessionId) {
+            console.log("This is my session. Closing window...");
+            getCurrentWindow().close();
+        }
     });
 
     // 4. データ送信 (xterm -> Rust)
     term.onData((data) => {
-        invoke('write_pty', { data });
+        invoke('write_pty', { id: sessionId, data });
     });
 
     // 5. リサイズ同期
@@ -153,6 +164,31 @@ async function init() {
         setTimeout(() => {
             fitAndResize();
         }, 50);
+    });
+
+    // 予約コマンドがあれば実行
+    const storeKey = `terminalAutoRunCommand_${sessionId}`;
+    const autoRunCmd = await store.get<string>(storeKey);
+
+    if (autoRunCmd) {
+        console.log(`Auto-running command for ${sessionId}: ${autoRunCmd}`);
+
+        // 使い終わった予約を消去
+        await store.set(storeKey, null);
+        await store.save();
+
+        // PTYの初期化が完全に完了してから文字を送る
+        setTimeout(() => {
+            invoke('write_pty', { id: sessionId, data: `${autoRunCmd}\r\n` });
+        }, 2000); // 2秒待機（確実性を高める）
+    }
+
+    document.getElementById('btn-minimize')?.addEventListener('click', () => {
+        getCurrentWindow().minimize();
+    });
+
+    document.getElementById('btn-maximize')?.addEventListener('click', () => {
+        getCurrentWindow().toggleMaximize(); // 最大化/元に戻すをトグル
     });
 
     document.getElementById('btn-close')?.addEventListener('click', () => {
@@ -180,7 +216,7 @@ async function init() {
                     text: '貼り付け',
                     action: async () => {
                         const text = await readText();
-                        if (text) invoke('write_pty', { data: text });
+                        if (text) invoke('write_pty', { id: sessionId, data: text });
                     }
                 }),
                 await PredefinedMenuItem.new({ item: 'Separator' }),

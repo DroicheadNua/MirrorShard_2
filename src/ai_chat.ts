@@ -17,6 +17,7 @@ export interface ChatSettings {
     localModel?: string;
     systemPrompt?: string;
     maxTokens?: number;
+    enableMistralAgents?: boolean;
 }
 
 export class AiChat {
@@ -75,19 +76,25 @@ export class AiChat {
             let url = "";
             let apiKey = "";
             let model = "";
+            let targetAgentId: string | undefined = undefined;
 
             if (apiType === 'groq') {
                 url = "https://api.groq.com/openai/v1/chat/completions";
                 apiKey = this.currentSettings.groqApiKey || "";
                 model = this.currentSettings.groqModel || "llama-3.3-70b-versatile";
             } else if (apiType === 'mistral') {
-                const isAgent = !!this.currentSettings.mistralAgentID;
+                // スイッチがON かつ IDがある場合のみ Agent モード判定
+                const isAgentActive = this.currentSettings.enableMistralAgents && !!this.currentSettings.mistralAgentID;
                 // Agent IDがあれば専用エンドポイントへ、なければ通常エンドポイントへ
-                url = isAgent
+                url = isAgentActive
                     ? "https://api.mistral.ai/v1/agents/completions"
                     : "https://api.mistral.ai/v1/chat/completions";
                 apiKey = this.currentSettings.mistralApiKey || "";
                 model = this.currentSettings.mistralModel || "mistral-small-latest";
+                // アクティブな時だけIDをセットする
+                if (isAgentActive) {
+                    targetAgentId = this.currentSettings.mistralAgentID;
+                }
             } else if (apiType === 'local') {
                 url = this.currentSettings.localUrl || "http://127.0.0.1:1234/v1/chat/completions";
                 apiKey = "local";
@@ -99,7 +106,7 @@ export class AiChat {
                 return;
             }
 
-            await this.sendToOpenAICompatibleStream(url, apiKey, model, history, this.currentSettings.mistralAgentID);
+            await this.sendToOpenAICompatibleStream(url, apiKey, model, history, targetAgentId);
         }
     }
 

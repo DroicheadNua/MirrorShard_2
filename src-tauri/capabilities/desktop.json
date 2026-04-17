@@ -6,6 +6,9 @@
     "linux"
   ],
   "windows": [
+    "main",
+    "terminal_sd",
+    "stable_diffusion_ui",
     "*"
   ],
   "permissions": [

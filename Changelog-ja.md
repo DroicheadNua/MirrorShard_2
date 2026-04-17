@@ -10,13 +10,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added (新機能)  
 - Stable Diffusion連携機能（Ctrl+Shift+W）を追加。A1111、Forge、Forge Neoなどに対応（ComfyUIは非対応）  
+ - Linuxは非対応  
 - AIチャットウィンドウに画像生成機能を追加  
  - ※Mistral使用時のみ（要Agent ID）  
  - ※無課金だと月5枚程度。実用には課金が必要  
 - メインエディタに画像生成機能を追加  
  - 選択範囲のテキストをAIに送り、それを元に画像を生成する機能  
+ - ※Mistral使用時のみ  
+- 内蔵ターミナルに最小化ボタンと最大化ボタンを追加  
 
 ### Changed (変更点)    
+- ターミナルを同時に複数起動できるようにした  
+- SillyTavernの起動プロセスを改善  
  
 
 ### Fixed (修正点)   

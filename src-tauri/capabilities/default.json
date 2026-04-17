@@ -9,17 +9,9 @@
   "description": "Capability for the main window",
   "windows": [
     "main",
-    "settings",
-    "preview",
-    "export",
-    "ai_chat",
-    "shortcut",
-    "markdown",
-    "terminal",
-    "idea_processor",
-    "opencode",
-    "stable_diffusion",
-    "loading_sd"
+    "terminal_sd",
+    "stable_diffusion_ui",
+    "*"
   ],
   "permissions": [
     "core:default",

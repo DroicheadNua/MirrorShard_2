@@ -168,7 +168,6 @@ class App {
   private isAiProcessing = false; // AI動作中フラグ
   private aiAbortController: AbortController | null = null;// 通信中断用
   private aiThinkingMode = "";
-  private isSdStarting = false;
 
   private isCodeMode = false;
   private currentCodeLanguage = 'html';
@@ -1280,8 +1279,9 @@ ${instructionFiller}
 
     const selectedText = this.editorView.state.sliceDoc(selection.from, selection.to);
     const mistralAgent = await this.store.get<string>('mistralAgentID');
+    const enableAgents = await this.store.get<boolean>('enableMistralAgents') ?? false;
 
-    if (this.mainAiApi !== 'mistral' || !mistralAgent) {
+    if (this.mainAiApi !== 'mistral' || !mistralAgent || !enableAgents) {
       await message(t('editor.ai.mistralAgentRequired'), { kind: 'warning' });
       return;
     }
@@ -3995,25 +3995,18 @@ ${instructionFiller}
   }
 
   private async openSillyTavern() {
-    // Linuxでは使用不可に
     if (this.currentOs === 'linux') return;
 
-    // AI起動中のオーバーレイを流用して「起動中」を表示
+    // 起動中なら一瞬だけオーバーレイを出して、あとは Rust に任せる
     this.aiThinkingMode = "SillyTavern Activating...";
     this.setAiLoading(true);
+    // 2秒でオーバーレイを消して操作可能にする
+    setTimeout(() => this.setAiLoading(false), 2000);
 
     try {
       const stPath = await this.store.get<string>('sillyTavernPath');
-      const result = await invoke<string>('open_silly_tavern', {
-        stPathSetting: stPath || null
-      });
-
-      if (result === "opened") {
-        // サーバーがポートを開くまでの時間を考慮して、少し長めにオーバーレイを出す
-        setTimeout(() => this.setAiLoading(false), 3000);
-      } else {
-        this.setAiLoading(false);
-      }
+      await invoke('open_silly_tavern', { stPathSetting: stPath || null });
+      // 結果待ちは不要（Rust側でスレッドが回るため）
     } catch (e) {
       this.setAiLoading(false);
       await message(t('editor.app.sillytavernFailed', { error: String(e) }), { kind: 'error' });
@@ -4023,37 +4016,27 @@ ${instructionFiller}
   private async openStableDiffusion() {
     if (this.currentOs === 'linux') return;
 
-    const { getAllWebviewWindows } = await import('@tauri-apps/api/webviewWindow');
-    const windows = await getAllWebviewWindows();
-    const existingWin = windows.find(w => w.label === "stable_diffusion");
+    const fullPath = await this.store.get<string>('sdWebUIPath');
+    if (!fullPath) return;
 
-    if (existingWin) {
-      // ウィンドウがある＝閉じる動作へ
-      await invoke('open_stable_diffusion');
-      this.isSdStarting = false;
-      return;
-    }
+    // --- コマンド準備 (前と同じ) ---
+    const separator = fullPath.includes('/') ? '/' : '\\';
+    const lastIndex = fullPath.lastIndexOf(separator);
+    const sdDir = fullPath.substring(0, lastIndex);
+    const scriptFile = fullPath.substring(lastIndex + 1);
 
-    // ウィンドウがないのにフラグが立っている場合、以前の起動が失敗か中断されているのでリセット
-    if (this.isSdStarting) {
-      // ここでフラグを強制リセットして再試行を許可する
-      this.isSdStarting = false;
-    }
+    const runCmd = `set SD_WEBUI_RESTARTING=1\rcall "${scriptFile}" --api`;
 
-    this.isSdStarting = true;
-    this.aiThinkingMode = "Stable Diffusion Activating...";
-    this.setAiLoading(true);
-    setTimeout(() => this.setAiLoading(false), 3000);
+    // Store保存
+    await this.store.set('terminalTempCwd_sd', sdDir);
+    await this.store.set(`terminalAutoRunCommand_terminal_sd`, runCmd);
+    await this.store.save();
 
-    const sdPath = await this.store.get<string>('sdWebUIPath');
+    // 1. ターミナル起動
+    await invoke('open_terminal_window', { id: 'sd' });
 
-    // invokeはすぐに返ってくる（Rust側でスレッドを分けたため）
-    try {
-      await invoke('open_stable_diffusion', { sdPathSetting: sdPath || null });
-    } catch (e) {
-      this.isSdStarting = false;
-      await message(t('editor.app.sdFailed', { error: String(e) }), { kind: 'error' });
-    }
+    // 2. Rust側の監視スレッドを開始 (投げっぱなしでOK)
+    invoke('start_sd_port_monitor');
   }
 
   /**
