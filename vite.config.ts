@@ -40,7 +40,7 @@ export default defineConfig(async () => ({
         markdown: resolve(__dirname, "markdown.html"),
         terminal: resolve(__dirname, "terminal.html"),
         idea_processor: resolve(__dirname, "idea_processor.html"),
-        loading_sd: resolve(__dirname, "loading_sd.html"),
+        loading_sd: resolve(__dirname, "loading.html"),
       }
     }
   },
