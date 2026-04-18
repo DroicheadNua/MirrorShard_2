@@ -4019,24 +4019,16 @@ ${instructionFiller}
     const fullPath = await this.store.get<string>('sdWebUIPath');
     if (!fullPath) return;
 
-    // --- コマンド準備 (前と同じ) ---
+    // パスからディレクトリだけを抽出（念のため）
     const separator = fullPath.includes('/') ? '/' : '\\';
-    const lastIndex = fullPath.lastIndexOf(separator);
-    const sdDir = fullPath.substring(0, lastIndex);
-    const scriptFile = fullPath.substring(lastIndex + 1);
+    const sdDir = fullPath.substring(0, fullPath.lastIndexOf(separator));
 
-    const runCmd = `set SD_WEBUI_RESTARTING=1\rcall "${scriptFile}" --api`;
-
-    // Store保存
-    await this.store.set('terminalTempCwd_sd', sdDir);
-    await this.store.set(`terminalAutoRunCommand_terminal_sd`, runCmd);
-    await this.store.save();
-
-    // 1. ターミナル起動
-    await invoke('open_terminal_window', { id: 'sd' });
-
-    // 2. Rust側の監視スレッドを開始 (投げっぱなしでOK)
-    invoke('start_sd_port_monitor');
+    try {
+      // Rust にパスを投げて終わり
+      await invoke('launch_stable_diffusion_external', { sdPath: sdDir });
+    } catch (e) {
+      console.error(e);
+    }
   }
 
   /**

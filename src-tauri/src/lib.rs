@@ -11,11 +11,9 @@ use std::collections::HashMap;
 use std::fs;
 use std::fs::File;
 use std::io::{Read, Write};
-use std::net::TcpStream;
 use std::path::{Path, PathBuf};
 use std::process::{Child, Command, Stdio};
 use std::sync::Mutex;
-use std::time::Duration;
 use tauri::{AppHandle, Emitter, Manager, State};
 use tauri_plugin_cli::CliExt;
 use tauri_plugin_window_state::{Builder, StateFlags};
@@ -67,49 +65,62 @@ struct MacFileBuffer(Mutex<Option<String>>);
 // --- Tauriコマンドの定義 ---
 
 #[tauri::command]
-async fn start_sd_port_monitor(app: tauri::AppHandle) {
-    std::thread::spawn(move || {
-        let addr = "127.0.0.1:7860";
-        println!("Rust: Monitoring port 7860...");
+fn launch_stable_diffusion_external(sd_path: String) -> Result<(), String> {
+    let base_path = std::path::Path::new(&sd_path);
+    if !base_path.exists() {
+        return Err("ERR_SD_PATH_NOT_FOUND".to_string());
+    }
 
-        for i in 0..600 {
-            // 10分間
-            // 1. ポート疎通確認
-            if TcpStream::connect_timeout(&addr.parse().unwrap(), Duration::from_millis(500))
-                .is_ok()
-            {
-                println!("Rust: SD Port detected! Spawning window...");
+    #[cfg(target_os = "windows")]
+    {
+        let is_forge = base_path.join("run.bat").exists();
+        let batch_file = if is_forge {
+            "run.bat"
+        } else {
+            "webui-user.bat"
+        };
 
-                // 2. 準備ができたら、Rust側から直接ウィンドウを生成
-                let app_handle = app.clone();
-                let _ = app.run_on_main_thread(move || {
-                    // 既に開いていないかチェック
-                    if app_handle
-                        .get_webview_window("stable_diffusion_ui")
-                        .is_none()
-                    {
-                        let _ = tauri::WebviewWindowBuilder::new(
-                            &app_handle,
-                            "stable_diffusion_ui",
-                            tauri::WebviewUrl::External("http://127.0.0.1:7860".parse().unwrap()),
-                        )
-                        .title("Stable Diffusion WebUI")
-                        .inner_size(1300.0, 900.0)
-                        .build();
-                    }
-                });
-                return; // 監視終了
-            }
+        let wrapper_name = "mirrorshard_launcher.bat";
+        let wrapper_path = base_path.join(wrapper_name);
 
-            // 3. 2秒待機
-            std::thread::sleep(Duration::from_secs(2));
+        // set SD_WEBUI_RESTARTING=1 を削除
+        let bat_content = format!(
+            "@echo off\r\n\
+             title Stable Diffusion (MirrorShard)\r\n\
+             cd /d \"{}\"\r\n\
+             call {} --api\r\n\
+             echo.\r\n\
+             echo [MirrorShard] Stable Diffusion process ended.\r\n\
+             pause",
+            base_path.display(),
+            batch_file
+        );
 
-            // 定期的に「まだ生きてるよ」とログを出す
-            if i % 5 == 0 {
-                println!("Rust: Still waiting for SD... (attempt {})", i);
-            }
-        }
-    });
+        std::fs::write(&wrapper_path, bat_content)
+            .map_err(|e| format!("Failed to create launcher: {}", e))?;
+
+        std::process::Command::new("explorer.exe")
+            .arg(wrapper_path.to_str().unwrap())
+            .spawn()
+            .map_err(|e| format!("Failed to launch SD via explorer: {}", e))?;
+    }
+
+    #[cfg(not(target_os = "windows"))]
+    {
+        let sh_file = if base_path.join("webui.sh").exists() {
+            "./webui.sh"
+        } else {
+            "./webui/webui.sh"
+        };
+        std::process::Command::new(sh_file)
+            // Mac/Linux もブラウザが開くように --nowebui などがあれば削除して --api のみに
+            .arg("--api")
+            .current_dir(base_path)
+            .spawn()
+            .map_err(|e| format!("Failed to launch SD: {}", e))?;
+    }
+
+    Ok(())
 }
 
 // 共通のツリーキルヘルパー関数
@@ -222,10 +233,10 @@ async fn open_silly_tavern(
 
         #[cfg(target_os = "windows")]
         let mut cmd = {
-            use std::os::windows::process::CommandExt;
+            // use std::os::windows::process::CommandExt;
             let mut c = std::process::Command::new("cmd");
             c.args(["/C", "node server.js"]);
-            c.creation_flags(0x08000000);
+            // c.creation_flags(0x08000000);
             c
         };
         #[cfg(not(target_os = "windows"))]
@@ -238,8 +249,8 @@ async fn open_silly_tavern(
         cmd.current_dir(&st_path);
         // 出力はnullに捨ててバッファ詰まりを防止
         let child = cmd
-            .stdout(std::process::Stdio::null())
-            .stderr(std::process::Stdio::null())
+            // .stdout(std::process::Stdio::null())
+            // .stderr(std::process::Stdio::null())
             .spawn()
             .map_err(|e| format!("ERR_ST_SPAWN:{}", e))?;
         *lock = Some(child);
@@ -488,18 +499,38 @@ fn init_pty(
 
     let mut cmd_builder = CommandBuilder::new(actual_shell);
 
+    // システムの環境変数をすべて引き継ぐ
+    for (key, val) in std::env::vars() {
+        cmd_builder.env(key, val);
+    }
+
+    // Windows 向けの「生命維持」用変数の強制上書き
+    if cfg!(target_os = "windows") {
+        // uv が外部プロセスを起動するのに必須のパスを確実に含める
+        let system_root = std::env::var("SystemRoot").unwrap_or_else(|_| "C:\\Windows".to_string());
+        let system_32 = format!("{}\\System32", system_root);
+
+        cmd_builder.env("SystemRoot", &system_root);
+        cmd_builder.env("COMSPEC", format!("{}\\cmd.exe", system_32));
+
+        // PATH に System32 が含まれていない場合、uv は os error 2 を吐く
+        if let Ok(current_path) = std::env::var("PATH") {
+            if !current_path.contains(&system_32) {
+                cmd_builder.env("PATH", format!("{};{}", current_path, system_32));
+            }
+        }
+
+        // 文字化け対策（TERMは cygwin より xterm の方が現代的なツールと相性が良い場合がある）
+        cmd_builder.env("TERM", "xterm");
+    } else {
+        cmd_builder.env("TERM", "xterm-256color");
+    }
+
     // CWDの設定
     if let Some(dir) = cwd {
         if !dir.is_empty() {
             cmd_builder.cwd(dir);
         }
-    }
-
-    // 環境変数の設定 (文字化け対策などで重要)
-    if cfg!(target_os = "windows") {
-        cmd_builder.env("TERM", "cygwin");
-    } else {
-        cmd_builder.env("TERM", "xterm-256color");
     }
 
     let mut child = pair
@@ -1544,7 +1575,7 @@ pub fn run() {
             open_silly_tavern,
             get_app_language,
             get_window_title,
-            start_sd_port_monitor,
+            launch_stable_diffusion_external,
         ])
         .on_window_event(|window, event| match event {
             // 1. メインウィンドウの終了確認
@@ -1608,6 +1639,20 @@ pub fn run() {
                     if let Ok(mut sessions) = state.0.lock() {
                         sessions.clear(); // HashMapを空にすれば全セッションがDropされる
                     }
+                }
+                #[cfg(target_os = "windows")]
+                {
+                    // ウィンドウタイトルを狙い撃ちして、SD のコンソールを強制終了させる
+                    use std::os::windows::process::CommandExt;
+                    let _ = std::process::Command::new("taskkill")
+                        .args([
+                            "/F",
+                            "/T",
+                            "/FI",
+                            "WINDOWTITLE eq Stable Diffusion (MirrorShard)",
+                        ])
+                        .creation_flags(0x08000000)
+                        .status();
                 }
             }
             // Macの関連付け起動イベント

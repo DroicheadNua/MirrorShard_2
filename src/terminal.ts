@@ -21,11 +21,12 @@ async function init() {
     // ★ CWDの決定ロジック
     let cwd: string | null = null;
     if (sessionId === 'terminal_sd') {
-        // main.ts が保存した「SDスクリプトの親フォルダ」を取得
-        cwd = await store.get<string>('terminalTempCwd_sd') || null;
+        // main.ts で保存した SD のディレクトリ
+        cwd = await store.get<string>(`terminalTempCwd_${sessionId}`) || null;
     } else {
         cwd = (await store.get<string>('terminalTempCwd')) || (await store.get<string>('terminalDefaultCwd')) || null;
     }
+
 
     console.log(`[${sessionId}] Terminal CWD:`, cwd);
 
@@ -103,7 +104,7 @@ async function init() {
     };
 
     // fitAddon.fit();
-
+    console.log(`[${sessionId}] Requesting PTY with CWD:`, cwd);
     // 2. PTY初期化 (Rustへ)
     try {
         await invoke('init_pty', {
