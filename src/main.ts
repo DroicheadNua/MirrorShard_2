@@ -971,7 +971,7 @@ ${instructionFiller}
   }
 
   // AIによる編集・加工実行メソッド
-  private async runAiEdit(mode: 'translate' | 'summary' | 'rewrite') {
+  private async runAiEdit(mode: 'translate' | 'summary' | 'rewrite' | 'sd_prompt') {
     if (this.isAiProcessing) return;
     const view = this.editorView;
     const state = view.state;
@@ -1019,6 +1019,20 @@ ${instructionFiller}
       case 'rewrite':
         baseSystemPrompt = t('prompts.systemPrompt.rewrite');
         label = "[Rewrite]";
+        break;
+      case 'sd_prompt':
+        // ユーザーが設定した画風などの Prefix を Store から取得（あれば）
+        const sdPrefix = await this.store.get<string>('imageSystemPrompt') || "";
+
+        // AIへの指示（システムプロンプト）
+        baseSystemPrompt = "Task: Convert the provided scene description into a concise, high-quality, comma-separated English prompt for Stable Diffusion (maximum 30 tags). Focus on the most important subjects, setting, and atmosphere. Output ONLY the tags/prompt text. Do not include any explanations, greetings, or preamble.";
+
+        // Prefixがあればシステムプロンプトに混ぜ込む
+        if (sdPrefix) {
+          baseSystemPrompt += `\nEnsure these tags are included at the beginning of your output: ${sdPrefix}`;
+        }
+
+        label = "[SD Prompt]";
         break;
     }
     // プロンプトの合成
@@ -2741,6 +2755,11 @@ ${instructionFiller}
             text: t('editor.menu.aiRewrite'),
             enabled: hasSelection,
             action: () => this.runAiEdit('rewrite')
+          }),
+          await MenuItem.new({
+            text: t('editor.menu.aiGenerateSdPrompt'), // 「AI: SDプロンプトを作成」
+            enabled: hasSelection,
+            action: () => this.runAiEdit('sd_prompt')
           }),
           await MenuItem.new({
             text: t('editor.menu.aiVisualize'),

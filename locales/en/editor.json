@@ -15,6 +15,7 @@
     "aiTranslate": "AI: Translate",
     "aiSummarize": "AI: Summarize",
     "aiRewrite": "AI: Rewrite",
+    "aiGenerateSdPrompt": "AI: Generate Image Prompt",
     "aiVisualize": "AI: Visualize Selection (Mistral Agent)",
     "importGeminiLog": "Import Gemini Log",
     "openTerminalHere": "Open Terminal Here (Ctrl+Shift+@)",

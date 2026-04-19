@@ -18,6 +18,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
  - 選択範囲のテキストをAIに送り、それを元に画像を生成する機能  
  - ※Mistral使用時のみ  
 - 内蔵ターミナルに最小化ボタンと最大化ボタンを追加  
+- メインエディタのAI機能に「画像生成プロンプトを作成」(範囲選択から右クリックメニュー)を追加  
+ 
 
 ### Changed (変更点)    
 - ターミナルを同時に複数起動できるようにした  
