@@ -115,11 +115,6 @@ async function setupSettings() {
         const localLlmUrlInput = document.querySelector('#local-llm-url') as HTMLInputElement;
         const aiSystemPromptInput = document.querySelector('#ai-system-prompt') as HTMLTextAreaElement;
         const imageSystemPromptInput = document.querySelector('#image-system-prompt') as HTMLTextAreaElement;
-        const imageGenProvider = document.querySelector('#image-gen-provider') as HTMLSelectElement;
-        const sdNegativePromptInput = document.querySelector('#sd-negative-prompt') as HTMLTextAreaElement;
-        const sdStepsInput = document.querySelector('#sd-steps') as HTMLInputElement;
-        const sdCfgInput = document.querySelector('#sd-cfg') as HTMLInputElement;
-        const sdAdetailerCheck = document.querySelector('#sd-adetailer') as HTMLInputElement;
         const aiMaxTokensInput = document.querySelector('#ai-max-tokens') as HTMLInputElement;
         const faMaxTokensInput = document.querySelector('#fa-max-tokens') as HTMLInputElement;
         const aiContextLimitInput = document.querySelector('#ai-context-limit') as HTMLInputElement;
@@ -583,11 +578,6 @@ async function setupSettings() {
         localLlmUrlInput.value = await store.get<string>('localLlmUrl') || 'http://127.0.0.1:1234/v1/chat/completions';
         aiSystemPromptInput.value = await store.get<string>('aiSystemPrompt') || '';
         imageSystemPromptInput.value = await store.get<string>('imageSystemPrompt') || '';
-        imageGenProvider.value = await store.get<string>('imageGenProvider') || 'mistral';
-        sdNegativePromptInput.value = await store.get<string>('sdNegativePrompt') || '';
-        sdStepsInput.value = (await store.get<number>('sdSteps') || 20).toString();
-        sdCfgInput.value = (await store.get<number>('sdCfgScale') || 7.0).toString();
-        sdAdetailerCheck.checked = await store.get<boolean>('sdUseADetailer') ?? false;
         aiMaxTokensInput.value = (await store.get<number>('aiMaxTokens') || 2000).toString();
         faMaxTokensInput.value = (await store.get<number>('faMaxTokens') || 30).toString();
         aiContextLimitInput.value = (await store.get<number>('aiContextLimit') || 2000).toString();
@@ -910,11 +900,6 @@ async function setupSettings() {
                 const newLocalUrl = localLlmUrlInput.value.trim();
                 const newSystemPrompt = aiSystemPromptInput.value;
                 const newImageSystemPrompt = imageSystemPromptInput.value;
-                const newImageGenProvider = imageGenProvider.value;
-                const newSdNegativePrompt = sdNegativePromptInput.value;
-                const newSdSteps = parseInt(sdStepsInput.value, 10) || 20;
-                const newSdCfgScale = parseFloat(sdCfgInput.value) || 7.0;
-                const newSdUseADetailer = sdAdetailerCheck.checked;
                 const newAiMaxTokens = parseInt(aiMaxTokensInput.value, 10) || 2000;
                 const newFaMaxTokens = parseInt(faMaxTokensInput.value, 10) || 30;
                 const newAiContextLimit = parseInt(aiContextLimitInput.value, 10) || 2000;
@@ -972,11 +957,6 @@ async function setupSettings() {
                 await store.set('localLlmUrl', newLocalUrl);
                 await store.set('aiSystemPrompt', newSystemPrompt);
                 await store.set('imageSystemPrompt', newImageSystemPrompt);
-                await store.set('imageGenProvider', newImageGenProvider);
-                await store.set('sdNegativePrompt', newSdNegativePrompt);
-                await store.set('sdSteps', newSdSteps);
-                await store.set('sdCfgScale', newSdCfgScale);
-                await store.set('sdUseADetailer', newSdUseADetailer);
                 const currentApiType = await store.get<string>('selectedApiType');
                 if (!currentApiType) {
                     await store.set('selectedApiType', 'gemini');
@@ -1042,11 +1022,6 @@ async function setupSettings() {
                     localLlmUrl: newLocalUrl,
                     aiSystemPrompt: newSystemPrompt,
                     imageSystemPrompt: newImageSystemPrompt,
-                    imageGenProvider: newImageGenProvider || 'mistral',
-                    sdNegativePrompt: newSdNegativePrompt || '',
-                    sdSteps: newSdSteps ?? 20,
-                    sdCfgScale: newSdCfgScale ?? 7.0,
-                    sdUseADetailer: newSdUseADetailer ?? false,
                     selectedApiType: currentApiType || 'gemini',
                     aiMaxTokens: newAiMaxTokens,
                     faMaxTokens: newFaMaxTokens,

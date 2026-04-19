@@ -196,7 +196,7 @@
             <div id="tab-ai" class="tab-content">
 
                 <div class="ai-setting-group">
-                    <h3 data-i18n="settings.ai.cloud">Cloud AI</h3>
+                    <h4 data-i18n="settings.ai.cloud">Cloud AI</h4>
 
                     <!-- Gemini -->
                     <div class="setting-item">
@@ -223,7 +223,7 @@
 
                 <!-- Groq -->
                 <div class="ai-setting-group">
-                    <h3 data-i18n="settings.ai.groq">Groq</h3>
+                    <h4 data-i18n="settings.ai.groq">Groq</h4>
                     <div class="setting-item">
                         <label for="groq-api-key" data-i18n="settings.ai.groqKeyLabel">Groq API Key</label>
                         <input type="password" id="groq-api-key" data-i18n-placeholder="settings.ai.groqKeyPlaceholder"
@@ -252,7 +252,7 @@
 
                 <!-- Cohere -->
                 <div class="ai-setting-group">
-                    <h3 data-i18n="settings.ai.cohere">Cohere</h3>
+                    <h4 data-i18n="settings.ai.cohere">Cohere</h4>
                     <div class="setting-item">
                         <label for="cohere-api-key" data-i18n="settings.ai.cohereKeyLabel">Cohere API Key</label>
                         <input type="password" id="cohere-api-key"
@@ -283,7 +283,7 @@
 
                 <!-- Mistral -->
                 <div class="ai-setting-group">
-                    <h3 data-i18n="settings.ai.mistral">Mistral</h3>
+                    <h4 data-i18n="settings.ai.mistral">Mistral</h4>
                     <div class="setting-item">
                         <label for="mistral-api-key" data-i18n="settings.ai.mistralKeyLabel">Mistral API Key</label>
                         <input type="password" id="mistral-api-key"
@@ -318,6 +318,18 @@
                         <small data-i18n="settings.ai.mistralNote">
                             ※Agent使用時は、Agentでのモデル指定が優先されます。
                         </small>
+                        <br>
+                        <div class="setting-item">
+                            <label for="image-auto-save-path" data-i18n="settings.ai.imageAutoSavePath">画像の自動保存フォルダ
+                            </label>
+                            <input type="text" id="image-auto-save-path" style="flex-grow:1;" placeholder="">
+                            <button id="btn-select-auto-save" data-i18n="settings.ai.browse">参照...</button>
+                        </div>
+                        <div class="setting-item">
+                            <label for="image-system-prompt" data-i18n="settings.ai.imageSystemPromptLabel">画像生成のプロンプト
+                            </label>
+                            <textarea id="image-system-prompt" class="setting-textarea" placeholder=""></textarea>
+                        </div>
                     </div>
                 </div>
 
@@ -325,7 +337,7 @@
 
                 <!-- Local LLM -->
                 <div class="ai-setting-group">
-                    <h3 data-i18n="settings.ai.localLlm">Local LLM</h3>
+                    <h4 data-i18n="settings.ai.localLlm">Local LLM</h4>
                     <div class="setting-item">
                         <label for="local-llm-url" data-i18n="settings.ai.localLlmUrlLabel">Endpoint URL</label>
                         <input type="text" id="local-llm-url" data-i18n-placeholder="settings.ai.localLlmUrlPlaceholder"
@@ -349,7 +361,7 @@
 
                 <!-- SillyTavern -->
                 <div class="ai-setting-group" id="silly-tavern-group">
-                    <h3 data-i18n="settings.ai.sillyTavern">SillyTavern</h3>
+                    <h4 data-i18n="settings.ai.sillyTavern">SillyTavern</h4>
                     <div class="setting-item">
                         <label for="silly-tavern-path" data-i18n="settings.ai.sillyTavernPathLabel">SillyTavern Path
                             (Folder)</label>
@@ -373,7 +385,7 @@
 
                 <!-- Stable Diffusion -->
                 <div class="ai-setting-group" id="sd-group">
-                    <h3 data-i18n="settings.ai.sd">Stable Diffusion</h3>
+                    <h4 data-i18n="settings.ai.sd">Stable Diffusion</h4>
                     <div class="setting-item">
                         <label for="sd-path" data-i18n="settings.ai.sdPathLabel">Stable Diffusion Path</label>
                         <input type="text" id="sd-path" style="flex-grow:1;"
@@ -388,59 +400,9 @@
 
                 <hr style="margin:10px 0;border:0;border-top:1px solid var(--ui-text-color);opacity:0.3;">
 
-                <!-- Image -->
-                <div class="ai-setting-group" id="image-group">
-                    <h3 data-i18n="settings.ai.imageGenTitle">画像生成 (Visualize)</h3>
-
-                    <!-- 共通設定 -->
-                    <div class="setting-item">
-                        <label data-i18n="settings.ai.imageProvider">生成エンジン</label>
-                        <select id="image-gen-provider">
-                            <option value="mistral">Mistral Agent (Cloud)</option>
-                            <option value="local_sd">Stable Diffusion (Local API)</option>
-                        </select>
-                    </div>
-
-                    <div class="setting-item">
-                        <label for="image-auto-save-path" data-i18n="settings.ai.imageAutoSavePath">画像の自動保存フォルダ</label>
-                        <input type="text" id="image-auto-save-path" style="flex-grow:1;">
-                        <button id="btn-select-auto-save" data-i18n="settings.ai.browse">参照...</button>
-                    </div>
-
-                    <div class="setting-item">
-                        <label for="image-system-prompt" data-i18n="settings.ai.imageSystemPromptLabel">画像生成の共通プロンプト
-                            /
-                            画風指定</label>
-                        <textarea id="image-system-prompt" class="setting-textarea"
-                            placeholder="masterpiece, anime style, etc."></textarea>
-                    </div>
-
-                    <!-- Local SD 専用の数値設定項目のみ追加 -->
-                    <div id="local-sd-params" style="border-top: 1px solid #444; padding-top: 10px; margin-top: 10px;">
-                        <div class="setting-item">
-                            <label for="sd-negative-prompt" data-i18n="settings.ai.sdNegative">ネガティブプロンプト</label>
-                            <textarea id="sd-negative-prompt" class="setting-textarea"></textarea>
-                        </div>
-                        <div class="setting-row" style="display: flex; gap: 15px;">
-                            <div class="setting-item">
-                                <label>Steps</label>
-                                <input type="number" id="sd-steps" style="width: 50px;">
-                            </div>
-                            <div class="setting-item">
-                                <label>CFG</label>
-                                <input type="number" id="sd-cfg" style="width: 50px;" step="0.5">
-                            </div>
-                            <div class="setting-item">
-                                <label>ADetailer</label>
-                                <input type="checkbox" id="sd-adetailer">
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
                 <!-- Behavior -->
                 <div class="ai-setting-group">
-                    <h3 data-i18n="settings.ai.behavior">Behavior</h3>
+                    <h4 data-i18n="settings.ai.behavior">Behavior</h4>
                     <div class="setting-item">
                         <label for="ai-max-tokens" data-i18n="settings.ai.maxTokensLabel">最大応答長 (100〜100000)</label>
                         <input type="number" id="ai-max-tokens" placeholder="2000" min="100" max="100000"
@@ -480,7 +442,7 @@
 
                 <!-- User Profile -->
                 <div class="ai-setting-group">
-                    <h3 data-i18n="settings.ai.userProfile">User Profile</h3>
+                    <h4 data-i18n="settings.ai.userProfile">User Profile</h4>
                     <div class="setting-item">
                         <label for="user-name" data-i18n="settings.ai.userNameLabel">Name</label>
                         <input type="text" id="user-name" data-i18n-placeholder="settings.ai.userNamePlaceholder"
@@ -497,7 +459,7 @@
 
                 <!-- AI Profile -->
                 <div class="ai-setting-group">
-                    <h3 data-i18n="settings.ai.aiProfile">AI Profile</h3>
+                    <h4 data-i18n="settings.ai.aiProfile">AI Profile</h4>
                     <div class="setting-item">
                         <label for="ai-name" data-i18n="settings.ai.aiNameLabel">Name</label>
                         <input type="text" id="ai-name" data-i18n-placeholder="settings.ai.aiNamePlaceholder"
@@ -517,7 +479,7 @@
             <div id="tab-code" class="tab-content">
 
                 <div class="setting-group">
-                    <h3 data-i18n="settings.code.title">Code Editor Settings</h3>
+                    <h4 data-i18n="settings.code.title">Code Editor Settings</h4>
                     <div class="setting-item">
                         <label for="code-language-select" data-i18n="settings.code.languageLabel">Syntax Highlight
                             Language</label>
@@ -547,7 +509,7 @@
                 </div>
 
                 <div class="setting-group" id="markdown-group">
-                    <h3 data-i18n="settings.markdown.title">Markdown Preview</h3>
+                    <h4 data-i18n="settings.markdown.title">Markdown Preview</h4>
                     <div class="setting-item">
                         <label for="check-md-hard-breaks" class="inline">
                             <input type="checkbox" id="check-md-hard-breaks">
@@ -560,7 +522,7 @@
                 </div>
 
                 <div class="setting-group">
-                    <h3 data-i18n="settings.terminal.title">Terminal Settings</h3>
+                    <h4 data-i18n="settings.terminal.title">Terminal Settings</h4>
                     <div class="setting-item">
                         <label for="shell-path" data-i18n="settings.terminal.shellPathLabel">Shell Path</label>
                         <input type="text" id="shell-path"

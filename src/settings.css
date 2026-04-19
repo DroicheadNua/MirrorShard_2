@@ -228,8 +228,7 @@ body {
 #groq-model-preset,
 #cohere-model-preset,
 #mistral-model-preset,
-#local-llm-url-preset,
-#image-gen-provider {
+#local-llm-url-preset {
     width: 160px;
 }
 

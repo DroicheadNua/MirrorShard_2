@@ -129,7 +129,7 @@ fn launch_stable_diffusion_external(sd_path: String) -> Result<(), String> {
     }
 
     #[cfg(not(target_os = "windows"))]
-    // Mac/Linux　こちらの処理は使わなくなったが念のため残しておく
+    // Mac/Linux　念のため残しておく
     {
         // Forge Neo は webui-user.sh、本家は webui.sh
         let sh_file = if base_path.join("webui-user.sh").exists() {

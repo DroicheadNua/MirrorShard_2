@@ -179,13 +179,7 @@
     "iconLabel": "アイコン",
     "iconSelect": "選択",
     "iconClear": "クリア",
-    "defaultIcon": "(デフォルト)",
-    "imageGenTitle": "画像生成 (Visualize)",
-    "imageProvider": "生成エンジン",
-    "sdPrefix": "プロンプト接頭辞",
-    "sdNegative": "ネガティブプロンプト",
-    "mistralAgentRequired": "Mistral API設定とAgent IDが必要です。",
-    "mistralAgentDisabled": "Mistral Agent機能がOFFです。設定画面で有効にしてください。"
+    "defaultIcon": "(デフォルト)"
   },
   "alerts": {
     "settingsSaveFailed": "設定の保存に失敗しました: {{err}}",
