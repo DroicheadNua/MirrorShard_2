@@ -15,7 +15,7 @@
     "aiTranslate": "AI: Translate",
     "aiSummarize": "AI: Summarize",
     "aiRewrite": "AI: Rewrite",
-    "aiVisualize": "AI: Visualize Selection (Mistral Agent)",
+    "aiVisualize": "AI: Visualize Selection",
     "importGeminiLog": "Import Gemini Log",
     "openTerminalHere": "Open Terminal Here (Ctrl+Shift+@)",
     "openFolderHere": "Open Folder Here (Ctrl+Shift+O)"

@@ -22,6 +22,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Changed (変更点)    
 - ターミナルを同時に複数起動できるようにした  
 - SillyTavernの起動プロセスを改善  
+- SillyTavern起動時にターミナルの表示／非表示を選択できるようにした（Windowsのみ）  
  
 
 ### Fixed (修正点)   

@@ -1268,6 +1268,44 @@ ${instructionFiller}
     }
   }
 
+  // メインAI（どこであれ）に直接リクエストを送る共通関数
+  private async requestMainAiDirect(prompt: string, systemPrompt: string): Promise<string> {
+    const tempMaxTokens = 1000; // プロンプト生成なので少なめでOK
+
+    if (this.mainAiApi === 'gemini') {
+      const apiKey = await this.store.get<string>('geminiApiKey');
+      if (!apiKey) throw new Error("Gemini API Key is not set.");
+      return await this.requestGeminiDirect(apiKey, prompt, systemPrompt, tempMaxTokens, this.aiAbortController?.signal);
+    }
+    else if (this.mainAiApi === 'cohere') {
+      const apiKey = await this.store.get<string>('cohereApiKey');
+      const model = await this.store.get<string>('cohereModel') || "command-r-plus-08-2024";
+      if (!apiKey) throw new Error("Cohere API Key is not set.");
+      return await this.requestCohereV2Direct(apiKey, model, prompt, systemPrompt, tempMaxTokens, this.aiAbortController?.signal);
+    }
+    else {
+      // OpenAI互換（Groq, Mistral, Local）
+      let url = "", apiKey = "", model = "";
+      if (this.mainAiApi === 'groq') {
+        url = "https://api.groq.com/openai/v1/chat/completions";
+        apiKey = await this.store.get<string>('groqApiKey') || "";
+        model = await this.store.get<string>('groqModel') || "llama-3.3-70b-versatile";
+      } else if (this.mainAiApi === 'mistral') {
+        url = "https://api.mistral.ai/v1/chat/completions";
+        apiKey = await this.store.get<string>('mistralApiKey') || "";
+        model = await this.store.get<string>('mistralModel') || "mistral-small-latest";
+      } else {
+        // local
+        url = await this.store.get<string>('localLlmUrl') || "http://127.0.0.1:1234/v1/chat/completions";
+        apiKey = "local";
+        model = await this.store.get<string>('localLlmModel') || "local-model";
+      }
+
+      if (this.mainAiApi !== 'local' && !apiKey) throw new Error(`${this.mainAiApi} API Key is not set.`);
+      return await this.requestOpenAICompatibleDirect(url, apiKey, model, prompt, systemPrompt, tempMaxTokens, this.aiAbortController?.signal);
+    }
+  }
+
   private async visualizeSelection() {
     if (this.isAiProcessing) return;
 
@@ -1278,22 +1316,10 @@ ${instructionFiller}
     }
 
     const selectedText = this.editorView.state.sliceDoc(selection.from, selection.to);
-    const mistralAgent = await this.store.get<string>('mistralAgentID');
-    const enableAgents = await this.store.get<boolean>('enableMistralAgents') ?? false;
 
-    if (this.mainAiApi !== 'mistral' || !mistralAgent || !enableAgents) {
-      await message(t('editor.ai.mistralAgentRequired'), { kind: 'warning' });
-      return;
-    }
-
-    // --- A. プロンプトとUIの状態準備 ---
+    // 生成エンジンの選択 (デフォルトは mistral)
+    const provider = await this.store.get<string>('imageGenProvider') || 'mistral';
     const imageSystemPrompt = await this.store.get<string>('imageSystemPrompt') || "";
-    const baseSystemPrompt = t('prompts.systemPrompt.visualize');
-    const userPrefix = t('prompts.template.userInstructionPrefix');
-
-    const systemPrompt = imageSystemPrompt
-      ? `${baseSystemPrompt}\n\n${userPrefix}\n${imageSystemPrompt}`
-      : baseSystemPrompt;
 
     this.isAiProcessing = true;
     this.aiAbortController = new AbortController();
@@ -1301,48 +1327,168 @@ ${instructionFiller}
     this.setAiLoading(true);
 
     try {
-      // --- B. Mistral Agent へのリクエスト ---
-      const apiKey = await this.store.get<string>('mistralApiKey');
-      const response = await fetch("https://api.mistral.ai/v1/agents/completions", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "Authorization": `Bearer ${apiKey}`
-        },
-        body: JSON.stringify({
-          agent_id: mistralAgent,
-          messages: [
-            { role: "system", content: systemPrompt },
-            { role: "user", content: selectedText }
-          ]
-        }),
-        signal: this.aiAbortController.signal // ESC等での中断に対応
-      });
+      let imageUrl = "";
 
-      if (!response.ok) throw new Error(`API Error: ${response.status}`);
+      if (provider === 'mistral') {
+        // --- Mistral Agent 経由 ---
+        const mistralAgent = await this.store.get<string>('mistralAgentID');
+        const enableAgents = await this.store.get<boolean>('enableMistralAgents') ?? false;
+        const apiKey = await this.store.get<string>('mistralApiKey');
 
-      const json = await response.json();
-      const content = json.choices?.[0]?.message?.content || "";
-      const urlMatch = content.match(/https?:\/\/[^\s"']+/);
+        if (!apiKey || !mistralAgent || !enableAgents) {
+          throw new Error(t('editor.ai.mistralAgentRequired'));
+        }
 
-      if (!urlMatch) throw new Error("No image URL found in response.");
-      const imageUrl = urlMatch[0];
+        const baseSystemPrompt = t('prompts.systemPrompt.visualize');
+        const userPrefix = t('prompts.template.userInstructionPrefix');
+        const finalSystemPrompt = imageSystemPrompt ? `${baseSystemPrompt}\n\n${userPrefix}\n${imageSystemPrompt}` : baseSystemPrompt;
 
-      // --- C. 保存処理 ---
-      await this.handleImageGenerationResult(imageUrl);
+        const response = await fetch("https://api.mistral.ai/v1/agents/completions", {
+          method: "POST",
+          headers: { "Content-Type": "application/json", "Authorization": `Bearer ${apiKey}` },
+          body: JSON.stringify({
+            agent_id: mistralAgent,
+            messages: [
+              { role: "system", content: finalSystemPrompt },
+              { role: "user", content: selectedText }
+            ]
+          }),
+          signal: this.aiAbortController.signal
+        });
+
+        if (!response.ok) throw new Error(`API Error: ${response.status}`);
+        const json = await response.json();
+        const content = json.choices?.[0]?.message?.content || "";
+        const urlMatch = content.match(/https?:\/\/[^\s"']+/);
+        if (!urlMatch) throw new Error("No image URL found.");
+        imageUrl = urlMatch[0];
+
+      } else {
+        // --- Local Stable Diffusion 処理 ---
+
+        this.aiThinkingMode = "Checking SD API status...";
+        this.setAiLoading(true); // ★ テキスト更新を確実にUIに反映
+        console.log(this.aiThinkingMode);
+
+        let isSdReady = await this.checkSdApiReady(this.aiAbortController.signal);
+
+        if (!isSdReady) {
+          const fullPath = await this.store.get<string>('sdWebUIPath');
+          if (!fullPath) throw new Error(t('editor.ai.sdPathNotSet'));
+
+          this.aiThinkingMode = "Waking up Stable Diffusion... (May take a few minutes)";
+          this.setAiLoading(true);
+          console.log(this.aiThinkingMode);
+
+          await this.startStableDiffusionProcess(fullPath);
+
+          // ここで signal を渡す
+          isSdReady = await this.waitForSdPort(this.aiAbortController.signal);
+          if (!isSdReady) throw new Error("Stable Diffusion startup timed out.");
+        }
+
+        this.aiThinkingMode = "Translating scene to prompt (Main AI)...";
+        this.setAiLoading(true);
+        console.log(this.aiThinkingMode);
+
+        const promptGenSystem = "Task: Convert the provided scene description into a high-quality English image generation prompt for Stable Diffusion. Output ONLY the prompt text in English, no preamble.";
+        // メインAIへのリクエスト
+        const sdPrompt = await this.requestMainAiDirect(selectedText, promptGenSystem);
+        console.log("Generated Prompt:", sdPrompt);
+
+        this.aiThinkingMode = "Generating Image with Local SD...";
+        this.setAiLoading(true);
+        console.log(this.aiThinkingMode);
+
+        // Local SD へのリクエスト
+        imageUrl = await this.requestLocalSdImage(sdPrompt, imageSystemPrompt, this.aiAbortController.signal);
+      }
+
+      if (imageUrl) {
+        await this.handleImageGenerationResult(imageUrl);
+      }
 
     } catch (e: any) {
-      if (e.name === 'AbortError') {
-        console.log("AI Visualize aborted by user.");
-      } else {
-        this.handleAiError(e);
-      }
+      if (e.name === 'AbortError') console.log("Visualize Aborted");
+      else this.handleAiError(e);
     } finally {
-      this.aiThinkingMode = "";
-      this.setAiLoading(false);
-      this.isAiProcessing = false;
-      this.aiAbortController = null;
+      this.clearAiProcessingState();
     }
+  }
+
+  // Local SD への API リクエスト関数
+  private async requestLocalSdImage(prompt: string, prefix: string, signal?: AbortSignal): Promise<string> {
+    const { fetch: tauriFetch } = await import('@tauri-apps/plugin-http');
+
+    // SD特有のパラメータをStoreから取得
+    const negPrompt = await this.store.get<string>('sdNegativePrompt') || "easynegative, low quality, bad anatomy";
+    const steps = Number(await this.store.get<number>('sdSteps')) || 20;
+    const cfg = Number(await this.store.get<number>('sdCfgScale')) || 7.0;
+    const useADetailer = await this.store.get<boolean>('sdUseADetailer') ?? false;
+
+    const body: any = {
+      prompt: prefix ? `${prefix}, ${prompt}` : prompt,
+      negative_prompt: negPrompt,
+      steps: steps,
+      cfg_scale: cfg,
+      width: 512,
+      height: 512,
+    };
+
+    if (useADetailer) {
+      body.alwayson_scripts = {
+        "ADetailer": { "args": [true, { "ad_model": "face_yolov8n.pt" }] }
+      };
+    }
+
+    const response = await tauriFetch("http://127.0.0.1:7860/sdapi/v1/txt2img", {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+      signal: signal
+    });
+
+    if (!response.ok) {
+      const errText = await response.text();
+      throw new Error(`SD API Error (${response.status}): ${errText}`);
+    }
+    const data = await response.json();
+    return `data:image/png;base64,${data.images[0]}`;
+  }
+
+  // APIが本当に受付可能かチェックする
+  private async checkSdApiReady(signal?: AbortSignal): Promise<boolean> {
+    try {
+      const { fetch: tauriFetch } = await import('@tauri-apps/plugin-http');
+      // /progress はAPIが有効な時だけ 200 OK を返す
+      const res = await tauriFetch("http://127.0.0.1:7860/sdapi/v1/progress", {
+        method: 'GET',
+        connectTimeout: 1000,
+        signal: signal // キャンセル対応
+      });
+
+      if (!res.ok) {
+        console.log(`[SD Check] API not ready yet. Status: ${res.status}`);
+      }
+      return res.ok;
+    } catch (e) {
+      return false;
+    }
+  }
+
+  // APIが開くまで待機する
+  private async waitForSdPort(signal?: AbortSignal): Promise<boolean> {
+    console.log("Waiting for SD API to become ready...");
+    for (let i = 0; i < 300; i++) {
+      if (signal?.aborted) throw new Error("Aborted by user");
+
+      if (await this.checkSdApiReady(signal)) {
+        console.log("SD API is ready!");
+        return true;
+      }
+      await new Promise(resolve => setTimeout(resolve, 2000));
+    }
+    return false;
   }
 
   private async handleImageGenerationResult(url: string) {
@@ -2744,7 +2890,7 @@ ${instructionFiller}
           }),
           await MenuItem.new({
             text: t('editor.menu.aiVisualize'),
-            enabled: hasSelection && this.mainAiApi === 'mistral',
+            enabled: hasSelection,
             action: () => this.visualizeSelection()
           }),
           await PredefinedMenuItem.new({ item: 'Separator' }),
@@ -3998,14 +4144,15 @@ ${instructionFiller}
     if (this.currentOs === 'linux') return;
 
     // 起動中なら一瞬だけオーバーレイを出して、あとは Rust に任せる
-    this.aiThinkingMode = "SillyTavern Activating...";
+    this.aiThinkingMode = "Starting SillyTavern...";
     this.setAiLoading(true);
     // 2秒でオーバーレイを消して操作可能にする
     setTimeout(() => this.setAiLoading(false), 2000);
 
     try {
       const stPath = await this.store.get<string>('sillyTavernPath');
-      await invoke('open_silly_tavern', { stPathSetting: stPath || null });
+      const enableStTerminal = await this.store.get<boolean>('enableStTerminal') ?? false;
+      await invoke('open_silly_tavern', { stPathSetting: stPath || null, enableStTerminal: enableStTerminal });
       // 結果待ちは不要（Rust側でスレッドが回るため）
     } catch (e) {
       this.setAiLoading(false);
@@ -4019,15 +4166,43 @@ ${instructionFiller}
     const fullPath = await this.store.get<string>('sdWebUIPath');
     if (!fullPath) return;
 
-    // パスからディレクトリだけを抽出（念のため）
-    const separator = fullPath.includes('/') ? '/' : '\\';
-    const sdDir = fullPath.substring(0, fullPath.lastIndexOf(separator));
+    this.aiThinkingMode = "Starting Stable Diffusion...";
+    this.setAiLoading(true);
+    setTimeout(() => this.setAiLoading(false), 2500);
 
     try {
-      // Rust にパスを投げて終わり
-      await invoke('launch_stable_diffusion_external', { sdPath: sdDir });
+      await this.startStableDiffusionProcess(fullPath);
+
+      // 共通：ポート監視を開始して、準備ができたら自前窓でUIを表示
+      // invoke('start_sd_port_monitor');
+
     } catch (e) {
-      console.error(e);
+      console.error("SD Launch Error:", e);
+      this.setAiLoading(false);
+    }
+  }
+
+  private async startStableDiffusionProcess(fullPath: string) {
+    const separator = fullPath.includes('/') ? '/' : '\\';
+    const lastIndex = fullPath.lastIndexOf(separator);
+    const sdDir = fullPath.substring(0, lastIndex);
+    const scriptFile = fullPath.substring(lastIndex + 1);
+
+    if (this.currentOs === 'windows') {
+      // Windows: エクスプローラー丸投げ
+      await invoke('launch_stable_diffusion_external', { sdPath: fullPath });
+    } else {
+      // Mac/Linux: 内蔵ターミナル方式
+      const sdSessionId = "terminal_sd";
+
+      const runCmd = `SD_WEBUI_RESTARTING=1 ./"${scriptFile}" --api\n`;
+
+      await this.store.set(`terminalTempCwd_${sdSessionId}`, sdDir);
+      await this.store.set(`terminalAutoRunCommand_${sdSessionId}`, runCmd);
+      await this.store.save();
+
+      // ターミナルを開く
+      await invoke('open_terminal_window', { id: 'sd' });
     }
   }
 
@@ -4041,10 +4216,10 @@ ${instructionFiller}
         const newHeadings: Heading[] = [];
         const doc = view.state.doc;
 
-        // ★ doc.linesを使って、ドキュメントの全行をループ処理
+        // doc.linesを使って、ドキュメントの全行をループ処理
         for (let i = 1; i <= doc.lines; i++) {
           const line = doc.line(i);
-          // ★ オリジナルと同じ正規表現
+          // オリジナルと同じ正規表現
           const match = line.text.match(/^(#+)\s(.*)/);
 
           if (match) {

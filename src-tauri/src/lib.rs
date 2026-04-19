@@ -16,6 +16,7 @@ use std::process::{Child, Command, Stdio};
 use std::sync::Mutex;
 use tauri::{AppHandle, Emitter, Manager, State};
 use tauri_plugin_cli::CliExt;
+use tauri_plugin_opener::OpenerExt;
 use tauri_plugin_window_state::{Builder, StateFlags};
 use zip::{write::SimpleFileOptions, ZipArchive, ZipWriter};
 
@@ -65,6 +66,28 @@ struct MacFileBuffer(Mutex<Option<String>>);
 // --- Tauriコマンドの定義 ---
 
 #[tauri::command]
+async fn start_sd_port_monitor(app: tauri::AppHandle) {
+    std::thread::spawn(move || {
+        let addr = "127.0.0.1:7860";
+        for _ in 0..300 {
+            if std::net::TcpStream::connect_timeout(
+                &addr.parse().unwrap(),
+                std::time::Duration::from_millis(500),
+            )
+            .is_ok()
+            {
+                // opener プラグインを使用してブラウザを開く
+                let _ = app
+                    .opener()
+                    .open_url("http://127.0.0.1:7860", Option::<String>::None);
+                return;
+            }
+            std::thread::sleep(std::time::Duration::from_secs(2));
+        }
+    });
+}
+
+#[tauri::command]
 fn launch_stable_diffusion_external(sd_path: String) -> Result<(), String> {
     let base_path = std::path::Path::new(&sd_path);
     if !base_path.exists() {
@@ -106,14 +129,24 @@ fn launch_stable_diffusion_external(sd_path: String) -> Result<(), String> {
     }
 
     #[cfg(not(target_os = "windows"))]
+    // Mac/Linux　こちらの処理は使わなくなったが念のため残しておく
     {
-        let sh_file = if base_path.join("webui.sh").exists() {
+        // Forge Neo は webui-user.sh、本家は webui.sh
+        let sh_file = if base_path.join("webui-user.sh").exists() {
+            "./webui-user.sh"
+        } else if base_path.join("webui.sh").exists() {
             "./webui.sh"
-        } else {
+        } else if base_path.join("webui/webui.sh").exists() {
             "./webui/webui.sh"
+        } else {
+            "./webui.sh" // フォールバック
         };
-        std::process::Command::new(sh_file)
-            // Mac/Linux もブラウザが開くように --nowebui などがあれば削除して --api のみに
+
+        // Mac/Linuxでは現状、標準ターミナルを出すのが難しいため
+        // バックグラウンドで起動し、ブラウザが開くのを待つ形に
+        std::process::Command::new("sh") // 明示的に sh で叩くのが確実
+            .env("SD_WEBUI_RESTARTING", "1") // ブラウザ抑制
+            .arg(sh_file)
             .arg("--api")
             .current_dir(base_path)
             .spawn()
@@ -125,7 +158,7 @@ fn launch_stable_diffusion_external(sd_path: String) -> Result<(), String> {
 
 // 共通のツリーキルヘルパー関数
 fn kill_child_tree(child: &mut Child) {
-    let pid = child.id();
+    let _pid = child.id();
     #[cfg(target_os = "windows")]
     {
         use std::os::windows::process::CommandExt;
@@ -133,7 +166,7 @@ fn kill_child_tree(child: &mut Child) {
         // 万が一のために python.exe 自体を狙い撃ちするのではなく、
         // このプロセスグループに属するものをすべて殺す
         let _ = std::process::Command::new("taskkill")
-            .args(["/F", "/T", "/PID", &pid.to_string()])
+            .args(["/F", "/T", "/PID", &_pid.to_string()])
             .creation_flags(0x08000000)
             .status();
     }
@@ -175,6 +208,7 @@ async fn open_silly_tavern(
     app: tauri::AppHandle,
     state: tauri::State<'_, SillyTavernProcess>,
     st_path_setting: Option<String>,
+    enable_st_terminal: bool,
 ) -> Result<String, String> {
     // 1. トグル処理
     if let Some(win) = app.get_webview_window("silly_tavern") {
@@ -194,7 +228,7 @@ async fn open_silly_tavern(
     }
 
     // 3. ウィンドウを「即座に」作成
-    let mut builder = tauri::WebviewWindowBuilder::new(
+    let builder = tauri::WebviewWindowBuilder::new(
         &app,
         "silly_tavern",
         tauri::WebviewUrl::App("loading.html".into()), // 共通ロード画面
@@ -219,7 +253,7 @@ async fn open_silly_tavern(
     // Windows/Mac用の視覚効果 (必要であれば)
     #[cfg(target_os = "windows")]
     {
-        builder = builder.theme(Some(tauri::Theme::Dark));
+        let builder = builder.theme(Some(tauri::Theme::Dark));
     }
 
     let window = builder.build().map_err(|e| e.to_string())?;
@@ -233,10 +267,12 @@ async fn open_silly_tavern(
 
         #[cfg(target_os = "windows")]
         let mut cmd = {
-            // use std::os::windows::process::CommandExt;
             let mut c = std::process::Command::new("cmd");
             c.args(["/C", "node server.js"]);
-            // c.creation_flags(0x08000000);
+            if !enable_st_terminal {
+                use std::os::windows::process::CommandExt;
+                c.creation_flags(0x08000000);
+            }
             c
         };
         #[cfg(not(target_os = "windows"))]
@@ -247,12 +283,15 @@ async fn open_silly_tavern(
         };
 
         cmd.current_dir(&st_path);
-        // 出力はnullに捨ててバッファ詰まりを防止
-        let child = cmd
-            // .stdout(std::process::Stdio::null())
-            // .stderr(std::process::Stdio::null())
-            .spawn()
-            .map_err(|e| format!("ERR_ST_SPAWN:{}", e))?;
+        // Windowsかつターミナル非表示のときは出力をnullに捨ててバッファ詰まりを防止
+        if cfg!(target_os = "windows") {
+            if !enable_st_terminal {
+                cmd.stdout(std::process::Stdio::null());
+                cmd.stderr(std::process::Stdio::null());
+            }
+        }
+
+        let child = cmd.spawn().map_err(|e| format!("ERR_ST_SPAWN:{}", e))?;
         *lock = Some(child);
     }
 
@@ -489,15 +528,20 @@ fn init_pty(
         .map_err(|e| e.to_string())?;
 
     // シェルの決定
-    let actual_shell = if id == "terminal_sd" && cfg!(target_os = "windows") {
-        println!("Forcing cmd.exe for SD session");
+    // 優先順位: 1. SD専用(Windows) 2. ユーザー設定 3. システムデフォルト
+    let cmd = if id == "terminal_sd" && cfg!(target_os = "windows") {
         "cmd.exe".to_string()
+    } else if let Some(path) = shell_path {
+        if path.is_empty() {
+            default_shell()
+        } else {
+            path
+        }
     } else {
-        // 通常はユーザー設定（shell_path）を使う
-        shell_path.unwrap_or_else(|| default_shell())
+        default_shell()
     };
 
-    let mut cmd_builder = CommandBuilder::new(actual_shell);
+    let mut cmd_builder = CommandBuilder::new(&cmd); // &cmd にして所有権エラー回避
 
     // システムの環境変数をすべて引き継ぐ
     for (key, val) in std::env::vars() {
@@ -524,6 +568,9 @@ fn init_pty(
         cmd_builder.env("TERM", "xterm");
     } else {
         cmd_builder.env("TERM", "xterm-256color");
+        // Mac/Linux向け：日本語化け対策
+        cmd_builder.env("LANG", "ja_JP.UTF-8");
+        cmd_builder.env("LC_ALL", "ja_JP.UTF-8");
     }
 
     // CWDの設定
@@ -618,9 +665,16 @@ fn default_shell() -> String {
     if cfg!(target_os = "windows") {
         "powershell.exe".to_string()
     } else {
+        // macOSはzsh, Linuxはbashが一般的
+        let fallback = if cfg!(target_os = "macos") {
+            "/bin/zsh"
+        } else {
+            "/bin/bash"
+        };
+
         match std::env::var("SHELL") {
-            Ok(s) => s,
-            Err(_) => "/bin/zsh".to_string(),
+            Ok(s) if !s.is_empty() => s,
+            _ => fallback.to_string(),
         }
     }
 }
@@ -1481,6 +1535,7 @@ pub fn run() {
         // std::env::set_var("GDK_BACKEND", "x11");
     }
     tauri::Builder::default()
+        .plugin(tauri_plugin_opener::init())
         .plugin(tauri_plugin_http::init())
         .plugin(tauri_plugin_shell::init())
         .plugin(tauri_plugin_os::init())
@@ -1576,6 +1631,7 @@ pub fn run() {
             get_app_language,
             get_window_title,
             launch_stable_diffusion_external,
+            start_sd_port_monitor,
         ])
         .on_window_event(|window, event| match event {
             // 1. メインウィンドウの終了確認

@@ -228,7 +228,8 @@ body {
 #groq-model-preset,
 #cohere-model-preset,
 #mistral-model-preset,
-#local-llm-url-preset {
+#local-llm-url-preset,
+#image-gen-provider {
     width: 160px;
 }
 
@@ -241,7 +242,8 @@ body {
 #shell-path,
 #terminal-cwd,
 #local-llm-url,
-#silly-tavern-path {
+#silly-tavern-path,
+#image-auto-save-path {
     flex-grow: 1;
     flex-shrink: 1;
     min-width: 250px;
