@@ -4091,7 +4091,7 @@ ${instructionFiller}
     try {
       if (this.currentOs === 'windows') {
         // Windows: エクスプローラー丸投げ方式（uvエラー対策）
-        await invoke('launch_stable_diffusion_external', { sdPath: fullPath });
+        await invoke('launch_stable_diffusion_external', { sdPath: sdDir });
       } else {
         // macOS: 内蔵ターミナル方式（ログ可視化）
         const sdSessionId = "terminal_sd";

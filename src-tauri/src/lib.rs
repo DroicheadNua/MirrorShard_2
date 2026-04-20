@@ -89,6 +89,7 @@ async fn start_sd_port_monitor(app: tauri::AppHandle) {
 
 #[tauri::command]
 fn launch_stable_diffusion_external(sd_path: String) -> Result<(), String> {
+    // 受け取るのはディレクトリのパス (sdDir)
     let base_path = std::path::Path::new(&sd_path);
     if !base_path.exists() {
         return Err("ERR_SD_PATH_NOT_FOUND".to_string());
@@ -106,7 +107,6 @@ fn launch_stable_diffusion_external(sd_path: String) -> Result<(), String> {
         let wrapper_name = "mirrorshard_launcher.bat";
         let wrapper_path = base_path.join(wrapper_name);
 
-        // set SD_WEBUI_RESTARTING=1 を削除
         let bat_content = format!(
             "@echo off\r\n\
              title Stable Diffusion (MirrorShard)\r\n\
@@ -122,6 +122,7 @@ fn launch_stable_diffusion_external(sd_path: String) -> Result<(), String> {
         std::fs::write(&wrapper_path, bat_content)
             .map_err(|e| format!("Failed to create launcher: {}", e))?;
 
+        // explorer.exe 経由で呼び出す（uv エラー回避）
         std::process::Command::new("explorer.exe")
             .arg(wrapper_path.to_str().unwrap())
             .spawn()
