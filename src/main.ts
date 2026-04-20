@@ -253,6 +253,44 @@ class App {
     }
   }
 
+  /**
+ * Tauriのグローバルイベントを聴取してドラッグ&ドロップを処理する
+ */
+  private async setupDragAndDrop() {
+    // 'tauri://drag-drop' イベントをリッスン
+    // Tauri 2.0 のペイロードは { paths: string[], position: { x: number, y: number } } です
+    await listen<{ paths: string[] }>('tauri://drag-drop', async (event) => {
+      const paths = event.payload.paths;
+      if (!paths || paths.length === 0) return;
+      const { convertFileSrc } = await import('@tauri-apps/api/core');
+
+      for (const path of paths) {
+        // 画像ファイルかチェック
+        if (/\.(jpg|jpeg|png|gif|webp|svg)$/i.test(path)) {
+          // ファイル名を取得
+          const fileName = path.split(/[\\/]/).pop() || 'image';
+
+          // ローカルパスをWebViewで表示可能なURLに変換
+          const assetUrl = convertFileSrc(path);
+
+          // Markdown形式を生成
+          const markdownImage = `![${fileName}](${assetUrl})\n`;
+
+          // エディタの現在のカーソル位置に挿入
+          this.editorView.dispatch({
+            changes: {
+              from: this.editorView.state.selection.main.from,
+              insert: markdownImage
+            },
+            selection: {
+              anchor: this.editorView.state.selection.main.from + markdownImage.length
+            }
+          });
+        }
+      }
+    });
+  }
+
   private createEditorExtensions(): Extension[] {
     const isMac = this.currentOs === 'macos';
 
@@ -1544,6 +1582,8 @@ ${instructionFiller}
       state: EditorState.create({ extensions: this.mainCompartment.of(this.createEditorExtensions()) }),
       parent: this.editorContainer,
     });
+
+    this.setupDragAndDrop();
 
     // イベントリスナーを設定
     this.setupEventListeners();

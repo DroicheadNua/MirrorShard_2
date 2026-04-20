@@ -228,7 +228,7 @@ async fn open_silly_tavern(
     }
 
     // 3. ウィンドウを「即座に」作成
-    let builder = tauri::WebviewWindowBuilder::new(
+    let mut builder = tauri::WebviewWindowBuilder::new(
         &app,
         "silly_tavern",
         tauri::WebviewUrl::App("loading.html".into()), // 共通ロード画面
@@ -253,7 +253,7 @@ async fn open_silly_tavern(
     // Windows/Mac用の視覚効果 (必要であれば)
     #[cfg(target_os = "windows")]
     {
-        let builder = builder.theme(Some(tauri::Theme::Dark));
+        builder = builder.theme(Some(tauri::Theme::Dark));
     }
 
     let window = builder.build().map_err(|e| e.to_string())?;
