@@ -27,7 +27,8 @@
         "closable": true,
         "maximizable": true,
         "minimizable": true,
-        "devtools": false
+        "devtools": false,
+        "dragDropEnabled": true
       }
     ],
     "security": {
