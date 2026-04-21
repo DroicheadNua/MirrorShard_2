@@ -40,6 +40,7 @@ const chatLog = document.getElementById('chat-log')!;
 const chatForm = document.getElementById('chat-form') as HTMLFormElement;
 const messageInput = document.getElementById('message-input') as HTMLTextAreaElement;
 const sendBtn = document.getElementById('send-btn') as HTMLButtonElement;
+const sdLinkBtn = document.getElementById('sd-link') as HTMLButtonElement;
 const apiTrigger = document.getElementById('api-selector-trigger');
 const apiOptions = document.getElementById('api-selector-options');
 const TRANSPARENT_ICON = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII=';
@@ -133,17 +134,27 @@ function onAiUpdate(text: string, isFinal: boolean) {
     }
 
     autoScroll();
-    const textarea = document.getElementById("message-input");
-    if (isFinal && textarea) {
-        setUiLocked(false);
-        textarea.focus();
-        // AIの返答が終わったタイミングでオートセーブ判定
-        if (currentFilePath) {
-            // 既に保存先のパスがある場合は、静かに上書き保存
-            saveLogOverwrite();
-        } else {
-            // 新規チャットの場合は、未保存マークをつける
-            isChatDirty = true;
+
+    if (isFinal) {
+        const sdMatch = text.match(/\[\[SD_PROMPT:\s*(.*?)\s*\]\]/);
+        const isSdLinkActive = document.getElementById('sd-link')?.classList.contains('enabled');
+
+        if (sdMatch && isSdLinkActive) {
+            const sdPrompt = sdMatch[1];
+
+            // UIをロックしてそのまま「全文」と「インデックス」を渡して画像生成へ
+            setUiLocked(true);
+            generateImageFromChat(sdPrompt, text, lastMsgIdx);
+            return; // 通常のアンロック処理をスキップ
+        }
+
+        // --- 通常のアンロック処理 ---
+        const textarea = document.getElementById("message-input");
+        if (textarea) {
+            setUiLocked(false);
+            textarea.focus();
+            if (currentFilePath) saveLogOverwrite();
+            else isChatDirty = true;
         }
     }
 }
@@ -201,6 +212,22 @@ async function renderAiSelector() {
     });
 }
 
+async function applySdLinkSystemPrompt() {
+    const baseSysPrompt = await store?.get<string>('aiSystemPrompt') || "";
+    const isSdLinkActive = document.getElementById('sd-link')?.classList.contains('enabled');
+
+    if (isSdLinkActive) {
+        const sdLinkInst = t('prompts.systemPrompt.sdLinkInstruction');
+        aiSettings.systemPrompt = `${baseSysPrompt}\n\n${sdLinkInst}`;
+    } else {
+        aiSettings.systemPrompt = baseSysPrompt;
+    }
+
+    if (aiChat) {
+        aiChat.updateSettings(aiSettings);
+    }
+}
+
 // --- 初期化 ---
 async function init() {
     try {
@@ -223,6 +250,10 @@ async function init() {
         const isDark = await store.get<boolean>('isDarkMode');
         if (isDark) {
             document.body.classList.add('dark-mode');
+        }
+        const isSdLinkEnabled = await store.get<boolean>('sdLinkEnabled') ?? false;
+        if (isSdLinkEnabled) {
+            sdLinkBtn.classList.add('enabled');
         }
 
         aiSettings = {
@@ -593,6 +624,15 @@ function setupEventListeners() {
         await processUserMessage(text);
     });
 
+    sdLinkBtn.addEventListener('click', async () => {
+        sdLinkBtn.classList.toggle('enabled');
+        const newState = sdLinkBtn.classList.contains('enabled');
+        if (store) {
+            await store.set('sdLinkEnabled', newState);
+            await store.save();
+        }
+    });
+
     // --- 右クリックメニュー (Context Menu) ---
     document.addEventListener('contextmenu', async (e) => {
         e.preventDefault();
@@ -725,6 +765,7 @@ async function processUserMessage(text: string) {
     chatHistory.push({ role: 'assistant', content: '...' });
     addMessageToLog('assistant', '...', chatHistory.length - 1);
 
+    await applySdLinkSystemPrompt();
     const historyToSend = chatHistory.slice(0, -1);
     await aiChat.sendMessage(historyToSend);
 }
@@ -1056,6 +1097,158 @@ async function sendToEditor() {
     showNotification(t('aiChat.notification.sentToEditor'));
 }
 
+function showAiLoadingOverlay(text: string) {
+    let overlay = document.getElementById('ai-loading-overlay');
+    if (!overlay) {
+        // オーバーレイの作成
+        overlay = document.createElement('div');
+        overlay.id = 'ai-loading-overlay';
+        Object.assign(overlay.style, {
+            position: 'absolute', top: '0', left: '0', right: '0', bottom: '0',
+            backgroundColor: 'rgba(0, 0, 0, 0.6)',
+            display: 'flex', flexDirection: 'column',
+            justifyContent: 'center', alignItems: 'center',
+            zIndex: '1000', color: 'white'
+        });
+
+        // スピナーの作成
+        const spinner = document.createElement('div');
+        Object.assign(spinner.style, {
+            width: '40px', height: '40px',
+            border: '4px solid rgba(255, 255, 255, 0.3)',
+            borderTopColor: '#fff', borderRadius: '50%',
+            animation: 'spin 1s linear infinite',
+            marginBottom: '20px'
+        });
+
+        // スピナー用のアニメーション（初回のみ追加）
+        if (!document.getElementById('spinner-style')) {
+            const style = document.createElement('style');
+            style.id = 'spinner-style';
+            style.innerHTML = `@keyframes spin { to { transform: rotate(360deg); } }`;
+            document.head.appendChild(style);
+        }
+
+        const textDiv = document.createElement('div');
+        textDiv.id = 'ai-thinking-text';
+        textDiv.textContent = text;
+
+        overlay.appendChild(spinner);
+        overlay.appendChild(textDiv);
+        document.body.appendChild(overlay);
+    } else {
+        // 既に存在する場合はテキストだけ更新
+        const textDiv = document.getElementById('ai-thinking-text');
+        if (textDiv) textDiv.textContent = text;
+    }
+}
+
+function hideAiLoadingOverlay() {
+    const overlay = document.getElementById('ai-loading-overlay');
+    if (overlay) {
+        overlay.remove(); // 用が済んだらDOMごと消し去る
+    }
+}
+
+// --- 画像生成と保存のコアロジック ---
+async function generateImageFromChat(sdPrompt: string, originalText: string, msgIdx: number) {
+    showAiLoadingOverlay(t('aiChat.generatingImage') || "Generating image with Local SD...");
+
+    let finalContent = originalText; // 最終的に吹き出しに入るテキスト
+
+    try {
+        const { fetch: tauriFetch } = await import('@tauri-apps/plugin-http');
+        const prefix = await store?.get<string>('imageSystemPrompt') || "";
+        const negPrompt = await store?.get<string>('sdNegativePrompt') || "easynegative, low quality, bad anatomy";
+        const steps = Number(await store?.get<number>('sdSteps')) || 20;
+        const cfg = Number(await store?.get<number>('sdCfgScale')) || 7.0;
+        const resolution = await store?.get<string>('sdResolution') || "512x512";
+        const [widthStr, heightStr] = resolution.split('x');
+        const width = Number(widthStr) || 512;
+        const height = Number(heightStr) || 512;
+
+        const finalPrompt = prefix ? `${prefix}, ${sdPrompt}` : sdPrompt;
+
+        const response = await tauriFetch("http://127.0.0.1:7860/sdapi/v1/txt2img", {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                prompt: finalPrompt,
+                negative_prompt: negPrompt,
+                steps: steps,
+                cfg_scale: cfg,
+                width: width,
+                height: height,
+            }),
+            connectTimeout: 60000
+        });
+
+        if (!response.ok) throw new Error(`SD API failed. Status: ${response.status}`);
+
+        const data = await response.json();
+        const savedPath = await saveBase64Image(data.images[0]);
+
+        if (savedPath) {
+            const { convertFileSrc } = await import('@tauri-apps/api/core');
+            const assetUrl = convertFileSrc(savedPath);
+
+            // ★ 元のテキストの [[SD_PROMPT: ...]] 部分だけを、画像表示用のJSONにすり替える
+            finalContent = originalText.replace(/\[\[SD_PROMPT:.*?\]\]/g, `{"url": "${assetUrl}"}`);
+        }
+    } catch (e) {
+        console.error("SD Link Error:", e);
+        // エラー時はタグをエラーメッセージにすり替える
+        finalContent = originalText.replace(/\[\[SD_PROMPT:.*?\]\]/g, `\n\n> ⚠️ **SD Image Generation Failed:** ${String(e)}\n\n`);
+    } finally {
+        // --- UIの更新とアンロック ---
+
+        // 履歴を書き換え
+        chatHistory[msgIdx].content = finalContent;
+
+        // 吹き出しのDOMを書き換え
+        const bubble = document.querySelector(`[data-message-id='${msgIdx}'] .message-bubble`);
+        if (bubble) bubble.innerHTML = formatAiMessage(finalContent);
+
+        autoScroll();
+        hideAiLoadingOverlay();
+        setUiLocked(false);
+        document.getElementById("message-input")?.focus();
+
+        if (currentFilePath) saveLogOverwrite();
+        else isChatDirty = true;
+    }
+}
+
+// Base64を保存してパスを返す関数 (メインの handleImageGenerationResult とほぼ同じ)
+async function saveBase64Image(base64Data: string): Promise<string | null> {
+    const { save } = await import('@tauri-apps/plugin-dialog');
+    const { invoke } = await import('@tauri-apps/api/core');
+
+    let savePath = await store?.get<string>('imageAutoSavePath') ?? null;
+
+    if (!savePath || savePath.trim() === "") {
+        savePath = await save({
+            title: t('editor.ai.saveImageTitle'),
+            defaultPath: `chat_img_${Date.now()}.png`,
+            filters: [{ name: 'Images', extensions: ['png'] }]
+        });
+    } else {
+        const separator = savePath.includes('/') ? '/' : '\\';
+        savePath = savePath.endsWith(separator) ? `${savePath}chat_img_${Date.now()}.png` : `${savePath}${separator}chat_img_${Date.now()}.png`;
+    }
+
+    if (!savePath) return null;
+
+    const binaryString = window.atob(base64Data);
+    const bytes = new Uint8Array(binaryString.length);
+    for (let i = 0; i < binaryString.length; i++) {
+        bytes[i] = binaryString.charCodeAt(i);
+    }
+
+    await invoke('force_save_file', { path: savePath, content: Array.from(bytes) });
+    return savePath;
+}
+
 // --- グローバル操作関数 ---
 
 (window as any).editMsg = async (idx: number) => {
@@ -1140,6 +1333,7 @@ async function sendToEditor() {
     setUiLocked(true);
     chatHistory.push({ role: 'assistant', content: '...' });
     addMessageToLog('assistant', '...', chatHistory.length - 1);
+    await applySdLinkSystemPrompt();
     const historyToSend = chatHistory.slice(0, -1);
     await aiChat.sendMessage(historyToSend);
 };

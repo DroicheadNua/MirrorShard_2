@@ -293,9 +293,43 @@ body.dark-mode #message-input {
 }
 
 body.dark-mode #send-btn {
+  color: white;
   background: linear-gradient(#4caf4f46, #45a049d8);
 }
 
+#sd-link {
+  height: 20px;
+  width: 60px;
+  flex-shrink: 0;
+  margin-left: 10px;
+  margin-bottom: 5px;
+  padding: 0;
+  border: 1px dotted var(--editor-text-color, white);
+  border-radius: 6px;
+  background: var(--editor-bg-color, linear-gradient(to bottom, #4CAF50, #45a049));
+  color: var(--editor-text-color, white);
+  font-weight: bold;
+  cursor: pointer;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+  transition: all 0.2s ease;
+  font-family: inherit;
+  vertical-align: middle;
+  -webkit-app-region: no-drag;
+  opacity: 0.3;
+  font-weight: lighter;
+}
+
+body.dark-mode #sd-link {
+  border-color: #5f5;
+  color: #5f5;
+  background: transparent;
+}
+
+#sd-link.enabled {
+  opacity: 1;
+  font-weight: normal;
+  border: 1px solid;
+}
 
 
 #chat-log::-webkit-scrollbar,

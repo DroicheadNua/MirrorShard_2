@@ -2612,7 +2612,7 @@ dependencies = [
 
 [[package]]
 name = "mirrorshard2"
-version = "1.7.1"
+version = "1.8.0"
 dependencies = [
  "encoding_rs",
  "epub-builder",

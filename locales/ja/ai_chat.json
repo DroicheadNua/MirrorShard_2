@@ -2,13 +2,15 @@
   "windowTitle": "AI Chat",
   "placeholder": "プロンプトを入力...",
   "run": "送信",
+  "generatingImage": "画像生成中...",
   "tooltip": {
     "clearLog": "ログのクリア (Ctrl+Shift+C)",
     "saveOverwrite": "上書き保存 (Ctrl+S)",
     "saveAs": "別名保存",
     "load": "読み込み (Ctrl+O)",
     "fullscreen": "最大化 (F11)",
-    "close": "閉じる (Ctrl+Shift+A)"
+    "close": "閉じる (Ctrl+Shift+A)",
+    "sd-link": "Stable Diffusion連携"
   },
   "notification": {
     "switchTo": "{{name}} に切り替えました",

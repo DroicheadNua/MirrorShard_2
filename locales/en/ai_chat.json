@@ -2,13 +2,15 @@
   "windowTitle": "AI Chat",
   "placeholder": "Enter a prompt...",
   "run": "Run",
+  "generatingImage": "Genearating image...",
   "tooltip": {
     "clearLog": "Clear log (Ctrl+Shift+C)",
     "saveOverwrite": "Save (Ctrl+S)",
     "saveAs": "Save As...",
     "load": "Load (Ctrl+O)",
     "fullscreen": "Maximize (F11)",
-    "close": "Close (Ctrl+Shift+A)"
+    "close": "Close (Ctrl+Shift+A)",
+    "sd-link": "Use Stable Diffusion"
   },
   "notification": {
     "switchTo": "Switched to {{name}}",

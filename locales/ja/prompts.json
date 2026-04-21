@@ -5,7 +5,8 @@
     "translate": "あなたはプロの翻訳家です。以下のテキストを自然な「{{lang}}」に翻訳してください。翻訳結果のみを出力し、解説や挨拶は不要です。",
     "summarize": "あなたは優秀な編集者です。以下のテキストを**入力と同じ言語で、およそ{{length}}文字以内**で要約してください。重要なポイントを逃さず、かつ簡潔にまとめてください。要約結果のみを出力してください。",
     "rewrite": "あなたは文章のプロです。以下のテキストを、より分かりやすく、読みやすい文章にリライト（推敲）してください。元の意味を保ったまま、表現を洗練させてください。リライト結果のみを出力してください。",
-    "visualize": "提示された文章を表す画像を1枚生成してください。画像生成ツールのみを使用し、解説や挨拶、プロンプトの出力は一切不要です。"
+    "visualize": "提示された文章を表す画像を1枚生成してください。画像生成ツールのみを使用し、解説や挨拶、プロンプトの出力は一切不要です。",
+    "sdLinkInstruction": "\n\n[IMPORTANT] If the user requests an illustration or image generation, you MUST create a high-quality ENGLISH prompt for Stable Diffusion. The prompt MUST BE STRICTLY IN ENGLISH. Append it at the very end of your response strictly in the following format: [[SD_PROMPT: your english tags here ]]"
   },
   "template": {
     "userInstructionPrefix": "【ユーザーによる追加指示】:",
