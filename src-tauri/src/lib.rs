@@ -111,6 +111,7 @@ fn launch_stable_diffusion_external(sd_path: String) -> Result<(), String> {
             "@echo off\r\n\
              title Stable Diffusion (MirrorShard)\r\n\
              cd /d \"{}\"\r\n\
+             set SD_WEBUI_RESTARTING=1\r\n\
              call {} --api\r\n\
              echo.\r\n\
              echo [MirrorShard] Stable Diffusion process ended.\r\n\

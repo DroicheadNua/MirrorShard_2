@@ -37,3 +37,35 @@ MirrorShardが対応しているAPIキーはGoogle・Groq・Mistral・Cohereの4
 ローカルAIを使用するには、LM Studio・Ollama・KoboldCPPといったソフトが必要になります。
 
 上記のいずれかをインストールすれば、MirrorShardでのローカルAIの使用が可能になります。詳しくはai-guide-ja.mdの「AIの導入方法」-「ローカルAIを使用する場合」をご覧ください。
+
+# 画像生成について
+
+残念ながら、画像生成機能については「ある程度のスペックのPC」か「Mistralへの課金」が必要になります。
+
+## Mistral
+
+MistralのAgents機能を使用することによって、AIチャット画面やメインエディタで画像生成機能を使用することができます。詳細についてはai-guide-ja.mdをご覧ください。
+
+ただ、Mistralは文書生成の無料枠は大きいのですが、画像生成の無料枠は月に4～5枚程度しかありません。お試しで使う分にはいいのですが、本格的な利用には課金が必要になります。
+
+## Stable Diffusion
+
+Stable Diffusionを利用すれば、選択範囲のテキストから画像を生成する「AI: 画像生成」機能を使用することができます。
+
+これにはある程度以上のグラフィックボード（VRAM 12GB以上推奨）をもったPCが必要ですが、軽量モデル（SD 1.5 LCMなど）を使えばMac Mini M4（グラフィックボードなし、ユニファイドメモリ16GB）あたりでも十分実用範囲です。
+
+### Stable Diffusion使用上の注意
+
+1. 上記の機能を使用するためには、あらかじめStable DiffusionをAPIモードで起動しておく必要があります。
+
+ - MirrorShard から Stable Diffusion を起動する場合（Ctrl+Shift+W）、起動オプションは自動的に調整されるためバッチファイルの改造などは一切不要です。設定画面で webui-user.bat（または Forge の run.bat）の場所を指定するだけで、すぐに「AI: 画像生成」機能が使えます。
+
+ - もし、MirrorShard を立ち上げる前にご自身で Stable Diffusion を起動しておきたい場合は、バッチファイル（webui-user.bat 等）をテキストエディタで開き、COMMANDLINE_ARGS= の行に --api と追記してください。
+
+2. 画像生成の際の使用モデルはStable Diffusion側で指定されたものになりますが、Animaなど特殊なモデルでは生成に失敗することがあります。
+
+ - 上記のような場合は他のモデルを使用するか、あるいは右クリックメニューの「AI: 画像生成プロンプトを作成」で選択範囲のテキストをプロンプトに翻訳し、Stable Diffusion本体で画像を生成してください。
+
+
+
+

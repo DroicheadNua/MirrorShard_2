@@ -1330,22 +1330,8 @@ ${instructionFiller}
     }
 
     const selectedText = this.editorView.state.sliceDoc(selection.from, selection.to);
-    const mistralAgent = await this.store.get<string>('mistralAgentID');
-    const enableAgents = await this.store.get<boolean>('enableMistralAgents') ?? false;
-
-    if (this.mainAiApi !== 'mistral' || !mistralAgent || !enableAgents) {
-      await message(t('editor.ai.mistralAgentRequired'), { kind: 'warning' });
-      return;
-    }
-
-    // --- A. プロンプトとUIの状態準備 ---
+    const imageProvider = await this.store.get<string>('imageGenProvider') || 'mistral';
     const imageSystemPrompt = await this.store.get<string>('imageSystemPrompt') || "";
-    const baseSystemPrompt = t('prompts.systemPrompt.visualize');
-    const userPrefix = t('prompts.template.userInstructionPrefix');
-
-    const systemPrompt = imageSystemPrompt
-      ? `${baseSystemPrompt}\n\n${userPrefix}\n${imageSystemPrompt}`
-      : baseSystemPrompt;
 
     this.isAiProcessing = true;
     this.aiAbortController = new AbortController();
@@ -1353,35 +1339,146 @@ ${instructionFiller}
     this.setAiLoading(true);
 
     try {
-      // --- B. Mistral Agent へのリクエスト ---
-      const apiKey = await this.store.get<string>('mistralApiKey');
-      const response = await fetch("https://api.mistral.ai/v1/agents/completions", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "Authorization": `Bearer ${apiKey}`
-        },
-        body: JSON.stringify({
-          agent_id: mistralAgent,
-          messages: [
-            { role: "system", content: systemPrompt },
-            { role: "user", content: selectedText }
-          ]
-        }),
-        signal: this.aiAbortController.signal // ESC等での中断に対応
-      });
+      // imageUrlOrBase64には、Mistralなら「httpから始まるURL」、Local SDなら「Base64の画像データ」が入る
+      let imageUrlOrBase64 = "";
 
-      if (!response.ok) throw new Error(`API Error: ${response.status}`);
+      if (imageProvider === 'mistral') {
+        // --- A. Mistral Agent 処理 ---
+        const mistralAgent = await this.store.get<string>('mistralAgentID');
+        const enableAgents = await this.store.get<boolean>('enableMistralAgents') ?? false;
+        const apiKey = await this.store.get<string>('mistralApiKey');
 
-      const json = await response.json();
-      const content = json.choices?.[0]?.message?.content || "";
-      const urlMatch = content.match(/https?:\/\/[^\s"']+/);
+        if (!apiKey || !mistralAgent || !enableAgents) {
+          throw new Error(t('editor.ai.mistralAgentRequired'));
+        }
 
-      if (!urlMatch) throw new Error("No image URL found in response.");
-      const imageUrl = urlMatch[0];
+        const baseSystemPrompt = t('prompts.systemPrompt.visualize');
+        const userPrefix = t('prompts.template.userInstructionPrefix');
+        const systemPrompt = imageSystemPrompt ? `${baseSystemPrompt}\n\n${userPrefix}\n${imageSystemPrompt}` : baseSystemPrompt;
 
-      // --- C. 保存処理 ---
-      await this.handleImageGenerationResult(imageUrl);
+        const response = await fetch("https://api.mistral.ai/v1/agents/completions", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "Authorization": `Bearer ${apiKey}`
+          },
+          body: JSON.stringify({
+            agent_id: mistralAgent,
+            messages: [
+              { role: "system", content: systemPrompt },
+              { role: "user", content: selectedText }
+            ]
+          }),
+          signal: this.aiAbortController.signal
+        });
+
+        if (!response.ok) throw new Error(`API Error: ${response.status}`);
+
+        const json = await response.json();
+        const content = json.choices?.[0]?.message?.content || "";
+        const urlMatch = content.match(/https?:\/\/[^\s"']+/);
+
+        if (!urlMatch) throw new Error("No image URL found in response.");
+        imageUrlOrBase64 = urlMatch[0]; // Mistralの画像URL
+
+      } else {
+        // --- B. Local Stable Diffusion 処理 ---
+        this.aiThinkingMode = "Translating scene to prompt...";
+        const promptGenSystem = "Task: Convert the provided scene description into a concise, comma-separated English prompt for Stable Diffusion. Use maximum 30 tags. Focus ONLY on the most important subjects, setting, and atmosphere. No explanations.";
+        let sdPrompt = "";
+        const tempMaxTokens = 1000;
+
+        // ★ メインAIによるプロンプト生成（既存のAI分岐ロジック）
+        if (this.mainAiApi === 'gemini') {
+          const apiKey = await this.store.get<string>('geminiApiKey');
+          if (!apiKey) throw new Error("Gemini API Key is not set.");
+          sdPrompt = await this.requestGeminiDirect(apiKey, selectedText, promptGenSystem, tempMaxTokens, this.aiAbortController?.signal);
+        } else if (this.mainAiApi === 'cohere') {
+          const apiKey = await this.store.get<string>('cohereApiKey');
+          const model = await this.store.get<string>('cohereModel') || "command-r-plus-08-2024";
+          if (!apiKey) throw new Error("Cohere API Key is not set.");
+          sdPrompt = await this.requestCohereV2Direct(apiKey, model, selectedText, promptGenSystem, tempMaxTokens, this.aiAbortController?.signal);
+        } else {
+          let url = "", apiKey = "", model = "";
+          if (this.mainAiApi === 'groq') {
+            url = "https://api.groq.com/openai/v1/chat/completions";
+            apiKey = await this.store.get<string>('groqApiKey') || "";
+            model = await this.store.get<string>('groqModel') || "llama-3.3-70b-versatile";
+          } else if (this.mainAiApi === 'mistral') {
+            url = "https://api.mistral.ai/v1/chat/completions";
+            apiKey = await this.store.get<string>('mistralApiKey') || "";
+            model = await this.store.get<string>('mistralModel') || "mistral-small-latest";
+          } else if (this.mainAiApi === 'local') {
+            url = await this.store.get<string>('localLlmUrl') || "http://127.0.0.1:1234/v1/chat/completions";
+            apiKey = "local";
+            model = await this.store.get<string>('localLlmModel') || "local-model";
+          }
+          if (this.mainAiApi !== 'local' && !apiKey) throw new Error(`${this.mainAiApi} API Key is not set.`);
+          sdPrompt = await this.requestOpenAICompatibleDirect(url, apiKey, model, selectedText, promptGenSystem, tempMaxTokens, this.aiAbortController?.signal);
+        }
+
+        // 2. Local SD の API を叩く
+        this.aiThinkingMode = "Generating Image with Local SD...";
+        const { fetch: tauriFetch } = await import('@tauri-apps/plugin-http');
+
+        const negPrompt = await this.store.get<string>('sdNegativePrompt') || "easynegative, low quality, bad anatomy, text, watermark";
+        const steps = Number(await this.store.get<number>('sdSteps')) || 20;
+        const cfg = Number(await this.store.get<number>('sdCfgScale')) || 7.0;
+        const resolution = await this.store.get<string>('sdResolution') || "512x512";
+        const [widthStr, heightStr] = resolution.split('x');
+        const width = Number(widthStr) || 512;
+        const height = Number(heightStr) || 512;
+
+        const finalPrompt = imageSystemPrompt ? `${imageSystemPrompt}, ${sdPrompt}` : sdPrompt;
+
+        const response = await tauriFetch("http://127.0.0.1:7860/sdapi/v1/txt2img", {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            prompt: finalPrompt,
+            negative_prompt: negPrompt,
+            steps: steps,
+            cfg_scale: cfg,
+            width: width,
+            height: height,
+          }),
+          connectTimeout: 60000,
+          signal: this.aiAbortController?.signal
+        });
+
+        if (!response.ok) {
+          const errText = await response.text();
+          throw new Error(`SD API Error (${response.status}): ${errText}\n※SDが --api オプション付きで起動しているか確認してください。`);
+        }
+
+        const data = await response.json();
+        // Local SDからは Base64文字列 が返ってくる
+        imageUrlOrBase64 = `data:image/png;base64,${data.images[0]}`;
+      }
+
+      // --- C. 保存処理とエディタへの挿入 ---
+      this.aiThinkingMode = "Saving image...";
+      const savedPath = await this.handleImageGenerationResult(imageUrlOrBase64);
+
+      if (savedPath) {
+        // 保存に成功したら、ローカルパスを asset:// 形式に変換
+        const { convertFileSrc } = await import('@tauri-apps/api/core');
+        const assetUrl = convertFileSrc(savedPath);
+        const fileName = savedPath.split(/[\\/]/).pop() || 'illustration.jpg';
+
+        // 選択範囲の直後に Markdown 形式で画像を挿入
+        const insertText = `\n\n![${fileName}](${assetUrl})\n`;
+
+        this.editorView.dispatch({
+          changes: { from: selection.to, insert: insertText },
+          selection: { anchor: selection.to + insertText.length }
+        });
+
+        // 挿入した位置までスクロール
+        this.editorView.dispatch({
+          effects: EditorView.scrollIntoView(selection.to + insertText.length, { y: "center" })
+        });
+      }
 
     } catch (e: any) {
       if (e.name === 'AbortError') {
@@ -1397,50 +1494,59 @@ ${instructionFiller}
     }
   }
 
-  private async handleImageGenerationResult(url: string) {
-    // Storeから取得（undefined の場合は null に変換して型を合わせる）
+  private async handleImageGenerationResult(urlOrBase64: string): Promise<string | null> {
+    const { save } = await import('@tauri-apps/plugin-dialog');
+    const { invoke } = await import('@tauri-apps/api/core');
+
     let savePath: string | null = (await this.store.get<string>('imageAutoSavePath')) ?? null;
 
-    // A. 保存先の決定
     if (!savePath || savePath.trim() === "") {
       savePath = await save({
         title: t('editor.ai.saveImageTitle'),
         defaultPath: `illustration_${Date.now()}.jpg`,
-        filters: [{ name: 'Images', extensions: ['jpg'] }]
+        filters: [{ name: 'Images', extensions: ['jpg', 'png'] }]
       });
     } else {
       const separator = savePath.includes('/') ? '/' : '\\';
       savePath = savePath.endsWith(separator)
-        ? `${savePath}ms_img_${Date.now()}.jpg`
-        : `${savePath}${separator}ms_img_${Date.now()}.jpg`;
+        ? `${savePath}ms_img_${Date.now()}.png`
+        : `${savePath}${separator}ms_img_${Date.now()}.png`;
     }
 
-    if (!savePath) return; // キャンセル時
+    if (!savePath) return null; // キャンセル時
 
-    // B. ダウンロード (Lazy Loading)
-    const { fetch: tauriFetch } = await import('@tauri-apps/plugin-http');
-    const res = await tauriFetch(url, { method: 'GET' });
-    const arrayBuffer = await res.arrayBuffer();
-    const uint8Array = new Uint8Array(arrayBuffer);
+    let uint8Array: Uint8Array;
 
-    // C. 保存 (既存の invoke 経由)
+    // Local SD からの Base64 文字列の場合
+    if (urlOrBase64.startsWith('data:image/')) {
+      const base64Data = urlOrBase64.split(',')[1];
+      const binaryString = window.atob(base64Data);
+      const len = binaryString.length;
+      const bytes = new Uint8Array(len);
+      for (let i = 0; i < len; i++) {
+        bytes[i] = binaryString.charCodeAt(i);
+      }
+      uint8Array = bytes;
+    }
+    // Mistral Agent からの URL の場合
+    else {
+      const { fetch: tauriFetch } = await import('@tauri-apps/plugin-http');
+      const res = await tauriFetch(urlOrBase64, { method: 'GET' });
+      const arrayBuffer = await res.arrayBuffer();
+      uint8Array = new Uint8Array(arrayBuffer);
+    }
+
+    // Rust側でローカルファイルとして保存
     await invoke('force_save_file', {
       path: savePath,
       content: Array.from(uint8Array)
     });
 
-    // D. 完了通知 (Lazy Loading)
-    const { ask } = await import('@tauri-apps/plugin-dialog');
+    // 挿入してプレビューですぐ見られるので、毎回「ブラウザで開くか？」と聞かずトースト通知のみ
+    await message(t('editor.ai.imageSavedSuccess', { path: savePath }), { kind: 'info' });
 
-    const confirmed = await ask(t('editor.ai.imageSavedSuccess', { path: savePath }), {
-      title: "MirrorShard AI",
-      okLabel: t('common.open'),
-      cancelLabel: t('common.close')
-    });
-
-    if (confirmed) {
-      await open(savePath);
-    }
+    // 保存したパスを返す
+    return savePath;
   }
 
   // コード用の拡張機能セットを返すヘルパー
@@ -2803,7 +2909,7 @@ ${instructionFiller}
           }),
           await MenuItem.new({
             text: t('editor.menu.aiVisualize'),
-            enabled: hasSelection && this.mainAiApi === 'mistral',
+            enabled: hasSelection,
             action: () => this.visualizeSelection()
           }),
           await PredefinedMenuItem.new({ item: 'Separator' }),

@@ -115,6 +115,9 @@ async function setupSettings() {
         const localLlmUrlInput = document.querySelector('#local-llm-url') as HTMLInputElement;
         const aiSystemPromptInput = document.querySelector('#ai-system-prompt') as HTMLTextAreaElement;
         const imageSystemPromptInput = document.querySelector('#image-system-prompt') as HTMLTextAreaElement;
+        const imageNegativePromptInput = document.querySelector('#image-negative-prompt') as HTMLTextAreaElement;
+        const sdStepsInput = document.querySelector('#sd-steps') as HTMLInputElement;
+        const sdCfgInput = document.querySelector('#sd-cfg') as HTMLInputElement;
         const aiMaxTokensInput = document.querySelector('#ai-max-tokens') as HTMLInputElement;
         const faMaxTokensInput = document.querySelector('#fa-max-tokens') as HTMLInputElement;
         const aiContextLimitInput = document.querySelector('#ai-context-limit') as HTMLInputElement;
@@ -129,6 +132,8 @@ async function setupSettings() {
         const localLlmModelInput = document.querySelector('#local-llm-model') as HTMLInputElement;
         const urlPresetSelect = document.querySelector('#local-llm-url-preset') as HTMLSelectElement;
         const aiThinkingOverlayCheck = document.querySelector('#check-ai-thinking-overlay') as HTMLInputElement;
+        const visualizeAi = document.querySelector('#visualize-ai') as HTMLSelectElement;
+        const sdResolution = document.querySelector('#sd-resolution') as HTMLSelectElement;
 
         // --- 3.2. Code Editor UI要素の取得 ---
         const codeLanguageSelect = document.querySelector('#code-language-select') as HTMLSelectElement;
@@ -516,6 +521,12 @@ async function setupSettings() {
         const cwd = await store.get<string>('terminalDefaultCwd') ?? '';
         if (terminalDefaultCwd) terminalDefaultCwd.value = cwd;
 
+        const initVisualizeAi = await store.get<string>('imageGenProvider') || 'mistral';
+        if (visualizeAi) visualizeAi.value = initVisualizeAi;
+
+        const initSdResolution = await store.get<string>('sdResolution') || "512x512";
+        if (sdResolution) sdResolution.value = initSdResolution;
+
         const initCodeLanguage = await store.get<string>('codeLanguage') || 'html';
         if (codeLanguageSelect) codeLanguageSelect.value = initCodeLanguage;
 
@@ -578,6 +589,9 @@ async function setupSettings() {
         localLlmUrlInput.value = await store.get<string>('localLlmUrl') || 'http://127.0.0.1:1234/v1/chat/completions';
         aiSystemPromptInput.value = await store.get<string>('aiSystemPrompt') || '';
         imageSystemPromptInput.value = await store.get<string>('imageSystemPrompt') || '';
+        imageNegativePromptInput.value = await store.get<string>('sdNegativePrompt') || '';
+        sdStepsInput.value = (await store.get<number>('sdSteps') || 20).toString();
+        sdCfgInput.value = (await store.get<number>('sdCfgScale') || 7.0).toString();
         aiMaxTokensInput.value = (await store.get<number>('aiMaxTokens') || 2000).toString();
         faMaxTokensInput.value = (await store.get<number>('faMaxTokens') || 30).toString();
         aiContextLimitInput.value = (await store.get<number>('aiContextLimit') || 2000).toString();
@@ -864,6 +878,8 @@ async function setupSettings() {
                 const newImageAutoSavePath = imageAutoSavePath.value;
                 const newShellPath = shellPath.value;
                 const newTerminalDefaultCwd = terminalDefaultCwd.value;
+                const newVisualizeAi = visualizeAi.value;
+                const newSdResolution = sdResolution.value;
                 const newCodeLanguage = codeLanguageSelect.value;
                 const newCodeFont = codeFontSelect.value;
                 console.log('Applying Code Font:', newCodeFont);
@@ -900,6 +916,9 @@ async function setupSettings() {
                 const newLocalUrl = localLlmUrlInput.value.trim();
                 const newSystemPrompt = aiSystemPromptInput.value;
                 const newImageSystemPrompt = imageSystemPromptInput.value;
+                const newImageNegativePrompt = imageNegativePromptInput.value;
+                const newSdSteps = parseInt(sdStepsInput.value, 10) || 20;
+                const newSdCfg = parseInt(sdCfgInput.value, 10) || 7.0;
                 const newAiMaxTokens = parseInt(aiMaxTokensInput.value, 10) || 2000;
                 const newFaMaxTokens = parseInt(faMaxTokensInput.value, 10) || 30;
                 const newAiContextLimit = parseInt(aiContextLimitInput.value, 10) || 2000;
@@ -922,6 +941,8 @@ async function setupSettings() {
                 await store.set('imageAutoSavePath', newImageAutoSavePath);
                 await store.set('shellPath', newShellPath);
                 await store.set('terminalDefaultCwd', newTerminalDefaultCwd);
+                await store.set('imageGenProvider', newVisualizeAi);
+                await store.set('sdResolution', newSdResolution);
                 await store.set('codeLanguage', newCodeLanguage);
                 await store.set('codeFontFamily', newCodeFont);
                 await store.set('codeFontSize', newCodeSize);
@@ -957,10 +978,13 @@ async function setupSettings() {
                 await store.set('localLlmUrl', newLocalUrl);
                 await store.set('aiSystemPrompt', newSystemPrompt);
                 await store.set('imageSystemPrompt', newImageSystemPrompt);
+                await store.set('sdNegativePrompt', newImageNegativePrompt);
                 const currentApiType = await store.get<string>('selectedApiType');
                 if (!currentApiType) {
                     await store.set('selectedApiType', 'gemini');
                 }
+                await store.set('sdSteps', newSdSteps);
+                await store.set('sdCfgScale', newSdCfg);
                 await store.set('aiMaxTokens', newAiMaxTokens);
                 await store.set('faMaxTokens', newFaMaxTokens);
                 await store.set('aiContextLimit', newAiContextLimit);
@@ -1022,8 +1046,11 @@ async function setupSettings() {
                     localLlmUrl: newLocalUrl,
                     aiSystemPrompt: newSystemPrompt,
                     imageSystemPrompt: newImageSystemPrompt,
+                    sdNegativePrompt: newImageNegativePrompt,
                     selectedApiType: currentApiType || 'gemini',
                     aiMaxTokens: newAiMaxTokens,
+                    sdSteps: newSdSteps,
+                    sdCfgScale: newSdCfg,
                     faMaxTokens: newFaMaxTokens,
                     aiContextLimit: newAiContextLimit,
                     aiChatUserName: userNameInput.value || 'User',
@@ -1031,6 +1058,8 @@ async function setupSettings() {
                     aiChatAiName: aiNameInput.value || 'AI',
                     aiChatAiIconPath: pendingAiIcon,
                     localLlmModel: newLocalModel,
+                    imageGenProvider: newVisualizeAi,
+                    sdResolution: newSdResolution,
                     codeLanguage: newCodeLanguage,
                     codeFontFamily: newCodeFont,
                     codeFontSize: newCodeSize,

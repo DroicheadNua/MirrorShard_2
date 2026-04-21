@@ -233,7 +233,9 @@ body {
 }
 
 #code-language-select,
-#code-font-family-select {
+#code-font-family-select,
+#visualize-ai,
+#sd-resolution {
     width: 200px;
 }
 
