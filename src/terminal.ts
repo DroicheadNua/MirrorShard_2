@@ -19,12 +19,17 @@ async function init() {
     const sessionId = params.get('id') || 'main';
 
     // ★ CWDの決定ロジック
-    let cwd: string | null = null;
-    if (sessionId === 'terminal_sd') {
-        // main.ts で保存した SD のディレクトリ
-        cwd = await store.get<string>(`terminalTempCwd_${sessionId}`) || null;
-    } else {
-        cwd = (await store.get<string>('terminalTempCwd')) || (await store.get<string>('terminalDefaultCwd')) || null;
+    // 1. まず、そのID専用の一時パスがあるか確認 (terminalTempCwd_terminal_sd 等)
+    let cwd = await store.get<string>(`terminalTempCwd_${sessionId}`);
+
+    // 2. なければ、汎用の「Open Here」用パスを確認
+    if (!cwd) {
+        cwd = await store.get<string>('terminalTempCwd');
+    }
+
+    // 3. それもなければ、設定画面のデフォルトCWD
+    if (!cwd) {
+        cwd = await store.get<string>('terminalDefaultCwd');
     }
 
 
@@ -32,6 +37,7 @@ async function init() {
 
     // 一時パスの掃除
     if (await store.get('terminalTempCwd')) {
+        await store.set(`terminalTempCwd_${sessionId}`, null);
         await store.set('terminalTempCwd', null);
         await store.save();
     }

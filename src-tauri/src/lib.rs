@@ -65,10 +65,12 @@ struct SecondInstanceFile(Mutex<Option<String>>);
 struct MacFileBuffer(Mutex<Option<String>>);
 // --- Tauriコマンドの定義 ---
 
+// 汎用ポートモニタ
 #[tauri::command]
-async fn start_sd_port_monitor(app: tauri::AppHandle) {
+async fn start_port_monitor(app: tauri::AppHandle, port: u16, url: String) {
     std::thread::spawn(move || {
-        let addr = "127.0.0.1:7860";
+        let addr = format!("127.0.0.1:{}", port);
+        // 5分〜10分程度監視 (1秒おきに300〜600回)
         for _ in 0..300 {
             if std::net::TcpStream::connect_timeout(
                 &addr.parse().unwrap(),
@@ -76,13 +78,11 @@ async fn start_sd_port_monitor(app: tauri::AppHandle) {
             )
             .is_ok()
             {
-                // opener プラグインを使用してブラウザを開く
-                let _ = app
-                    .opener()
-                    .open_url("http://127.0.0.1:7860", Option::<String>::None);
+                // ポートを検知したら指定のURLをブラウザで開く
+                let _ = app.opener().open_url(&url, Option::<String>::None);
                 return;
             }
-            std::thread::sleep(std::time::Duration::from_secs(2));
+            std::thread::sleep(std::time::Duration::from_secs(1));
         }
     });
 }
@@ -236,7 +236,6 @@ async fn open_silly_tavern(
     }
 
     // --- 3. ロード画面を「先に」表示 (Windows/Mac用) ---
-    #[cfg(not(target_os = "linux"))]
     let window = {
         let builder = tauri::WebviewWindowBuilder::new(
             &app,
@@ -305,55 +304,28 @@ async fn open_silly_tavern(
         *lock = Some(child);
     }
 
-    // --- 5. 表示・監視のOS分岐 ---
-    let _app_handle = app.clone();
+    // --- 5. 表示・監視 ---
 
-    #[cfg(target_os = "linux")]
-    {
-        // Linux: ポート監視して標準ブラウザで開く
-        std::thread::spawn(move || {
-            let addr = "127.0.0.1:8000";
-            for _ in 0..100 {
-                if std::net::TcpStream::connect_timeout(
-                    &addr.parse().unwrap(),
-                    std::time::Duration::from_millis(200),
-                )
-                .is_ok()
-                {
-                    use tauri_plugin_opener::OpenerExt;
-                    let _ = _app_handle
-                        .opener()
-                        .open_url("http://127.0.0.1:8000", Option::<String>::None);
-                    return;
-                }
-                std::thread::sleep(std::time::Duration::from_millis(200));
+    // Windows/Mac: ポート監視してURL切り替え
+    std::thread::spawn(move || {
+        let addr = "127.0.0.1:8000";
+        for _ in 0..100 {
+            if std::net::TcpStream::connect_timeout(
+                &addr.parse().unwrap(),
+                std::time::Duration::from_millis(200),
+            )
+            .is_ok()
+            {
+                let _ = window.eval("window.location.href = 'http://127.0.0.1:8000'");
+                let _ = window.set_title("SillyTavern");
+                return;
             }
-        });
-    }
-
-    #[cfg(not(target_os = "linux"))]
-    {
-        // Windows/Mac: ポート監視してURL切り替え
-        std::thread::spawn(move || {
-            let addr = "127.0.0.1:8000";
-            for _ in 0..100 {
-                if std::net::TcpStream::connect_timeout(
-                    &addr.parse().unwrap(),
-                    std::time::Duration::from_millis(200),
-                )
-                .is_ok()
-                {
-                    let _ = window.eval("window.location.href = 'http://127.0.0.1:8000'");
-                    let _ = window.set_title("SillyTavern");
-                    return;
-                }
-                if window.is_closable().is_err() {
-                    return;
-                }
-                std::thread::sleep(std::time::Duration::from_millis(200));
+            if window.is_closable().is_err() {
+                return;
             }
-        });
-    }
+            std::thread::sleep(std::time::Duration::from_millis(200));
+        }
+    });
 
     Ok("opened".to_string())
 }
@@ -418,46 +390,20 @@ async fn open_opencode(
         *lock = Some(child);
     }
 
-    // 3. 表示処理の分岐
-    let _app_handle = app.clone();
+    // 3. 表示処理
 
-    #[cfg(target_os = "linux")]
-    {
-        // Linux: ポートを監視して標準ブラウザで開く
-        std::thread::spawn(move || {
-            let addr = "127.0.0.1:4096";
-            for _ in 0..50 {
-                if std::net::TcpStream::connect_timeout(
-                    &addr.parse().unwrap(),
-                    std::time::Duration::from_millis(200),
-                )
-                .is_ok()
-                {
-                    let _ = _app_handle
-                        .opener()
-                        .open_url("http://127.0.0.1:4096", Option::<String>::None);
-                    return;
-                }
-                std::thread::sleep(std::time::Duration::from_millis(200));
-            }
-        });
-    }
+    // Windows/Mac: 専用ウィンドウを生成
+    let builder = tauri::WebviewWindowBuilder::new(
+        &app,
+        "opencode",
+        tauri::WebviewUrl::External("http://127.0.0.1:4096".parse().unwrap()),
+    )
+    .title("OpenCode - AI Coding Assistant")
+    .inner_size(1100.0, 850.0)
+    .decorations(true);
 
-    #[cfg(not(target_os = "linux"))]
-    {
-        // Windows/Mac: 専用ウィンドウを生成
-        let builder = tauri::WebviewWindowBuilder::new(
-            &app,
-            "opencode",
-            tauri::WebviewUrl::External("http://127.0.0.1:4096".parse().unwrap()),
-        )
-        .title("OpenCode - AI Coding Assistant")
-        .inner_size(1100.0, 850.0)
-        .decorations(true);
-
-        let window = builder.build().map_err(|e| e.to_string())?;
-        window.show().unwrap();
-    }
+    let window = builder.build().map_err(|e| e.to_string())?;
+    window.show().unwrap();
 
     Ok(())
 }
@@ -1691,7 +1637,7 @@ pub fn run() {
             get_app_language,
             get_window_title,
             launch_stable_diffusion_external,
-            start_sd_port_monitor,
+            start_port_monitor,
         ])
         .on_window_event(|window, event| match event {
             // 1. メインウィンドウの終了確認

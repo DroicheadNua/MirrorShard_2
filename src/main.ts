@@ -4153,6 +4153,19 @@ ${instructionFiller}
     // Linuxでの運用を試験的に開始
     // if (this.currentOs === 'linux') return;
     try {
+
+      if (this.currentOs === 'linux') {
+        const runCmd = `opencode serve --port 4096\n`;
+        // OpenCodeは通常PATHが通っているのでCWD指定は不要（またはプロジェクトルート等）
+        await this.store.set('terminalAutoRunCommand_terminal_oc', runCmd);
+        await this.store.save();
+
+        await invoke('open_terminal_window', { id: 'oc' });
+        // ポート 4096 を監視してブラウザを開かせる
+        await invoke('start_port_monitor', { port: 4096, url: 'http://127.0.0.1:4096' });
+        return;
+      }
+
       await invoke('open_opencode');
     } catch (e) {
       console.error(e);
@@ -4172,6 +4185,21 @@ ${instructionFiller}
     try {
       const stPath = await this.store.get<string>('sillyTavernPath');
       const enableStTerminal = await this.store.get<boolean>('enableStTerminal') ?? false;
+
+      if (this.currentOs === 'linux') {
+        if (!stPath) return;
+
+        const runCmd = `node server.js\n`; // Linuxは \n
+        await this.store.set('terminalTempCwd_terminal_st', stPath);
+        await this.store.set('terminalAutoRunCommand_terminal_st', runCmd);
+        await this.store.save();
+
+        await invoke('open_terminal_window', { id: 'st' });
+        // ポート 8000 を監視してブラウザを開かせる
+        await invoke('start_port_monitor', { port: 8000, url: 'http://127.0.0.1:8000' });
+        return;
+      }
+
       await invoke('open_silly_tavern', { stPathSetting: stPath || null, enableStTerminal: enableStTerminal });
       // 結果待ちは不要（Rust側でスレッドが回るため）
     } catch (e) {
@@ -4215,7 +4243,7 @@ ${instructionFiller}
       }
 
       // 共通：ポート監視を開始して、準備ができたら自前窓でUIを表示
-      invoke('start_sd_port_monitor');
+      invoke('start_port_monitor', { port: 7860, url: 'http://127.0.0.1:7860' });
 
     } catch (e) {
       console.error("SD Launch Error:", e);
