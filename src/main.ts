@@ -4189,14 +4189,14 @@ ${instructionFiller}
       if (this.currentOs === 'linux') {
         if (!stPath) return;
 
-        const runCmd = `node server.js --no-browser`; //  \nはつけない
+        const runCmd = `node server.js`; //  \nはつけない
         await this.store.set('terminalTempCwd_st', stPath);
         await this.store.set('terminalAutoRunCommand_st', runCmd);
         await this.store.save();
 
         await invoke('open_terminal_window', { id: 'st' });
-        // ポート 8000 を監視してブラウザを開かせる
-        await invoke('start_port_monitor', { port: 8000, url: 'http://127.0.0.1:8000' });
+        // LinuxはMirrorShard側では開かない（SillyTavern本体の自動起動に任せる）
+        // await invoke('start_port_monitor', { port: 8000, url: 'http://127.0.0.1:8000' });
         return;
       }
 
