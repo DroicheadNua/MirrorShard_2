@@ -212,15 +212,21 @@ async fn open_silly_tavern(
     st_path_setting: Option<String>,
     enable_st_terminal: bool,
 ) -> Result<String, String> {
+    let _ = enable_st_terminal;
     // 1. トグル処理
-    if let Some(win) = app.get_webview_window("silly_tavern") {
-        let _ = win.close();
-        // 以前のプロセスを殺す
+    {
         let mut lock = state.inner().0.lock().unwrap();
         if let Some(mut child) = lock.take() {
+            // すでにプロセスがあるなら、殺して終了（OFFにする）
             kill_child_tree(&mut child);
+
+            // もし専用ウィンドウ（Win/Mac）が開いていればそれも閉じる
+            if let Some(win) = app.get_webview_window("silly_tavern") {
+                let _ = win.close();
+            }
+            return Ok("closed".to_string());
         }
-        return Ok("closed".to_string());
+        // プロセスがない場合は、そのまま下へ進んで起動処理を行う
     }
 
     // 2. パス判定
@@ -229,38 +235,37 @@ async fn open_silly_tavern(
         return Err("ERR_ST_PATH_NOT_FOUND".to_string());
     }
 
-    // 3. ウィンドウを「即座に」作成
-    let mut builder = tauri::WebviewWindowBuilder::new(
-        &app,
-        "silly_tavern",
-        tauri::WebviewUrl::App("loading.html".into()), // 共通ロード画面
-    )
-    .title("SillyTavern (Loading...)")
-    .inner_size(1200.0, 900.0)
-    // ★ Mac特有のIME変換確定誤爆を防ぐスクリプトをここで注入
-    .initialization_script(
-        r#"
-        let isComposing = false;
-        document.addEventListener('compositionstart', () => { isComposing = true; }, true);
-        document.addEventListener('compositionend', () => { setTimeout(() => { isComposing = false; }, 50); }, true);
-        document.addEventListener('keydown', (e) => {
-            if (e.key === 'Enter' && isComposing) {
-                e.stopPropagation();
-                e.stopImmediatePropagation();
-            }
-        }, true);
-    "#,
-    );
+    // --- 3. ロード画面を「先に」表示 (Windows/Mac用) ---
+    #[cfg(not(target_os = "linux"))]
+    let window = {
+        let builder = tauri::WebviewWindowBuilder::new(
+            &app,
+            "silly_tavern",
+            tauri::WebviewUrl::App("loading.html".into()),
+        )
+        .title("SillyTavern (Loading...)")
+        .inner_size(1200.0, 900.0)
+        .initialization_script(
+            r#"
+            let isComposing = false;
+            document.addEventListener('compositionstart', () => { isComposing = true; }, true);
+            document.addEventListener('compositionend', () => { setTimeout(() => { isComposing = false; }, 50); }, true);
+            document.addEventListener('keydown', (e) => {
+                if (e.key === 'Enter' && isComposing) {
+                    e.stopPropagation();
+                    e.stopImmediatePropagation();
+                }
+            }, true);
+        "#,
+        );
 
-    // Windows/Mac用の視覚効果 (必要であれば)
-    #[cfg(target_os = "windows")]
-    {
-        builder = builder.theme(Some(tauri::Theme::Dark));
-    }
+        #[cfg(target_os = "windows")]
+        let builder = builder.theme(Some(tauri::Theme::Dark));
 
-    let window = builder.build().map_err(|e| e.to_string())?;
+        builder.build().map_err(|e| e.to_string())?
+    };
 
-    // 4. サーバープロセス起動
+    // --- 4. サーバープロセス起動 ---
     {
         let mut lock = state.inner().0.lock().unwrap();
         if let Some(mut child) = lock.take() {
@@ -269,137 +274,190 @@ async fn open_silly_tavern(
 
         #[cfg(target_os = "windows")]
         let mut cmd = {
+            use std::os::windows::process::CommandExt;
             let mut c = std::process::Command::new("cmd");
             c.args(["/C", "node server.js"]);
-            if !enable_st_terminal {
-                use std::os::windows::process::CommandExt;
+
+            if enable_st_terminal {
+                // ★ 確実に新しい窓を出すフラグ
+                c.creation_flags(0x00000010);
+            } else {
+                // 完全に隠すフラグ
                 c.creation_flags(0x08000000);
+                c.stdout(Stdio::null());
+                c.stderr(Stdio::null());
             }
             c
         };
+
         #[cfg(not(target_os = "windows"))]
         let mut cmd = {
             let mut c = std::process::Command::new(resolve_node_path());
             c.arg("server.js");
+            // Mac/Linuxは常に非表示（ゾンビ化防止）
+            c.stdout(Stdio::null());
+            c.stderr(Stdio::null());
             c
         };
 
         cmd.current_dir(&st_path);
-        // Windowsかつターミナル非表示のときは出力をnullに捨ててバッファ詰まりを防止
-        if cfg!(target_os = "windows") {
-            if !enable_st_terminal {
-                cmd.stdout(std::process::Stdio::null());
-                cmd.stderr(std::process::Stdio::null());
-            }
-        }
-
         let child = cmd.spawn().map_err(|e| format!("ERR_ST_SPAWN:{}", e))?;
         *lock = Some(child);
     }
 
-    // 5. バックグラウンド監視
-    let window_clone = window.clone();
-    std::thread::spawn(move || {
-        let addr = "127.0.0.1:8000";
-        for _ in 0..150 {
-            // 約30秒
-            if std::net::TcpStream::connect_timeout(
-                &addr.parse().unwrap(),
-                std::time::Duration::from_millis(200),
-            )
-            .is_ok()
-            {
-                // 準備ができたらリダイレクト
-                let _ = window_clone.eval("window.location.href = 'http://127.0.0.1:8000'");
-                let _ = window_clone.set_title("SillyTavern");
-                return;
+    // --- 5. 表示・監視のOS分岐 ---
+    let _app_handle = app.clone();
+
+    #[cfg(target_os = "linux")]
+    {
+        // Linux: ポート監視して標準ブラウザで開く
+        std::thread::spawn(move || {
+            let addr = "127.0.0.1:8000";
+            for _ in 0..100 {
+                if std::net::TcpStream::connect_timeout(
+                    &addr.parse().unwrap(),
+                    std::time::Duration::from_millis(200),
+                )
+                .is_ok()
+                {
+                    use tauri_plugin_opener::OpenerExt;
+                    let _ = _app_handle
+                        .opener()
+                        .open_url("http://127.0.0.1:8000", Option::<String>::None);
+                    return;
+                }
+                std::thread::sleep(std::time::Duration::from_millis(200));
             }
-            if window_clone.is_closable().is_err() {
-                return;
-            } // 窓が閉じられたら監視終了
-            std::thread::sleep(std::time::Duration::from_millis(200));
-        }
-    });
+        });
+    }
+
+    #[cfg(not(target_os = "linux"))]
+    {
+        // Windows/Mac: ポート監視してURL切り替え
+        std::thread::spawn(move || {
+            let addr = "127.0.0.1:8000";
+            for _ in 0..100 {
+                if std::net::TcpStream::connect_timeout(
+                    &addr.parse().unwrap(),
+                    std::time::Duration::from_millis(200),
+                )
+                .is_ok()
+                {
+                    let _ = window.eval("window.location.href = 'http://127.0.0.1:8000'");
+                    let _ = window.set_title("SillyTavern");
+                    return;
+                }
+                if window.is_closable().is_err() {
+                    return;
+                }
+                std::thread::sleep(std::time::Duration::from_millis(200));
+            }
+        });
+    }
 
     Ok("opened".to_string())
 }
 
 #[tauri::command]
-async fn open_opencode(app: AppHandle, state: State<'_, OpenCodeProcess>) -> Result<(), String> {
-    // ウィンドウを閉じる際のトグル処理
+async fn open_opencode(
+    app: tauri::AppHandle,
+    state: State<'_, OpenCodeProcess>,
+) -> Result<(), String> {
+    // 1. トグル処理 (ウィンドウがある場合のみ。Linuxでは基本スルーされる)
     if let Some(win) = app.get_webview_window("opencode") {
         let _ = win.close();
         let mut lock = state.inner().0.lock().unwrap();
         if let Some(mut child) = lock.take() {
-            println!("Stopping OpenCode server tree (PID: {})...", child.id());
             kill_child_tree(&mut child);
         }
         return Ok(());
     }
 
-    // サーバー起動
+    // 2. サーバー起動
     {
         let mut lock = state.inner().0.lock().unwrap();
+        if let Some(mut child) = lock.take() {
+            kill_child_tree(&mut child);
+        }
 
         let mut cmd = if cfg!(target_os = "windows") {
-            let mut c = Command::new("cmd");
+            let mut c = std::process::Command::new("cmd");
             c.args(["/C", "set BROWSER=true && opencode serve --port 4096"]);
             #[cfg(target_os = "windows")]
             {
                 use std::os::windows::process::CommandExt;
-                c.creation_flags(0x08000000); // 窓を出さない
+                c.creation_flags(0x08000000);
             }
             c
         } else {
-            // Mac用の修正:
-            // 1. Homebrewの標準パス (Apple Silicon / Intel両対応) を確認
+            // Mac/Linux 共通のパス解決
             let brew_path = "/opt/homebrew/bin/opencode";
             let intel_path = "/usr/local/bin/opencode";
 
             let final_cmd = if std::path::Path::new(brew_path).exists() {
-                brew_path
+                brew_path.to_string()
             } else if std::path::Path::new(intel_path).exists() {
-                intel_path
+                intel_path.to_string()
             } else {
-                "opencode" // どちらにもなければPATHに賭ける
+                "opencode".to_string() // Linux や、PATHが通っている環境
             };
 
-            println!("Mac: {} を起動します", final_cmd);
-            let mut c = Command::new(final_cmd);
+            let mut c = std::process::Command::new(final_cmd);
             c.args(["serve", "--port", "4096"]);
             c.env("BROWSER", "true");
 
-            // 開発中は Stdio::inherit() に
-            #[cfg(debug_assertions)]
-            c.stdout(std::process::Stdio::inherit())
-                .stderr(std::process::Stdio::inherit());
-
+            // 出力は捨てる（バッファ詰まり防止）
+            c.stdout(Stdio::null());
+            c.stderr(Stdio::null());
             c
         };
 
-        // 入出力を完全に「虚無」に捨ててバッファ詰まりを防ぐ
         let child = cmd
-            .stdout(Stdio::null())
-            .stderr(Stdio::null())
             .spawn()
             .map_err(|e| format!("ERR_OPENCODE_SPAWN:{}", e))?;
-
         *lock = Some(child);
-        std::thread::sleep(std::time::Duration::from_millis(2000));
     }
 
-    // 5. ウィンドウ生成
-    let builder = tauri::WebviewWindowBuilder::new(
-        &app,
-        "opencode",
-        tauri::WebviewUrl::External("http://127.0.0.1:4096".parse().unwrap()),
-    )
-    .title("OpenCode - AI Coding Assistant")
-    .inner_size(1100.0, 850.0)
-    .decorations(true);
+    // 3. 表示処理の分岐
+    let _app_handle = app.clone();
 
-    let window = builder.build().map_err(|e| e.to_string())?;
-    window.show().unwrap();
+    #[cfg(target_os = "linux")]
+    {
+        // Linux: ポートを監視して標準ブラウザで開く
+        std::thread::spawn(move || {
+            let addr = "127.0.0.1:4096";
+            for _ in 0..50 {
+                if std::net::TcpStream::connect_timeout(
+                    &addr.parse().unwrap(),
+                    std::time::Duration::from_millis(200),
+                )
+                .is_ok()
+                {
+                    let _ = _app_handle
+                        .opener()
+                        .open_url("http://127.0.0.1:4096", Option::<String>::None);
+                    return;
+                }
+                std::thread::sleep(std::time::Duration::from_millis(200));
+            }
+        });
+    }
+
+    #[cfg(not(target_os = "linux"))]
+    {
+        // Windows/Mac: 専用ウィンドウを生成
+        let builder = tauri::WebviewWindowBuilder::new(
+            &app,
+            "opencode",
+            tauri::WebviewUrl::External("http://127.0.0.1:4096".parse().unwrap()),
+        )
+        .title("OpenCode - AI Coding Assistant")
+        .inner_size(1100.0, 850.0)
+        .decorations(true);
+
+        let window = builder.build().map_err(|e| e.to_string())?;
+        window.show().unwrap();
+    }
 
     Ok(())
 }

@@ -33,8 +33,9 @@ async function setupSettings() {
         // --- 1. OSごとの見た目調整 ---
         const wrapper = document.querySelector('#settings-wrapper') as HTMLElement;
         const body = document.querySelector('body') as HTMLElement;
-        const st = document.querySelector('#silly-tavern-group') as HTMLElement;
-        const sd = document.querySelector('#sd-group') as HTMLElement;
+        // Linuxでの外部ツール連携を試験的に復活
+        // const st = document.querySelector('#silly-tavern-group') as HTMLElement;
+        // const sd = document.querySelector('#sd-group') as HTMLElement;
         const md = document.querySelector('#markdown-group') as HTMLElement;
         const osType = await type();
         if (osType !== 'macos') {
@@ -42,8 +43,8 @@ async function setupSettings() {
             body.style.backgroundColor = 'silver';
         }
         if (osType === 'linux') {
-            st.style.display = 'none';
-            sd.style.display = 'none';
+            // st.style.display = 'none';
+            // sd.style.display = 'none';
             md.style.display = 'none';
         }
 

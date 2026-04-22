@@ -4150,8 +4150,8 @@ ${instructionFiller}
   }
 
   private async openOpenCode() {
-    // Linuxでは使用不可に
-    if (this.currentOs === 'linux') return;
+    // Linuxでの運用を試験的に開始
+    // if (this.currentOs === 'linux') return;
     try {
       await invoke('open_opencode');
     } catch (e) {
@@ -4160,7 +4160,8 @@ ${instructionFiller}
   }
 
   private async openSillyTavern() {
-    if (this.currentOs === 'linux') return;
+    // Linuxでの運用を試験的に開始
+    // if (this.currentOs === 'linux') return;
 
     // 起動中なら一瞬だけオーバーレイを出して、あとは Rust に任せる
     this.aiThinkingMode = "Starting SillyTavern...";
@@ -4180,7 +4181,8 @@ ${instructionFiller}
   }
 
   private async openStableDiffusion() {
-    if (this.currentOs === 'linux') return;
+    // Linuxでの運用を試験的に開始
+    // if (this.currentOs === 'linux') return;
 
     const fullPath = await this.store.get<string>('sdWebUIPath');
     if (!fullPath) return;

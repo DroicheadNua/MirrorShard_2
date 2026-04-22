@@ -106,7 +106,7 @@ function formatAiMessage(text: string): string {
 
     // B. 画像URLのJSONを、背景色が同期した画像ブロックに置換
     // ボタンを廃止し、画像そのものが「保存ボタン」を兼ねる
-    processedText = processedText.replace(/\{"url":\s*"(https?:\/\/[^"]+)"\}/g, (_, url) => {
+    processedText = processedText.replace(/\{"url":\s*"(https?:\/\/[^"]+|asset:\/\/[^"]+)"\}/g, (_, url) => {
         return `
 <div class="ai-generated-image-container" style="display: block; margin: 0; border: none; border-radius: 12px; overflow: hidden; background: transparent;">
     <img src="${url}" class="generated-img" data-url="${url}" 
