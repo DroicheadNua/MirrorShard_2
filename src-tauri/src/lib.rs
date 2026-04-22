@@ -28,6 +28,7 @@ struct SillyTavernProcess(Mutex<Option<Child>>);
 struct PtySession {
     writer: Box<dyn Write + Send>,
     master: Box<dyn MasterPty + Send>,
+    pid: u32,
 }
 
 struct TerminalState(Mutex<HashMap<String, PtySession>>);
@@ -592,6 +593,9 @@ fn init_pty(
         .spawn_command(cmd_builder)
         .map_err(|e| e.to_string())?;
 
+    // portable_ptyのChildからPIDを取得（数値に変換）
+    let pid = child.process_id().unwrap_or(0) as u32;
+
     // 1. Writerの取得 (Masterから)
     // take_writer は &mut self を取るので、先に reader をクローンするか、順序に注意
     let writer = pair.master.take_writer().map_err(|e| e.to_string())?;
@@ -607,6 +611,7 @@ fn init_pty(
             PtySession {
                 writer,
                 master: pair.master,
+                pid,
             },
         );
     }
@@ -1669,11 +1674,38 @@ pub fn run() {
                         }
                     }
                     _ if label.starts_with("terminal_") => {
+                        let id = label.replace("terminal_", "");
                         if let Some(state) = window.try_state::<TerminalState>() {
                             if let Ok(mut sessions) = state.0.lock() {
-                                // ラベル名 = HashMapのキー なので、そのまま消す
-                                sessions.remove(label);
-                                println!("PTY session removed for: {}", label);
+                                if let Some(session) = sessions.remove(&id) {
+                                    // ★ PIDを使ってプロセスを殺す
+                                    #[cfg(target_os = "windows")]
+                                    {
+                                        use std::os::windows::process::CommandExt;
+                                        let _ = std::process::Command::new("taskkill")
+                                            .args(["/F", "/T", "/PID", &session.pid.to_string()])
+                                            .creation_flags(0x08000000)
+                                            .spawn();
+                                    }
+                                    #[cfg(not(target_os = "windows"))]
+                                    {
+                                        // Linux/Mac: プロセスグループごと殺す (-記号をPIDの前に付けるのが定石)
+                                        let _ = std::process::Command::new("kill")
+                                            .arg("-9")
+                                            .arg(format!("-{}", session.pid)) // グループキル
+                                            .spawn();
+
+                                        // 万が一グループキルが効かない時の保険（自分自身を殺す）
+                                        let _ = std::process::Command::new("kill")
+                                            .arg("-9")
+                                            .arg(session.pid.to_string())
+                                            .spawn();
+                                    }
+                                    println!(
+                                        "PTY Terminal PID {} killed for ID: {}",
+                                        session.pid, id
+                                    );
+                                }
                             }
                         }
                     }

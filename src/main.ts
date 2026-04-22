@@ -4189,7 +4189,7 @@ ${instructionFiller}
       if (this.currentOs === 'linux') {
         if (!stPath) return;
 
-        const runCmd = `node server.js`; //  \nはつけない
+        const runCmd = `node server.js --no-browser`; //  \nはつけない
         await this.store.set('terminalTempCwd_st', stPath);
         await this.store.set('terminalAutoRunCommand_st', runCmd);
         await this.store.save();
