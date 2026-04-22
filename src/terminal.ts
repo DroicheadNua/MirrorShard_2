@@ -118,7 +118,7 @@ async function init() {
             rows: term.rows,
             cols: term.cols,
             shellPath: shellPath || "",
-            cwd: cwd
+            cwd: cwd ?? null
         });
     } catch (e) {
         term.write('\r\n\x1b[31mFailed to initialize PTY: ' + e + '\x1b[0m\r\n');

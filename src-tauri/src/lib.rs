@@ -447,48 +447,49 @@ fn toggle_devtools(window: tauri::WebviewWindow) {
 // 1. Terminalを開くコマンド
 #[tauri::command]
 async fn open_terminal_window(app: tauri::AppHandle, id: Option<String>) -> Result<(), String> {
-    let input_id = id.unwrap_or_else(|| "main".to_string());
+    let actual_id = id.unwrap_or_else(|| "main".to_string());
 
-    // 1. 最終的な「ユニークなセッションID」を決定する
-    let session_id = if input_id == "sd" {
-        "terminal_sd".to_string()
-    } else {
-        // 通常のターミナルの場合は、呼び出すたびに完全に固有のIDを作る
-        format!(
+    // 1. ラベルの決定（sd, st, oc は固定ラベルで多重起動防止。通常ターミナルはユニーク化）
+    let label = match actual_id.as_str() {
+        "sd" => "terminal_sd".to_string(),
+        "st" => "terminal_st".to_string(),
+        "oc" => "terminal_oc".to_string(),
+        _ => format!(
             "terminal_main_{}",
             std::time::SystemTime::now()
                 .duration_since(std::time::UNIX_EPOCH)
                 .unwrap()
                 .as_millis()
-        )
+        ),
     };
 
-    // 2. ラベルとセッションIDを同一にする
-    let label = &session_id;
-
-    // SD用(固定ID)の場合のみ、既に開いていればフォーカス
-    if input_id == "sd" {
-        if let Some(win) = app.get_webview_window(label) {
+    // 2. 固定ラベルの窓が既に開いていればフォーカスして終了
+    if actual_id == "sd" || actual_id == "st" || actual_id == "oc" {
+        if let Some(win) = app.get_webview_window(&label) {
             let _ = win.set_focus();
             return Ok(());
         }
     }
 
-    // 3. URLパラメータにも「ユニークなID」を渡す
-    let url = format!("terminal.html?id={}", session_id);
-    let builder = tauri::WebviewWindowBuilder::new(&app, label, tauri::WebviewUrl::App(url.into()))
-        .title(if input_id == "sd" {
-            "Stable Diffusion Console"
-        } else {
-            "Terminal"
-        })
-        .inner_size(640.0, 480.0)
-        .min_inner_size(640.0, 480.0)
-        .resizable(true)
-        .decorations(false)
-        .transparent(true)
-        .visible(false)
-        .devtools(false);
+    // 3. タイトルの決定
+    let title = match actual_id.as_str() {
+        "sd" => "Stable Diffusion Console",
+        "st" => "SillyTavern Console",
+        "oc" => "OpenCode Console",
+        _ => "Terminal",
+    };
+
+    // 4. ウィンドウ作成
+    let url = format!("terminal.html?id={}", actual_id);
+    let builder =
+        tauri::WebviewWindowBuilder::new(&app, &label, tauri::WebviewUrl::App(url.into()))
+            .title(title)
+            .inner_size(640.0, 480.0) // デフォルトサイズ
+            .min_inner_size(640.0, 480.0)
+            .resizable(true)
+            .decorations(false)
+            .transparent(true)
+            .visible(false);
 
     #[cfg(any(windows, target_os = "macos"))]
     let builder = builder.effects(tauri::utils::config::WindowEffectsConfig {

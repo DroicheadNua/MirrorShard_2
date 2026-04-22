@@ -4155,9 +4155,9 @@ ${instructionFiller}
     try {
 
       if (this.currentOs === 'linux') {
-        const runCmd = `opencode serve --port 4096\n`;
+        const runCmd = `opencode serve --port 4096`;//  \nはつけない
         // OpenCodeは通常PATHが通っているのでCWD指定は不要（またはプロジェクトルート等）
-        await this.store.set('terminalAutoRunCommand_terminal_oc', runCmd);
+        await this.store.set(`terminalAutoRunCommand_oc`, runCmd);
         await this.store.save();
 
         await invoke('open_terminal_window', { id: 'oc' });
@@ -4189,9 +4189,9 @@ ${instructionFiller}
       if (this.currentOs === 'linux') {
         if (!stPath) return;
 
-        const runCmd = `node server.js\n`; // Linuxは \n
-        await this.store.set('terminalTempCwd_terminal_st', stPath);
-        await this.store.set('terminalAutoRunCommand_terminal_st', runCmd);
+        const runCmd = `node server.js`; //  \nはつけない
+        await this.store.set('terminalTempCwd_st', stPath);
+        await this.store.set('terminalAutoRunCommand_st', runCmd);
         await this.store.save();
 
         await invoke('open_terminal_window', { id: 'st' });
@@ -4230,15 +4230,15 @@ ${instructionFiller}
         await invoke('launch_stable_diffusion_external', { sdPath: sdDir });
       } else {
         // macOS: 内蔵ターミナル方式（ログ可視化）
-        const sdSessionId = "terminal_sd";
-        // Macは \n で実行。環境変数をセットして実行
-        const runCmd = `export SD_WEBUI_RESTARTING=1 && ./"${scriptFile}" --api\n`;
+        const sdSessionId = "sd";
+        // 末尾の \n を削除（terminal.ts で付与するため）
+        const runCmd = `export SD_WEBUI_RESTARTING=1 && ./"${scriptFile}" --api`;
 
         await this.store.set(`terminalTempCwd_${sdSessionId}`, sdDir);
         await this.store.set(`terminalAutoRunCommand_${sdSessionId}`, runCmd);
         await this.store.save();
 
-        // ID: "sd" でターミナルを開く (labelは "terminal_sd" になる)
+        // ID: "sd" でターミナルを開く
         await invoke('open_terminal_window', { id: 'sd' });
       }
 
