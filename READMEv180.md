@@ -6,9 +6,29 @@
 
 > From idea graph to structured draft — in one AI-powered outliner.
 
-💡 Use powerful AI features for free — no subscription required.
+>💡 Use powerful AI features for free — no subscription required.
 
 🌐 **Now available in English.**
+
+---
+
+## ✨ Highlights
+
+- 🧠 AI-powered writing, editing, and idea generation  
+- 🌐 Supports multiple AI providers (Gemini, Groq, Mistral, Cohere)  
+- 🖼️ **Generate images from text using Stable Diffusion**  
+- 💬 AI chat with optional image generation (SD Link / Mistral Agents)  
+- ✍️ Convert text into image prompts automatically  
+- 📂 Works with both cloud AI and local AI  
+- 💡 Designed for **free usage (no subscription required)**  
+
+### 🖼️ AI Image Generation
+
+Turn your ideas into images — AI writes the prompt for you.
+
+- Generate images from selected text  
+- Ask for images directly in AI chat  
+- Works with Stable Diffusion (local) or Mistral Agents (cloud)  
 
 ---
 
@@ -18,13 +38,33 @@ Videos below demonstrate the English UI.
 
 Watch MirrorShard in action:
 
-### Idea Expansion
+### 🧠 Idea Expansion
 
 https://github.com/user-attachments/assets/e19ec70f-4132-4859-8c04-04a1d44b9b06
 
-### Send to Editor
+### ✍️ Send to Editor
 
 https://github.com/user-attachments/assets/fd28d3cb-3e05-4efb-8bd1-f551d77f3c31
+
+### 🖼️ AI Image Generation(Stable Diffusion / SD-Link)
+
+<ここに動画>
+
+---
+
+## 🚀 Getting Started
+
+New users should begin here:
+
+👉 [docs/quick_guide.md](docs/quick_guide.md)
+
+---
+
+## 💡 Free AI Usage Guide
+
+Learn how to use MirrorShard with **no cost**:
+
+👉 [docs/free-ai-guide.md](docs/free-ai-guide.md)
 
 ---
 
@@ -59,14 +99,6 @@ Generate ideas, connect them, and turn them into a draft — all in one place.
 👉 [Latest Release](https://github.com/DroicheadNua/MirrorShard_2/releases/latest)
 
 Prebuilt binaries are available for Windows, macOS, and Linux.
-
----
-
-## 🚀 Quick Start
-
-New to MirrorShard? Start here:
-
-👉 [docs/quick_guide.md](docs/quick_guide.md)
 
 ---
 

@@ -9,7 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [1.8.0] - 2026-4-XX  
 
 ### Added (新機能)  
-- Stable Diffusion連携機能（Ctrl+Shift+W）を追加。A1111、Forge、Forge Neoなどに対応（ComfyUIは非対応）  
+- Stable Diffusion連携機能（Ctrl+Shift+W）を追加。A1111、Forge、Forge Neoなどに対応（現状ComfyUIは非対応）  
 - メインエディタの右クリックメニューに「AI: 画像生成」機能を追加  
  - 選択範囲のテキストをAIに送り、それを元に画像を生成する機能  
  - ※Stable Diffusion及びMistral Agentsに対応  
@@ -18,7 +18,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - 画像ファイルのドラッグアンドドロップを実装。画像ファイルをエディタにドロップするとリンクが作成され、マークダウンプレビューで表示可能に  
 - 内蔵ターミナルに最小化ボタンと最大化ボタンを追加  
 - メインエディタのAI機能に「画像生成プロンプトを作成」(範囲選択から右クリックメニュー)を追加  
-- Linuxの外部ツール連携機能を一部復活、OpenCodeがショートカットで開けるようになった  
+- LinuxでもOpenCodeとSillyTavernがショートカットで開けるようになった(標準ブラウザでの起動)  
  
 
 ### Changed (変更点)    

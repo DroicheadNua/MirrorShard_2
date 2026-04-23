@@ -29,6 +29,38 @@ A non-linear, visual environment for brainstorming and idea development.
 
 ---
 
+## 🖼️ AI Image Generation (Stable Diffusion / Mistral Agents Integration)
+
+✨ Turn your ideas into images — AI writes the prompts for you.
+
+MirrorShard integrates with Stable Diffusion or Mistral Agents to enable seamless image generation from text.
+
+### 💬 From Chat
+- Ask the AI to generate an image (e.g., "Create an illustration of a fantasy forest")
+- The AI automatically generates a structured prompt
+- The prompt is sent to Stable Diffusion via API
+- The generated image is saved and displayed directly in the chat
+
+> No prompt engineering required — the AI handles it for you.
+
+---
+
+### ✍️ From Editor
+- Select any text in the editor
+- Generate an image based on the selected content
+- The AI converts the text into an optimized prompt
+- The generated image is saved and is inserted as a link at the cursor position
+
+---
+
+### 🔧 Supported Backends
+- AUTOMATIC1111
+- Forge / Forge Neo
+
+> ComfyUI is not supported.
+
+---
+
 ## ✍️ Writing Environment
 
 A minimal, distraction-free editor designed for immersive writing.

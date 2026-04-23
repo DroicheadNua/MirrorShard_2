@@ -7,6 +7,38 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [1.8.0] - 2026-4-XX  
+
+### Added  
+- **Stable Diffusion integration (Ctrl+Shift+W)**  
+  - Supports AUTOMATIC1111, Forge, and Forge Neo (ComfyUI not supported)  
+  - Generate images directly from AI chat or editor text  
+  - Automatically sends prompts to Stable Diffusion via API and displays results in-app  
+
+- **AI-powered image generation (Chat)**  
+  - When "SD Link" is enabled, the AI generates structured prompts and triggers image generation  
+  - Generated images are saved to a user-defined folder and displayed in the chat  
+
+- **AI-powered image generation (Editor)**  
+  - Generate images from selected text  
+  - AI converts text into prompts and inserts image links at the cursor position  
+
+- Added minimize and maximize buttons to the built-in terminal  
+
+- Added "Generate Image Prompt" to the editor AI menu (right-click on selected text)  
+
+
+### Changed  
+- Multiple terminal instances can now run simultaneously  
+- Improved SillyTavern launch process  
+- Added option to show/hide terminal when launching SillyTavern (Windows only)  
+
+
+### Fixed  
+- Fixed an issue where clicking URLs in the AI chat window caused navigation inside the app  
+  - Links now open in the default browser  
+
+
 ## [1.7.1] - 2026-4-14  
 
 ### Changed

@@ -163,6 +163,25 @@ Output is inserted after selected text.
 
 ---
 
+### Image Features (Right Click)
+
+- **AI: Generate Image Prompt**  
+  Converts selected text into an English prompt optimized for image generation models.
+
+- **AI: Generate Image**  
+  Generates an image from the selected text, saves it to the configured image folder,  
+  and inserts an image link at the cursor position.
+
+  You can preview the result instantly using Markdown Preview (Ctrl+M).
+
+  To generate images, use either Stable Diffusion or Mistral Agents.
+
+- **Mistral**: In the settings screen, select "Mistral Agent" for "AI for Visualize (Image Gen)" and set the AI selector in the editor to "Mistral."
+
+- **Stable Diffusion**: In the "AI for Visualize (Image Gen)" setting, choose "Stable Diffusion."
+
+---
+
 ## ■ 2. Code Completion (Code Mode Only)
 
 Press **Ctrl + K** to enable Code Mode
@@ -189,6 +208,53 @@ Features:
 * Save / load chat logs
 * Edit / regenerate responses
 * Export logs
+
+### AI Chat – Image Generation
+
+In the AI Chat window, you can simply ask:
+
+> "Generate an image of ..."
+
+and MirrorShard will handle the rest.
+
+---
+
+#### Requirements
+
+Image generation requires either:
+
+- **Mistral Agents**, or  
+- **Stable Diffusion Web UI**
+
+🧠 Using Mistral Agents
+1. Log in to Mistral and create an Agent in AI Studio  
+2. Enable the **Image** capability  
+3. Enter your **Agent ID** in MirrorShard settings  
+4. Enable "Use Mistral Agents"  
+5. Select **Mistral** in the AI selector  
+
+You can now generate images directly from chat or editor.
+
+🎨 Using Stable Diffusion
+Stable Diffusion enables image generation with any supported AI model.
+
+---
+
+### Setup
+
+1. Install Stable Diffusion Web UI (A1111, Forge, Forge Neo, etc.)  
+2. Register the launch script (e.g., `webui-user.bat`) in settings  
+3. Launch it with **Ctrl+Shift+W**  
+4. Enable **SD Link** in the chat window  
+
+---
+
+Once enabled:
+
+- The AI generates a structured prompt  
+- MirrorShard detects it  
+- Sends it to Stable Diffusion via API  
+- Displays the generated image automatically
 
 ---
 
@@ -256,10 +322,93 @@ Recommended setting in `config.yaml`:
 browserLaunch:
   enabled: false
 ```
+---
+
+# **5. Image Generation Notes **
+
+## Settings
+
+From the settings window, you can specify:
+
+- Auto-save folder for images
+- Image generation prompt
+- Image Negative prompt
+- Steps
+- CFG scale
+- Resolution (Image size)
+
+## ⚠️ Mistral
+
+- Free tier allows only a few images per month (~4–5)  
+- Suitable for testing, not heavy usage  
+
+## ⚠️ Stable Diffusion
+
+### 1. API Mode Required
+
+Stable Diffusion must be running in API mode.
+
+- If launched from MirrorShard → handled automatically  
+- If launched manually → add `--api` to COMMANDLINE_ARGS  
 
 ---
 
-# **5. Notes and Limitations**
+### 2. Model Compatibility
+
+Some models (e.g., highly specialized ones like Anima) may fail.
+
+If that happens:
+- Try another model, or  
+- Use "Generate Image Prompt" and run it manually in Stable Diffusion  
+
+---
+
+### 3. SD Link (Chat Integration)
+
+SD Link works by:
+
+- AI converting your request into a structured English prompt  
+- MirrorShard detecting the format  
+- Automatically triggering image generation  
+
+👉 This requires **instruction-following capable models**
+
+Recommended:
+
+- Cloud: Gemini, GPT-based (Groq), Mistral Large  
+- Local: Instruction-tuned models (e.g., Gemma variants)  
+
+Weak models may:
+- Output prompts in Japanese  
+- Break the required format  
+
+---
+
+### 4. Mistral Conflict
+
+If Mistral Agents is enabled:
+
+👉 It may override SD Link behavior  
+
+Disable Agents if you want to use SD Link with Mistral.
+
+---
+
+### 5. Hardware Requirements
+
+Stable Diffusion requires a reasonably powerful system.
+
+- Recommended: GPU with ~12GB VRAM  
+- Minimum:  
+  - GTX 1050 Ti (4GB VRAM)  
+  - or 16GB unified memory (Mac)  
+
+Lightweight models (e.g., SD 1.5 LCM) can run on lower-end systems,  
+but performance may be limited.
+
+---
+
+# **6. Notes and Limitations**
 
 ---
 
@@ -310,7 +459,7 @@ Set Max Tokens to **3000–5000+**
 
 ---
 
-# **6. Design Philosophy**
+# **7. Design Philosophy**
 
 MirrorShard follows a strict principle:
 

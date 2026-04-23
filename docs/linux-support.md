@@ -18,10 +18,16 @@ https://github.com/DroicheadNua/MirrorShard
 The following features are **not available** on Linux:
 
 - Markdown / HTML preview
-- SillyTavern integration
-- OpenCode integration
 - Typewriter sound
 - Spotlight mode
+
+---
+
+### Different Specifications
+
+Starting with version 1.8.0, SillyTavern (Ctrl+Shift+J) and OpenCode (Ctrl+Shift+K) can now be launched using keyboard shortcuts.
+
+However, unlike the Windows and macOS versions, which run in a dedicated window (WebView), the Linux version launches in the default browser.
 
 ---
 

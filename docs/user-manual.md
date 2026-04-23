@@ -1,4 +1,4 @@
-# MirrorShard 2 v1.7.0 User Manual
+# MirrorShard 2 v1.8.0 User Manual
 
 ## Keyboard Shortcuts
 
@@ -9,9 +9,13 @@ This application allows you to perform almost all operations using keyboard shor
 ### ◯ File Operations
 
 New File     Ctrl + N (Cmd + N) Create a new tab
+
 Open File    Ctrl + O (Cmd + O) Open the file selection dialog
+
 Open Folder of Current File Ctrl + Shift + O (Cmd + Shift + O) Open the folder containing the currently selected file
+
 Save File    Ctrl + S (Cmd + S) Overwrite the current file
+
 Quit Application Ctrl + Q (Cmd + Q) Exit the application
 
 ---
@@ -19,31 +23,46 @@ Quit Application Ctrl + Q (Cmd + Q) Exit the application
 ### ◯ View
 
 Show Shortcut List F1 Open the shortcut list
+
 AI Chat Window  Ctrl + Shift + A (Cmd + Shift + A) Open the AI chat window
+
 Idea Processor  Ctrl + I (Cmd + I) Open the Idea Processor
+
 Toggle Dark Mode Ctrl + T (Cmd + T) Switch between light and dark mode
+
 Markdown/HTML Preview Ctrl + M (Cmd + M) Open the preview window
+
 Code Editor Mode Ctrl + K (Cmd + K) Switch to code editor mode
+
 Toggle ZEN Mode Ctrl + Shift + C (Cmd + Shift + C) Hide all UI except the text area
+
 Vertical Writing Preview Ctrl + P (Cmd + P) Open vertical writing preview
+
 Toggle Spotlight Mode Ctrl + L (Cmd + L) Blur everything except the current section
+
 Minimize Window Ctrl + H (Cmd + H) Minimize the window
 Toggle Fullscreen F11 (Cmd + Ctrl + F) Toggle fullscreen mode
 
 Switch Document Ctrl + Tab
+
 Switch Document (Reverse) Ctrl + Shift + Tab Switch between open documents
+
   ※ You can also use mouse back/forward buttons if available
 
 Snow Effect  Ctrl + Shift + E Toggle snowfall effect on/off
 
 Open OpenCode Ctrl + Shift + K Launch OpenCode (must be installed)
+
 Open SillyTavern Ctrl + Shift + J Launch SillyTavern (must be installed)
+
+Open Stable Diffusion Ctrl + Shift + W Launch Stable Diffusion (must be installed)
 
 ---
 
 ### ◯ Edit / Settings
 
 Increase Font Size Ctrl + + (Cmd + +) Increase font size
+
   ※ Numpad "+" may not work in the main window
 
 Decrease Font Size Ctrl + - (Cmd + -) Decrease font size
@@ -61,6 +80,7 @@ Toggle Typing Sound Ctrl + Shift + T (Cmd + Shift + T)
 Settings F2 Open settings window
 
 Open Terminal Ctrl + @
+
 Open Terminal in Current File Location Ctrl + Shift + @
 
 Export Ctrl + E (Cmd + E) Open export window
@@ -70,27 +90,35 @@ Export Ctrl + E (Cmd + E) Open export window
 ### ◯ Basic Editing
 
 Undo Ctrl + Z (Cmd + Z)
+
 Redo Ctrl + Y (Cmd + Shift + Z)
 
 Cut Ctrl + X (Cmd + X)
+
 Copy Ctrl + C (Cmd + C)
+
 Paste Ctrl + V (Cmd + V)
+
 Select All Ctrl + A (Cmd + A)
 
 Find / Replace Ctrl + F (Cmd + F)
 
 Go to Start of Document Ctrl + ↑ (Cmd + ↑)
+
 Go to End of Document Ctrl + ↓ (Cmd + ↓)
 
 AI Generate / Code Completion Alt + Enter (Option + Enter)
+
  Generate text continuation or complete code from the cursor position
 
 AI Insert Text Alt + Shift + Enter (Option + Shift + Enter)
+
  Insert AI-generated text based on surrounding context
 
 Cancel AI Task ESC Stop AI generation
 
 Simple Formatter (Code Editor Mode only) Alt + Shift + F
+
  Format indentation across the entire file
 
 ---
@@ -123,13 +151,28 @@ Simple Formatter (Code Editor Mode only) Alt + Shift + F
    Translate the selected text using AI
 
 * AI: Summarize
+
    Summarize the selected text using AI
+
    A dialog will appear where you can specify the target length
 
 * AI: Rewrite
+
    Rewrite the selected text using AI
 
+* AI: Generate Image Prompt
+
+   Converts selected text into an English prompt optimized for image generation models.
+
+* AI: Generate Image
+
+   Generates an image from the selected text, saves it to the configured image folder,  
+  and inserts an image link at the cursor position.
+
+   You can preview the result instantly using Markdown Preview (Ctrl+M).
+
 * Import Gemini Logs
+
    Import conversation logs from Gemini
 
 * Open Terminal Here
@@ -208,6 +251,9 @@ MirrorShard includes several types of AI-powered features:
 * **Four AI features built into the Idea Processor**
 * **OpenCode** (external tool integration)
 * **SillyTavern** (external tool integration)
+* **Stable Diffusion Web UI** (external tool integration)
+
+If you have Stable Diffusion Web UI installed (such as AUTOMATIC1111, Forge, or Forge Neo), you can use it with the image generation features.
 
 For detailed instructions, please refer to:
 **AI Feature Guide (ai-guide.md)**
@@ -230,6 +276,7 @@ For detailed instructions, please refer to:
 You can open the export window by pressing **Ctrl + E (Cmd + E on Mac)**.
 
 This window supports **horizontal (left-to-right) export only**.
+
 If you want to export vertical writing, please use the **Vertical Writing Preview**.
 
 ---
@@ -237,17 +284,23 @@ If you want to export vertical writing, please use the **Vertical Writing Previe
 ### Features and Options
 
 * **Print / Save as PDF**
+
    Export the document as a PDF file or print it using your printer.
+
    Ruby annotations are supported.
 
 * **Save as DOCX (Word)**
+
    Export the document as a DOCX file (horizontal layout).
+
    ※ Requires Pandoc. See **Pandoc Setup Guide (pandoc-guide.md)** for installation.
 
 * **Save as HTML**
+
    Export the document as an HTML file (horizontal layout).
 
 * **Save as EPUB**
+
    Export the document as an EPUB file (horizontal layout).
 
 ---
@@ -275,6 +328,7 @@ You can also export your document in vertical format (**HTML / EPUB**) from this
  See **Pandoc Setup Guide (pandoc-guide.md)** for installation instructions.
 
 ※ Direct printing or PDF export in vertical writing is **not supported**.
+
  To print or save as PDF, export as HTML and open it in a web browser.
 
 ---
@@ -304,30 +358,41 @@ You can switch between **Markdown mode** and **HTML mode** using the dropdown me
 ### Features and Controls
 
 * **Zoom**
+
    Use **Ctrl + Mouse Wheel** or **Ctrl + +/-** to zoom in/out
+
    Press **Ctrl + 0** to reset
 
 * **Outline Synchronization**
+
    Clicking an item in the editor’s outline will automatically scroll the preview to the corresponding section
 
 * **Copy as HTML Source**
+
    Copy the currently displayed content, including HTML tags, to the clipboard
+
    Useful for blogging or web publishing
 
 * **Save as HTML**
+
    Save the current preview as an HTML file
 
 * **Open DevTools**
+
    Open developer tools
 
 * **Open in Browser**
+
    Open the current file in your default web browser (e.g., Chrome, Edge)
+
    ※ Please save the file before using this feature
 
 * **Always on Top**
+
    Keep the preview window always on top
 
 * **Refresh (Ctrl + R)**
+
    Update the preview
 
 ---
@@ -335,23 +400,33 @@ You can switch between **Markdown mode** and **HTML mode** using the dropdown me
 ### Specifications and Limitations
 
 * **Layout Accuracy**
+
    The preview uses a lightweight browser engine, so some layouts may not render correctly
+
    (e.g., legacy CSS or layouts requiring specific screen widths)
+
    Use **“Open in Browser”** for accurate rendering
 
 * **Link Behavior**
+
    Clicking links in the preview:
+
    ・Web links (http/https) open in your default browser
+
    ・Local file links open as a new tab in MirrorShard
 
 * **External Scripts**
+
    For security reasons (CSP), external JavaScript and CSS are restricted
 
 * **Large Text Files**
+
    When previewing text exceeding 50,000 characters, only the beginning portion is displayed to maintain performance
 
 * **Code Blocks**
+
    Very long or complex code blocks may not render correctly in Markdown mode
+
    In such cases, using **Code Editor Mode (Ctrl + K)** is recommended
 
 ---
@@ -378,6 +453,7 @@ For such projects, it is recommended to:
 You can switch to Code Editor Mode by pressing **Ctrl + K (Cmd + K on Mac)**.
 
 This is a simple code editor with support for the following languages:
+
 **HTML / CSS / JavaScript / TypeScript / Markdown / Rust / Python**
 
 In addition to syntax highlighting, the following features are available:
@@ -395,7 +471,9 @@ Automatically formats indentation across the entire file
 (Available only in Code Editor Mode)
 
 ※ Internally, this feature performs a “Select All → Format” operation.
+
 After execution, using **Undo** may temporarily return the text to a fully selected state.
+
 This is expected behavior.
 
 ---
@@ -425,13 +503,17 @@ This is useful for running Git commands or working with Node.js projects while w
    You can change the shell path in the settings.
 
  ※ To use Git Bash, specify: `bin\bash.exe`
+
  ※ When using Git Bash, errors may occur due to compatibility issues with `pnpm` symbolic links.
+
   See the FAQ for workarounds.
 
 * **Open Terminal Here**
+
    Right-click a tab and select **“Open Terminal Here”** to open the terminal in the same directory as the current file
 
 * **Font Synchronization**
+
    The font settings from Code Editor Mode are also applied to the terminal
 
 * **Exit Command**
@@ -470,6 +552,11 @@ browserLaunch:
 ```
 
 Without this setting, the same interface may open both in your default browser and in the editor window simultaneously.
+
+## Stable Diffusion
+
+If Stable Diffusion is installed, it can be launched in a separate window (Ctrl+Shift+W).
+In addition to standalone use, it can also be utilized for image generation in the main editor or AI chat window.
 
 ---
 
@@ -565,9 +652,16 @@ In addition, you can create, save, and delete your own custom themes.
 
 * **Groq Model**
    Select the Groq model
+
    ※ Depending on the model and pricing plan, usage fees may apply
 
 ※ Cohere and Mistral settings are similar to Groq
+
+* **Mistral Agent ID**
+	Specifies the ID of the Mistral Agent. Required for image generation with Mistral.
+
+* **Enable Mistral Agents**
+	Enables Mistral Agents.
 
 ---
 
@@ -584,31 +678,79 @@ In addition, you can create, save, and delete your own custom themes.
 
 ---
 
-#### SillyTavern Path (Folder)
+#### SillyTavern
 
-* Specify the installation folder of SillyTavern
+* **SillyTavern Path (Folder)**
+
+	Specify the installation folder of SillyTavern
+
+* **Display terminal**
+
+	Specifies whether to show the terminal at startup. Available on Windows only.
+
+---
+
+#### Image Generation
+
+* **Stable Diffusion Path**
+
+	Specify the Stable Diffusion batch file.
+
+* **Default image save folder**
+
+	Set the destination folder for saving generated images.
+
+
+* **Image Generation Prompt**
+
+	Enter any additional prompts to be used during image generation.
+
+* **Image Negative Prompt**
+
+	Enter the negative prompt.
+
+* **Steps**
+
+	Set the number of steps. Higher values improve image quality but increase generation time.
+* **CFG**
+
+	Specify the CFG scale. Use the recommended value for the selected model.
+
+* **AI for Visualization**
+
+	Select the AI to be used in the main editor’s *"AI: Image Generation"* feature.
+
+* **Image Size**
+
+	Choose the image size from the preset options.
 
 ---
 
 #### Behavior
 
 * **Max Output Tokens**
+
    Set the maximum length of AI responses
    (Approx. 1 Japanese character ≈ 2 tokens)
 
  ※ When using models like Gemini 2.5, additional tokens may be consumed internally for reasoning
+
   It is recommended to set a higher value
 
 * **AI Association Response Length**
+
    Set the maximum response length for AI Free Association in the Idea Processor
 
 * **Context Length**
+
    Set the length of context sent to the AI
 
 * **AI Thinking Effect**
+
    Toggle visual effects (overlay) while the AI is generating a response
 
 * **System Prompt**
+
    Set the system prompt
 
 ---
@@ -638,10 +780,13 @@ In addition, you can create, save, and delete your own custom themes.
 #### Code Editor Settings
 
 * **Syntax Highlight Language**
+
    Specify the language used for syntax highlighting in Code Editor Mode
+
    Normally detected automatically based on file extension
 
  Currently supported languages:
+
  **HTML / CSS / JavaScript / TypeScript / Markdown / Rust / Python**
 
 * **Font**
