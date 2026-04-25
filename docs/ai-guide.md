@@ -243,9 +243,10 @@ Stable Diffusion enables image generation with any supported AI model.
 ### Setup
 
 1. Install Stable Diffusion Web UI (A1111, Forge, Forge Neo, etc.)  
-2. Register the launch script (e.g., `webui-user.bat`) in settings  
-3. Launch it with **Ctrl+Shift+W**  
-4. Enable **SD Link** in the chat window  
+2. Register the launch script (e.g., `webui-user.bat`) in settings
+3. Open the launch script in a text editor, add `--api` to COMMANDLINE_ARGS  (For more details, see the section "Image Generation Notes")
+4. Launch it with **Ctrl+Shift+W**  
+5. Enable **SD Link** in the chat window  
 
 ---
 
@@ -348,8 +349,13 @@ From the settings window, you can specify:
 
 Stable Diffusion must be running in API mode.
 
-- If launched from MirrorShard → handled automatically  
-- If launched manually → add `--api` to COMMANDLINE_ARGS  
+add `--api` to COMMANDLINE_ARGS  
+
+Example:
+
+　　export COMMANDLINE_ARGS="--uv"
+
+=>　export COMMANDLINE_ARGS="--api --uv"  
 
 ---
 

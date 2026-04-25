@@ -292,8 +292,9 @@ Stable Diffusionを使用すれば、任意のAIで画像生成が可能にな�
 
 1. Stable Diffusion Web UI（A1111、Forge、Forge Neoなど）をインストールします。
 2. MirrorShardの設定画面にある「Stable Diffusionの起動スクリプト」に、起動時に使用するファイル（webui-user.batなど）を登録します。
-3. Ctrl+Shift+WでStable Diffusionを起動します。
-4. AIチャットウィンドウを起動し、送信ボタンの上の「SD-Link」ボタンを有効にします。
+3. 起動時に使用するファイルをテキストエディタで開き、COMMANDLINE_ARGS= の行に --api と追記します（後述）。
+4. Ctrl+Shift+WでStable Diffusionを起動します。
+5. AIチャットウィンドウを起動し、送信ボタンの上の「SD-Link」ボタンを有効にします。
 
 なお、Stable Diffusionの利用に関してはいくつかの注意点があります。詳細は後述の「5. 画像生成機能について」の「Stable Diffusion使用上の注意点」の項目をご参照ください。
 
@@ -360,9 +361,22 @@ Mistralが無課金で生成できる画像は1ヶ月に数枚程度です。本
 
 1. AI機能で使用するためには、あらかじめStable DiffusionをAPIモードで起動しておく必要があります。
 
- - MirrorShard から Stable Diffusion を起動する場合（Ctrl+Shift+W）、起動オプションは自動的に調整されるため、特に何もする必要はありません。
+ご利用の環境の起動ファイル（Windowsは webui-user.bat、Mac/Linuxは webui-user.sh 等）をテキストエディタで開き、起動オプションに --api を追記してください（※念のため、起動ファイルのバックアップをとることをお勧めします）。
 
- - もし、MirrorShard を立ち上げる前にご自身で Stable Diffusion を起動しておきたい場合は、バッチファイル（webui-user.bat 等）をテキストエディタで開き、COMMANDLINE_ARGS= の行に --api と追記してください。
+例: 
+
+set COMMANDLINE_ARGS=--api (Windows) 
+
+export COMMANDLINE_ARGS="--api" (Mac/Linux)
+
+「COMMANDLINE_ARGS=」の行に他の記述がある場合は、先頭に「--api」を挿入してください。
+
+例：
+
+　　export COMMANDLINE_ARGS="--uv"
+
+→　export COMMANDLINE_ARGS="--api --uv"  
+
 
 2. 画像生成の際の使用モデルはStable Diffusion側で指定されたものになりますが、Animaなど特殊なモデルでは生成に失敗することがあります。
 

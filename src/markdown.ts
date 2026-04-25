@@ -99,7 +99,7 @@ async function renderContent() {
             images.forEach(img => {
                 let src = img.getAttribute('src');
                 if (!src) return;
-                if (src.startsWith('http') || src.startsWith('data:')) return;
+                if (src.startsWith('http') || src.startsWith('data:') || src.startsWith('asset://')) return;
 
                 try {
                     // パス解決ロジック

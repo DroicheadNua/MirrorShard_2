@@ -389,6 +389,7 @@ async fn open_opencode(
             .spawn()
             .map_err(|e| format!("ERR_OPENCODE_SPAWN:{}", e))?;
         *lock = Some(child);
+        std::thread::sleep(std::time::Duration::from_millis(2000)); // 2秒待機してサーバーを安定させる。この行がないとMacOSで正常に起動しない
     }
 
     // 3. 表示処理
@@ -448,15 +449,13 @@ fn toggle_devtools(window: tauri::WebviewWindow) {
 // 1. Terminalを開くコマンド
 #[tauri::command]
 async fn open_terminal_window(app: tauri::AppHandle, id: Option<String>) -> Result<(), String> {
-    let actual_id = id.unwrap_or_else(|| "main".to_string());
+    let input_id = id.unwrap_or_else(|| "main".to_string());
 
-    // 1. ラベルの決定（sd, st, oc は固定ラベルで多重起動防止。通常ターミナルはユニーク化）
-    let label = match actual_id.as_str() {
-        "sd" => "terminal_sd".to_string(),
-        "st" => "terminal_st".to_string(),
-        "oc" => "terminal_oc".to_string(),
+    // セッションID自体をユニークにする
+    let session_id = match input_id.as_str() {
+        "sd" | "st" | "oc" => input_id.clone(),
         _ => format!(
-            "terminal_main_{}",
+            "main_{}",
             std::time::SystemTime::now()
                 .duration_since(std::time::UNIX_EPOCH)
                 .unwrap()
@@ -464,27 +463,27 @@ async fn open_terminal_window(app: tauri::AppHandle, id: Option<String>) -> Resu
         ),
     };
 
-    // 2. 固定ラベルの窓が既に開いていればフォーカスして終了
-    if actual_id == "sd" || actual_id == "st" || actual_id == "oc" {
+    let label = format!("terminal_{}", session_id);
+
+    // SD, ST, OC 用の場合のみ、既に開いていればフォーカスして終了
+    if session_id == "sd" || session_id == "st" || session_id == "oc" {
         if let Some(win) = app.get_webview_window(&label) {
             let _ = win.set_focus();
             return Ok(());
         }
     }
 
-    // 3. タイトルの決定
-    let title = match actual_id.as_str() {
-        "sd" => "Stable Diffusion Console",
-        "st" => "SillyTavern Console",
-        "oc" => "OpenCode Console",
-        _ => "Terminal",
-    };
+    // ユニークなIDをURLに渡す
+    let url = format!("terminal.html?id={}", session_id);
 
-    // 4. ウィンドウ作成
-    let url = format!("terminal.html?id={}", actual_id);
     let builder =
         tauri::WebviewWindowBuilder::new(&app, &label, tauri::WebviewUrl::App(url.into()))
-            .title(title)
+            .title(match session_id.as_str() {
+                "sd" => "Stable Diffusion Console",
+                "st" => "SillyTavern Console",
+                "oc" => "OpenCode Console",
+                _ => "Terminal",
+            })
             .inner_size(640.0, 480.0) // デフォルトサイズ
             .min_inner_size(640.0, 480.0)
             .resizable(true)
