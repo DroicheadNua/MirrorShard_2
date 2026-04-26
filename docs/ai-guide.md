@@ -412,6 +412,14 @@ Stable Diffusion requires a reasonably powerful system.
 Lightweight models (e.g., SD 1.5 LCM) can run on lower-end systems,  
 but performance may be limited.
 
+Please note that it does not work properly with basic integrated/onboard graphics (e.g., standard Intel office PCs).
+
+### 6. Installation Path
+
+**Do not** include any non-ASCII characters or spaces in the path of the folder where you install and extract Stable Diffusion. This will prevent the path from being resolved correctly, resulting in an error.
+
+If you have already installed it, please repeat the installation procedure from the beginning. The venv (Python virtual environment) located within the Stable Diffusion folder remembers the absolute path of its creation location; therefore, simply moving Stable Diffusion to a different folder or drive will break it and prevent it from starting.
+
 ---
 
 # **6. Notes and Limitations**
