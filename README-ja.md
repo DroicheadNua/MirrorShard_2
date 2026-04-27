@@ -7,7 +7,29 @@
 MirrorShard 2は、発想から構造化、そして執筆までを一つの流れとして扱うためのエディタです。
 思いついた断片を広げ、つなぎ、そのまま文章へと展開できます。
 
+また、Gemini・Mistralなど豊富な無料枠を持つ複数のAIに対応し、Stable Diffusionと連携した画像生成機能とあわせて、無課金でも強力なAI機能の支援を受けることができます。
+
 ---
+
+## ✨ 特徴
+
+- 🧠 AIによる文章作成、編集、アイデア生成
+- 🌐 複数のAIプロバイダーに対応（Gemini、Groq、Mistral、Cohere）
+- 🖼️ テキストから画像を生成（Stable Diffusion対応）
+- 💬 AIチャット（画像生成オプション付き：SD Link / Mistral Agents）
+- ✍️ テキストを自動で画像プロンプトに変換
+- 📂 クラウドAIとローカルAIの両方に対応
+- 💡 完全無料でAI機能を利用可能（サブスクリプション不要）
+
+### 🖼️ AI画像生成
+
+普通の言葉でAIに注文するだけ。プロンプトはAIが自動生成します。
+
+- 選択したテキストから画像を生成
+- AIチャット内で直接画像をリクエスト
+- Stable Diffusion（ローカル）またはMistral Agents（クラウド）に対応
+----------------
+
 
 ## 🎬 デモ
 
@@ -18,6 +40,10 @@ https://github.com/user-attachments/assets/2d22c7e3-ff4d-4958-a1e6-ae4c5e4361b5
 ### Send to Editor
 
 https://github.com/user-attachments/assets/291d7852-6d6e-4040-899c-efd4a500f360
+
+### 🖼️ AI Image Generation(Stable Diffusion / SD-Link)
+
+<ここに動画>
 
 ---
 
@@ -59,7 +85,7 @@ https://github.com/user-attachments/assets/291d7852-6d6e-4040-899c-efd4a500f360
 
 ---
 
-## 🧰 主な機能
+## 🧰 その他の主な機能
 
 * Markdownベースのアウトライナー（大規模ファイル対応）
 * ZENモード / スポットライトモード

@@ -6,7 +6,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 
-## [1.8.0] - 2026-4-XX  
+## [1.8.0] - 2026-4-27  
 
 ### Added (新機能)  
 - Stable Diffusion連携機能（Ctrl+Shift+W）を追加。A1111、Forge、Forge Neoなどに対応（現状ComfyUIは非対応）  

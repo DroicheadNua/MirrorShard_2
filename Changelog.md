@@ -7,7 +7,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
-## [1.8.0] - 2026-4-XX  
+## [1.8.0] - 2026-4-27  
 
 ### Added  
 - **Stable Diffusion integration (Ctrl+Shift+W)**  
