@@ -43,7 +43,7 @@ https://github.com/user-attachments/assets/291d7852-6d6e-4040-899c-efd4a500f360
 
 ### 🖼️ AI Image Generation(Stable Diffusion / SD-Link)
 
-<ここに動画>
+https://github.com/user-attachments/assets/d8be1190-e2af-4fd4-aa27-73a6fd11a349
 
 ---
 
