@@ -117,7 +117,7 @@
     "wordWrapLabel": "ワードラップ (折り返し)"
   },
   "ai": {
-    "cloud": "クラウドAI",
+    "cloud": "Gemini",
     "gemini": "Gemini",
     "geminiKeyLabel": "Gemini APIキー",
     "geminiKeyPlaceholder": "AIzaSy...",

@@ -297,7 +297,8 @@ body.dark-mode #send-btn {
   background: linear-gradient(#4caf4f46, #45a049d8);
 }
 
-#sd-link {
+#sd-link,
+#web-search {
   height: 20px;
   width: 60px;
   flex-shrink: 0;
@@ -319,13 +320,15 @@ body.dark-mode #send-btn {
   font-weight: lighter;
 }
 
-body.dark-mode #sd-link {
+body.dark-mode #sd-link,
+body.dark-mode #web-search {
   border-color: #5f5;
   color: #5f5;
   background: transparent;
 }
 
-#sd-link.enabled {
+#sd-link.enabled,
+#web-search.enabled {
   opacity: 1;
   font-weight: normal;
   border: 1px solid;

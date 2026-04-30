@@ -94,6 +94,7 @@ async function setupSettings() {
         const pandocPath = document.querySelector('#pandoc-path') as HTMLInputElement;
         const sillyTavernPath = document.querySelector('#silly-tavern-path') as HTMLInputElement;
         const sdPath = document.querySelector('#sd-path') as HTMLInputElement;
+        const obscuraPath = document.querySelector('#obscura-path') as HTMLInputElement;
         const imageAutoSavePath = document.querySelector('#image-auto-save-path') as HTMLInputElement;
         const shellPath = document.querySelector('#shell-path') as HTMLInputElement;
         const terminalDefaultCwd = document.querySelector('#terminal-cwd') as HTMLInputElement;
@@ -513,6 +514,9 @@ async function setupSettings() {
         const stableDiffusion = await store.get<string>('sdWebUIPath') ?? '';
         if (sdPath) sdPath.value = stableDiffusion;
 
+        const obscura = await store.get<string>('obscuraPath') ?? '';
+        if (obscuraPath) obscuraPath.value = obscura;
+
         const imageAutoSave = await store.get<string>('imageAutoSavePath') ?? '';
         if (imageAutoSavePath) imageAutoSavePath.value = imageAutoSave;
 
@@ -775,6 +779,22 @@ async function setupSettings() {
             }
         });
 
+        document.querySelector('#btn-select-obscura')?.addEventListener('click', async () => {
+            const osType = await type();
+            const extensions = osType === 'windows' ? ['exe'] : [''];
+            const path = await open({
+                title: t('settings.terminal.selectDirTitle'),
+                filters: [
+                    { name: 'Executables', extensions: extensions },
+                ]
+            });
+
+            if (path && typeof path === 'string') {
+                const input = document.querySelector('#obscura-path') as HTMLInputElement;
+                if (input) input.value = path;
+            }
+        });
+
         document.querySelector('#btn-select-auto-save')?.addEventListener('click', async () => {
             const path = await open({
                 title: t('settings.terminal.selectDirTitle'),
@@ -876,6 +896,7 @@ async function setupSettings() {
                 const newPandocPath = pandocPath.value;
                 const newSillyTavernPath = sillyTavernPath.value;
                 const newSDPath = sdPath.value;
+                const newObscuraPath = obscuraPath.value;
                 const newImageAutoSavePath = imageAutoSavePath.value;
                 const newShellPath = shellPath.value;
                 const newTerminalDefaultCwd = terminalDefaultCwd.value;
@@ -939,6 +960,7 @@ async function setupSettings() {
                 await store.set('pandocPath', newPandocPath);
                 await store.set('sillyTavernPath', newSillyTavernPath);
                 await store.set('sdWebUIPath', newSDPath);
+                await store.set('obscuraPath', newObscuraPath);
                 await store.set('imageAutoSavePath', newImageAutoSavePath);
                 await store.set('shellPath', newShellPath);
                 await store.set('terminalDefaultCwd', newTerminalDefaultCwd);
@@ -1027,6 +1049,7 @@ async function setupSettings() {
                     pandocPath: newPandocPath,
                     sillyTavernPath: newSillyTavernPath,
                     sdWebUIPath: newSDPath,
+                    obscuraPath: newObscuraPath,
                     imageAutoSavePath: newImageAutoSavePath,
                     shellPath: newShellPath,
                     terminalDefaultCwd: newTerminalDefaultCwd,

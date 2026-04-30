@@ -6,6 +6,8 @@ use epub_builder::{EpubBuilder, EpubContent, ReferenceType, ZipLibrary};
 use font_kit::source::SystemSource;
 use portable_pty::{native_pty_system, CommandBuilder, MasterPty, PtySize};
 use regex::Regex;
+use rig::client::{CompletionClient, ProviderClient};
+use rig::completion::Prompt;
 use serde::Serialize;
 use std::collections::HashMap;
 use std::fs;
@@ -64,7 +66,207 @@ struct InitialFile(Mutex<Option<String>>);
 struct SecondInstanceFile(Mutex<Option<String>>);
 // Mac用のファイルパス保持場所
 struct MacFileBuffer(Mutex<Option<String>>);
+
+// 1. 引数の定義（マクロは使わないただの構造体）
+#[derive(serde::Deserialize, serde::Serialize)]
+pub struct WebSearchArgs {
+    pub query: String,
+}
+
+// 2. ツールの実体
+pub struct WebSearchTool {
+    pub obscura_path: String,
+}
+
+// 3. エラー型の定義 (既存のまま)
+#[derive(Debug, thiserror::Error)]
+pub enum WebFetchError {
+    #[error("Obscura error: {0}")]
+    ObscuraError(String),
+    #[error("IO error: {0}")]
+    IoError(String),
+}
+
+// 4. トレイトの実装
+impl rig::tool::Tool for WebSearchTool {
+    const NAME: &'static str = "web_search";
+    type Error = WebFetchError;
+    type Args = WebSearchArgs;
+    type Output = String;
+
+    async fn definition(&self, _prompt: String) -> rig::completion::ToolDefinition {
+        rig::completion::ToolDefinition {
+            name: Self::NAME.to_string(),
+            description: "A tool to search the web or fetch content from a URL. The agent must use this tool for research and then provide the final answer in the user's original language.".to_string(),
+            parameters: serde_json::json!({
+                "type": "object",
+                "properties": {
+                    "query": {
+                        "type": "string",
+                        "description": "The search keyword or URL. Use only one string."
+                    }
+                },
+                "required": ["query"]
+            }),
+        }
+    }
+
+    async fn call(&self, args: Self::Args) -> Result<Self::Output, Self::Error> {
+        // 1. URLか検索クエリかを判定してベースとなるURLを作る（mut に変更）
+        let mut target_url = if args.query.starts_with("http") {
+            args.query.clone()
+        } else {
+            // URLエンコードの代わりに簡易的にスペースを+に変換
+            let encoded = args.query.replace(" ", "+");
+            format!("https://html.duckduckgo.com/html/?q={}", encoded)
+        };
+
+        // 2. 特定のドメインに対するハック（Reddit対策）
+        // www.reddit.com を old.reddit.com に置換することで
+        // 重いJSを回避
+        if target_url.contains("www.reddit.com") {
+            target_url = target_url.replace("www.reddit.com", "old.reddit.com");
+        }
+
+        println!("Rig Tool: Executing -> {}", target_url);
+
+        #[cfg(target_os = "windows")]
+        let mut cmd = {
+            use std::os::windows::process::CommandExt;
+            let mut c = std::process::Command::new(&self.obscura_path);
+            // ここにフラグを追加することで、Obscura の窓が一切出なくなる
+            c.creation_flags(0x08000000);
+            c
+        };
+
+        #[cfg(not(target_os = "windows"))]
+        let mut cmd = std::process::Command::new(&self.obscura_path);
+
+        cmd.args([
+            "fetch",
+            &target_url,
+            "--stealth",
+            "--wait-until",
+            "load",
+            "--eval",
+            "document.body.innerText",
+        ]);
+
+        let output = cmd
+            .output()
+            .map_err(|e| WebFetchError::IoError(e.to_string()))?;
+
+        if output.status.success() {
+            let text = String::from_utf8_lossy(&output.stdout).trim().to_string();
+            Ok(text.chars().take(4000).collect())
+        } else {
+            let err_raw = String::from_utf8_lossy(&output.stderr).to_string();
+            Ok(format!("Error during fetching: {}", err_raw)) // AIにエラーを伝えてリトライさせる
+        }
+    }
+}
+
 // --- Tauriコマンドの定義 ---
+
+#[tauri::command]
+async fn run_web_agent(
+    api_type: String,
+    api_key: String,
+    base_url: String,
+    model: String,
+    obscura_path: String,
+    system_prompt: String,
+    prompt: String,
+) -> Result<String, String> {
+    let web_search_tool = WebSearchTool { obscura_path };
+    let actual_key = if api_key.is_empty() {
+        "sk-local".to_string()
+    } else {
+        api_key.clone()
+    };
+
+    let result = match api_type.as_str() {
+        "gemini" => {
+            std::env::set_var("GEMINI_API_KEY", &api_key);
+            let client = rig::providers::gemini::Client::from_env().map_err(|e| e.to_string())?;
+            let mut agent = client
+                .agent(&model)
+                .preamble(&system_prompt)
+                .tool(web_search_tool)
+                .build();
+            agent.default_max_turns = Some(10);
+            agent.prompt(&prompt).await.map_err(|e| e.to_string())?
+        }
+        "groq" => {
+            std::env::set_var("GROQ_API_KEY", &actual_key);
+            let client = rig::providers::groq::Client::from_env().map_err(|e| e.to_string())?;
+            let mut agent = client
+                .agent(&model)
+                .preamble(&system_prompt)
+                .tool(web_search_tool)
+                .build();
+            agent.default_max_turns = Some(10);
+            agent.prompt(&prompt).await.map_err(|e| e.to_string())?
+        }
+        "mistral" => {
+            std::env::set_var("MISTRAL_API_KEY", &actual_key);
+            let client = rig::providers::mistral::Client::from_env().map_err(|e| e.to_string())?;
+            let mut agent = client
+                .agent(&model)
+                .preamble(&system_prompt)
+                .tool(web_search_tool)
+                .build();
+            agent.default_max_turns = Some(10);
+            agent.prompt(&prompt).await.map_err(|e| e.to_string())?
+        }
+        "cohere" => {
+            return Err("Currently, Cohere does not support Web Agent mode in MirrorShard. Please use another AI.".to_string());
+        }
+        "cerebras" => {
+            std::env::set_var("CEREBRAS_API_KEY", &api_key);
+            let client = rig::providers::openai::Client::builder()
+                .api_key(&api_key)
+                .base_url("https://api.cerebras.ai/v1")
+                .build()
+                .map_err(|e| e.to_string())?;
+
+            let model_instance = client.completion_model(&model);
+            let mut agent = rig::agent::AgentBuilder::new(model_instance)
+                .preamble(&system_prompt)
+                .tool(web_search_tool)
+                .build();
+
+            agent.default_max_turns = Some(10);
+            agent.prompt(&prompt).await.map_err(|e| e.to_string())?
+        }
+        _ => {
+            // Local は OpenAI互換として処理
+            let target_base_url = match api_type.as_str() {
+                "cerebras" => "https://api.cerebras.ai/v1",
+                "cohere" => "https://api.cohere.com",
+                _ => &base_url,
+            };
+
+            // 環境変数を使わず、ビルダーで直接固定する
+            // build() が Result を返すため .map_err(|e| e.to_string())? を追加
+            let client = rig::providers::openai::Client::builder()
+                .api_key(&actual_key)
+                .base_url(target_base_url)
+                .build()
+                .map_err(|e| format!("Failed to build OpenAI client: {}", e))?;
+
+            let model_instance = client.completion_model(&model);
+            let mut agent = rig::agent::AgentBuilder::new(model_instance)
+                .preamble(&system_prompt)
+                .tool(web_search_tool)
+                .build();
+
+            agent.default_max_turns = Some(10);
+            agent.prompt(&prompt).await.map_err(|e| e.to_string())?
+        }
+    };
+    Ok(result)
+}
 
 // 汎用ポートモニタ
 #[tauri::command]
@@ -279,7 +481,7 @@ async fn open_silly_tavern(
             c.args(["/C", "node server.js"]);
 
             if enable_st_terminal {
-                // ★ 確実に新しい窓を出すフラグ
+                // 確実に新しい窓を出すフラグ
                 c.creation_flags(0x00000010);
             } else {
                 // 完全に隠すフラグ
@@ -1643,6 +1845,7 @@ pub fn run() {
             get_window_title,
             launch_stable_diffusion_external,
             start_port_monitor,
+            run_web_agent,
         ])
         .on_window_event(|window, event| match event {
             // 1. メインウィンドウの終了確認

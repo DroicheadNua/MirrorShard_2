@@ -7,6 +7,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [1.9.0] - 2026-5-XX  
+
+### Added  
+- Integrated Rig (a Rust-based agent framework) as the backend.  
+By integrating with the headless browser "Obscura" (https://github.com/h4ckf0r0day/obscura), users can perform web searches using any AI (including local ones).  
+ - * Specify the path to the Obscura executable file in the settings screen and enable the "Search" button in the chat screen to launch it (*Cohere is not supported)  
+
+### Changed    
+ 
+
+### Fixed   
+
+
 ## [1.8.0] - 2026-4-27  
 
 ### Added  

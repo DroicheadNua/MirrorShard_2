@@ -117,7 +117,7 @@
     "wordWrapLabel": "Word Wrap"
   },
   "ai": {
-    "cloud": "Cloud AI",
+    "cloud": "Gemini",
     "gemini": "Gemini",
     "geminiKeyLabel": "Gemini API Key",
     "geminiKeyPlaceholder": "AIzaSy...",

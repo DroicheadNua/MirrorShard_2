@@ -10,6 +10,7 @@
     "load": "読み込み (Ctrl+O)",
     "fullscreen": "最大化 (F11)",
     "close": "閉じる (Ctrl+Shift+A)",
+    "webSearch": "Webエージェント (Obscura)",
     "sd-link": "Stable Diffusion連携"
   },
   "notification": {
@@ -65,5 +66,6 @@
     "local": "Local LLM",
     "geminiFull": "Gemini (Cloud)",
     "localFull": "Local AI"
-  }
+  },
+  "agentThinking": "エージェントが調査・思考中です..."
 }

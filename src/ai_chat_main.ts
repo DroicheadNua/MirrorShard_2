@@ -41,6 +41,7 @@ const chatForm = document.getElementById('chat-form') as HTMLFormElement;
 const messageInput = document.getElementById('message-input') as HTMLTextAreaElement;
 const sendBtn = document.getElementById('send-btn') as HTMLButtonElement;
 const sdLinkBtn = document.getElementById('sd-link') as HTMLButtonElement;
+const webSearchBtn = document.getElementById('web-search') as HTMLButtonElement;
 const apiTrigger = document.getElementById('api-selector-trigger');
 const apiOptions = document.getElementById('api-selector-options');
 const TRANSPARENT_ICON = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII=';
@@ -56,6 +57,7 @@ let aiName = 'AI';
 let userIconSrc = '';
 let aiIconSrc = '';
 let isChatDirty = false;
+let agentAbortController: AbortController | null = null;
 const osType = await type();
 
 const aiChat = new AiChat(onAiUpdate);
@@ -254,6 +256,10 @@ async function init() {
         const isSdLinkEnabled = await store.get<boolean>('sdLinkEnabled') ?? false;
         if (isSdLinkEnabled) {
             sdLinkBtn.classList.add('enabled');
+        }
+        const isWebSearchEnabled = await store.get<boolean>('webSearchEnabled') ?? false;
+        if (isWebSearchEnabled) {
+            webSearchBtn.classList.add('enabled');
         }
 
         aiSettings = {
@@ -633,6 +639,15 @@ function setupEventListeners() {
         }
     });
 
+    webSearchBtn.addEventListener('click', async () => {
+        webSearchBtn.classList.toggle('enabled');
+        const newState = webSearchBtn.classList.contains('enabled');
+        if (store) {
+            await store.set('webSearchEnabled', newState);
+            await store.save();
+        }
+    });
+
     // --- 右クリックメニュー (Context Menu) ---
     document.addEventListener('contextmenu', async (e) => {
         e.preventDefault();
@@ -670,6 +685,14 @@ function setupEventListeners() {
 
         // 入力欄にフォーカスがある場合、一部のショートカットは無効化するか、挙動を変える
         // ただし Ctrl+S などは効かせたいので、ここでは除外判定は緩めに
+
+        if (e.key === 'Escape' && agentAbortController) {
+            e.preventDefault();
+            agentAbortController.abort();
+            hideAiLoadingOverlay();
+            setUiLocked(false);
+            return;
+        }
 
         // Ctrl + T : ダークモード切替
         if (isCtrlOrCmd && key === 't' && !isShift) {
@@ -765,9 +788,20 @@ async function processUserMessage(text: string) {
     chatHistory.push({ role: 'assistant', content: '...' });
     addMessageToLog('assistant', '...', chatHistory.length - 1);
 
+    // SD-Link 等のシステムプロンプトを最新状態に合成
     await applySdLinkSystemPrompt();
-    const historyToSend = chatHistory.slice(0, -1);
-    await aiChat.sendMessage(historyToSend);
+
+    // Web検索トグルがオンか判定
+    const isWebSearchActive = document.getElementById('web-search')?.classList.contains('enabled');
+
+    if (isWebSearchActive) {
+        // --- 🌐 Rig (Rust) エージェントモード ---
+        await runWebAgentViaRust();
+    } else {
+        // --- 💬 既存のストリーミングモード ---
+        const historyToSend = chatHistory.slice(0, -1);
+        await aiChat.sendMessage(historyToSend);
+    }
 }
 
 function setUiLocked(locked: boolean) {
@@ -1249,6 +1283,105 @@ async function saveBase64Image(base64Data: string): Promise<string | null> {
     return savePath;
 }
 
+// Rigを呼び出す関数
+async function runWebAgentViaRust() {
+    agentAbortController = new AbortController();
+    showAiLoadingOverlay(t('aiChat.agentThinking') || "Agent is researching and thinking...");
+
+    try {
+        const obscuraPath = await store?.get<string>('obscuraPath');
+        if (!obscuraPath) throw new Error("Obscura path is not set.");
+
+        const apiType = aiSettings.apiType || 'mistral';
+        let baseUrl = "";
+        let apiKey = "";
+        let model = "";
+
+        // APIごとの設定取得と分岐
+        if (apiType === 'groq') {
+            baseUrl = "https://api.groq.com/openai/v1";
+            apiKey = await store?.get<string>('groqApiKey') || "";
+            model = await store?.get<string>('groqModel') || "llama-3.3-70b-versatile";
+        } else if (apiType === 'mistral') {
+            baseUrl = "https://api.mistral.ai/v1";
+            apiKey = await store?.get<string>('mistralApiKey') || "";
+            model = await store?.get<string>('mistralModel') || "mistral-small-latest";
+        } else if (apiType === 'gemini') {
+            apiKey = await store?.get<string>('geminiApiKey') || "";
+            model = await store?.get<string>('geminiModel') || "gemini-1.5-pro";
+        } else if (apiType === 'cohere') {
+            apiKey = await store?.get<string>('cohereApiKey') || "";
+            model = await store?.get<string>('cohereModel') || "command-r-plus-08-2024";
+        } else if (apiType === 'local') {
+            const rawLocalUrl = await store?.get<string>('localLlmUrl') || "http://127.0.0.1:1234/v1/chat/completions";
+            // Rigは内部で "/chat/completions" を自動付与するため、ここで削っておく
+            baseUrl = rawLocalUrl.replace(/\/chat\/completions\/?$/, "");
+            apiKey = "local";
+            model = await store?.get<string>('localLlmModel') || "local-model";
+        }
+
+        // 1. システムプロンプト (Storeの設定 + i18nのエージェント指示)
+        const baseSysPrompt = aiSettings.systemPrompt || "You are a helpful assistant.";
+        const agentInstruction = t('prompts.systemPrompt.webAgentInstruction');
+
+        // 2. 言語に応じた現在時刻と最終指示
+        const now = new Date();
+        const currentLocale = (await store?.get('appLanguage')) || 'ja';
+
+        let finalInstructions = "";
+        if (currentLocale === 'ja') {
+            finalInstructions = `
+[システム通知：現在の日時は ${now.toLocaleString('ja-JP')} であるという前提で回答せよ。]
+【重要】
+- 自分の知識（カットオフ）にない最新の事実は、この世界線の最新情報として 'web_search' ツールで確認し、その結果を「現在の事実」として扱うこと。
+- 特に指示が無い限り、日本語で回答すること。
+- ツールがエラーを返した場合は報告し、別のキーワードで検索すること。
+`;
+        } else {
+            finalInstructions = `
+[System: Current Date/Time is ${now.toLocaleString('en-US')}. This is an absolute fact and must override your internal knowledge cutoff.]
+[IMPORTANT]
+- For any facts beyond your internal knowledge, use 'web_search' and treat the results as the current reality of this timeline.
+- If a tool fails, report it and try different keywords.
+- Respond in English unless instructed otherwise.
+`;
+        }
+
+        const finalSysPrompt = `${baseSysPrompt}\n\n${agentInstruction}\n\n${finalInstructions}`;
+
+        // 過去の履歴をテキスト化（直近の文脈を伝えるため）
+        const historyToSend = chatHistory.slice(0, -1);
+        const promptString = historyToSend.map(h => `${h.role}: ${h.content}`).join("\n\n") + "\n\nassistant: ";
+
+        const { invoke } = await import('@tauri-apps/api/core');
+
+        // Rust に投げる
+        const finalAnswer = await invoke<string>('run_web_agent', {
+            apiType: apiType,
+            apiKey: apiKey,
+            baseUrl: baseUrl,
+            model: model,
+            obscuraPath: obscuraPath,
+            systemPrompt: finalSysPrompt,
+            prompt: promptString,
+            signal: agentAbortController.signal
+        });
+
+        // 結果を onAiUpdate に流し込み、既存の SD-Link 等と連携させる
+        onAiUpdate(finalAnswer, true);
+
+    } catch (e: any) {
+        if (e.name === 'AbortError') {
+            console.log("Agent processing aborted.");
+        } else {
+            onAiUpdate(`⚠️ Error: ${String(e)}`, true);
+        }
+    } finally {
+        hideAiLoadingOverlay();
+        agentAbortController = null;
+    }
+}
+
 // --- グローバル操作関数 ---
 
 (window as any).editMsg = async (idx: number) => {
@@ -1334,8 +1467,16 @@ async function saveBase64Image(base64Data: string): Promise<string | null> {
     chatHistory.push({ role: 'assistant', content: '...' });
     addMessageToLog('assistant', '...', chatHistory.length - 1);
     await applySdLinkSystemPrompt();
-    const historyToSend = chatHistory.slice(0, -1);
-    await aiChat.sendMessage(historyToSend);
+    const isWebSearchActive = document.getElementById('web-search')?.classList.contains('enabled');
+
+    if (isWebSearchActive) {
+        // --- 🌐 Rig (Rust) エージェントモード ---
+        await runWebAgentViaRust();
+    } else {
+        // --- 💬 既存のストリーミングモード ---
+        const historyToSend = chatHistory.slice(0, -1);
+        await aiChat.sendMessage(historyToSend);
+    }
 };
 
 (window as any).copyMsg = async (idx: number) => {

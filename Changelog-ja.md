@@ -6,6 +6,19 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 
+## [1.9.0] - 2026-5-XX  
+
+### Added (新機能)  
+- Rig（Rust製エージェントフレームワーク）をバックエンドに統合。  
+ヘッドレスブラウザ「Obscura」(https://github.com/h4ckf0r0day/obscura)と連携することにより、任意のAI（ローカル含む）によるWeb検索が可能に  
+ - ※ 設定画面でObscuraの実行ファイルのパスを指定し、チャット画面の「Search」ボタンをONにすることで起動（※Cohereは非対応）  
+
+### Changed (変更点)    
+ 
+
+### Fixed (修正点)   
+
+
 ## [1.8.0] - 2026-4-27  
 
 ### Added (新機能)  
