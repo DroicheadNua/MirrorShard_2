@@ -250,6 +250,37 @@
 
                 <hr style="margin:10px 0;border:0;border-top:1px solid var(--ui-text-color);opacity:0.3;">
 
+                <!-- Cerebras -->
+                <div class="ai-setting-group">
+                    <h4 data-i18n="settings.ai.cerebras">Cerebras</h4>
+                    <div class="setting-item">
+                        <label for="cerebras-api-key" data-i18n="settings.ai.cerebrasKeyLabel">Cerebras API Key</label>
+                        <input type="password" id="cerebras-api-key"
+                            data-i18n-placeholder="settings.ai.cerebrasKeyPlaceholder" placeholder="...">
+                    </div>
+                    <div class="setting-item">
+                        <label for="enable-cerebras" class="inline">
+                            <input type="checkbox" id="enable-cerebras">
+                            <span data-i18n="settings.ai.enableCerebras">Cerebras を有効にする</span>
+                        </label>
+                    </div>
+                    <div class="setting-item">
+                        <label for="cerebras-model" data-i18n="settings.ai.cerebrasModelLabel">Cerebras Model</label>
+                        <input type="text" id="cerebras-model" data-i18n-placeholder="settings.ai.modelPlaceholder"
+                            placeholder="<モデル名を入力>">
+                        <select id="cerebras-model-preset"
+                            onchange="document.getElementById('cerebras-model').value=this.value">
+                            <option value="qwen-3-235b-a22b-instruct-2507">Qwen 3 235B</option>
+                            <option value="gpt-oss-120b">GPT OSS 120B</option>
+                            <option value="zai-glm-4.7">Z.ai GLM 4.7</option>
+                            <option value="llama3.1-8b">Llama 3.1 8B</option>
+                            <option value="" data-i18n="settings.ai.manualEntry">手動入力</option>
+                        </select>
+                    </div>
+                </div>
+
+                <hr style="margin:10px 0;border:0;border-top:1px solid var(--ui-text-color);opacity:0.3;">
+
                 <!-- Cohere -->
                 <div class="ai-setting-group">
                     <h4 data-i18n="settings.ai.cohere">Cohere</h4>

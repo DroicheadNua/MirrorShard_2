@@ -3,11 +3,13 @@ import { GoogleGenerativeAI, GenerativeModel, ChatSession } from "@google/genera
 import { t } from "./i18n";
 
 export interface ChatSettings {
-    apiType: 'gemini' | 'groq' | 'cohere' | 'mistral' | 'local';
+    apiType: 'gemini' | 'groq' | 'cerebras' | 'cohere' | 'mistral' | 'local';
     geminiApiKey?: string;
     geminiModel?: string;
     groqApiKey?: string;
     groqModel?: string;
+    cerebrasApiKey?: string;
+    cerebrasModel?: string;
     cohereApiKey?: string;
     cohereModel?: string;
     mistralApiKey?: string;
@@ -82,6 +84,10 @@ export class AiChat {
                 url = "https://api.groq.com/openai/v1/chat/completions";
                 apiKey = this.currentSettings.groqApiKey || "";
                 model = this.currentSettings.groqModel || "llama-3.3-70b-versatile";
+            } else if (apiType === 'cerebras') {
+                url = "https://api.cerebras.ai/v1/chat/completions";
+                apiKey = this.currentSettings.cerebrasApiKey || "";
+                model = this.currentSettings.cerebrasModel || "llama3.1-8b";
             } else if (apiType === 'mistral') {
                 // スイッチがON かつ IDがある場合のみ Agent モード判定
                 const isAgentActive = this.currentSettings.enableMistralAgents && !!this.currentSettings.mistralAgentID;

@@ -163,7 +163,7 @@ class App {
   private fontList = [this.serifFont, this.sansSerifFont, this.monospaceFont];
   private languageCompartment = new Compartment();
 
-  private mainAiApi: 'gemini' | 'groq' | 'cohere' | 'mistral' | 'local' = 'gemini';
+  private mainAiApi: 'gemini' | 'groq' | 'cerebras' | 'cohere' | 'mistral' | 'local' = 'gemini';
   private showAiThinkingOverlay = true;
   private isAiProcessing = false; // AI動作中フラグ
   private aiAbortController: AbortController | null = null;// 通信中断用
@@ -454,6 +454,9 @@ class App {
       if (await this.store.get<boolean>('enableGroq')) {
         optionsContainer.innerHTML += `<div class="custom-option" data-value="groq">Groq</div>`;
       }
+      if (await this.store.get<boolean>('enableCerebras')) {
+        optionsContainer.innerHTML += `<div class="custom-option" data-value="cerebras">Cerebras</div>`;
+      }
       if (await this.store.get<boolean>('enableCohere')) {
         optionsContainer.innerHTML += `<div class="custom-option" data-value="cohere">Cohere</div>`;
       }
@@ -733,6 +736,11 @@ class App {
           apiKey = await this.store.get<string>('groqApiKey') || "";
           model = await this.store.get<string>('groqModel') || "llama-3.3-70b-versatile";
         }
+        else if (this.mainAiApi === 'cerebras') {
+          url = "https://api.cerebras.ai/v1/chat/completions";
+          apiKey = await this.store.get<string>('cerebrasApiKey') || "";
+          model = await this.store.get<string>('cerebrasModel') || "llama3.1-8b";
+        }
         else if (this.mainAiApi === 'mistral') {
           url = "https://api.mistral.ai/v1/chat/completions";
           apiKey = await this.store.get<string>('mistralApiKey') || "";
@@ -872,6 +880,11 @@ ${instructionFiller}
           url = "https://api.groq.com/openai/v1/chat/completions";
           apiKey = await this.store.get<string>('groqApiKey') || "";
           model = await this.store.get<string>('groqModel') || "llama-3.3-70b-versatile";
+        }
+        else if (this.mainAiApi === 'cerebras') {
+          url = "https://api.cerebras.ai/v1/chat/completions";
+          apiKey = await this.store.get<string>('cerebrasApiKey') || "";
+          model = await this.store.get<string>('cerebrasModel') || "llama3.1-8b";
         }
         else if (this.mainAiApi === 'mistral') {
           url = "https://api.mistral.ai/v1/chat/completions";
@@ -1107,6 +1120,11 @@ ${instructionFiller}
           url = "https://api.groq.com/openai/v1/chat/completions";
           apiKey = await this.store.get<string>('groqApiKey') || "";
           model = await this.store.get<string>('groqModel') || "llama-3.3-70b-versatile";
+        }
+        else if (this.mainAiApi === 'cerebras') {
+          url = "https://api.cerebras.ai/v1/chat/completions";
+          apiKey = await this.store.get<string>('cerebrasApiKey') || "";
+          model = await this.store.get<string>('cerebrasModel') || "llama3.1-8b";
         }
         else if (this.mainAiApi === 'mistral') {
           url = "https://api.mistral.ai/v1/chat/completions";
@@ -1404,6 +1422,10 @@ ${instructionFiller}
             url = "https://api.groq.com/openai/v1/chat/completions";
             apiKey = await this.store.get<string>('groqApiKey') || "";
             model = await this.store.get<string>('groqModel') || "llama-3.3-70b-versatile";
+          } else if (this.mainAiApi === 'cerebras') {
+            url = "https://api.cerebras.ai/v1/chat/completions";
+            apiKey = await this.store.get<string>('cerebrasApiKey') || "";
+            model = await this.store.get<string>('cerebrasModel') || "llama3.1-8b";
           } else if (this.mainAiApi === 'mistral') {
             url = "https://api.mistral.ai/v1/chat/completions";
             apiKey = await this.store.get<string>('mistralApiKey') || "";

@@ -3843,6 +3843,11 @@ async function triggerFreeAssociation() {
         apiKey = await store.get<string>('groqApiKey') || "";
         model = await store.get<string>('groqModel') || "llama-3.3-70b-versatile";
       }
+      else if (ipAiApi === 'cerebras') {
+        url = "https://api.cerebras.ai/v1/chat/completions";
+        apiKey = await store.get<string>('cerebrasApiKey') || "";
+        model = await store.get<string>('cerebrasModel') || "llama3.1-8b";
+      }
       else if (ipAiApi === 'mistral') {
         url = "https://api.mistral.ai/v1/chat/completions";
         apiKey = await store.get<string>('mistralApiKey') || "";
@@ -4089,6 +4094,11 @@ async function triggerTemplateCompletion() {
         apiKey = await store.get<string>('groqApiKey') || "";
         model = await store.get<string>('groqModel') || "llama-3.3-70b-versatile";
       }
+      else if (ipAiApi === 'cerebras') {
+        url = "https://api.cerebras.ai/v1/chat/completions";
+        apiKey = await store.get<string>('cerebrasApiKey') || "";
+        model = await store.get<string>('cerebrasModel') || "llama3.1-8b";
+      }
       else if (ipAiApi === 'mistral') {
         url = "https://api.mistral.ai/v1/chat/completions";
         apiKey = await store.get<string>('mistralApiKey') || "";
@@ -4145,6 +4155,9 @@ async function initAiSelector() {
   // チェックボックスに応じて追加
   if (await store.get<boolean>('enableGroq')) {
     optionsContainer.innerHTML += `<div class="custom-option" data-value="groq">Groq</div>`;
+  }
+  if (await store.get<boolean>('enableCerebras')) {
+    optionsContainer.innerHTML += `<div class="custom-option" data-value="cerebras">Cerebras</div>`;
   }
   if (await store.get<boolean>('enableCohere')) {
     optionsContainer.innerHTML += `<div class="custom-option" data-value="cohere">Cohere</div>`;
@@ -4388,6 +4401,11 @@ async function triggerNodeAlchemy() {
         url = "https://api.groq.com/openai/v1/chat/completions";
         apiKey = await store.get<string>('groqApiKey') || "";
         model = await store.get<string>('groqModel') || "llama-3.3-70b-versatile";
+      }
+      else if (ipAiApi === 'cerebras') {
+        url = "https://api.cerebras.ai/v1/chat/completions";
+        apiKey = await store.get<string>('cerebrasApiKey') || "";
+        model = await store.get<string>('cerebrasModel') || "llama3.1-8b";
       }
       else if (ipAiApi === 'mistral') {
         url = "https://api.mistral.ai/v1/chat/completions";
@@ -4651,6 +4669,11 @@ async function triggerIpMissingLink() {
         url = "https://api.groq.com/openai/v1/chat/completions";
         apiKey = await store.get<string>('groqApiKey') || "";
         model = await store.get<string>('groqModel') || "llama-3.3-70b-versatile";
+      }
+      else if (ipAiApi === 'cerebras') {
+        url = "https://api.cerebras.ai/v1/chat/completions";
+        apiKey = await store.get<string>('cerebrasApiKey') || "";
+        model = await store.get<string>('cerebrasModel') || "llama3.1-8b";
       }
       else if (ipAiApi === 'mistral') {
         url = "https://api.mistral.ai/v1/chat/completions";

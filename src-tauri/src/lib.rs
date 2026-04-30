@@ -195,7 +195,10 @@ async fn run_web_agent(
                 .tool(web_search_tool)
                 .build();
             agent.default_max_turns = Some(10);
-            agent.prompt(&prompt).await.map_err(|e| e.to_string())?
+            agent
+                .prompt(&prompt)
+                .await
+                .map_err(|e| format!("Gemini Error: {}", e))?
         }
         "groq" => {
             std::env::set_var("GROQ_API_KEY", &actual_key);
@@ -206,7 +209,10 @@ async fn run_web_agent(
                 .tool(web_search_tool)
                 .build();
             agent.default_max_turns = Some(10);
-            agent.prompt(&prompt).await.map_err(|e| e.to_string())?
+            agent
+                .prompt(&prompt)
+                .await
+                .map_err(|e| format!("Groq Error: {}", e))?
         }
         "mistral" => {
             std::env::set_var("MISTRAL_API_KEY", &actual_key);
@@ -217,44 +223,27 @@ async fn run_web_agent(
                 .tool(web_search_tool)
                 .build();
             agent.default_max_turns = Some(10);
-            agent.prompt(&prompt).await.map_err(|e| e.to_string())?
+            agent
+                .prompt(&prompt)
+                .await
+                .map_err(|e| format!("Mistral Error: {}", e))?
         }
         "cohere" => {
-            return Err("Currently, Cohere does not support Web Agent mode in MirrorShard. Please use another AI.".to_string());
+            return Err("Web Agent is not supported for Cohere in this version.".to_string());
         }
         "cerebras" => {
-            std::env::set_var("CEREBRAS_API_KEY", &api_key);
-            let client = rig::providers::openai::Client::builder()
-                .api_key(&api_key)
-                .base_url("https://api.cerebras.ai/v1")
-                .build()
-                .map_err(|e| e.to_string())?;
-
-            let model_instance = client.completion_model(&model);
-            let mut agent = rig::agent::AgentBuilder::new(model_instance)
-                .preamble(&system_prompt)
-                .tool(web_search_tool)
-                .build();
-
-            agent.default_max_turns = Some(10);
-            agent.prompt(&prompt).await.map_err(|e| e.to_string())?
+            return Err("Web Agent is not supported for Cerebras in this version.".to_string());
         }
         _ => {
-            // Local は OpenAI互換として処理
-            let target_base_url = match api_type.as_str() {
-                "cerebras" => "https://api.cerebras.ai/v1",
-                "cohere" => "https://api.cohere.com",
-                _ => &base_url,
-            };
+            // Local LLM
+            std::env::set_var("OPENAI_API_KEY", &actual_key);
+            if !base_url.is_empty() {
+                std::env::set_var("OPENAI_API_BASE", &base_url);
+                std::env::set_var("OPENAI_BASE_URL", &base_url);
+            }
+            let client = rig::providers::openai::Client::from_env().map_err(|e| e.to_string())?;
 
-            // 環境変数を使わず、ビルダーで直接固定する
-            // build() が Result を返すため .map_err(|e| e.to_string())? を追加
-            let client = rig::providers::openai::Client::builder()
-                .api_key(&actual_key)
-                .base_url(target_base_url)
-                .build()
-                .map_err(|e| format!("Failed to build OpenAI client: {}", e))?;
-
+            // Local は確実に /chat/completions を叩かせるための処理
             let model_instance = client.completion_model(&model);
             let mut agent = rig::agent::AgentBuilder::new(model_instance)
                 .preamble(&system_prompt)
@@ -262,9 +251,13 @@ async fn run_web_agent(
                 .build();
 
             agent.default_max_turns = Some(10);
-            agent.prompt(&prompt).await.map_err(|e| e.to_string())?
+            agent
+                .prompt(&prompt)
+                .await
+                .map_err(|e| format!("Local AI Error: {}", e))?
         }
     };
+
     Ok(result)
 }
 

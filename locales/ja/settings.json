@@ -126,6 +126,10 @@
     "groqKeyLabel": "Groq APIキー",
     "groqKeyPlaceholder": "gsk_...",
     "groqModelLabel": "Groqモデル",
+    "cerebras": "Cerebras",
+    "cerebrasKeyLabel": "Cerebras APIキー",
+    "cerebrasKeyPlaceholder": "...",
+    "cerebrasModelLabel": "Cerebrasモデル",
     "cohere": "Cohere",
     "cohereKeyLabel": "Cohere APIキー",
     "cohereKeyPlaceholder": "...",
@@ -141,6 +145,7 @@
     "imageSystemPromptLabel": "画像生成のプロンプト",
     "imageNegativePromptLabel": "ネガティブプロンプト",
     "enableGroq": "Groq を有効にする",
+    "enableCerebras": "Cerebras を有効にする",
     "enableCohere": "Cohere を有効にする",
     "enableMistral": "Mistral を有効にする",
     "enableMistralAgents": "Mistral Agents を有効にする",
@@ -182,7 +187,8 @@
     "iconLabel": "アイコン",
     "iconSelect": "選択",
     "iconClear": "クリア",
-    "defaultIcon": "(デフォルト)"
+    "defaultIcon": "(デフォルト)",
+    "obscuraPathLabel": "Obscuraのパス"
   },
   "alerts": {
     "settingsSaveFailed": "設定の保存に失敗しました: {{err}}",

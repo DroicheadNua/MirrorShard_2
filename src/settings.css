@@ -224,12 +224,14 @@ body {
     width: 200px;
 }
 
+#gemini-model,
 #gemini-model-preset,
 #groq-model-preset,
+#cerebras-model-preset,
 #cohere-model-preset,
 #mistral-model-preset,
 #local-llm-url-preset {
-    width: 160px;
+    width: 180px;
 }
 
 #code-language-select,

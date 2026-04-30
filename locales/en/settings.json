@@ -126,6 +126,10 @@
     "groqKeyLabel": "Groq API Key",
     "groqKeyPlaceholder": "gsk_...",
     "groqModelLabel": "Groq Model",
+    "cerebras": "Cerebras",
+    "cerebrasKeyLabel": "Cerebras API Key",
+    "cerebrasKeyPlaceholder": "...",
+    "cerebrasModelLabel": "Cerebras Model",
     "cohere": "Cohere",
     "cohereKeyLabel": "Cohere API Key",
     "cohereKeyPlaceholder": "...",
@@ -141,6 +145,7 @@
     "imageSystemPromptLabel": "Image generation prompt",
     "imageNegativePromptLabel": "Image Negative prompt",
     "enableGroq": "Enable Groq",
+    "enableCerebras": "Enable Cerebras",
     "enableCohere": "Enable Cohere",
     "enableMistral": "Enable Mistral",
     "enableMistralAgents": "Enable Mistral Agents",
@@ -182,7 +187,8 @@
     "iconLabel": "Icon:",
     "iconSelect": "Select",
     "iconClear": "Clear",
-    "defaultIcon": "(Default)"
+    "defaultIcon": "(Default)",
+    "obscuraPathLabel": "Obscura Path"
   },
   "alerts": {
     "settingsSaveFailed": "Failed to save settings: {{err}}",

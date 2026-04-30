@@ -102,14 +102,17 @@ async function setupSettings() {
         // --- 3.1. UI要素の取得 (AI新規) ---
         const geminiApiKeyInput = document.querySelector('#gemini-api-key') as HTMLInputElement;
         const groqApiKeyInput = document.querySelector('#groq-api-key') as HTMLInputElement;
+        const cerebrasApiKeyInput = document.querySelector('#cerebras-api-key') as HTMLInputElement;
         const cohereApiKeyInput = document.querySelector('#cohere-api-key') as HTMLInputElement;
         const mistralApiKeyInput = document.querySelector('#mistral-api-key') as HTMLInputElement;
         const mistralAgentIDInput = document.querySelector('#mistral-agent-id') as HTMLInputElement;
         const geminiModelInput = document.querySelector('#gemini-model') as HTMLInputElement | null;
         const groqModelInput = document.querySelector('#groq-model') as HTMLInputElement;
+        const cerebrasModelInput = document.querySelector('#cerebras-model') as HTMLInputElement;
         const cohereModelInput = document.querySelector('#cohere-model') as HTMLInputElement;
         const mistralModelInput = document.querySelector('#mistral-model') as HTMLInputElement;
         const enableGroq = document.querySelector('#enable-groq') as HTMLInputElement;
+        const enableCerebras = document.querySelector('#enable-cerebras') as HTMLInputElement;
         const enableCohere = document.querySelector('#enable-cohere') as HTMLInputElement;
         const enableMistral = document.querySelector('#enable-mistral') as HTMLInputElement;
         const enableMistralAgents = document.querySelector('#enable-mistral-agents') as HTMLInputElement;
@@ -129,6 +132,7 @@ async function setupSettings() {
         const aiIconDisplay = document.querySelector('#ai-icon-path') as HTMLElement;
         const modelPresetSelect = document.querySelector('#gemini-model-preset') as HTMLSelectElement;
         const groqModelPresetSelect = document.querySelector('#groq-model-preset') as HTMLSelectElement;
+        const cerebrasModelPresetSelect = document.querySelector('#cerebras-model-preset') as HTMLSelectElement;
         const cohereModelPresetSelect = document.querySelector('#cohere-model-preset') as HTMLSelectElement;
         const mistralModelPresetSelect = document.querySelector('#mistral-model-preset') as HTMLSelectElement;
         const localLlmModelInput = document.querySelector('#local-llm-model') as HTMLInputElement;
@@ -577,6 +581,7 @@ async function setupSettings() {
         // AI Settings
         geminiApiKeyInput.value = await store.get<string>('geminiApiKey') || '';
         groqApiKeyInput.value = await store.get<string>('groqApiKey') || '';
+        cerebrasApiKeyInput.value = await store.get<string>('cerebrasApiKey') || '';
         cohereApiKeyInput.value = await store.get<string>('cohereApiKey') || '';
         mistralApiKeyInput.value = await store.get<string>('mistralApiKey') || '';
         mistralAgentIDInput.value = await store.get<string>('mistralAgentID') || '';
@@ -584,9 +589,11 @@ async function setupSettings() {
             geminiModelInput.value = await store.get<string>('geminiModel') || 'gemini-3.1-flash-lite-preview';
         }
         groqModelInput.value = await store.get<string>('groqModel') || 'llama-3.3-70b-versatile';
+        cerebrasModelInput.value = await store.get<string>('cerebrasModel') || 'llama3.1-8b';
         cohereModelInput.value = await store.get<string>('cohereModel') || '';
         mistralModelInput.value = await store.get<string>('mistralModel') || '';
         enableGroq.checked = await store.get<boolean>('enableGroq') ?? false;
+        enableCerebras.checked = await store.get<boolean>('enableCerebras') ?? false;
         enableCohere.checked = await store.get<boolean>('enableCohere') ?? false;
         enableMistral.checked = await store.get<boolean>('enableMistral') ?? false;
         enableMistralAgents.checked = await store.get<boolean>('enableMistralAgents') ?? false;
@@ -624,6 +631,14 @@ async function setupSettings() {
                 groqModelPresetSelect.value = groqModelInput.value;
             } else {
                 groqModelPresetSelect.value = "";
+            }
+        }
+        if (cerebrasModelPresetSelect) {
+            const options = Array.from(cerebrasModelPresetSelect.options).map(o => o.value);
+            if (options.includes(cerebrasModelInput.value)) {
+                cerebrasModelPresetSelect.value = cerebrasModelInput.value;
+            } else {
+                cerebrasModelPresetSelect.value = "";
             }
         }
         if (cohereModelPresetSelect) {
@@ -923,14 +938,17 @@ async function setupSettings() {
                 // AI Params
                 const newGeminiApiKey = geminiApiKeyInput.value.trim();
                 const newGroqApiKey = groqApiKeyInput.value.trim();
+                const newCerebrasApiKey = cerebrasApiKeyInput.value.trim();
                 const newCohereApiKey = cohereApiKeyInput.value.trim();
                 const newMistralApiKey = mistralApiKeyInput.value.trim();
                 const newMistralAgentID = mistralAgentIDInput.value.trim();
                 const newGeminiModel = geminiModelInput ? geminiModelInput.value.trim() : '';
                 const newGroqModel = groqModelInput.value.trim();
+                const newCerebrasModel = cerebrasModelInput.value.trim();
                 const newCohereModel = cohereModelInput.value.trim();
                 const newMistralModel = mistralModelInput.value.trim();
                 const newEnableGroq = enableGroq.checked;
+                const newEnableCerebras = enableCerebras.checked;
                 const newEnableCohere = enableCohere.checked;
                 const newEnableMistral = enableMistral.checked;
                 const newEnableMistralAgents = enableMistralAgents.checked;
@@ -987,13 +1005,16 @@ async function setupSettings() {
                 if (newGeminiApiKey) await store.set('geminiApiKey', newGeminiApiKey);
                 await store.set('geminiModel', newGeminiModel);
                 if (newGroqApiKey) await store.set('groqApiKey', newGroqApiKey);
+                if (newCerebrasApiKey) await store.set('cerebrasApiKey', newCerebrasApiKey);
                 if (newCohereApiKey) await store.set('cohereApiKey', newCohereApiKey);
                 if (newMistralApiKey) await store.set('mistralApiKey', newMistralApiKey);
                 if (newMistralAgentID) await store.set('mistralAgentID', newMistralAgentID);
                 await store.set('groqModel', newGroqModel);
+                await store.set('cerebrasModel', newCerebrasModel);
                 await store.set('cohereModel', newCohereModel);
                 await store.set('mistralModel', newMistralModel);
                 await store.set('enableGroq', newEnableGroq);
+                await store.set('enableCerebras', newEnableCerebras);
                 await store.set('enableCohere', newEnableCohere);
                 await store.set('enableMistral', newEnableMistral);
                 await store.set('enableMistralAgents', newEnableMistralAgents);
@@ -1055,14 +1076,17 @@ async function setupSettings() {
                     terminalDefaultCwd: newTerminalDefaultCwd,
                     geminiApiKey: newGeminiApiKey,
                     groqApiKey: newGroqApiKey,
+                    cerebrasApiKey: newCerebrasApiKey,
                     cohereApiKey: newCohereApiKey,
                     mistralApiKey: newMistralApiKey,
                     mistralAgentID: newMistralAgentID,
                     geminiModel: newGeminiModel,
                     groqModel: newGroqModel,
+                    cerebrasModel: newCerebrasModel,
                     cohereModel: newCohereModel,
                     mistralModel: newMistralModel,
                     enableGroq: newEnableGroq,
+                    enableCerebras: newEnableCerebras,
                     enableCohere: newEnableCohere,
                     enableMistral: newEnableMistral,
                     enableMistralAgents: newEnableMistralAgents,

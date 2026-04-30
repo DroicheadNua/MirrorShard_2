@@ -173,6 +173,9 @@ async function renderAiSelector() {
     if (await store.get<boolean>('enableGroq')) {
         apiOptions.innerHTML += `<div class="custom-option" data-value="groq">Groq</div>`;
     }
+    if (await store.get<boolean>('enableCerebras')) {
+        apiOptions.innerHTML += `<div class="custom-option" data-value="cerebras">Cerebras</div>`;
+    }
     if (await store.get<boolean>('enableCohere')) {
         apiOptions.innerHTML += `<div class="custom-option" data-value="cohere">Cohere</div>`;
     }
@@ -187,7 +190,7 @@ async function renderAiSelector() {
 
     newApiItems.forEach(item => {
         item.addEventListener('click', async () => {
-            const newType = item.getAttribute('data-value') as 'gemini' | 'groq' | 'cohere' | 'mistral' | 'local';
+            const newType = item.getAttribute('data-value') as 'gemini' | 'groq' | 'cerebras' | 'cohere' | 'mistral' | 'local';
             const newText = item.textContent;
 
             if (newType && newText) {
@@ -239,6 +242,8 @@ async function init() {
         const model = await store.get<string>('geminiModel');
         const groqKey = await store.get<string>('groqApiKey');
         const groqModel = await store.get<string>('groqModel');
+        const cerebrasKey = await store.get<string>('cerebrasApiKey');
+        const cerebrasModel = await store.get<string>('cerebrasModel');
         const cohereKey = await store.get<string>('cohereApiKey');
         const cohereModel = await store.get<string>('cohereModel');
         const mistralKey = await store.get<string>('mistralApiKey');
@@ -263,11 +268,13 @@ async function init() {
         }
 
         aiSettings = {
-            apiType: (savedApiType as 'gemini' | 'groq' | 'local'),
+            apiType: (savedApiType as 'gemini' | 'groq' | 'cerebras' | 'cohere' | 'mistral' | 'local'),
             geminiApiKey: apiKey || undefined,
             geminiModel: model || undefined,
             groqApiKey: groqKey || undefined,
             groqModel: groqModel || undefined,
+            cerebrasApiKey: cerebrasKey || undefined,
+            cerebrasModel: cerebrasModel || undefined,
             cohereApiKey: cohereKey || undefined,
             cohereModel: cohereModel || undefined,
             mistralApiKey: mistralKey || undefined,
@@ -284,6 +291,8 @@ async function init() {
                 apiTrigger.textContent = 'Gemini';
             } else if (savedApiType === 'groq') {
                 apiTrigger.textContent = 'Groq';
+            } else if (savedApiType === 'cerebras') {
+                apiTrigger.textContent = 'Cerebras';
             } else if (savedApiType === 'cohere') {
                 apiTrigger.textContent = 'Cohere';
             } else if (savedApiType === 'mistral') {
@@ -494,6 +503,8 @@ function setupSettingsListener() {
         aiSettings.geminiModel = p.geminiModel ?? aiSettings.geminiModel;
         aiSettings.groqApiKey = p.groqApiKey ?? aiSettings.groqApiKey;
         aiSettings.groqModel = p.groqModel ?? aiSettings.groqModel;
+        aiSettings.cerebrasApiKey = p.cerebrasApiKey ?? aiSettings.cerebrasApiKey;
+        aiSettings.cerebrasModel = p.cerebrasModel ?? aiSettings.cerebrasModel;
         aiSettings.cohereApiKey = p.cohereApiKey ?? aiSettings.cohereApiKey;
         aiSettings.cohereModel = p.cohereModel ?? aiSettings.cohereModel;
         aiSettings.mistralApiKey = p.mistralApiKey ?? aiSettings.mistralApiKey;
@@ -561,7 +572,7 @@ function setupSettingsListener() {
             aiSettings.apiType = p.selectedApiType;
             if (apiTrigger) {
                 const textMap: Record<string, string> = {
-                    'gemini': 'Gemini (Cloud)', 'groq': 'Groq', 'cohere': 'Cohere',
+                    'gemini': 'Gemini (Cloud)', 'groq': 'Groq', 'cerebras': 'Cerebras', 'cohere': 'Cohere',
                     'mistral': 'Mistral', 'local': 'Local AI'
                 };
                 apiTrigger.textContent = textMap[p.selectedApiType] || 'Unknown API';
@@ -1302,6 +1313,10 @@ async function runWebAgentViaRust() {
             baseUrl = "https://api.groq.com/openai/v1";
             apiKey = await store?.get<string>('groqApiKey') || "";
             model = await store?.get<string>('groqModel') || "llama-3.3-70b-versatile";
+        } else if (apiType === 'cerebras') {
+            baseUrl = "https://api.cerebras.ai/v1";
+            apiKey = await store?.get<string>('cerebrasApiKey') || "";
+            model = await store?.get<string>('cerebrasModel') || "llama3.1-8b";
         } else if (apiType === 'mistral') {
             baseUrl = "https://api.mistral.ai/v1";
             apiKey = await store?.get<string>('mistralApiKey') || "";

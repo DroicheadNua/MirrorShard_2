@@ -11,7 +11,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added (新機能)  
 - Rig（Rust製エージェントフレームワーク）をバックエンドに統合。  
 ヘッドレスブラウザ「Obscura」(https://github.com/h4ckf0r0day/obscura)と連携することにより、任意のAI（ローカル含む）によるWeb検索が可能に  
- - ※ 設定画面でObscuraの実行ファイルのパスを指定し、チャット画面の「Search」ボタンをONにすることで起動（※Cohereは非対応）  
+ - ※ 設定画面でObscuraの実行ファイルのパスを指定し、チャット画面の「Search」ボタンをONにすることで起動（※Cohere・Cerebrasは非対応）  
+- Cerebras APIに対応  
 
 ### Changed (変更点)    
  
