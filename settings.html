@@ -406,6 +406,16 @@
                 <div class="ai-setting-group" id="sd-group">
                     <h4 data-i18n="settings.ai.imageGeneration">Image Generation</h4>
                     <div class="setting-item">
+                        <label for="image-system-prompt" data-i18n="settings.ai.imageSystemPromptLabel">画像生成のプロンプト
+                        </label>
+                        <textarea id="image-system-prompt" class="setting-textarea" placeholder=""></textarea>
+                    </div>
+                    <div class="setting-item">
+                        <label for="image-negative-prompt" data-i18n="settings.ai.imageNegativePromptLabel">ネガティブプロンプト
+                        </label>
+                        <textarea id="image-negative-prompt" class="setting-textarea" placeholder=""></textarea>
+                    </div>
+                    <div class="setting-item">
                         <label for="sd-path" data-i18n="settings.ai.sdPathLabel">Stable Diffusion Path</label>
                         <input type="text" id="sd-path" style="flex-grow:1;"
                             data-i18n-placeholder="settings.ai.sdPathPlaceholder"
@@ -421,16 +431,7 @@
                         <input type="text" id="image-auto-save-path" style="flex-grow:1;" placeholder="">
                         <button id="btn-select-auto-save" data-i18n="settings.ai.browse">参照...</button>
                     </div>
-                    <div class="setting-item">
-                        <label for="image-system-prompt" data-i18n="settings.ai.imageSystemPromptLabel">画像生成のプロンプト
-                        </label>
-                        <textarea id="image-system-prompt" class="setting-textarea" placeholder=""></textarea>
-                    </div>
-                    <div class="setting-item">
-                        <label for="image-negative-prompt" data-i18n="settings.ai.imageNegativePromptLabel">ネガティブプロンプト
-                        </label>
-                        <textarea id="image-negative-prompt" class="setting-textarea" placeholder=""></textarea>
-                    </div>
+
                     <div class="setting-row" style="display: flex; gap: 15px;">
                         <div class="setting-item">
                             <label>Steps</label>
@@ -448,18 +449,52 @@
                             </select>
                         </div>
                     </div>
-                    <div class="setting-item">
-                        <label for="sd-resolution" data-i18n="settings.ai.sdResolution">画像サイズ (解像度)</label>
-                        <select id="sd-resolution">
-                            <!-- SD 1.5 向け -->
-                            <option value="512x512">512 x 512 (Square - SD1.5)</option>
-                            <option value="512x768">512 x 768 (Portrait - SD1.5)</option>
-                            <option value="768x512">768 x 512 (Landscape - SD1.5)</option>
-                            <!-- SDXL 向け -->
-                            <option value="1024x1024">1024 x 1024 (Square - SDXL)</option>
-                            <option value="896x1152">896 x 1152 (Portrait - SDXL)</option>
-                            <option value="1152x896">1152 x 896 (Landscape - SDXL)</option>
-                        </select>
+                    <div class="setting-row" style="display: flex; gap: 15px;">
+                        <!-- サンプラーの選択 -->
+                        <div class="setting-item">
+                            <label for="sd-sampler">Sampler</label>
+                            <select id="sd-sampler">
+                                <option value="euler_a">euler_a</option>
+                                <option value="euler">euler</option>
+                                <option value="dpmpp_2m">DPM++_2M</option>
+                                <option value="dpmpp_2m_v2">DPM++_2M_v2</option>
+                                <option value="dpmpp_sde">DPM++_SDE</option>
+                                <option value="lcm">LCM</option>
+                            </select>
+                        </div>
+                        <!-- モデルファイルの指定（sd.cpp用） -->
+                        <div class="setting-item">
+                            <label for="sd-model-path" data-i18n="settings.ai.sdModelPath">モデルファイルのパス
+                                (.safetensors)</label>
+                            <input type="text" id="sd-model-path" style="flex-grow:1;"
+                                placeholder="D:\models\model.safetensors">
+                            <button id="btn-select-sd-model" data-i18n="settings.ai.browse">参照...</button>
+                        </div>
+                    </div>
+                    <div class="setting-row" style="display: flex; gap: 15px;">
+                        <!-- スケジューラーの選択 -->
+                        <div class="setting-item">
+                            <label for="sd-scheduler">Scheduler</label>
+                            <select id="sd-scheduler">
+                                <option value="default">default</option>
+                                <option value="karras">karras</option>
+                                <option value="sgm_uniform">sgm_uniform</option>
+                                <option value="simple">simple</option>
+                            </select>
+                        </div>
+                        <div class="setting-item">
+                            <label for="sd-resolution" data-i18n="settings.ai.sdResolution">画像サイズ (解像度)</label>
+                            <select id="sd-resolution">
+                                <!-- SD 1.5 向け -->
+                                <option value="512x512">512 x 512 (Square - SD1.5)</option>
+                                <option value="512x768">512 x 768 (Portrait - SD1.5)</option>
+                                <option value="768x512">768 x 512 (Landscape - SD1.5)</option>
+                                <!-- SDXL 向け -->
+                                <option value="1024x1024">1024 x 1024 (Square - SDXL)</option>
+                                <option value="896x1152">896 x 1152 (Portrait - SDXL)</option>
+                                <option value="1152x896">1152 x 896 (Landscape - SDXL)</option>
+                            </select>
+                        </div>
                     </div>
                 </div>
 

@@ -204,7 +204,9 @@ body {
     width: 18px;
 }
 
-#app-language {
+#app-language,
+#sd-sampler,
+#sd-scheduler {
     width: 120px;
 }
 
@@ -246,7 +248,8 @@ body {
 #terminal-cwd,
 #local-llm-url,
 #silly-tavern-path,
-#image-auto-save-path {
+#image-auto-save-path,
+#sd-model-path {
     flex-grow: 1;
     flex-shrink: 1;
     min-width: 250px;

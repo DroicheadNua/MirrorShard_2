@@ -167,6 +167,7 @@
     "sdPathLabel": "Stable Diffusionの起動スクリプト",
     "sdPathPlaceholder": "webui-user.bat / run.bat (win), webui-user.sh / webui.sh (他OS)",
     "sdNote": "※Windowsは .bat、Mac/Linuxは .sh",
+    "sdModelPath": "モデル (stable-diffusion.cpp使用時)",
     "behavior": "動作設定",
     "maxTokensLabel": "最大応答長 (100〜100000)",
     "faMaxTokensLabel": "AI連想機能応答長 (10〜1000)",

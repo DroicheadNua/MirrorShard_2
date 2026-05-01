@@ -94,6 +94,7 @@ async function setupSettings() {
         const pandocPath = document.querySelector('#pandoc-path') as HTMLInputElement;
         const sillyTavernPath = document.querySelector('#silly-tavern-path') as HTMLInputElement;
         const sdPath = document.querySelector('#sd-path') as HTMLInputElement;
+        const sdModelPath = document.querySelector('#sd-model-path') as HTMLInputElement;
         const obscuraPath = document.querySelector('#obscura-path') as HTMLInputElement;
         const imageAutoSavePath = document.querySelector('#image-auto-save-path') as HTMLInputElement;
         const shellPath = document.querySelector('#shell-path') as HTMLInputElement;
@@ -140,6 +141,8 @@ async function setupSettings() {
         const aiThinkingOverlayCheck = document.querySelector('#check-ai-thinking-overlay') as HTMLInputElement;
         const visualizeAi = document.querySelector('#visualize-ai') as HTMLSelectElement;
         const sdResolution = document.querySelector('#sd-resolution') as HTMLSelectElement;
+        const sdSampler = document.querySelector('#sd-sampler') as HTMLSelectElement;
+        const sdScheduler = document.querySelector('#sd-scheduler') as HTMLSelectElement;
 
         // --- 3.2. Code Editor UI要素の取得 ---
         const codeLanguageSelect = document.querySelector('#code-language-select') as HTMLSelectElement;
@@ -518,6 +521,9 @@ async function setupSettings() {
         const stableDiffusion = await store.get<string>('sdWebUIPath') ?? '';
         if (sdPath) sdPath.value = stableDiffusion;
 
+        const sdModel = await store.get<string>('sdModelPath') ?? '';
+        if (sdModelPath) sdModelPath.value = sdModel;
+
         const obscura = await store.get<string>('obscuraPath') ?? '';
         if (obscuraPath) obscuraPath.value = obscura;
 
@@ -535,6 +541,12 @@ async function setupSettings() {
 
         const initSdResolution = await store.get<string>('sdResolution') || "512x512";
         if (sdResolution) sdResolution.value = initSdResolution;
+
+        const initSdSampler = await store.get<string>('sdSampler') || "euler";
+        if (sdSampler) sdSampler.value = initSdSampler;
+
+        const initSdScheduler = await store.get<string>('sdScheduler') || "default";
+        if (sdScheduler) sdScheduler.value = initSdScheduler;
 
         const initCodeLanguage = await store.get<string>('codeLanguage') || 'html';
         if (codeLanguageSelect) codeLanguageSelect.value = initCodeLanguage;
@@ -780,7 +792,7 @@ async function setupSettings() {
 
         document.querySelector('#btn-select-sd')?.addEventListener('click', async () => {
             const osType = await type();
-            const extensions = osType === 'windows' ? ['bat'] : ['sh'];
+            const extensions = osType === 'windows' ? ['bat', 'exe'] : [''];
             const path = await open({
                 title: t('settings.terminal.selectDirTitle'),
                 filters: [
@@ -790,6 +802,20 @@ async function setupSettings() {
 
             if (path && typeof path === 'string') {
                 const input = document.querySelector('#sd-path') as HTMLInputElement;
+                if (input) input.value = path;
+            }
+        });
+
+        document.querySelector('#btn-select-sd-model')?.addEventListener('click', async () => {
+            const path = await open({
+                title: t('settings.terminal.selectDirTitle'),
+                filters: [
+                    { name: 'Executables', extensions: ["safetensors", "gguf"] },
+                ]
+            });
+
+            if (path && typeof path === 'string') {
+                const input = document.querySelector('#sd-model-path') as HTMLInputElement;
                 if (input) input.value = path;
             }
         });
@@ -911,12 +937,15 @@ async function setupSettings() {
                 const newPandocPath = pandocPath.value;
                 const newSillyTavernPath = sillyTavernPath.value;
                 const newSDPath = sdPath.value;
+                const newSDModelPath = sdModelPath.value;
                 const newObscuraPath = obscuraPath.value;
                 const newImageAutoSavePath = imageAutoSavePath.value;
                 const newShellPath = shellPath.value;
                 const newTerminalDefaultCwd = terminalDefaultCwd.value;
                 const newVisualizeAi = visualizeAi.value;
                 const newSdResolution = sdResolution.value;
+                const newSdSampler = sdSampler.value;
+                const newSdScheduler = sdScheduler.value;
                 const newCodeLanguage = codeLanguageSelect.value;
                 const newCodeFont = codeFontSelect.value;
                 console.log('Applying Code Font:', newCodeFont);
@@ -978,12 +1007,15 @@ async function setupSettings() {
                 await store.set('pandocPath', newPandocPath);
                 await store.set('sillyTavernPath', newSillyTavernPath);
                 await store.set('sdWebUIPath', newSDPath);
+                await store.set('sdModelPath', newSDModelPath);
                 await store.set('obscuraPath', newObscuraPath);
                 await store.set('imageAutoSavePath', newImageAutoSavePath);
                 await store.set('shellPath', newShellPath);
                 await store.set('terminalDefaultCwd', newTerminalDefaultCwd);
                 await store.set('imageGenProvider', newVisualizeAi);
                 await store.set('sdResolution', newSdResolution);
+                await store.set('sdSampler', newSdSampler);
+                await store.set('sdScheduler', newSdScheduler);
                 await store.set('codeLanguage', newCodeLanguage);
                 await store.set('codeFontFamily', newCodeFont);
                 await store.set('codeFontSize', newCodeSize);
@@ -1070,6 +1102,7 @@ async function setupSettings() {
                     pandocPath: newPandocPath,
                     sillyTavernPath: newSillyTavernPath,
                     sdWebUIPath: newSDPath,
+                    sdModelPath: newSDModelPath,
                     obscuraPath: newObscuraPath,
                     imageAutoSavePath: newImageAutoSavePath,
                     shellPath: newShellPath,
@@ -1108,6 +1141,8 @@ async function setupSettings() {
                     localLlmModel: newLocalModel,
                     imageGenProvider: newVisualizeAi,
                     sdResolution: newSdResolution,
+                    sdSampler: newSdSampler,
+                    sdScheduler: newSdScheduler,
                     codeLanguage: newCodeLanguage,
                     codeFontFamily: newCodeFont,
                     codeFontSize: newCodeSize,

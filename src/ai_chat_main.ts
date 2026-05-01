@@ -58,6 +58,7 @@ let userIconSrc = '';
 let aiIconSrc = '';
 let isChatDirty = false;
 let agentAbortController: AbortController | null = null;
+let imageGenAbortController: AbortController | null = null;
 const osType = await type();
 
 const aiChat = new AiChat(onAiUpdate);
@@ -697,12 +698,27 @@ function setupEventListeners() {
         // 入力欄にフォーカスがある場合、一部のショートカットは無効化するか、挙動を変える
         // ただし Ctrl+S などは効かせたいので、ここでは除外判定は緩めに
 
-        if (e.key === 'Escape' && agentAbortController) {
-            e.preventDefault();
-            agentAbortController.abort();
-            hideAiLoadingOverlay();
-            setUiLocked(false);
-            return;
+        if (e.key === 'Escape') {
+            let aborted = false;
+
+            if (agentAbortController) {
+                e.preventDefault();
+                agentAbortController.abort();
+                aborted = true;
+            }
+            if (imageGenAbortController) {
+                e.preventDefault();
+                imageGenAbortController.abort();
+                aborted = true;
+            }
+
+            if (aborted) {
+                hideAiLoadingOverlay();
+                setUiLocked(false);
+                // WebUI用の中断信号を投げておく（念のため）
+                const { fetch: tauriFetch } = await import('@tauri-apps/plugin-http');
+                tauriFetch("http://127.0.0.1:7860/sdapi/v1/interrupt", { method: 'POST' }).catch(() => { });
+            }
         }
 
         // Ctrl + T : ダークモード切替
@@ -1198,12 +1214,15 @@ function hideAiLoadingOverlay() {
 // --- 画像生成と保存のコアロジック ---
 async function generateImageFromChat(sdPrompt: string, originalText: string, msgIdx: number) {
     showAiLoadingOverlay(t('aiChat.generatingImage') || "Generating image with Local SD...");
+    imageGenAbortController = new AbortController();
 
     let finalContent = originalText; // 最終的に吹き出しに入るテキスト
 
     try {
-        const { fetch: tauriFetch } = await import('@tauri-apps/plugin-http');
-        const prefix = await store?.get<string>('imageSystemPrompt') || "";
+        const exePath = await store?.get<string>('sdWebUIPath') || "";
+        const isCppMode = exePath.toLowerCase().endsWith('sd-cli.exe') || exePath.toLowerCase().endsWith('sd-cli');
+
+        const imageSystemPrompt = await store?.get<string>('imageSystemPrompt') || "";
         const negPrompt = await store?.get<string>('sdNegativePrompt') || "easynegative, low quality, bad anatomy";
         const steps = Number(await store?.get<number>('sdSteps')) || 20;
         const cfg = Number(await store?.get<number>('sdCfgScale')) || 7.0;
@@ -1212,39 +1231,77 @@ async function generateImageFromChat(sdPrompt: string, originalText: string, msg
         const width = Number(widthStr) || 512;
         const height = Number(heightStr) || 512;
 
-        const finalPrompt = prefix ? `${prefix}, ${sdPrompt}` : sdPrompt;
+        const finalPrompt = imageSystemPrompt ? `${imageSystemPrompt}, ${sdPrompt}` : sdPrompt;
 
-        const response = await tauriFetch("http://127.0.0.1:7860/sdapi/v1/txt2img", {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
+        if (isCppMode) {
+            // --- A. sd-cli.exe モード ---
+            const { invoke } = await import('@tauri-apps/api/core');
+            const savedPath = await invoke<string>('generate_image_cpp', {
+                exePath: exePath,
+                modelPath: await store?.get('sdModelPath'),
                 prompt: finalPrompt,
-                negative_prompt: negPrompt,
+                negPrompt: negPrompt,
                 steps: steps,
-                cfg_scale: cfg,
+                cfg: cfg,
+                sampler: await store?.get('sdSampler') || "euler_a",
+                scheduler: await store?.get('sdScheduler') || "default",
                 width: width,
                 height: height,
-            }),
-            connectTimeout: 60000
-        });
+                saveDir: await store?.get('imageAutoSavePath') || ""
+            });
 
-        if (!response.ok) throw new Error(`SD API failed. Status: ${response.status}`);
+            if (savedPath) {
+                const { convertFileSrc } = await import('@tauri-apps/api/core');
+                const assetUrl = convertFileSrc(savedPath);
+                finalContent = originalText.replace(/\[\[SD_PROMPT:.*?\]\]/g, `{"url": "${assetUrl}"}`);
+            }
 
-        const data = await response.json();
-        const savedPath = await saveBase64Image(data.images[0]);
+        } else {
+            // --- B. Web UI (API) モード ---
+            const { fetch: tauriFetch } = await import('@tauri-apps/plugin-http');
+            const response = await tauriFetch("http://127.0.0.1:7860/sdapi/v1/txt2img", {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    prompt: finalPrompt,
+                    negative_prompt: negPrompt,
+                    steps: steps,
+                    cfg_scale: cfg,
+                    width: width,
+                    height: height,
+                }),
+                connectTimeout: 60000,
+                signal: imageGenAbortController.signal // fetchはsignalをサポート
+            });
 
-        if (savedPath) {
-            const { convertFileSrc } = await import('@tauri-apps/api/core');
-            const assetUrl = convertFileSrc(savedPath);
+            if (!response.ok) throw new Error(`SD API failed. Status: ${response.status}`);
 
-            // ★ 元のテキストの [[SD_PROMPT: ...]] 部分だけを、画像表示用のJSONにすり替える
-            finalContent = originalText.replace(/\[\[SD_PROMPT:.*?\]\]/g, `{"url": "${assetUrl}"}`);
+            const data = await response.json();
+            const savedPath = await saveBase64Image(data.images[0]);
+
+            if (savedPath) {
+                const { convertFileSrc } = await import('@tauri-apps/api/core');
+                const assetUrl = convertFileSrc(savedPath);
+
+                // ★ 元のテキストの [[SD_PROMPT: ...]] 部分だけを、画像表示用のJSONにすり替える
+                finalContent = originalText.replace(/\[\[SD_PROMPT:.*?\]\]/g, `{"url": "${assetUrl}"}`);
+            }
         }
-    } catch (e) {
-        console.error("SD Link Error:", e);
-        // エラー時はタグをエラーメッセージにすり替える
-        finalContent = originalText.replace(/\[\[SD_PROMPT:.*?\]\]/g, `\n\n> ⚠️ **SD Image Generation Failed:** ${String(e)}\n\n`);
+    } catch (e: any) {
+        if (e.name === 'AbortError') {
+            const { invoke } = await import('@tauri-apps/api/core');
+            await invoke('abort_image_cpp');
+            const { fetch: tauriFetch } = await import('@tauri-apps/plugin-http');
+            tauriFetch("http://127.0.0.1:7860/sdapi/v1/interrupt", { method: 'POST' })
+                .catch(() => { /* 失敗しても無視 */ });
+            console.log("Image generation aborted.");
+            finalContent = originalText.replace(/\[\[SD_PROMPT:.*?\]\]/g, `\n\n> ❌ **Generation Aborted**\n\n`);
+        } else {
+            console.error("SD Link Error:", e);
+            finalContent = originalText.replace(/\[\[SD_PROMPT:.*?\]\]/g, `\n\n> ⚠️ **SD Image Generation Failed:** ${String(e)}\n\n`);
+        }
     } finally {
+        imageGenAbortController = null;
         // --- UIの更新とアンロック ---
 
         // 履歴を書き換え

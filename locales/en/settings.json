@@ -167,6 +167,7 @@
     "sdPathLabel": "Stable Diffusion Path",
     "sdPathPlaceholder": "webui-user.bat / run.bat (win), webui-user.sh / webui.sh (others)",
     "sdNote": "Specify the Stable Diffusion batch file.",
+    "sdModelPath": "Model Path (stable-diffusion.cpp)",
     "behavior": "Behavior",
     "maxTokensLabel": "Max response length (100–100000)",
     "faMaxTokensLabel": "AI association response length (10–1000)",

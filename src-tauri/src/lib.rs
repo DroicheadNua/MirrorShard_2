@@ -26,6 +26,8 @@ struct OpenCodeProcess(Mutex<Option<Child>>);
 
 struct SillyTavernProcess(Mutex<Option<Child>>);
 
+struct SdCppProcess(Mutex<Option<std::process::Child>>);
+
 // PTYの入力側を保持する構造体
 struct PtySession {
     writer: Box<dyn Write + Send>,
@@ -167,6 +169,142 @@ impl rig::tool::Tool for WebSearchTool {
 }
 
 // --- Tauriコマンドの定義 ---
+
+#[tauri::command]
+async fn generate_image_cpp(
+    state: tauri::State<'_, SdCppProcess>,
+    exe_path: String,
+    model_path: String,
+    prompt: String,
+    neg_prompt: String,
+    steps: u32,
+    cfg: f32,
+    sampler: String,
+    scheduler: String,
+    width: u32,
+    height: u32,
+    save_dir: String,
+) -> Result<String, String> {
+    use std::os::windows::process::CommandExt;
+
+    let exe_file = std::path::Path::new(&exe_path);
+    let exe_dir = exe_file.parent().ok_or("Failed to get exe directory")?;
+
+    // 1. 最終的な保存パス（日本語OK）
+    let timestamp = std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .unwrap()
+        .as_millis();
+    let file_name = format!("ms_cpp_{}.png", timestamp);
+    let final_output_path = std::path::Path::new(&save_dir).join(&file_name);
+
+    // 2. sd-cli用の「一時的なASCII出力パス」(C言語の日本語エラーを防ぐ)
+    // exeと同じフォルダに ms_temp.png として出させる
+    let temp_output_name = "ms_temp_gen.png";
+    let temp_output_path = exe_dir.join(temp_output_name);
+
+    let mut cmd = std::process::Command::new(&exe_path);
+    cmd.current_dir(exe_dir);
+
+    // DLL対策のPATH追加
+    if let Ok(existing_path) = std::env::var("PATH") {
+        let new_path = format!("{};{}", exe_dir.display(), existing_path);
+        cmd.env("PATH", new_path);
+    }
+
+    #[cfg(target_os = "windows")]
+    {
+        // まだ不安定な場合は 0x00000010 (窓出し) で
+        cmd.creation_flags(0x08000000);
+    }
+
+    cmd.args([
+        "-m",
+        &model_path,
+        "-p",
+        &prompt,
+        "-n",
+        &neg_prompt,
+        "--steps",
+        &steps.to_string(),
+        "--cfg-scale",
+        &cfg.to_string(),
+        "--sampling-method",
+        &sampler,
+        "--scheduler",
+        &scheduler,
+        "-W",
+        &width.to_string(),
+        "-H",
+        &height.to_string(),
+        "-s",
+        "-1",
+        "-o",
+        temp_output_name, // ディレクトリを含まない「ファイル名のみ」を渡すのが最も安全
+    ]);
+
+    // プロセスを開始し、ハンドルを保存する
+    let child = cmd
+        .spawn()
+        .map_err(|e| format!("Failed to spawn sd-cli: {}", e))?;
+
+    {
+        let mut lock = state.0.lock().unwrap();
+        *lock = Some(child);
+    } // ここでロックが解放される
+
+    // 4. プロセスの終了を「監視」する
+    // ロックを長時間持たないようにループ内で try_wait を使う
+    loop {
+        // 中断されたか確認
+        {
+            let lock = state.0.lock().unwrap();
+            if lock.is_none() {
+                return Err("ABORTED".to_string());
+            }
+        }
+
+        // 終了したか確認
+        {
+            let mut lock = state.0.lock().unwrap();
+            if let Some(child) = lock.as_mut() {
+                match child.try_wait() {
+                    Ok(Some(status)) => {
+                        // 終了した
+                        if status.success() {
+                            break;
+                        } else {
+                            return Err(format!("sd-cli failed with code: {:?}", status.code()));
+                        }
+                    }
+                    Ok(None) => { /* まだ実行中 */ }
+                    Err(e) => return Err(e.to_string()),
+                }
+            }
+        }
+        // CPU負荷を抑えるために少し待機
+        std::thread::sleep(std::time::Duration::from_millis(200));
+    }
+
+    // 成功後の処理 (ファイル移動)
+    if temp_output_path.exists() {
+        std::fs::rename(&temp_output_path, &final_output_path).map_err(|e| e.to_string())?;
+        Ok(final_output_path.to_str().unwrap().to_string())
+    } else {
+        Err("Output file not found".to_string())
+    }
+}
+
+// アボート用コマンド
+#[tauri::command]
+async fn abort_image_cpp(state: tauri::State<'_, SdCppProcess>) -> Result<(), String> {
+    let mut lock = state.0.lock().unwrap();
+    if let Some(mut child) = lock.take() {
+        println!("Aborting sd-cli process...");
+        kill_child_tree(&mut child); // 既存の心中関数を利用
+    }
+    Ok(())
+}
 
 #[tauri::command]
 async fn run_web_agent(
@@ -1753,6 +1891,7 @@ pub fn run() {
         .manage(TerminalState(Mutex::new(HashMap::new())))
         .manage(OpenCodeProcess(Mutex::new(None)))
         .manage(SillyTavernProcess(Mutex::new(None)))
+        .manage(SdCppProcess(Mutex::new(None)))
         .setup(|app| {
             // ---  起動時引数を解析し、状態に書き込む ---
             if let Ok(matches) = app.cli().matches() {
@@ -1839,6 +1978,8 @@ pub fn run() {
             launch_stable_diffusion_external,
             start_port_monitor,
             run_web_agent,
+            generate_image_cpp,
+            abort_image_cpp,
         ])
         .on_window_event(|window, event| match event {
             // 1. メインウィンドウの終了確認

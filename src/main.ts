@@ -1168,7 +1168,7 @@ ${instructionFiller}
 
   // 共通のエラーハンドラ
   private handleAiError(e: any) {
-    if (e.name === 'AbortError') {
+    if (e.name === 'AbortError' || this.aiAbortController?.signal.aborted) {
       console.log("AI Task was aborted by user.");
       return; // 中断時は何も表示しない
     }
@@ -1350,6 +1350,9 @@ ${instructionFiller}
     const selectedText = this.editorView.state.sliceDoc(selection.from, selection.to);
     const imageProvider = await this.store.get<string>('imageGenProvider') || 'mistral';
     const imageSystemPrompt = await this.store.get<string>('imageSystemPrompt') || "";
+    const exePath = await this.store.get<string>('sdWebUIPath') || "";
+    // パスが sd-cliで終わる場合は sd.cpp モードと判定
+    const isCppMode = exePath.toLowerCase().endsWith('sd-cli.exe') || exePath.toLowerCase().endsWith('sd-cli');
 
     this.isAiProcessing = true;
     this.aiAbortController = new AbortController();
@@ -1359,6 +1362,7 @@ ${instructionFiller}
     try {
       // imageUrlOrBase64には、Mistralなら「httpから始まるURL」、Local SDなら「Base64の画像データ」が入る
       let imageUrlOrBase64 = "";
+      let savedPath = "";
 
       if (imageProvider === 'mistral') {
         // --- A. Mistral Agent 処理 ---
@@ -1398,6 +1402,7 @@ ${instructionFiller}
 
         if (!urlMatch) throw new Error("No image URL found in response.");
         imageUrlOrBase64 = urlMatch[0]; // Mistralの画像URL
+        savedPath = await this.handleImageGenerationResult(imageUrlOrBase64) || "";
 
       } else {
         // --- B. Local Stable Diffusion 処理 ---
@@ -1406,7 +1411,7 @@ ${instructionFiller}
         let sdPrompt = "";
         const tempMaxTokens = 1000;
 
-        // ★ メインAIによるプロンプト生成（既存のAI分岐ロジック）
+        // メインAIによるプロンプト生成（既存のAI分岐ロジック）
         if (this.mainAiApi === 'gemini') {
           const apiKey = await this.store.get<string>('geminiApiKey');
           if (!apiKey) throw new Error("Gemini API Key is not set.");
@@ -1439,7 +1444,7 @@ ${instructionFiller}
           sdPrompt = await this.requestOpenAICompatibleDirect(url, apiKey, model, selectedText, promptGenSystem, tempMaxTokens, this.aiAbortController?.signal);
         }
 
-        // 2. Local SD の API を叩く
+        // --- Local SD ---
         this.aiThinkingMode = "Generating Image with Local SD...";
         const { fetch: tauriFetch } = await import('@tauri-apps/plugin-http');
 
@@ -1453,34 +1458,60 @@ ${instructionFiller}
 
         const finalPrompt = imageSystemPrompt ? `${imageSystemPrompt}, ${sdPrompt}` : sdPrompt;
 
-        const response = await tauriFetch("http://127.0.0.1:7860/sdapi/v1/txt2img", {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
+        if (isCppMode) {
+          // --- B-1. sd-cli.exe (Rust内蔵エンジン) モード ---
+          const autoSaveDir = await this.store.get<string>('imageAutoSavePath') || "";
+          const modelPath = await this.store.get<string>('sdModelPath');
+
+          // Rust側で生成し、直接保存ディレクトリへ書き込ませる
+          savedPath = await invoke<string>('generate_image_cpp', {
+            exePath: exePath,
+            modelPath: modelPath,
             prompt: finalPrompt,
-            negative_prompt: negPrompt,
+            negPrompt: negPrompt,
             steps: steps,
-            cfg_scale: cfg,
+            cfg: cfg,
+            sampler: await this.store.get('sdSampler') || "euler_a",
+            scheduler: await this.store.get('sdScheduler') || "default",
             width: width,
             height: height,
-          }),
-          connectTimeout: 60000,
-          signal: this.aiAbortController?.signal
-        });
+            saveDir: autoSaveDir
+          });
+          // 保存成功通知
+          if (savedPath) {
+            await message(t('editor.ai.imageSavedSuccess', { path: savedPath }), { kind: 'info' });
+          }
+        } else {
 
-        if (!response.ok) {
-          const errText = await response.text();
-          throw new Error(`SD API Error (${response.status}): ${errText}\n※SDが --api オプション付きで起動しているか確認してください。`);
+          const response = await tauriFetch("http://127.0.0.1:7860/sdapi/v1/txt2img", {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              prompt: finalPrompt,
+              negative_prompt: negPrompt,
+              steps: steps,
+              cfg_scale: cfg,
+              width: width,
+              height: height,
+            }),
+            connectTimeout: 60000,
+            signal: this.aiAbortController?.signal
+          });
+
+          if (!response.ok) {
+            const errText = await response.text();
+            throw new Error(`SD API Error (${response.status}): ${errText}\n※SDが --api オプション付きで起動しているか確認してください。`);
+          }
+
+          const data = await response.json();
+          // Local SDからは Base64文字列 が返ってくる
+          imageUrlOrBase64 = `data:image/png;base64,${data.images[0]}`;
+          savedPath = await this.handleImageGenerationResult(imageUrlOrBase64) || "";
         }
-
-        const data = await response.json();
-        // Local SDからは Base64文字列 が返ってくる
-        imageUrlOrBase64 = `data:image/png;base64,${data.images[0]}`;
       }
 
       // --- C. 保存処理とエディタへの挿入 ---
       this.aiThinkingMode = "Saving image...";
-      const savedPath = await this.handleImageGenerationResult(imageUrlOrBase64);
 
       if (savedPath) {
         // 保存に成功したら、ローカルパスを asset:// 形式に変換
@@ -1503,10 +1534,14 @@ ${instructionFiller}
       }
 
     } catch (e: any) {
-      if (e.name === 'AbortError') {
-        console.log("AI Visualize aborted by user.");
+      // JS側のアボートコントローラーが発火した場合
+      if (this.aiAbortController?.signal.aborted || e.name === 'AbortError') {
+        console.log("Abort detected, killing Rust process...");
+        await invoke('abort_image_cpp'); // Rust側のプロセスを強制終了
       } else {
-        this.handleAiError(e);
+        const { fetch: tauriFetch } = await import('@tauri-apps/plugin-http');
+        tauriFetch("http://127.0.0.1:7860/sdapi/v1/interrupt", { method: 'POST' })
+          .catch(() => { /* 失敗しても無視 */ });
       }
     } finally {
       this.aiThinkingMode = "";
