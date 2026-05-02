@@ -1221,6 +1221,7 @@ async function generateImageFromChat(sdPrompt: string, originalText: string, msg
     try {
         const exePath = await store?.get<string>('sdWebUIPath') || "";
         const isCppMode = exePath.toLowerCase().endsWith('sd-cli.exe') || exePath.toLowerCase().endsWith('sd-cli');
+        const isCppServer = exePath.toLowerCase().endsWith('sd-server.exe') || exePath.toLowerCase().endsWith('sd-server');
 
         const imageSystemPrompt = await store?.get<string>('imageSystemPrompt') || "";
         const negPrompt = await store?.get<string>('sdNegativePrompt') || "easynegative, low quality, bad anatomy";
@@ -1253,6 +1254,44 @@ async function generateImageFromChat(sdPrompt: string, originalText: string, msg
             if (savedPath) {
                 const { convertFileSrc } = await import('@tauri-apps/api/core');
                 const assetUrl = convertFileSrc(savedPath);
+                finalContent = originalText.replace(/\[\[SD_PROMPT:.*?\]\]/g, `{"url": "${assetUrl}"}`);
+            }
+
+        } else if (isCppServer) {
+            // --- B. sd-server モード ---
+            const { fetch: tauriFetch } = await import('@tauri-apps/plugin-http');
+
+            const response = await tauriFetch("http://127.0.0.1:8888/sdapi/v1/txt2img", {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    prompt: finalPrompt,
+                    negative_prompt: negPrompt,
+                    steps: steps,
+                    cfg_scale: cfg,
+                    sample_method: await store?.get<string>('sdSampler') || "euler_a",
+                    schedule_method: await store?.get<string>('sdScheduler') || "default",
+                    width: width,
+                    height: height,
+                    seed: -1
+                }),
+                connectTimeout: 60000,
+                signal: imageGenAbortController.signal
+            });
+
+            if (!response.ok) {
+                const errText = await response.text();
+                throw new Error(`sd-server API failed (Status: ${response.status}): ${errText}`);
+            }
+
+            const data = await response.json();
+            const savedPath = await saveBase64Image(data.images[0]);
+
+            if (savedPath) {
+                const { convertFileSrc } = await import('@tauri-apps/api/core');
+                const assetUrl = convertFileSrc(savedPath);
+
+                // 元のテキストの [[SD_PROMPT: ...]] 部分だけを、画像表示用のJSONにすり替える
                 finalContent = originalText.replace(/\[\[SD_PROMPT:.*?\]\]/g, `{"url": "${assetUrl}"}`);
             }
 

@@ -28,6 +28,8 @@ struct SillyTavernProcess(Mutex<Option<Child>>);
 
 struct SdCppProcess(Mutex<Option<std::process::Child>>);
 
+struct SdServerProcess(Mutex<Option<std::process::Child>>);
+
 // PTYの入力側を保持する構造体
 struct PtySession {
     writer: Box<dyn Write + Send>,
@@ -169,6 +171,176 @@ impl rig::tool::Tool for WebSearchTool {
 }
 
 // --- Tauriコマンドの定義 ---
+
+#[tauri::command]
+async fn open_sd_server(
+    app: tauri::AppHandle,
+    state: tauri::State<'_, SdServerProcess>,
+    exe_path: String,
+    model_path: String,
+    prompt: String,
+    neg_prompt: String,
+    steps: u32,
+    cfg: f32,
+    sampler: String,
+    scheduler: String,
+    resolution: String,
+) -> Result<(), String> {
+    // 1. トグル処理
+    if let Some(win) = app.get_webview_window("sd_server") {
+        let _ = win.close();
+        let mut lock = state.inner().0.lock().unwrap();
+        if let Some(mut child) = lock.take() {
+            kill_child_tree(&mut child);
+        }
+        return Ok(());
+    }
+
+    let exe_file = std::path::Path::new(&exe_path);
+    let exe_dir = exe_file.parent().ok_or("Failed to get exe directory")?;
+
+    let parts: Vec<&str> = resolution.split('x').collect();
+    let width = parts.get(0).unwrap_or(&"512");
+    let height = parts.get(1).unwrap_or(&"512");
+
+    // 2. サーバープロセス起動
+    {
+        let mut lock = state.inner().0.lock().unwrap();
+        if let Some(mut child) = lock.take() {
+            kill_child_tree(&mut child);
+        }
+
+        let mut cmd = std::process::Command::new(&exe_path);
+        cmd.current_dir(exe_dir);
+
+        // Windows 向け DLL パス追加と窓隠し
+        #[cfg(target_os = "windows")]
+        {
+            if let Ok(existing_path) = std::env::var("PATH") {
+                cmd.env("PATH", format!("{};{}", exe_dir.display(), existing_path));
+            }
+            use std::os::windows::process::CommandExt;
+            cmd.creation_flags(0x08000000);
+        }
+
+        // Mac 向け dylib パス追加 (これで Gatekeeper / Library not loaded を回避)
+        #[cfg(target_os = "macos")]
+        {
+            if let Ok(existing_path) = std::env::var("DYLD_LIBRARY_PATH") {
+                cmd.env(
+                    "DYLD_LIBRARY_PATH",
+                    format!("{}:{}", exe_dir.display(), existing_path),
+                );
+            } else {
+                cmd.env("DYLD_LIBRARY_PATH", exe_dir.display().to_string());
+            }
+        }
+
+        cmd.args(["--listen-port", "8888", "-m", &model_path]);
+
+        // 空でなければ引数に追加（初期プロンプトとしてUIにセット）
+        if !prompt.is_empty() {
+            cmd.args(["-p", &prompt]);
+        }
+        if !neg_prompt.is_empty() {
+            cmd.args(["-n", &neg_prompt]);
+        }
+
+        cmd.args([
+            "--steps",
+            &steps.to_string(),
+            "--cfg-scale",
+            &cfg.to_string(),
+            "--sampling-method",
+            &sampler,
+            "--scheduler",
+            &scheduler,
+            "-W",
+            width,
+            "-H",
+            height,
+            "-s",
+            "-1",
+        ]);
+
+        // バッファ詰まり防止
+        cmd.stdout(std::process::Stdio::null());
+        cmd.stderr(std::process::Stdio::null());
+
+        let child = cmd
+            .spawn()
+            .map_err(|e| format!("ERR_SD_SERVER_SPAWN:{}", e))?;
+        *lock = Some(child);
+    }
+
+    // 3. 表示処理のOS分岐
+    let _app_handle = app.clone();
+
+    #[cfg(target_os = "linux")]
+    {
+        // Linux: ポート監視して標準ブラウザで開く
+        std::thread::spawn(move || {
+            let addr = "127.0.0.1:8888";
+            for _ in 0..150 {
+                // モデルロードを考慮して長めに
+                if std::net::TcpStream::connect_timeout(
+                    &addr.parse().unwrap(),
+                    std::time::Duration::from_millis(200),
+                )
+                .is_ok()
+                {
+                    use tauri_plugin_opener::OpenerExt;
+                    let _ = _app_handle
+                        .opener()
+                        .open_url("http://127.0.0.1:8888", Option::<String>::None);
+                    return;
+                }
+                std::thread::sleep(std::time::Duration::from_millis(200));
+            }
+        });
+    }
+
+    #[cfg(not(target_os = "linux"))]
+    {
+        // Windows/Mac: 専用ウィンドウを loading 経由で生成
+        let builder = tauri::WebviewWindowBuilder::new(
+            &app,
+            "sd_server",
+            tauri::WebviewUrl::App("loading.html".into()),
+        )
+        .title("Stable Diffusion C++ Server (Loading...)")
+        .inner_size(1100.0, 850.0)
+        .decorations(true);
+
+        #[cfg(target_os = "windows")]
+        let builder = builder.theme(Some(tauri::Theme::Dark));
+
+        let window = builder.build().map_err(|e| e.to_string())?;
+
+        // ポート監視してURL切り替え
+        std::thread::spawn(move || {
+            let addr = "127.0.0.1:8888";
+            for _ in 0..150 {
+                if std::net::TcpStream::connect_timeout(
+                    &addr.parse().unwrap(),
+                    std::time::Duration::from_millis(200),
+                )
+                .is_ok()
+                {
+                    let _ = window.eval("window.location.href = 'http://127.0.0.1:8888'");
+                    let _ = window.set_title("Stable Diffusion C++ Server");
+                    return;
+                }
+                if window.is_closable().is_err() {
+                    return;
+                }
+                std::thread::sleep(std::time::Duration::from_millis(200));
+            }
+        });
+    }
+
+    Ok(())
+}
 
 #[tauri::command]
 async fn generate_image_cpp(
@@ -1908,6 +2080,7 @@ pub fn run() {
         .manage(OpenCodeProcess(Mutex::new(None)))
         .manage(SillyTavernProcess(Mutex::new(None)))
         .manage(SdCppProcess(Mutex::new(None)))
+        .manage(SdServerProcess(Mutex::new(None)))
         .setup(|app| {
             // ---  起動時引数を解析し、状態に書き込む ---
             if let Ok(matches) = app.cli().matches() {
@@ -1996,6 +2169,7 @@ pub fn run() {
             run_web_agent,
             generate_image_cpp,
             abort_image_cpp,
+            open_sd_server,
         ])
         .on_window_event(|window, event| match event {
             // 1. メインウィンドウの終了確認
@@ -2022,6 +2196,15 @@ pub fn run() {
                         if let Ok(mut lock) = state.inner().0.lock() {
                             if let Some(mut child) = lock.take() {
                                 kill_child_tree(&mut child);
+                            }
+                        }
+                    }
+                    "sd_server" => {
+                        if let Some(state) = window.try_state::<SdServerProcess>() {
+                            if let Ok(mut lock) = state.0.lock() {
+                                if let Some(mut child) = lock.take() {
+                                    kill_child_tree(&mut child);
+                                }
                             }
                         }
                     }
@@ -2079,6 +2262,13 @@ pub fn run() {
                 if let Ok(mut lock) = app_handle.state::<SillyTavernProcess>().inner().0.lock() {
                     if let Some(mut child) = lock.take() {
                         kill_child_tree(&mut child);
+                    }
+                }
+                if let Some(state) = app_handle.try_state::<SdServerProcess>() {
+                    if let Ok(mut lock) = state.0.lock() {
+                        if let Some(mut child) = lock.take() {
+                            kill_child_tree(&mut child);
+                        }
                     }
                 }
                 // ターミナルセッションを一掃

@@ -1168,12 +1168,13 @@ ${instructionFiller}
 
   // 共通のエラーハンドラ
   private handleAiError(e: any) {
-    if (e.name === 'AbortError' || this.aiAbortController?.signal.aborted) {
+    if (this.aiAbortController?.signal.aborted) {
       console.log("AI Task was aborted by user.");
       return; // 中断時は何も表示しない
     }
     console.error(e);
-    message(`AI Error: ${e}`, { title: 'Error', kind: 'error' });
+    const errorMsg = e.message || String(e);
+    message(`AI Error: ${errorMsg}`, { title: 'Error', kind: 'error' });
   }
 
   // 共通のクリーンアップ
@@ -1351,8 +1352,9 @@ ${instructionFiller}
     const imageProvider = await this.store.get<string>('imageGenProvider') || 'mistral';
     const imageSystemPrompt = await this.store.get<string>('imageSystemPrompt') || "";
     const exePath = await this.store.get<string>('sdWebUIPath') || "";
-    // パスが sd-cliで終わる場合は sd.cpp モードと判定
-    const isCppMode = exePath.toLowerCase().endsWith('sd-cli.exe') || exePath.toLowerCase().endsWith('sd-cli');
+    const exePathLower = exePath.toLowerCase();
+    const isCppCli = exePathLower.endsWith('sd-cli.exe') || exePathLower.endsWith('sd-cli');
+    const isCppServer = exePathLower.endsWith('sd-server.exe') || exePathLower.endsWith('sd-server');
 
     this.isAiProcessing = true;
     this.aiAbortController = new AbortController();
@@ -1458,7 +1460,7 @@ ${instructionFiller}
 
         const finalPrompt = imageSystemPrompt ? `${imageSystemPrompt}, ${sdPrompt}` : sdPrompt;
 
-        if (isCppMode) {
+        if (isCppCli) {
           // --- B-1. sd-cli.exe (Rust内蔵エンジン) モード ---
           const autoSaveDir = await this.store.get<string>('imageAutoSavePath') || "";
           const modelPath = await this.store.get<string>('sdModelPath');
@@ -1481,8 +1483,13 @@ ${instructionFiller}
           if (savedPath) {
             await message(t('editor.ai.imageSavedSuccess', { path: savedPath }), { kind: 'info' });
           }
-        } else {
+        } else if (isCppServer) {
+          // --- B-2. sd-server モード ---
 
+          const imageUrlOrBase64 = await this.requestCppServerImage(sdPrompt, imageSystemPrompt, this.aiAbortController?.signal);
+          savedPath = await this.handleImageGenerationResult(imageUrlOrBase64) || "";
+        } else {
+          // --- B-3. AUTOMATIC1111 / Forge モード ---
           const response = await tauriFetch("http://127.0.0.1:7860/sdapi/v1/txt2img", {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -1534,14 +1541,21 @@ ${instructionFiller}
       }
 
     } catch (e: any) {
-      // JS側のアボートコントローラーが発火した場合
-      if (this.aiAbortController?.signal.aborted || e.name === 'AbortError') {
-        console.log("Abort detected, killing Rust process...");
-        await invoke('abort_image_cpp'); // Rust側のプロセスを強制終了
-      } else {
+      // シグナルがONかどうかだけで判定する
+      if (this.aiAbortController?.signal.aborted) {
+        console.log("Abort detected, killing processes...");
+
+        // sd-cli (C++エンジン) を殺す
+        await invoke('abort_image_cpp').catch(() => { });
+
+        // sd-server や WebUI の計算も念のため止める
         const { fetch: tauriFetch } = await import('@tauri-apps/plugin-http');
-        tauriFetch("http://127.0.0.1:7860/sdapi/v1/interrupt", { method: 'POST' })
-          .catch(() => { /* 失敗しても無視 */ });
+        tauriFetch("http://127.0.0.1:7860/sdapi/v1/interrupt", { method: 'POST' }).catch(() => { });
+        tauriFetch("http://127.0.0.1:8888/sdapi/v1/interrupt", { method: 'POST' }).catch(() => { });
+
+      } else {
+        // ユーザーがキャンセルしていないのにエラーが起きた場合は、真の異常事態
+        this.handleAiError(e);
       }
     } finally {
       this.aiThinkingMode = "";
@@ -1551,7 +1565,7 @@ ${instructionFiller}
     }
   }
 
-  private async handleImageGenerationResult(urlOrBase64: string): Promise<string | null> {
+  private async handleImageGenerationResult(urlOrBase64: string | Uint8Array): Promise<string | null> {
     const { save } = await import('@tauri-apps/plugin-dialog');
     const { invoke } = await import('@tauri-apps/api/core');
 
@@ -1574,23 +1588,27 @@ ${instructionFiller}
 
     let uint8Array: Uint8Array;
 
-    // Local SD からの Base64 文字列の場合
-    if (urlOrBase64.startsWith('data:image/')) {
-      const base64Data = urlOrBase64.split(',')[1];
-      const binaryString = window.atob(base64Data);
-      const len = binaryString.length;
-      const bytes = new Uint8Array(len);
-      for (let i = 0; i < len; i++) {
-        bytes[i] = binaryString.charCodeAt(i);
+    if (typeof urlOrBase64 === 'string') {
+      if (urlOrBase64.startsWith('data:image/')) {
+        // Base64 (Forge/A1111 API) の場合
+        const base64Data = urlOrBase64.split(',')[1];
+        const binaryString = window.atob(base64Data);
+        const len = binaryString.length;
+        const bytes = new Uint8Array(len);
+        for (let i = 0; i < len; i++) {
+          bytes[i] = binaryString.charCodeAt(i);
+        }
+        uint8Array = bytes;
+      } else {
+        // URL (Mistral Agent) の場合
+        const { fetch: tauriFetch } = await import('@tauri-apps/plugin-http');
+        const res = await tauriFetch(urlOrBase64, { method: 'GET' });
+        const arrayBuffer = await res.arrayBuffer();
+        uint8Array = new Uint8Array(arrayBuffer);
       }
-      uint8Array = bytes;
-    }
-    // Mistral Agent からの URL の場合
-    else {
-      const { fetch: tauriFetch } = await import('@tauri-apps/plugin-http');
-      const res = await tauriFetch(urlOrBase64, { method: 'GET' });
-      const arrayBuffer = await res.arrayBuffer();
-      uint8Array = new Uint8Array(arrayBuffer);
+    } else {
+      // 生バイナリ (sd-server API) の場合
+      uint8Array = urlOrBase64;
     }
 
     // Rust側でローカルファイルとして保存
@@ -1604,6 +1622,59 @@ ${instructionFiller}
 
     // 保存したパスを返す
     return savePath;
+  }
+
+  private async requestCppServerImage(prompt: string, prefix: string, signal?: AbortSignal): Promise<string> {
+    const { fetch: tauriFetch } = await import('@tauri-apps/plugin-http');
+
+    const negPrompt = await this.store.get<string>('sdNegativePrompt') || "easynegative, low quality, bad anatomy";
+    const steps = Number(await this.store.get<number>('sdSteps')) || 20;
+    const cfg = Number(await this.store.get<number>('sdCfgScale')) || 7.0;
+    const sampler = await this.store.get<string>('sdSampler') || "euler_a";
+    const scheduler = await this.store.get<string>('sdScheduler') || "default";
+    const resolution = await this.store.get<string>('sdResolution') || "512x512";
+    const [widthStr, heightStr] = resolution.split('x');
+    const width = Number(widthStr) || 512;
+    const height = Number(heightStr) || 512;
+
+    const finalPrompt = prefix ? `${prefix}, ${prompt}` : prompt;
+
+    let response;
+    try {
+      // sd-server の API エンドポイント (ポート8888)
+      response = await tauriFetch("http://127.0.0.1:8888/sdapi/v1/txt2img", {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          prompt: finalPrompt,
+          negative_prompt: negPrompt,
+          steps: steps,
+          cfg_scale: cfg,
+          sample_method: sampler, // API仕様に合わせる
+          schedule_method: scheduler,
+          width: width,
+          height: height,
+          seed: -1
+        }),
+        connectTimeout: 60000,
+        signal: signal
+      });
+    } catch (e) {
+      throw new Error(`Failed to connect to sd-server (Port 8888). Please make sure the server is running.\nDetails: ${e}`);
+    }
+
+    if (!response.ok) {
+      const err = await response.text();
+      throw new Error(`sd-server API failed (Status: ${response.status}): ${err}`);
+    }
+
+    const data = await response.json();
+    if (!data.images || data.images.length === 0) {
+      throw new Error("sd-server did not return any images.");
+    }
+
+    // Base64形式のURLとして返す（既存のA1111処理と合流）
+    return `data:image/png;base64,${data.images[0]}`;
   }
 
   // コード用の拡張機能セットを返すヘルパー
@@ -4271,9 +4342,36 @@ ${instructionFiller}
 
     const fullPath = await this.store.get<string>('sdWebUIPath') || "";
     const isCppMode = fullPath.toLowerCase().endsWith('sd-cli.exe') || fullPath.toLowerCase().endsWith('sd-cli');
+    const isCppServer = fullPath.toLowerCase().endsWith('sd-server.exe') || fullPath.toLowerCase().endsWith('sd-server');
     if (!fullPath) return;
     if (isCppMode) {
       alert(t('editor.app.cppModeError'));
+      return;
+    }
+
+    if (isCppServer) {
+      this.aiThinkingMode = "Starting sd-server...";
+      this.setAiLoading(true);
+      setTimeout(() => this.setAiLoading(false), 2000);
+
+      try {
+        const resolution = await this.store.get<string>('sdResolution') || "512x512";
+        await invoke('open_sd_server', {
+          exePath: fullPath,
+          modelPath: await this.store.get('sdModelPath') || "",
+          // 初期プロンプトを入れたい場合は設定から。不要なら空文字でOK
+          prompt: await this.store.get('imageSystemPrompt') || "",
+          negPrompt: await this.store.get('sdNegativePrompt') || "",
+          steps: Number(await this.store.get('sdSteps')) || 20,
+          cfg: Number(await this.store.get('sdCfgScale')) || 7.0,
+          sampler: await this.store.get('sdSampler') || "euler_a",
+          scheduler: await this.store.get('sdScheduler') || "default",
+          resolution: resolution
+        });
+      } catch (e) {
+        console.error(e);
+        await message(`Failed to start sd-server: ${e}`, { kind: 'error' });
+      }
       return;
     }
 
