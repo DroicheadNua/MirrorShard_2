@@ -9,6 +9,11 @@
   "description": "Capability for the main window",
   "windows": [
     "main",
+    "preview",
+    "export",
+    "ai_chat",
+    "settings",
+    "markdown",
     "terminal_sd",
     "*"
   ],

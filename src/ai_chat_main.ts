@@ -1313,11 +1313,14 @@ async function generateImageFromChat(sdPrompt: string, originalText: string, msg
 
         autoScroll();
         hideAiLoadingOverlay();
-        setUiLocked(false);
-        document.getElementById("message-input")?.focus();
 
-        if (currentFilePath) saveLogOverwrite();
-        else isChatDirty = true;
+        const textarea = document.getElementById("message-input");
+        if (textarea) {
+            setUiLocked(false);
+            textarea.focus();
+            if (currentFilePath) saveLogOverwrite();
+            else isChatDirty = true;
+        }
     }
 }
 

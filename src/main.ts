@@ -4269,8 +4269,13 @@ ${instructionFiller}
     // Linuxでの運用を試験的に開始
     // if (this.currentOs === 'linux') return;
 
-    const fullPath = await this.store.get<string>('sdWebUIPath');
+    const fullPath = await this.store.get<string>('sdWebUIPath') || "";
+    const isCppMode = fullPath.toLowerCase().endsWith('sd-cli.exe') || fullPath.toLowerCase().endsWith('sd-cli');
     if (!fullPath) return;
+    if (isCppMode) {
+      alert(t('editor.app.cppModeError'));
+      return;
+    }
 
     this.aiThinkingMode = "Starting Stable Diffusion...";
     this.setAiLoading(true);

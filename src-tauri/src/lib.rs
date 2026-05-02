@@ -185,8 +185,6 @@ async fn generate_image_cpp(
     height: u32,
     save_dir: String,
 ) -> Result<String, String> {
-    use std::os::windows::process::CommandExt;
-
     let exe_file = std::path::Path::new(&exe_path);
     let exe_dir = exe_file.parent().ok_or("Failed to get exe directory")?;
 
@@ -212,10 +210,28 @@ async fn generate_image_cpp(
         cmd.env("PATH", new_path);
     }
 
+    // --- Windows 向け DLL 読み込み対策 ---
     #[cfg(target_os = "windows")]
     {
-        // まだ不安定な場合は 0x00000010 (窓出し) で
+        if let Ok(existing_path) = std::env::var("PATH") {
+            let new_path = format!("{};{}", exe_dir.display(), existing_path);
+            cmd.env("PATH", new_path);
+        }
+        // 窓を隠すフラグ
+        use std::os::windows::process::CommandExt;
         cmd.creation_flags(0x08000000);
+    }
+
+    // --- Mac 向け dylib 読み込み対策 ---
+    #[cfg(target_os = "macos")]
+    {
+        // macOSのダイナミックリンカーに、exeと同じフォルダを探すよう強制する
+        if let Ok(existing_path) = std::env::var("DYLD_LIBRARY_PATH") {
+            let new_path = format!("{}:{}", exe_dir.display(), existing_path); // Macはコロン(:)区切り
+            cmd.env("DYLD_LIBRARY_PATH", new_path);
+        } else {
+            cmd.env("DYLD_LIBRARY_PATH", exe_dir.display().to_string());
+        }
     }
 
     cmd.args([
