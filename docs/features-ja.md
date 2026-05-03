@@ -55,6 +55,7 @@ MirrorShardはStable DiffusionやMisral Agentsと連携し、テキストから�
 ### 🔧 対応バックエンド
 - AUTOMATIC1111
 - Forge / Forge Neo
+- stable-diffusion.cpp
 
 > ComfyUI は非対応です。
 
@@ -123,7 +124,8 @@ MirrorShardはStable DiffusionやMisral Agentsと連携し、テキストから�
 ## 🛠️ AI & コーディング
 
 * **AIチャット連携**
-  Google Gemini、Groq API、およびローカルLLMに対応しています。
+  Google Gemini、Groq APIなど5社のクラウドAI、およびローカルLLMに対応しています。  
+  また、ヘッドレスブラウザ「Obscura」を使用することにより、AIにWeb検索をさせることができます。
 
 * **OpenCode連携**
   別ウィンドウでコーディングエージェント「OpenCode」を起動できます。
@@ -143,5 +145,3 @@ MirrorShardはStable DiffusionやMisral Agentsと連携し、テキストから�
 
 * **ログビューア**
   Google Geminiのログをテキストとして読み込み、大規模な会話履歴でも快適に閲覧・編集できます。
-
-

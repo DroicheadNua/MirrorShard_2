@@ -1,4 +1,4 @@
-# MirrorShard 2 v1.8.0 User Manual
+# MirrorShard 2 v1.9.0 User Manual
 
 ## Keyboard Shortcuts
 
@@ -655,7 +655,7 @@ In addition, you can create, save, and delete your own custom themes.
 
    ※ Depending on the model and pricing plan, usage fees may apply
 
-※ Cohere and Mistral settings are similar to Groq
+※ Cerebras, Cohere and Mistral settings are similar to Groq
 
 * **Mistral Agent ID**
 	Specifies the ID of the Mistral Agent. Required for image generation with Mistral.
@@ -716,6 +716,18 @@ In addition, you can create, save, and delete your own custom themes.
 
 	Specify the CFG scale. Use the recommended value for the selected model.
 
+* **Sampler**
+
+	Specify the Sampler. Use the recommended value for the selected model.
+
+* **Scheduler**
+
+	Specify the Scheduler. Use the recommended value for the selected model.
+
+* **Model Path**
+
+  Specify the model to be used in `stable-diffusion.cpp`. On platforms such as A1111 and Forge, this value is ignored.
+
 * **AI for Visualization**
 
 	Select the AI to be used in the main editor’s *"AI: Image Generation"* feature.
@@ -775,6 +787,13 @@ In addition, you can create, save, and delete your own custom themes.
 
 ---
 
+#### Obscura
+
+* **Obscura Path**
+	Specify the path to Obscura.
+
+---
+
 ### ■ Code Editor
 
 #### Code Editor Settings
@@ -831,10 +850,3 @@ For details, please refer to:
 **linux-support.md**
 
 ---
-
-
-
-
-
-
-

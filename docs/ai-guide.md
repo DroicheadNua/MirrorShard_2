@@ -1,501 +1,386 @@
 # **MirrorShard 2 – AI Guide**
 
-> *Note: This document may include features that are still under development.  
-> Some features may differ from the currently distributed build.*
+**Note:** This document may include descriptions of features still under development.
+Actual functionality may differ from the distributed binaries.
+
+This guide is intended for users who want a comprehensive understanding of MirrorShard’s AI features.
+If you are new, it is recommended to start with the **Quick Guide**.
 
 ---
 
-# **Table of Contents**
+# AI Features in MirrorShard 2
 
-1. AI Setup
-2. Choosing and Switching AI
-3. Features
-4. External Tools Integration
-5. Notes and Limitations
-6. Design Philosophy
+MirrorShard 2 provides AI assistance across multiple components:
 
----
+* Main Editor
+* AI Chat Window
+* Idea Processor
+* OpenCode Window (requires OpenCode)
+* SillyTavern Window (requires SillyTavern)
 
-# **1. AI Setup**
+Additionally:
 
-## ■ What is an API Key?
-
-An API key is a secret token that allows MirrorShard to communicate with an AI service on your behalf.
-
-**Important:**
-
-* Keep your API key private
-* Do not share it with others
+* If **Stable Diffusion Web UI** (AUTOMATIC1111, Forge, Forge Neo, stable-diffusion.cpp, etc.) is installed, it can be used for image generation.
+* If **Obscura** (a Rust-based headless browser) is installed, AI can perform web searches from the chat window.
 
 ---
 
-## ■ Recommended for Beginners: Gemini
+# Supported AI Providers
 
-Gemini is the easiest to set up and provides high-quality responses.
+* Cloud AI (API key required):
 
-### Setup Steps
+  * Google Gemini
+  * Groq
+  * Cohere
+  * Mistral
+  * Cerebras
 
-1. Go to:
-   [https://aistudio.google.com/](https://aistudio.google.com/)
+* Local AI:
 
-2. Log in with your Google account
-
-3. Click **"Get API Key"**
-
-4. Select **"Create API key in new project"**
-
-5. Copy the generated API key
-
-6. Open MirrorShard and press **F2** (Settings)
-
-7. Go to **AI Settings** tab
-
-8. Paste the API key into **"Gemini API Key"**
+  * LM Studio
+  * Ollama
+  * Other compatible local runtimes
 
 ---
 
-## ■ Other Cloud AI (Groq, Cohere, Mistral)
+# Table of Contents
 
-To use other cloud AI services:
-
-* Create an API key on their official website
-* Enter it in MirrorShard settings
-
-**Note:**
-Some services may require billing setup or phone verification.
-
----
-
-## ■ Local AI (Recommended for Privacy / Offline Use)
-
-Local AI runs entirely on your own machine.
+1. Setting Up AI
+2. Switching AI Providers
+3. Feature Usage
+4. External Tool Integration
+5. Image Generation
+6. Notes & Limitations
+7. Free Usage
+8. Design Philosophy
 
 ---
 
-### ● LM Studio (GUI-based)
+# 1. Setting Up AI
 
-1. Launch LM Studio
-2. Open the **Developer** tab
-3. Download and load a model
-4. Start the server (**Status: Running**)
-5. Enable **CORS** in settings
+## Gemini
 
-MirrorShard setup:
-
-* Use default endpoint:
-  `http://127.0.0.1:1234/v1/chat/completions`
+1. Log in to Google AI Studio
+2. Click **"Get API key" → "Create API key in new project"**
+3. Copy the key
+4. Paste it into MirrorShard → Settings → AI Settings → Gemini API Key
 
 ---
 
-### ● Ollama (Lightweight CLI)
+## Groq
 
-1. Install Ollama:
-   [https://ollama.com/](https://ollama.com/)
+Groq is known for extremely fast response speeds.
 
-2. Pull a model:
+1. Log in to Groq
+2. Open **API Keys**
+3. Copy your key (shown only once)
+4. Paste into MirrorShard settings
+
+---
+
+## Cerebras
+
+Known for ultra-high-speed inference (up to thousands of tokens/sec).
+
+1. Log in and open **API Keys**
+2. Copy the default key
+3. Paste into MirrorShard
+
+---
+
+## Cohere
+
+1. Create an account at [https://cohere.com/](https://cohere.com/)
+2. Open Dashboard → API Keys
+3. Copy Trial key
+4. Paste into MirrorShard
+
+---
+
+## Mistral
+
+1. Register at [https://mistral.ai/](https://mistral.ai/)
+2. Enter AI Studio → API Keys
+3. Create a key
+4. Select a plan (Experiment = free tier)
+5. Phone verification required
+6. Paste into MirrorShard
+
+---
+
+## Local AI
+
+### LM Studio
+
+1. Load a model
+2. Start server (Status: Running)
+3. Enable CORS
+4. Default endpoint works as-is
+
+---
+
+### Ollama
+
+1. Install from [https://ollama.com/](https://ollama.com/)
+2. Run:
 
 ```
-ollama pull llama3
+ollama pull gemma2
 ```
 
-3. MirrorShard settings:
+3. Use endpoint:
 
-* Endpoint URL:
-  `http://127.0.0.1:11434/v1/chat/completions`
-
-* Model Name:
-  e.g. `llama3`
+```
+http://127.0.0.1:11434/v1/chat/completions
+```
 
 ---
 
-Other local AI backends such as koboldcpp are also supported, as long as they provide an OpenAI-compatible API endpoint.
+# 2. Switching AI
+
+Each component has its own AI selector:
+
+* Main Editor → sidebar selector
+* Chat Window → top-left selector
+* Idea Processor → top-right selector
 
 ---
 
-# **2. Choosing and Switching AI**
+## Model Selection
 
-### ■ Recommended Usage
-
-* **Beginners:** Gemini
-* **Fast responses:** Groq
-* **Privacy / offline:** Local AI
+* Gemini and others allow manual model input
+* Be aware: newer models may **not be free-tier**
 
 ---
 
-### ■ Switching AI
+## Strengths Overview
 
-* **Main Editor:** AI selector in the sidebar
-* **Chat Window:** Top-left selector
-* **Idea Processor:** Selector below top-right buttons
-
----
-
-# **3. Features**
+* Gemini → highest quality
+* Groq / Cerebras → speed
+* Mistral → different training bias
+* Local AI → privacy, no cost
 
 ---
 
-## ■ 1. AI Writing Assistance
+# 3. Feature Usage
 
-### Continue Writing
+---
 
-Press **Alt + Enter**
+## ■ Main Editor AI
+
+### 1. Continue Writing
+
+**Shortcut:** `Alt + Enter`
 
 * AI continues text based on context
-* Press **ESC** to cancel
+* Context size affects speed and cost
+
+⚠️ Unlike browser AI tools, context is sent every time
+→ Not ideal for very long documents
 
 ---
 
-### Missing Link Completion
+### 2. Missing Link Completion
 
-Press **Alt + Shift + Enter**
+**Shortcut:** `Alt + Shift + Enter`
 
-* AI fills the gap between two parts of text
+* Connects two parts of text
 
 ---
 
-### Text Processing (Right Click)
+### 3. Selection-Based AI Actions
+
+Right-click selected text:
 
 * Translate
 * Summarize
 * Rewrite
+* Generate image prompt
+* Generate image
 
-Output is inserted after selected text.
+Image generation uses:
 
----
-
-### Image Features (Right Click)
-
-- **AI: Generate Image Prompt**  
-  Converts selected text into an English prompt optimized for image generation models.
-
-- **AI: Generate Image**  
-  Generates an image from the selected text, saves it to the configured image folder,  
-  and inserts an image link at the cursor position.
-
-  You can preview the result instantly using Markdown Preview (Ctrl+M).
-
-  To generate images, use either Stable Diffusion or Mistral Agents.
-
-- **Mistral**: In the settings screen, select "Mistral Agent" for "AI for Visualize (Image Gen)" and set the AI selector in the editor to "Mistral."
-
-- **Stable Diffusion**: In the "AI for Visualize (Image Gen)" setting, choose "Stable Diffusion."
+* Stable Diffusion
+* or Mistral Agents
 
 ---
 
-## ■ 2. Code Completion (Code Mode Only)
-
-Press **Ctrl + K** to enable Code Mode
-
-Then press **Alt + Enter**
+### 4. Code Completion (Code Mode Only)
 
 * Uses FIM (Fill-in-the-Middle)
-* Local AI only
-
-**Recommended models:**
-
-* qwen2.5-coder
-* similar coding models
+* Requires local AI
+* Recommended: `qwen2.5-coder`
 
 ---
 
-## ■ 3. AI Chat Window
+## ■ AI Chat Window
 
-Open with **Ctrl + Shift + A**
+Open with `Ctrl + Shift + A`
 
-Features:
+### Features
 
-* Free conversation with AI
-* Save / load chat logs
-* Edit / regenerate responses
-* Export logs
+* Save / Load chat logs
+* Regenerate responses
+* Edit previous messages
+* Export to editor
 
-### AI Chat – Image Generation
+---
 
-In the AI Chat window, you can simply ask:
+### Image Generation (Chat)
+
+You can simply say:
 
 > "Generate an image of ..."
 
-and MirrorShard will handle the rest.
+#### Mistral Agents
+
+* Enable Image capability
+* Enter Agent ID
+* Select Mistral
 
 ---
 
-#### Requirements
+#### Stable Diffusion (SD-Link)
 
-Image generation requires either:
-
-- **Mistral Agents**, or  
-- **Stable Diffusion Web UI**
-
-🧠 Using Mistral Agents
-1. Log in to Mistral and create an Agent in AI Studio  
-2. Enable the **Image** capability  
-3. Enter your **Agent ID** in MirrorShard settings  
-4. Enable "Use Mistral Agents"  
-5. Select **Mistral** in the AI selector  
-
-You can now generate images directly from chat or editor.
-
-🎨 Using Stable Diffusion
-Stable Diffusion enables image generation with any supported AI model.
+1. Install Web UI
+2. Enable `--api`
+3. Start via `Ctrl + Shift + W`
+4. Enable **SD-Link button**
+5. Send request
 
 ---
 
-### Setup
+### Web Search (Obscura)
 
-1. Install Stable Diffusion Web UI (A1111, Forge, Forge Neo, etc.)  
-2. Register the launch script (e.g., `webui-user.bat`) in settings
-3. Open the launch script in a text editor, add `--api` to COMMANDLINE_ARGS  (For more details, see the section "Image Generation Notes")
-4. Launch it with **Ctrl+Shift+W**  
-5. Enable **SD Link** in the chat window  
+1. Install Obscura
+2. Set path in settings
+3. Enable **Search button**
+4. Ask AI to search
 
----
+⚠️ Limitations:
 
-Once enabled:
-
-- The AI generates a structured prompt  
-- MirrorShard detects it  
-- Sends it to Stable Diffusion via API  
-- Displays the generated image automatically
+* Not supported: Cohere, Cerebras
+* Mistral Large unstable
+* Local models may struggle
 
 ---
 
-## ■ 4. Idea Processor AI Features
+## ■ Idea Processor AI
+
+### Features
+
+* AFA (AI Free Association)
+* Missing Link
+* Node Alchemy
+* Template Completion
 
 ---
 
-### AFA (AI Free Association)
+# 4. External Tools
 
-* Select a node
-* Press **Ctrl + Shift + F**
+## OpenCode
 
-→ Generates 3 related ideas
-
----
-
-### Missing Link (Idea Graph)
-
-* Select a connection
-* Activate AI
-
-→ Generates content between nodes
+* Open with `Ctrl + Shift + K`
 
 ---
 
-### Node Alchemy
+## SillyTavern
 
-* Select multiple nodes
-* Activate AI
-
-→ Combines ideas into a new node
+* Open with `Ctrl + Shift + J`
+* Recommended for character roleplay
 
 ---
 
-### Template Completion
-
-* Works inside story templates
-* AI expands structured content
-
----
-
-# **4. External Tools Integration**
-
----
-
-## ■ OpenCode
-
-If installed:
-
-* Open with **Ctrl + Shift + K**
-
-Refer to OpenCode documentation for usage.
-
----
-
-## ■ SillyTavern
-
-If installed:
-
-* Open with **Ctrl + Shift + J**
-
-Recommended setting in `config.yaml`:
-
-```
-browserLaunch:
-  enabled: false
-```
----
-
-# **5. Image Generation Notes **
+# 5. Image Generation
 
 ## Settings
 
-From the settings window, you can specify:
-
-- Auto-save folder for images
-- Image generation prompt
-- Image Negative prompt
-- Steps
-- CFG scale
-- Resolution (Image size)
-
-## ⚠️ Mistral
-
-- Free tier allows only a few images per month (~4–5)  
-- Suitable for testing, not heavy usage  
-
-## ⚠️ Stable Diffusion
-
-### 1. API Mode Required
-
-Stable Diffusion must be running in API mode.
-
-add `--api` to COMMANDLINE_ARGS  
-
-Example:
-
-　　export COMMANDLINE_ARGS="--uv"
-
-=>　export COMMANDLINE_ARGS="--api --uv"  
+* Prompt / Negative Prompt
+* Steps / CFG
+* Sampler / Scheduler
+* Model
+* Image size
 
 ---
 
-### 2. Model Compatibility
+## Notes
 
-Some models (e.g., highly specialized ones like Anima) may fail.
+### Mistral
 
-If that happens:
-- Try another model, or  
-- Use "Generate Image Prompt" and run it manually in Stable Diffusion  
+* Free tier is very limited
 
 ---
 
-### 3. SD Link (Chat Integration)
+### Stable Diffusion
 
-SD Link works by:
-
-- AI converting your request into a structured English prompt  
-- MirrorShard detecting the format  
-- Automatically triggering image generation  
-
-👉 This requires **instruction-following capable models**
-
-Recommended:
-
-- Cloud: Gemini, GPT-based (Groq), Mistral Large  
-- Local: Instruction-tuned models (e.g., Gemma variants)  
-
-Weak models may:
-- Output prompts in Japanese  
-- Break the required format  
+1. Must run in API mode (`--api`)
+2. Some models may fail
+3. SD-Link requires **high instruction-following AI**
+4. Requires GPU (recommended 12GB VRAM)
+5. Avoid spaces / non-ASCII in install path
 
 ---
 
-### 4. Mistral Conflict
+# 6. Notes & Limitations
 
-If Mistral Agents is enabled:
+## API Costs
 
-👉 It may override SD Link behavior  
-
-Disable Agents if you want to use SD Link with Mistral.
-
----
-
-### 5. Hardware Requirements
-
-Stable Diffusion requires a reasonably powerful system.
-
-- Recommended: GPU with ~12GB VRAM  
-- Minimum:  
-  - GTX 1050 Ti (4GB VRAM)  
-  - or 16GB unified memory (Mac)  
-
-Lightweight models (e.g., SD 1.5 LCM) can run on lower-end systems,  
-but performance may be limited.
-
-Please note that it does not work properly with basic integrated/onboard graphics (e.g., standard Intel office PCs).
-
-### 6. Installation Path
-
-**Do not** include any non-ASCII characters or spaces in the path of the folder where you install and extract Stable Diffusion. This will prevent the path from being resolved correctly, resulting in an error.
-
-If you have already installed it, please repeat the installation procedure from the beginning. The venv (Python virtual environment) located within the Stable Diffusion folder remembers the absolute path of its creation location; therefore, simply moving Stable Diffusion to a different folder or drive will break it and prevent it from starting.
+* Free tier stops automatically
+* Paid usage may incur charges
 
 ---
 
-# **6. Notes and Limitations**
+## Security
+
+* Keep API keys private
 
 ---
 
-## ■ ⚠️ API Usage Costs
+## Context Handling
 
-Using cloud AI (Gemini, etc.) may incur charges depending on your account settings.
-
-* Free tier: limited usage
-* Paid plan: usage-based billing
-
-**The developer is not responsible for any charges incurred.**
-
-Check official pricing pages before use.
+* Full chat history is sent
+* Be careful when switching AI
 
 ---
 
-## ■ Context Behavior
+## Performance Notes
 
-* Context is sent **only when you trigger AI manually**
-* MirrorShard does NOT monitor your text in the background
-
----
-
-## ■ Long Text Limitations
-
-Very large texts (hundreds of thousands of tokens) may cause performance issues.
+* Large logs may freeze UI
+* Use editor for large files
 
 ---
 
-## ■ Truncated Responses
+## Short Responses Issue
 
-If responses are cut off:
+Some models (e.g., Gemini Flash) may output very short responses.
 
-→ Increase **Max Tokens** in settings
-
----
-
-## ■ Short Responses (Gemini / Thinking Models)
-
-Some models use internal reasoning ("thinking").
-
-If Max Tokens is too low:
-
-→ Output may be extremely short
-
-**Recommended:**
-Set Max Tokens to **3000–5000+**
+**Fix:** Increase max tokens (3000–5000 recommended)
 
 ---
 
-# **7. Design Philosophy**
+# 7. Free Usage
+
+MirrorShard is designed to work without payment.
+See:
+
+👉 `free-ai-guide.md`
+
+---
+
+# 8. Design Philosophy
 
 MirrorShard follows a strict principle:
 
-**"Never let AI take control away from the user."**
+> **AI does nothing unless explicitly requested.**
 
-* AI is only triggered by explicit user action
-* No background monitoring
-* No automatic suggestions
+* No background processing
+* No hidden data sending
+* Minimal context usage
 
-This design prioritizes:
+This prioritizes:
 
 * User control
 * Privacy
 * System performance
 
 ---
-
-## ■ Summary
-
-MirrorShard is designed as:
-
-> A tool where **humans lead, AI assists**
-
----
-

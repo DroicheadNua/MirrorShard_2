@@ -56,6 +56,7 @@ MirrorShard integrates with Stable Diffusion or Mistral Agents to enable seamles
 ### 🔧 Supported Backends
 - AUTOMATIC1111
 - Forge / Forge Neo
+- stable-diffusion.cpp
 
 > ComfyUI is not supported.
 
@@ -117,7 +118,8 @@ Export your work into multiple formats.
 ## 🛠️ AI & Coding
 
 * **AI Chat Integration**
-  Supports Google Gemini, Groq API, and local LLMs.
+  Supports Google Gemini, Groq API, and local LLMs.  
+  In addition, by using the headless browser "Obscura," you can have the AI perform web searches.
 
 * **OpenCode Integration**
   Launch coding agents inside the app.
@@ -134,4 +136,3 @@ Export your work into multiple formats.
 
 * **Log Viewer**
   Analyze large AI logs without performance issues.
-
