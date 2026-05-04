@@ -457,7 +457,9 @@ export COMMANDLINE_ARGS="--api" (Mac/Linux)
 
 ※stable-diffusion.cppの場合は日本語名のフォルダでも使用可能なようにしてありますが、基本的には避けたほうが無難です。
 
-6. stable-diffusion.cppを使用する場合、起動ファイルやlibstable-diffusion.dylibがGatekeeper（MacOSのセキュリティ機能）にブロックされてしまうことがあります。その場合、ターミナルで以下のように入力して、フォルダ内すべてのファイルの実行を許可してください。
+6. Macでstable-diffusion.cppを使用する場合、GPU（Metal）が十分活用されずに画像生成が低速になる場合があります。その場合はForge Neoなどをお使いください。
+ 
+また、起動ファイルやlibstable-diffusion.dylibがGatekeeper（MacOSのセキュリティ機能）にブロックされてしまうことがあります。その場合、ターミナルで以下のように入力して、フォルダ内すべてのファイルの実行を許可してください。
 
 xattr -d com.apple.quarantine "（フォルダのパス）"
 
