@@ -221,6 +221,11 @@ Options:
 
 ---
 
+### Q. The AI Agent's Web Search fails or returns an error on Linux.
+
+**A.** Due to DuckDuckGo's strict anti-bot measures, requests from Linux environments (which have specific TLS/OpenSSL fingerprints) are currently being blocked. (It works fine on Windows).
+We are planning to integrate a stable Search API (like Tavily API) in the next update. We apologize for the inconvenience and appreciate your patience.
+
 ## OpenCode
 
 ### Q. OpenCode doesn’t launch (Ctrl+Shift+K)
@@ -247,4 +252,4 @@ browserLaunch:
 
 ### Q. Why does the code editor support Rust but not C++ or Java?
 
-**A.** Because about 6% of MirrorShard is written in Rust.
+**A.** Because about 9% of MirrorShard is written in Rust.
