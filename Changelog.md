@@ -7,7 +7,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
-## [1.9.0] - 2026-5-XX  
+## [1.9.0] - 2026-5-6  
 
 ### Added  
 - Integrated Rig (a Rust-based agent framework) as the backend.  

@@ -120,8 +120,8 @@ impl rig::tool::Tool for WebSearchTool {
         let mut target_url = if args.query.starts_with("http") {
             args.query.clone()
         } else {
-            // URLエンコードの代わりに簡易的にスペースを+に変換
-            let encoded = args.query.replace(" ", "+");
+            // URLエンコードする
+            let encoded = urlencoding::encode(&args.query);
             format!("https://html.duckduckgo.com/html/?q={}", encoded)
         };
 
@@ -1503,7 +1503,7 @@ async fn export_epub(
         r#"
         body { font-family: serif; line-height: 1.8; margin: 0; padding: 0; }
         p { margin: 0; }
-        h1, h2, h3 { margin-bottom: 1em; } 
+        h1, h2, h3 { margin-bottom: 1em; }
         img { max-width: 100%; height: auto; display: block; margin: 0 auto; }
         .cover { height: 100%; width: 100%; display: flex; align-items: center; justify-content: center; }
         .title-page { text-align: center; margin-top: 30%; }
