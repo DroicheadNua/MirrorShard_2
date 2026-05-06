@@ -38,6 +38,8 @@ The following issues have been observed during testing:
 - Rendering artifacts may appear when using a transparent background  
   (cleared after redraw, e.g., scrolling; does not occur with opaque backgrounds)
 
+- Environment-dependent: Search functionality in the chat window may not work as expected (search engine may block requests)
+
 ### MX Linux (X11 / Xfce)
 - Inline input does not work; IME falls back to over-the-spot mode  
   (composition text is shown in the IME window instead of the editor)
@@ -101,4 +103,3 @@ Due to platform limitations, audio is fully loaded into memory
 Higher memory usage when BGM is enabled
 
 On low-spec environments (e.g., Raspberry Pi), disabling BGM is recommended if memory usage becomes an issue.
-
