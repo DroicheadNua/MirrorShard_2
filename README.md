@@ -8,7 +8,7 @@
 
 >💡 Use powerful AI features for free — no subscription required.
 
-🌐 **Now available in English.**
+![MirrorShard_2 Key Visual](screenshots/ScreenShot-en2.jpg)
 
 ---
 

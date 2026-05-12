@@ -2,6 +2,8 @@
 
 # MirrorShard 2
 
+![MirrorShard_2 Key Visual](screenshots/ScreenShot01.jpg)
+
 アイデアを、そのまま文章にできたら――と思ったことはありませんか？
 
 MirrorShard 2は、発想から構造化、そして執筆までを一つの流れとして扱うためのエディタです。
@@ -144,5 +146,3 @@ https://droicheadnua.github.io/MirrorShard-Official/
 MIT License
 
 ---
-
-
