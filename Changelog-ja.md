@@ -6,6 +6,19 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 
+## [1.10.0] - 2026-5-XX  
+
+### Added (新機能)  
+
+
+### Changed (変更点)    
+ 
+
+### Fixed (修正点)   
+- Geminiのプリセットをgemini-3.1-flash-lite-preview → gemini-3.1-flash-liteに変更（プレビューモデル廃止のため）  
+- 設定画面のスクロールバーの挙動を修正  
+
+
 ## [1.9.0] - 2026-5-6  
 
 ### Added (新機能)  
