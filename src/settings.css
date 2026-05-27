@@ -21,6 +21,8 @@ body {
 }
 
 #settings-wrapper {
+    display: flex;
+    flex-direction: column;
     border-radius: 6px;
     box-sizing: border-box;
     width: 100%;
@@ -29,25 +31,21 @@ body {
     overflow-y: hidden;
 }
 
-#settings-wrapper::-webkit-scrollbar,
-#settings-container::-webkit-scrollbar {
+.tab-content::-webkit-scrollbar {
     width: 8px;
 }
 
-#settings-wrapper::-webkit-scrollbar-track,
-#settings-container::-webkit-scrollbar-track {
+.tab-content::-webkit-scrollbar-track {
     background: transparent;
 }
 
-#settings-wrapper::-webkit-scrollbar-thumb,
-#settings-container::-webkit-scrollbar-thumb {
+.tab-content::-webkit-scrollbar-thumb {
     background: rgba(0, 0, 0, 0.15);
     border-radius: 4px;
     min-height: "40px";
 }
 
-#settings-wrapper::-webkit-scrollbar-thumb:hover,
-#settings-container::-webkit-scrollbar-thumb:hover {
+.tab-content::-webkit-scrollbar-thumb:hover {
     background: rgba(0, 0, 0, 0.25);
 }
 
@@ -57,7 +55,9 @@ body {
     height: calc(100% - 40px);
     width: 90vw;
     background-color: transparent;
-    overflow-y: auto;
+    flex-grow: 1;
+    overflow-y: hidden;
+    min-height: 0;
     padding-left: 5%;
     padding-right: 5%;
     line-height: 2;
@@ -235,6 +235,7 @@ body {
 #gemini-model-preset,
 #groq-model-preset,
 #cerebras-model-preset,
+#openrouter-model-preset,
 #cohere-model-preset,
 #mistral-model-preset,
 #local-llm-url-preset {
@@ -287,6 +288,7 @@ body::-webkit-scrollbar-thumb:hover {
 /* --- タブのスタイル --- */
 .tabs {
     display: flex;
+    flex-shrink: 0;
     border-bottom: 1px solid #555;
     margin-bottom: 15px;
     padding-bottom: 5px;
@@ -322,6 +324,9 @@ body::-webkit-scrollbar-thumb:hover {
 
 .tab-content.active {
     display: block;
+    flex-grow: 1;
+    overflow-y: auto;
+    min-height: 0;
 }
 
 @keyframes fadeIn {

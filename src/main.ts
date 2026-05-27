@@ -279,6 +279,7 @@ class App {
     | "gemini"
     | "groq"
     | "cerebras"
+    | "openRouter"
     | "cohere"
     | "mistral"
     | "local" = "gemini";
@@ -628,6 +629,9 @@ class App {
       if (await this.store.get<boolean>("enableCerebras")) {
         optionsContainer.innerHTML += `<div class="custom-option" data-value="cerebras">Cerebras</div>`;
       }
+      if (await this.store.get<boolean>("enableOpenRouter")) {
+        optionsContainer.innerHTML += `<div class="custom-option" data-value="openRouter">OpenRouter</div>`;
+      }
       if (await this.store.get<boolean>("enableCohere")) {
         optionsContainer.innerHTML += `<div class="custom-option" data-value="cohere">Cohere</div>`;
       }
@@ -940,6 +944,12 @@ class App {
           apiKey = (await this.store.get<string>("cerebrasApiKey")) || "";
           model =
             (await this.store.get<string>("cerebrasModel")) || "llama3.1-8b";
+        } else if (this.mainAiApi === "openRouter") {
+          url = "https://openrouter.ai/api/v1/chat/completions";
+          apiKey = (await this.store.get<string>("openRouterApiKey")) || "";
+          model =
+            (await this.store.get<string>("openRouterModel")) ||
+            "openrouter/owl-alpha";
         } else if (this.mainAiApi === "mistral") {
           url = "https://api.mistral.ai/v1/chat/completions";
           apiKey = (await this.store.get<string>("mistralApiKey")) || "";
@@ -1121,6 +1131,12 @@ ${instructionFiller}
           apiKey = (await this.store.get<string>("cerebrasApiKey")) || "";
           model =
             (await this.store.get<string>("cerebrasModel")) || "llama3.1-8b";
+        } else if (this.mainAiApi === "openRouter") {
+          url = "https://openrouter.ai/api/v1/chat/completions";
+          apiKey = (await this.store.get<string>("openRouterApiKey")) || "";
+          model =
+            (await this.store.get<string>("openRouterModel")) ||
+            "openrouter/owl-alpha";
         } else if (this.mainAiApi === "mistral") {
           url = "https://api.mistral.ai/v1/chat/completions";
           apiKey = (await this.store.get<string>("mistralApiKey")) || "";
@@ -1428,6 +1444,12 @@ ${instructionFiller}
           apiKey = (await this.store.get<string>("cerebrasApiKey")) || "";
           model =
             (await this.store.get<string>("cerebrasModel")) || "llama3.1-8b";
+        } else if (this.mainAiApi === "openRouter") {
+          url = "https://openrouter.ai/api/v1/chat/completions";
+          apiKey = (await this.store.get<string>("openRouterApiKey")) || "";
+          model =
+            (await this.store.get<string>("openRouterModel")) ||
+            "openrouter/owl-alpha";
         } else if (this.mainAiApi === "mistral") {
           url = "https://api.mistral.ai/v1/chat/completions";
           apiKey = (await this.store.get<string>("mistralApiKey")) || "";
@@ -1799,6 +1821,12 @@ ${instructionFiller}
             apiKey = (await this.store.get<string>("cerebrasApiKey")) || "";
             model =
               (await this.store.get<string>("cerebrasModel")) || "llama3.1-8b";
+          } else if (this.mainAiApi === "openRouter") {
+            url = "https://openrouter.ai/api/v1/chat/completions";
+            apiKey = (await this.store.get<string>("openRouterApiKey")) || "";
+            model =
+              (await this.store.get<string>("openRouterModel")) ||
+              "openrouter/owl-alpha";
           } else if (this.mainAiApi === "mistral") {
             url = "https://api.mistral.ai/v1/chat/completions";
             apiKey = (await this.store.get<string>("mistralApiKey")) || "";

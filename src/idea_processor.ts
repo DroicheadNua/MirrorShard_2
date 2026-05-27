@@ -4209,6 +4209,12 @@ async function triggerFreeAssociation() {
         url = "https://api.cerebras.ai/v1/chat/completions";
         apiKey = (await store.get<string>("cerebrasApiKey")) || "";
         model = (await store.get<string>("cerebrasModel")) || "llama3.1-8b";
+      } else if (ipAiApi === "openrouter") {
+        url = "https://openrouter.ai/api/v1/chat/completions";
+        apiKey = (await store.get<string>("openRouterApiKey")) || "";
+        model =
+          (await store.get<string>("openRouterModel")) ||
+          "openrouter/owl-alpha";
       } else if (ipAiApi === "mistral") {
         url = "https://api.mistral.ai/v1/chat/completions";
         apiKey = (await store.get<string>("mistralApiKey")) || "";
@@ -4519,6 +4525,12 @@ async function triggerTemplateCompletion() {
         url = "https://api.cerebras.ai/v1/chat/completions";
         apiKey = (await store.get<string>("cerebrasApiKey")) || "";
         model = (await store.get<string>("cerebrasModel")) || "llama3.1-8b";
+      } else if (ipAiApi === "openrouter") {
+        url = "https://openrouter.ai/api/v1/chat/completions";
+        apiKey = (await store.get<string>("openRouterApiKey")) || "";
+        model =
+          (await store.get<string>("openRouterModel")) ||
+          "openrouter/owl-alpha";
       } else if (ipAiApi === "mistral") {
         url = "https://api.mistral.ai/v1/chat/completions";
         apiKey = (await store.get<string>("mistralApiKey")) || "";
@@ -4590,6 +4602,9 @@ async function initAiSelector() {
   }
   if (await store.get<boolean>("enableCerebras")) {
     optionsContainer.innerHTML += `<div class="custom-option" data-value="cerebras">Cerebras</div>`;
+  }
+  if (await store.get<boolean>("enableOpenRouter")) {
+    optionsContainer.innerHTML += `<div class="custom-option" data-value="openrouter">OpenRouter</div>`;
   }
   if (await store.get<boolean>("enableCohere")) {
     optionsContainer.innerHTML += `<div class="custom-option" data-value="cohere">Cohere</div>`;
@@ -4872,6 +4887,12 @@ async function triggerNodeAlchemy() {
         url = "https://api.cerebras.ai/v1/chat/completions";
         apiKey = (await store.get<string>("cerebrasApiKey")) || "";
         model = (await store.get<string>("cerebrasModel")) || "llama3.1-8b";
+      } else if (ipAiApi === "openrouter") {
+        url = "https://openrouter.ai/api/v1/chat/completions";
+        apiKey = (await store.get<string>("openRouterApiKey")) || "";
+        model =
+          (await store.get<string>("openRouterModel")) ||
+          "openrouter/owl-alpha";
       } else if (ipAiApi === "mistral") {
         url = "https://api.mistral.ai/v1/chat/completions";
         apiKey = (await store.get<string>("mistralApiKey")) || "";
@@ -5209,6 +5230,12 @@ async function triggerIpMissingLink() {
         url = "https://api.cerebras.ai/v1/chat/completions";
         apiKey = (await store.get<string>("cerebrasApiKey")) || "";
         model = (await store.get<string>("cerebrasModel")) || "llama3.1-8b";
+      } else if (ipAiApi === "openrouter") {
+        url = "https://openrouter.ai/api/v1/chat/completions";
+        apiKey = (await store.get<string>("openRouterApiKey")) || "";
+        model =
+          (await store.get<string>("openRouterModel")) ||
+          "openrouter/owl-alpha";
       } else if (ipAiApi === "mistral") {
         url = "https://api.mistral.ai/v1/chat/completions";
         apiKey = (await store.get<string>("mistralApiKey")) || "";

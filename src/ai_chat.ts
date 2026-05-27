@@ -7,13 +7,22 @@ import {
 import { t } from "./i18n";
 
 export interface ChatSettings {
-  apiType: "gemini" | "groq" | "cerebras" | "cohere" | "mistral" | "local";
+  apiType:
+    | "gemini"
+    | "groq"
+    | "cerebras"
+    | "openrouter"
+    | "cohere"
+    | "mistral"
+    | "local";
   geminiApiKey?: string;
   geminiModel?: string;
   groqApiKey?: string;
   groqModel?: string;
   cerebrasApiKey?: string;
   cerebrasModel?: string;
+  openRouterApiKey?: string;
+  openRouterModel?: string;
   cohereApiKey?: string;
   cohereModel?: string;
   mistralApiKey?: string;
@@ -93,6 +102,10 @@ export class AiChat {
         url = "https://api.cerebras.ai/v1/chat/completions";
         apiKey = this.currentSettings.cerebrasApiKey || "";
         model = this.currentSettings.cerebrasModel || "llama3.1-8b";
+      } else if (apiType === "openrouter") {
+        url = "https://openrouter.ai/api/v1/chat/completions";
+        apiKey = this.currentSettings.openRouterApiKey || "";
+        model = this.currentSettings.openRouterModel || "openrouter/owl-alpha";
       } else if (apiType === "mistral") {
         // スイッチがON かつ IDがある場合のみ Agent モード判定
         const isAgentActive =

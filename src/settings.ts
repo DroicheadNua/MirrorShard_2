@@ -189,6 +189,9 @@ async function setupSettings() {
     const cerebrasApiKeyInput = document.querySelector(
       "#cerebras-api-key",
     ) as HTMLInputElement;
+    const openRouterApiKeyInput = document.querySelector(
+      "#openrouter-api-key",
+    ) as HTMLInputElement;
     const cohereApiKeyInput = document.querySelector(
       "#cohere-api-key",
     ) as HTMLInputElement;
@@ -207,6 +210,9 @@ async function setupSettings() {
     const cerebrasModelInput = document.querySelector(
       "#cerebras-model",
     ) as HTMLInputElement;
+    const openRouterModelInput = document.querySelector(
+      "#openrouter-model",
+    ) as HTMLInputElement;
     const cohereModelInput = document.querySelector(
       "#cohere-model",
     ) as HTMLInputElement;
@@ -218,6 +224,9 @@ async function setupSettings() {
     ) as HTMLInputElement;
     const enableCerebras = document.querySelector(
       "#enable-cerebras",
+    ) as HTMLInputElement;
+    const enableOpenRouter = document.querySelector(
+      "#enable-openrouter",
     ) as HTMLInputElement;
     const enableCohere = document.querySelector(
       "#enable-cohere",
@@ -274,6 +283,9 @@ async function setupSettings() {
     ) as HTMLSelectElement;
     const cerebrasModelPresetSelect = document.querySelector(
       "#cerebras-model-preset",
+    ) as HTMLSelectElement;
+    const openRouterModelPresetSelect = document.querySelector(
+      "#open-router-model-preset",
     ) as HTMLSelectElement;
     const cohereModelPresetSelect = document.querySelector(
       "#cohere-model-preset",
@@ -910,6 +922,8 @@ async function setupSettings() {
     groqApiKeyInput.value = (await store.get<string>("groqApiKey")) || "";
     cerebrasApiKeyInput.value =
       (await store.get<string>("cerebrasApiKey")) || "";
+    openRouterApiKeyInput.value =
+      (await store.get<string>("openRouterApiKey")) || "";
     cohereApiKeyInput.value = (await store.get<string>("cohereApiKey")) || "";
     mistralApiKeyInput.value = (await store.get<string>("mistralApiKey")) || "";
     mistralAgentIDInput.value =
@@ -922,11 +936,15 @@ async function setupSettings() {
       (await store.get<string>("groqModel")) || "llama-3.3-70b-versatile";
     cerebrasModelInput.value =
       (await store.get<string>("cerebrasModel")) || "llama3.1-8b";
+    openRouterModelInput.value =
+      (await store.get<string>("openRouterModel")) || "openrouter/owl-alpha";
     cohereModelInput.value = (await store.get<string>("cohereModel")) || "";
     mistralModelInput.value = (await store.get<string>("mistralModel")) || "";
     enableGroq.checked = (await store.get<boolean>("enableGroq")) ?? false;
     enableCerebras.checked =
       (await store.get<boolean>("enableCerebras")) ?? false;
+    enableOpenRouter.checked =
+      (await store.get<boolean>("enableOpenRouter")) ?? false;
     enableCohere.checked = (await store.get<boolean>("enableCohere")) ?? false;
     enableMistral.checked =
       (await store.get<boolean>("enableMistral")) ?? false;
@@ -998,6 +1016,16 @@ async function setupSettings() {
         cerebrasModelPresetSelect.value = cerebrasModelInput.value;
       } else {
         cerebrasModelPresetSelect.value = "";
+      }
+    }
+    if (openRouterModelPresetSelect) {
+      const options = Array.from(openRouterModelPresetSelect.options).map(
+        (o) => o.value,
+      );
+      if (options.includes(openRouterModelInput.value)) {
+        openRouterModelPresetSelect.value = openRouterModelInput.value;
+      } else {
+        openRouterModelPresetSelect.value = "";
       }
     }
     if (cohereModelPresetSelect) {
@@ -1397,6 +1425,7 @@ async function setupSettings() {
         const newGeminiApiKey = geminiApiKeyInput.value.trim();
         const newGroqApiKey = groqApiKeyInput.value.trim();
         const newCerebrasApiKey = cerebrasApiKeyInput.value.trim();
+        const newOpenRouterApiKey = openRouterApiKeyInput.value.trim();
         const newCohereApiKey = cohereApiKeyInput.value.trim();
         const newMistralApiKey = mistralApiKeyInput.value.trim();
         const newMistralAgentID = mistralAgentIDInput.value.trim();
@@ -1405,10 +1434,12 @@ async function setupSettings() {
           : "";
         const newGroqModel = groqModelInput.value.trim();
         const newCerebrasModel = cerebrasModelInput.value.trim();
+        const newOpenRouterModel = openRouterModelInput.value.trim();
         const newCohereModel = cohereModelInput.value.trim();
         const newMistralModel = mistralModelInput.value.trim();
         const newEnableGroq = enableGroq.checked;
         const newEnableCerebras = enableCerebras.checked;
+        const newEnableOpenRouter = enableOpenRouter.checked;
         const newEnableCohere = enableCohere.checked;
         const newEnableMistral = enableMistral.checked;
         const newEnableMistralAgents = enableMistralAgents.checked;
@@ -1471,6 +1502,8 @@ async function setupSettings() {
         if (newGroqApiKey) await store.set("groqApiKey", newGroqApiKey);
         if (newCerebrasApiKey)
           await store.set("cerebrasApiKey", newCerebrasApiKey);
+        if (newOpenRouterApiKey)
+          await store.set("openRouterApiKey", newOpenRouterApiKey);
         if (newCohereApiKey) await store.set("cohereApiKey", newCohereApiKey);
         if (newMistralApiKey)
           await store.set("mistralApiKey", newMistralApiKey);
@@ -1478,10 +1511,12 @@ async function setupSettings() {
           await store.set("mistralAgentID", newMistralAgentID);
         await store.set("groqModel", newGroqModel);
         await store.set("cerebrasModel", newCerebrasModel);
+        await store.set("openRouterModel", newOpenRouterModel);
         await store.set("cohereModel", newCohereModel);
         await store.set("mistralModel", newMistralModel);
         await store.set("enableGroq", newEnableGroq);
         await store.set("enableCerebras", newEnableCerebras);
+        await store.set("enableOpenRouter", newEnableOpenRouter);
         await store.set("enableCohere", newEnableCohere);
         await store.set("enableMistral", newEnableMistral);
         await store.set("enableMistralAgents", newEnableMistralAgents);
@@ -1547,16 +1582,19 @@ async function setupSettings() {
           geminiApiKey: newGeminiApiKey,
           groqApiKey: newGroqApiKey,
           cerebrasApiKey: newCerebrasApiKey,
+          openRouterApiKey: newOpenRouterApiKey,
           cohereApiKey: newCohereApiKey,
           mistralApiKey: newMistralApiKey,
           mistralAgentID: newMistralAgentID,
           geminiModel: newGeminiModel,
           groqModel: newGroqModel,
           cerebrasModel: newCerebrasModel,
+          openRouterModel: newOpenRouterModel,
           cohereModel: newCohereModel,
           mistralModel: newMistralModel,
           enableGroq: newEnableGroq,
           enableCerebras: newEnableCerebras,
+          enableOpenRouter: newEnableOpenRouter,
           enableCohere: newEnableCohere,
           enableMistral: newEnableMistral,
           enableMistralAgents: newEnableMistralAgents,
