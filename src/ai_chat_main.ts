@@ -48,6 +48,9 @@ const sdLinkBtn = document.getElementById("sd-link") as HTMLButtonElement;
 const webSearchBtn = document.getElementById("web-search") as HTMLButtonElement;
 const apiTrigger = document.getElementById("api-selector-trigger");
 const apiOptions = document.getElementById("api-selector-options");
+const searchTrigger = document.getElementById("search-selector-trigger");
+const searchOptions = document.getElementById("search-selector-options");
+
 const TRANSPARENT_ICON =
   "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII=";
 
@@ -239,6 +242,70 @@ async function renderAiSelector() {
   });
 }
 
+// --- 検索セレクタの動的生成とイベント登録 ---
+async function renderSearchSelector() {
+  if (!searchOptions || !store) return;
+
+  // 1. HTMLを一旦空にして再構築
+  searchOptions.innerHTML = "";
+
+  // DuckDuckGoは常に利用可能
+  searchOptions.innerHTML += `<div class="custom-option" data-value="duckduckgo">DuckDuckGo</div>`;
+
+  // 設定でTavilyが有効な場合のみ追加
+  if (await store.get<boolean>("enableTavily")) {
+    searchOptions.innerHTML += `<div class="custom-option" data-value="tavily">Tavily API</div>`;
+  }
+
+  // 2. 現在保存されている検索エンジンを復元（なければデフォルトでDuckDuckGo）
+  let currentSearch =
+    (await store.get<string>("selectedSearchEngine")) || "duckduckgo";
+
+  // もし「前回Tavilyを選んでいたが、設定画面でTavilyを無効化した場合」の安全策（フォールバック）
+  if (
+    currentSearch === "tavily" &&
+    !(await store.get<boolean>("enableTavily"))
+  ) {
+    currentSearch = "duckduckgo";
+    await store.set("selectedSearchEngine", currentSearch);
+    await store.save();
+  }
+
+  // 起動時にトリガーボタンのテキストを正しいものにしておく
+  if (searchTrigger) {
+    searchTrigger.textContent =
+      currentSearch === "tavily" ? "Tavily API" : "DuckDuckGo";
+  }
+
+  // 3. 新しく生成された要素を取得し直してイベントを付ける
+  const newSearchItems = searchOptions.querySelectorAll(".custom-option");
+
+  newSearchItems.forEach((item) => {
+    item.addEventListener("click", async () => {
+      const newType = item.getAttribute("data-value") as
+        | "duckduckgo"
+        | "tavily";
+      const newText = item.textContent;
+
+      if (newType && newText) {
+        // Storeに状態を保存
+        if (store) {
+          await store.set("selectedSearchEngine", newType);
+          await store.save();
+        }
+
+        // 通知（Tavily等の検索エンジン名の翻訳キーがあればそれに変更）
+        // showNotification(t("aiChat.notification.switchToSearch", { name: newText }));
+        showNotification(`Search Engine: ${newText}`);
+
+        // UIの更新
+        if (searchTrigger) searchTrigger.textContent = newText;
+        searchOptions.classList.remove("open");
+      }
+    });
+  });
+}
+
 async function applySdLinkSystemPrompt() {
   const baseSysPrompt = (await store?.get<string>("aiSystemPrompt")) || "";
   const isSdLinkActive = document
@@ -343,6 +410,8 @@ async function init() {
     }
     await aiChat.updateSettings(aiSettings);
     await renderAiSelector();
+    await renderSearchSelector();
+
     // 表示テキストの初期化
     if (apiTrigger && apiOptions) {
       const activeOption = apiOptions.querySelector(
@@ -676,10 +745,18 @@ function setupThemeListener() {
 }
 
 function setupEventListeners() {
-  // ドロップダウンの開閉
+  // --- AIセレクタの開閉 ---
   apiTrigger?.addEventListener("click", (e) => {
     e.stopPropagation();
     apiOptions?.classList.toggle("open");
+    searchOptions?.classList.remove("open"); // 開いた時に検索側を閉じる
+  });
+
+  // --- 検索セレクタの開閉 ---
+  searchTrigger?.addEventListener("click", (e) => {
+    e.stopPropagation();
+    searchOptions?.classList.toggle("open");
+    apiOptions?.classList.remove("open"); // 開いた時にAI側を閉じる
   });
 
   document.addEventListener(
@@ -687,6 +764,7 @@ function setupEventListeners() {
     async (e) => {
       // 画面クリックでメニューを閉じる
       apiOptions?.classList.remove("open");
+      searchOptions?.classList.remove("open");
 
       const targetEl = e.target as HTMLElement;
 
@@ -1612,6 +1690,11 @@ async function runWebAgentViaRust() {
     const obscuraPath = await store?.get<string>("obscuraPath");
     if (!obscuraPath) throw new Error("Obscura path is not set.");
 
+    // 検索エンジンの設定を取得
+    const searchEngine =
+      (await store?.get<string>("selectedSearchEngine")) || "duckduckgo";
+    const tavilyApiKey = (await store?.get<string>("tavilyApiKey")) || "";
+
     const apiType = aiSettings.apiType || "mistral";
     let baseUrl = "";
     let apiKey = "";
@@ -1701,6 +1784,8 @@ async function runWebAgentViaRust() {
       obscuraPath: obscuraPath,
       systemPrompt: finalSysPrompt,
       prompt: promptString,
+      searchEngine: searchEngine,
+      tavilyApiKey: tavilyApiKey,
       signal: agentAbortController.signal,
     });
 

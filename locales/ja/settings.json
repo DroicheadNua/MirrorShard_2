@@ -194,7 +194,9 @@
     "iconSelect": "選択",
     "iconClear": "クリア",
     "defaultIcon": "(デフォルト)",
-    "obscuraPathLabel": "Obscuraのパス"
+    "obscuraPathLabel": "Obscuraのパス",
+    "tavilyApiKeyLabel": "Tavily APIキー",
+    "enableTavily": "Tavilyで検索する"
   },
   "alerts": {
     "settingsSaveFailed": "設定の保存に失敗しました: {{err}}",

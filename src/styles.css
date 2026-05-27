@@ -461,7 +461,7 @@ body.code-mode .outline-text:hover {
     padding-bottom: 10px;
     border: none;
     color: var(--outline-text-color);
-    max-height: 160px; /* ファイル3つ分程度の高さ */
+    max-height: 210px;
     overflow-y: auto;
     flex-shrink: 0;
 }

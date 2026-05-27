@@ -1,565 +1,591 @@
 /* --- 基本設定 --- */
 html,
 body {
-  margin: 0;
-  padding: 0;
-  height: 100%;
-  overflow: hidden;
+    margin: 0;
+    padding: 0;
+    height: 100%;
+    overflow: hidden;
 
-  background-size: cover;
-  background-position: center;
-  background-repeat: no-repeat;
-  transition: background-color 0.5s ease, background-image 0.5s ease-in-out;
-  border-radius: 6px;
+    background-size: cover;
+    background-position: center;
+    background-repeat: no-repeat;
+    transition:
+        background-color 0.5s ease,
+        background-image 0.5s ease-in-out;
+    border-radius: 6px;
 }
 
 #ai-wrapper {
-  border-radius: 6px;
-  box-sizing: border-box;
-  width: 100%;
-  height: 100%;
-  overflow: hidden;
-  font-family: var(--user-font-family, 'Palatino Linotype', 'Book Antiqua', 'Times New Roman', 'Hiragino Mincho ProN', 'Yu Mincho', 'YuMincho', serif);
-  line-height: 1.5;
-  background-color: var(--window-bg-color, #EAE3D2);
-  color: var(--editor-text-color, black);
+    border-radius: 6px;
+    box-sizing: border-box;
+    width: 100%;
+    height: 100%;
+    overflow: hidden;
+    font-family: var(
+        --user-font-family,
+        "Palatino Linotype",
+        "Book Antiqua",
+        "Times New Roman",
+        "Hiragino Mincho ProN",
+        "Yu Mincho",
+        "YuMincho",
+        serif
+    );
+    line-height: 1.5;
+    background-color: var(--window-bg-color, #eae3d2);
+    color: var(--editor-text-color, black);
 }
 
 body.dark-mode #ai-wrapper {
-  background-color: #000000CC;
-  color: #00ff00;
-  border-radius: 6px;
-  text-shadow:
-    0 0 5px rgba(0, 255, 0, 0.5),
-    /* 内側の、最も強い輝き */
-    0 0 10px rgba(0, 255, 0, 0.4),
-    /* 中間の、拡散する輝き */
-    0 0 20px rgba(0, 255, 0, 0.3);
-  /* 外側の、最も淡い輝き */
+    background-color: #000000cc;
+    color: #00ff00;
+    border-radius: 6px;
+    text-shadow:
+        0 0 5px rgba(0, 255, 0, 0.5),
+        /* 内側の、最も強い輝き */ 0 0 10px rgba(0, 255, 0, 0.4),
+        /* 中間の、拡散する輝き */ 0 0 20px rgba(0, 255, 0, 0.3);
+    /* 外側の、最も淡い輝き */
 }
 
 /* --- タイトルバー --- */
 #title-bar {
-  position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  height: 32px;
-  -webkit-app-region: drag;
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 32px;
+    -webkit-app-region: drag;
 }
 
 .top-right-buttons {
-  position: absolute;
-  top: 12px;
-  right: 12px;
-  -webkit-app-region: no-drag;
+    position: absolute;
+    top: 12px;
+    right: 12px;
+    -webkit-app-region: no-drag;
 }
 
 .top-right-buttons button {
-  background-color: var(--editor-text-color, rgba(0, 0, 0, 0.2));
-  border: 1px solid rgba(255, 255, 255, 0.2);
-  color: white;
-  border-radius: 30%;
-  width: 24px;
-  height: 24px;
-  cursor: pointer;
-  font-size: 12px;
-  text-align: center;
-  -webkit-app-region: no-drag;
-  z-index: 150;
+    background-color: var(--editor-text-color, rgba(0, 0, 0, 0.2));
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    color: white;
+    border-radius: 30%;
+    width: 24px;
+    height: 24px;
+    cursor: pointer;
+    font-size: 12px;
+    text-align: center;
+    -webkit-app-region: no-drag;
+    z-index: 150;
 
-  /* 画像をマスクとして適用 */
-  -webkit-mask-repeat: no-repeat;
-  -webkit-mask-position: top;
-  -webkit-mask-size: 60%;
-  mask-repeat: no-repeat;
-  mask-position: top;
-  mask-size: 60%;
+    /* 画像をマスクとして適用 */
+    -webkit-mask-repeat: no-repeat;
+    -webkit-mask-position: top;
+    -webkit-mask-size: 60%;
+    mask-repeat: no-repeat;
+    mask-position: top;
+    mask-size: 60%;
 }
 
 .top-left-controls {
-  position: absolute;
-  top: 12px;
-  left: 12px;
-  -webkit-app-region: no-drag;
+    position: absolute;
+    top: 12px;
+    left: 12px;
+    -webkit-app-region: no-drag;
 }
 
 /* カスタムドロップダウン */
 .custom-select-wrapper {
-  position: absolute;
-  top: 4px;
-  left: 8px;
-  z-index: 200;
-  -webkit-app-region: no-drag;
-  width: 100px;
+    position: absolute;
+    top: 4px;
+    left: 8px;
+    z-index: 200;
+    -webkit-app-region: no-drag;
+    width: 100px;
+}
+
+.custom-select-wrapper-2 {
+    position: absolute;
+    top: 4px;
+    left: 110px;
+    z-index: 200;
+    -webkit-app-region: no-drag;
+    width: 100px;
 }
 
 .custom-select-trigger {
-  width: 100%;
-  padding: 2px 5px;
-  font-size: 11px;
-  color: var(--ui-text-color, #eee);
-  background: transparent;
-  border: 1px solid var(--ui-text-color, #888);
-  border-radius: 4px;
-  cursor: pointer;
-  text-align: left;
-  position: relative;
+    width: 100%;
+    padding: 2px 5px;
+    font-size: 11px;
+    color: var(--ui-text-color, #eee);
+    background: transparent;
+    border: 1px solid var(--ui-text-color, #888);
+    border-radius: 4px;
+    cursor: pointer;
+    text-align: left;
+    position: relative;
 }
 
 body.dark-mode .custom-select-trigger {
-  color: var(--outline-text-color);
-  border: 1px solid var(--outline-text-color);
+    color: var(--outline-text-color);
+    border: 1px solid var(--outline-text-color);
 }
 
 body.code-mode .custom-select-trigger {
-  color: #7aa2f7;
-  border: 1px solid #7aa2f7;
+    color: #7aa2f7;
+    border: 1px solid #7aa2f7;
 }
 
 /* 矢印アイコン（CSSで描画） */
 .custom-select-trigger::after {
-  content: "▼";
-  font-size: 8px;
-  position: absolute;
-  right: 8px;
-  top: 50%;
-  transform: translateY(-50%);
-  opacity: 0.7;
+    content: "▼";
+    font-size: 8px;
+    position: absolute;
+    right: 8px;
+    top: 50%;
+    transform: translateY(-50%);
+    opacity: 0.7;
 }
 
 /* 展開されるリスト */
 .custom-options {
-  display: none;
-  /* デフォルト非表示 */
-  position: absolute;
-  top: 100%;
-  left: 0;
-  right: 0;
-  background-color: var(--window-bg-color, #1e1e1e);
-  /* テーマ色に合わせる */
-  border: 1px solid var(--ui-text-color, #888);
-  border-top: none;
-  border-radius: 0 0 4px 4px;
-  z-index: 1000;
-  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.5);
-  overflow: hidden;
+    display: none;
+    /* デフォルト非表示 */
+    position: absolute;
+    top: 100%;
+    left: 0;
+    right: 0;
+    background-color: var(--window-bg-color, #1e1e1e);
+    /* テーマ色に合わせる */
+    border: 1px solid var(--ui-text-color, #888);
+    border-top: none;
+    border-radius: 0 0 4px 4px;
+    z-index: 1000;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.5);
+    overflow: hidden;
 }
 
 body.dark-mode .custom-options {
-  background-color: #333;
-  border: 1px solid var(--outline-text-color);
-  border-top: none;
+    background-color: #333;
+    border: 1px solid var(--outline-text-color);
+    border-top: none;
 }
 
 body.code-mode .custom-options {
-  background-color: rgba(26, 27, 38, 0.95);
-  border: 1px solid #7aa2f7;
-  border-top: none;
+    background-color: rgba(26, 27, 38, 0.95);
+    border: 1px solid #7aa2f7;
+    border-top: none;
 }
 
 .custom-options.open {
-  display: block;
+    display: block;
 }
 
 .custom-option {
-  padding: 5px 10px;
-  font-size: 11px;
-  color: var(--ui-text-color, #eee);
-  cursor: pointer;
-  transition: background 0.2s;
+    padding: 5px 10px;
+    font-size: 11px;
+    color: var(--ui-text-color, #eee);
+    cursor: pointer;
+    transition: background 0.2s;
 }
 
 body.dark-mode .custom-option {
-  color: var(--outline-text-color);
+    color: var(--outline-text-color);
 }
 
 body.code-mode .custom-option {
-  color: #7aa2f7;
+    color: #7aa2f7;
 }
 
 .custom-option:hover {
-  background-color: var(--selection-color, rgba(0, 255, 65, 0.2));
-  color: #fff;
+    background-color: var(--selection-color, rgba(0, 255, 65, 0.2));
+    color: #fff;
 }
 
 body.dark-mode .custom-option:hover {
-  background-color: var(--sidebar-hover-bg);
-  color: var(--outline-text-color);
+    background-color: var(--sidebar-hover-bg);
+    color: var(--outline-text-color);
 }
 
 body.code-mode .custom-option:hover {
-  background-color: rgba(81, 92, 126, 0.4);
-  color: #fff;
+    background-color: rgba(81, 92, 126, 0.4);
+    color: #fff;
 }
 
 body.dark-mode .top-right-buttons button {
-  color: #3e3;
-  border: 1px solid rgba(55, 255, 55, 0.3);
-  font-family: 'Courier New', 'Menlo', 'Monaco', 'Consolas', 'BIZ UDGothic', monospace;
-  text-shadow:
-    0 0 5px rgba(0, 255, 0, 0.5),
-    0 0 10px rgba(0, 255, 0, 0.4),
-    0 0 20px rgba(0, 255, 0, 0.3);
+    color: #3e3;
+    border: 1px solid rgba(55, 255, 55, 0.3);
+    font-family:
+        "Courier New", "Menlo", "Monaco", "Consolas", "BIZ UDGothic", monospace;
+    text-shadow:
+        0 0 5px rgba(0, 255, 0, 0.5),
+        0 0 10px rgba(0, 255, 0, 0.4),
+        0 0 20px rgba(0, 255, 0, 0.3);
 }
 
 body.dark-mode .top-right-buttons button {
-  background-color: #3e3;
+    background-color: #3e3;
 }
-
-
 
 /* --- チャットコンテナ --- */
 #chat-container {
-  display: flex;
-  flex-direction: column;
-  height: 100%;
-  box-sizing: border-box;
-  padding-top: 32px;
-  /* タイトルバーの分を空ける */
-  padding-left: 5%;
-  background-color: transparent;
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    box-sizing: border-box;
+    padding-top: 32px;
+    /* タイトルバーの分を空ける */
+    padding-left: 5%;
+    background-color: transparent;
 }
 
 #chat-log {
-  flex-grow: 1;
-  overflow-y: auto;
-  padding: 10px;
+    flex-grow: 1;
+    overflow-y: auto;
+    padding: 10px;
 }
 
 #chat-form {
-  flex-shrink: 0;
-  display: flex;
-  padding: 10px;
-  border-top: 1px solid rgba(0, 0, 0, 0.1);
-  align-items: flex-end;
+    flex-shrink: 0;
+    display: flex;
+    padding: 10px;
+    border-top: 1px solid rgba(0, 0, 0, 0.1);
+    align-items: flex-end;
 }
 
 body.dark-mode #chat-form {
-  border-top: 0px solid rgba(255, 255, 255, 0.1);
+    border-top: 0px solid rgba(255, 255, 255, 0.1);
 }
 
 /* --- 入力エリア --- */
 #message-input {
-  flex-grow: 1;
-  resize: none;
-  border: 1px solid #ccc;
-  border-radius: 8px;
-  padding: 8px;
-  font-family: inherit;
-  font-size: 14px;
-  max-height: 240px;
-  box-sizing: border-box;
-  background-color: var(--editor-bg-color, ivory);
-  border: 1px solid var(--editor-text-color, #ccc);
-  color: var(--editor-text-color, #ccc);
-  line-height: 1.3;
+    flex-grow: 1;
+    resize: none;
+    border: 1px solid #ccc;
+    border-radius: 8px;
+    padding: 8px;
+    font-family: inherit;
+    font-size: 14px;
+    max-height: 240px;
+    box-sizing: border-box;
+    background-color: var(--editor-bg-color, ivory);
+    border: 1px solid var(--editor-text-color, #ccc);
+    color: var(--editor-text-color, #ccc);
+    line-height: 1.3;
 }
 
 #message-input::placeholder {
-  color: var(--editor-text-color, #ccc);
-  opacity: 0.5;
+    color: var(--editor-text-color, #ccc);
+    opacity: 0.5;
 }
 
 #message-input:focus {
-  outline: none;
-  border: 1px solid var(--editor-text-color, #ccc);
+    outline: none;
+    border: 1px solid var(--editor-text-color, #ccc);
 }
 
 body.dark-mode #message-input {
-  background-color: #000;
-  color: #5f5;
-  border: 2px solid #5959;
+    background-color: #000;
+    color: #5f5;
+    border: 2px solid #5959;
 }
 
 #send-btn {
-  height: 40px;
-  width: 60px;
-  flex-shrink: 0;
-  margin-left: 10px;
-  margin-bottom: 5px;
-  padding: 8px 16px;
-  border: none;
-  background: var(--selection-color, linear-gradient(to bottom, #4CAF50, #45a049));
-  color: var(--editor-text-color, white);
-  font-weight: bold;
-  border-radius: 12px;
-  cursor: pointer;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
-  transition: all 0.2s ease;
-  font-family: inherit;
-  vertical-align: middle;
-  -webkit-app-region: no-drag;
+    height: 40px;
+    width: 60px;
+    flex-shrink: 0;
+    margin-left: 10px;
+    margin-bottom: 5px;
+    padding: 8px 16px;
+    border: none;
+    background: var(
+        --selection-color,
+        linear-gradient(to bottom, #4caf50, #45a049)
+    );
+    color: var(--editor-text-color, white);
+    font-weight: bold;
+    border-radius: 12px;
+    cursor: pointer;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+    transition: all 0.2s ease;
+    font-family: inherit;
+    vertical-align: middle;
+    -webkit-app-region: no-drag;
 }
 
 body.dark-mode #send-btn {
-  color: white;
-  background: linear-gradient(#4caf4f46, #45a049d8);
+    color: white;
+    background: linear-gradient(#4caf4f46, #45a049d8);
 }
 
 #sd-link,
 #web-search {
-  height: 20px;
-  width: 60px;
-  flex-shrink: 0;
-  margin-left: 10px;
-  margin-bottom: 5px;
-  padding: 0;
-  border: 1px dotted var(--editor-text-color, white);
-  border-radius: 6px;
-  background: var(--editor-bg-color, linear-gradient(to bottom, #4CAF50, #45a049));
-  color: var(--editor-text-color, white);
-  font-weight: bold;
-  cursor: pointer;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
-  transition: all 0.2s ease;
-  font-family: inherit;
-  vertical-align: middle;
-  -webkit-app-region: no-drag;
-  opacity: 0.3;
-  font-weight: lighter;
+    height: 20px;
+    width: 60px;
+    flex-shrink: 0;
+    margin-left: 10px;
+    margin-bottom: 5px;
+    padding: 0;
+    border: 1px dotted var(--editor-text-color, white);
+    border-radius: 6px;
+    background: var(
+        --editor-bg-color,
+        linear-gradient(to bottom, #4caf50, #45a049)
+    );
+    color: var(--editor-text-color, white);
+    font-weight: bold;
+    cursor: pointer;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+    transition: all 0.2s ease;
+    font-family: inherit;
+    vertical-align: middle;
+    -webkit-app-region: no-drag;
+    opacity: 0.3;
+    font-weight: lighter;
 }
 
 body.dark-mode #sd-link,
 body.dark-mode #web-search {
-  border-color: #5f5;
-  color: #5f5;
-  background: transparent;
+    border-color: #5f5;
+    color: #5f5;
+    background: transparent;
 }
 
 #sd-link.enabled,
 #web-search.enabled {
-  opacity: 1;
-  font-weight: normal;
-  border: 1px solid;
+    opacity: 1;
+    font-weight: normal;
+    border: 1px solid;
 }
-
 
 #chat-log::-webkit-scrollbar,
 .edit-textarea::-webkit-scrollbar,
 .cyber-text::-webkit-scrollbar,
 #message-input::-webkit-scrollbar {
-  height: 16px;
+    height: 16px;
 }
 
 #chat-log::-webkit-scrollbar-track,
 .cyber-text::-webkit-scrollbar-track,
 #message-input::-webkit-scrollbar-track {
-  background: transparent;
+    background: transparent;
 }
 
 #chat-log::-webkit-scrollbar-thumb,
 .cyber-text::-webkit-scrollbar-thumb,
 #message-input::-webkit-scrollbar-thumb {
-  background-color: var(--scrollbar-color, rgba(0, 0, 0, 0.1)) !important;
-  border-radius: 4px;
-  min-width: 40px;
+    background-color: var(--scrollbar-color, rgba(0, 0, 0, 0.1)) !important;
+    border-radius: 4px;
+    min-width: 40px;
 }
 
 #chat-log::-webkit-scrollbar-thumb:hover,
 .cyber-text::-webkit-scrollbar-thumb:hover,
 #message-input::-webkit-scrollbar-thumb:hover {
-  background-color: var(--scrollbar-color, rgba(0, 0, 0, 0.2)) !important;
-  filter: brightness(0.8);
+    background-color: var(--scrollbar-color, rgba(0, 0, 0, 0.2)) !important;
+    filter: brightness(0.8);
 }
 
 body.dark-mode #chat-log::-webkit-scrollbar-thumb,
 body.dark-mode .cyber-text::-webkit-scrollbar-thumb,
 #message-input::-webkit-scrollbar-thumb {
-  background-color: rgba(255, 255, 255, 0.2);
+    background-color: rgba(255, 255, 255, 0.2);
 }
 
 body.dark-mode #message-input:focus {
-  outline: none;
-  border-color: #00ff00;
-  box-shadow:
-    0 0 5px rgba(0, 255, 0, 0.8),
-    0 0 10px rgba(0, 255, 0, 0.6);
-  /* グローエフェクト */
+    outline: none;
+    border-color: #00ff00;
+    box-shadow:
+        0 0 5px rgba(0, 255, 0, 0.8),
+        0 0 10px rgba(0, 255, 0, 0.6);
+    /* グローエフェクト */
 }
 
 body.dark-mode #message-input::placeholder {
-  color: #50ff5090;
+    color: #50ff5090;
 }
 
 #edit-container {
-  background-color: transparent;
+    background-color: transparent;
 }
 
 #edit-container:focus {
-  outline: none;
+    outline: none;
 }
 
 .message-row {
-  display: flex;
-  align-items: flex-start;
-  gap: 10px;
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
 }
 
 .message-row.user {
-  flex-direction: row-reverse;
-  /* DOMの順番を、見た目上だけ逆にする */
+    flex-direction: row-reverse;
+    /* DOMの順番を、見た目上だけ逆にする */
 }
 
 .message-row.user .message-sender {
-  text-align: right;
+    text-align: right;
 }
 
 .avatar-container {
-  display: flex;
-  flex-direction: column;
-  /* ★ アイコンとボタンを縦に並べる */
-  align-items: center;
-  /* ★ 中央揃えにする */
-  width: 64px;
-  /* アイコンの幅に合わせる */
-  flex-shrink: 0;
+    display: flex;
+    flex-direction: column;
+    /* ★ アイコンとボタンを縦に並べる */
+    align-items: center;
+    /* ★ 中央揃えにする */
+    width: 64px;
+    /* アイコンの幅に合わせる */
+    flex-shrink: 0;
 }
 
 .message-icon {
-  width: 48px;
-  height: 48px;
-  border-radius: 50%;
-  object-fit: cover;
+    width: 48px;
+    height: 48px;
+    border-radius: 50%;
+    object-fit: cover;
 }
 
 .message-content {
-  display: flex;
-  flex-direction: column;
+    display: flex;
+    flex-direction: column;
 }
 
 .message-sender {
-  font-size: 0.8em;
-  color: var(--editor-text-color, #333);
-  margin-bottom: 4px;
+    font-size: 0.8em;
+    color: var(--editor-text-color, #333);
+    margin-bottom: 4px;
 }
 
 body.dark-mode .message-sender {
-  font-size: 0.8em;
-  color: #0f0;
-  margin-bottom: 4px;
+    font-size: 0.8em;
+    color: #0f0;
+    margin-bottom: 4px;
 }
 
 /* --- チャットバルーン  --- */
 .message-bubble {
-  /* background-color: #FAF9F5;  */
-  background-color: var(--editor-bg-color, ivory);
-  padding: 2%;
-  border: 1px solid var(--editor-text-color, rgba(0, 0, 0, 0.3));
-  border-radius: 12px;
-  margin-bottom: 10px;
-  max-width: 80%;
-  white-space: pre-wrap;
-  word-break: break-all;
-  min-height: 4em;
-  min-width: 15em;
-  display: block;
+    /* background-color: #FAF9F5;  */
+    background-color: var(--editor-bg-color, ivory);
+    padding: 2%;
+    border: 1px solid var(--editor-text-color, rgba(0, 0, 0, 0.3));
+    border-radius: 12px;
+    margin-bottom: 10px;
+    max-width: 80%;
+    white-space: pre-wrap;
+    word-break: break-all;
+    min-height: 4em;
+    min-width: 15em;
+    display: block;
 }
 
 body.dark-mode .message-bubble {
-  background-color: transparent;
-  border: 2px solid rgba(0, 255, 0, 0.3);
+    background-color: transparent;
+    border: 2px solid rgba(0, 255, 0, 0.3);
 }
 
 .message-actions {
-  display: flex;
-  gap: 8px;
-  margin-top: 8px;
-  /* ★ アイコンとの間の隙間 */
+    display: flex;
+    gap: 8px;
+    margin-top: 8px;
+    /* ★ アイコンとの間の隙間 */
 }
 
 .action-btn {
-  width: 24px;
-  height: 24px;
-  background-color: var(--ui-text-color, transparent);
-  border: 0px;
-  cursor: pointer;
-  -webkit-mask-repeat: no-repeat;
-  -webkit-mask-position: center;
-  -webkit-mask-size: 14px;
-  /* アイコンの実サイズを少し小さくして繊細さを出す */
-  mask-repeat: no-repeat;
-  mask-position: center;
-  mask-size: 14px;
-  opacity: 0.5;
-  transition: opacity 0.2s;
+    width: 24px;
+    height: 24px;
+    background-color: var(--ui-text-color, transparent);
+    border: 0px;
+    cursor: pointer;
+    -webkit-mask-repeat: no-repeat;
+    -webkit-mask-position: center;
+    -webkit-mask-size: 14px;
+    /* アイコンの実サイズを少し小さくして繊細さを出す */
+    mask-repeat: no-repeat;
+    mask-position: center;
+    mask-size: 14px;
+    opacity: 0.5;
+    transition: opacity 0.2s;
 }
 
 body.dark-mode .action-btn {
-  background-color: #0f0;
+    background-color: #0f0;
 }
 
 .action-btn:hover {
-  opacity: 1;
+    opacity: 1;
 }
 
 .cyber-button {
-  background-color: transparent;
-  border-color: var(--editor-text-color, #0005);
-  color: var(--editor-text-color, #0005);
-  border-width: 1px;
-  border-radius: 10px;
-  padding: 5px 10px;
-  cursor: pointer;
-  font-family: 'Courier New', 'Menlo', 'Monaco', 'Consolas', 'BIZ UDGothic', monospace;
-  font-weight: bold;
+    background-color: transparent;
+    border-color: var(--editor-text-color, #0005);
+    color: var(--editor-text-color, #0005);
+    border-width: 1px;
+    border-radius: 10px;
+    padding: 5px 10px;
+    cursor: pointer;
+    font-family:
+        "Courier New", "Menlo", "Monaco", "Consolas", "BIZ UDGothic", monospace;
+    font-weight: bold;
 }
 
 body.dark-mode .cyber-button {
-  color: #00ff00;
-  border-color: #0f00;
+    color: #00ff00;
+    border-color: #0f00;
 }
 
 body.dark-mode .cyber-button:hover {
-  box-shadow: 0 0 5px #00ff00;
+    box-shadow: 0 0 5px #00ff00;
 }
 
 .cyber-text {
-  border-color: #0005;
-  border-width: 1px;
-  border-radius: 5px;
-  padding: 5px 10px;
-  cursor: pointer;
-  font-family: 'Courier New', 'Menlo', 'Monaco', 'Consolas', 'BIZ UDGothic', monospace;
-  font-style: oblique;
-  resize: none;
-  background-color: var(--editor-bg-color, ivory);
-  color: var(--editor-text-color, #333);
-  border: 1px solid var(--editor-text-color, rgba(0, 0, 0, 0.3));
+    border-color: #0005;
+    border-width: 1px;
+    border-radius: 5px;
+    padding: 5px 10px;
+    cursor: pointer;
+    font-family:
+        "Courier New", "Menlo", "Monaco", "Consolas", "BIZ UDGothic", monospace;
+    font-style: oblique;
+    resize: none;
+    background-color: var(--editor-bg-color, ivory);
+    color: var(--editor-text-color, #333);
+    border: 1px solid var(--editor-text-color, rgba(0, 0, 0, 0.3));
 }
 
 body.dark-mode .cyber-text {
-  color: #0f0;
-  background-color: #3339;
-  border-color: #0f09;
+    color: #0f0;
+    background-color: #3339;
+    border-color: #0f09;
 }
 
 .cyber-text:focus {
-  outline: none;
+    outline: none;
 }
 
 /* トースト通知 */
 #notification-container {
-  position: fixed;
-  bottom: 20px;
-  right: 20px;
-  z-index: 10000;
+    position: fixed;
+    bottom: 20px;
+    right: 20px;
+    z-index: 10000;
 }
 
 .toast-notification {
-  background-color: rgba(0, 0, 0, 0.7);
-  color: white;
-  padding: 10px 20px;
-  border-radius: 5px;
-  margin-top: 10px;
-  opacity: 0;
-  transition: opacity 0.5s, transform 0.5s;
-  transform: translateY(20px);
+    background-color: rgba(0, 0, 0, 0.7);
+    color: white;
+    padding: 10px 20px;
+    border-radius: 5px;
+    margin-top: 10px;
+    opacity: 0;
+    transition:
+        opacity 0.5s,
+        transform 0.5s;
+    transform: translateY(20px);
 }
 
 .toast-notification.show {
-  opacity: 1;
-  transform: translateY(0);
+    opacity: 1;
+    transform: translateY(0);
 }
 
 /* カスタムグローエフェクト */
@@ -571,7 +597,7 @@ body.custom-glow .action-btn,
 body.custom-glow button,
 body.custom-glow input,
 body.custom-glow textarea {
-  text-shadow: var(--custom-text-shadow) !important;
+    text-shadow: var(--custom-text-shadow) !important;
 }
 
 /* ついでにドロップダウンも */
@@ -581,58 +607,58 @@ body.custom-glow .custom-option,
 body.custom-glow .cyber-button,
 body.custom-glow .top-right-buttons button,
 body.custom-glow #message-input:focus {
-  text-shadow: var(--custom-text-shadow) !important;
-  box-shadow: var(--custom-text-shadow) !important;
+    text-shadow: var(--custom-text-shadow) !important;
+    box-shadow: var(--custom-text-shadow) !important;
 }
 
 /* 各ボタンのアイコンを、SVGデータとしてCSSに埋め込む */
 .btn-edit {
-  -webkit-mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23333' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z'%3E%3C/path%3E%3C/svg%3E");
-  mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23333' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z'%3E%3C/path%3E%3C/svg%3E");
+    -webkit-mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23333' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z'%3E%3C/path%3E%3C/svg%3E");
+    mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23333' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z'%3E%3C/path%3E%3C/svg%3E");
 }
 
 .btn-delete {
-  -webkit-mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23333' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='3 6 5 6 21 6'%3E%3C/polyline%3E%3Cpath d='M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2'%3E%3C/path%3E%3C/svg%3E");
-  mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23333' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='3 6 5 6 21 6'%3E%3C/polyline%3E%3Cpath d='M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2'%3E%3C/path%3E%3C/svg%3E");
+    -webkit-mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23333' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='3 6 5 6 21 6'%3E%3C/polyline%3E%3Cpath d='M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2'%3E%3C/path%3E%3C/svg%3E");
+    mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23333' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='3 6 5 6 21 6'%3E%3C/polyline%3E%3Cpath d='M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2'%3E%3C/path%3E%3C/svg%3E");
 }
 
 .btn-regenerate {
-  -webkit-mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23333' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='23 4 23 10 17 10'%3E%3C/polyline%3E%3Cpath d='M20.49 15a9 9 0 1 1-2.12-9.36L23 10'%3E%3C/path%3E%3C/svg%3E");
-  mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23333' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='23 4 23 10 17 10'%3E%3C/polyline%3E%3Cpath d='M20.49 15a9 9 0 1 1-2.12-9.36L23 10'%3E%3C/path%3E%3C/svg%3E");
+    -webkit-mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23333' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='23 4 23 10 17 10'%3E%3C/polyline%3E%3Cpath d='M20.49 15a9 9 0 1 1-2.12-9.36L23 10'%3E%3C/path%3E%3C/svg%3E");
+    mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23333' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='23 4 23 10 17 10'%3E%3C/polyline%3E%3Cpath d='M20.49 15a9 9 0 1 1-2.12-9.36L23 10'%3E%3C/path%3E%3C/svg%3E");
 }
 
 .btn-copy {
-  -webkit-mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23333' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Crect x='9' y='9' width='13' height='13' rx='2' ry='2'%3E%3C/rect%3E%3Cpath d='M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1'%3E%3C/path%3E%3C/svg%3E");
-  mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23333' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Crect x='9' y='9' width='13' height='13' rx='2' ry='2'%3E%3C/rect%3E%3Cpath d='M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1'%3E%3C/path%3E%3C/svg%3E");
+    -webkit-mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23333' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Crect x='9' y='9' width='13' height='13' rx='2' ry='2'%3E%3C/rect%3E%3Cpath d='M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1'%3E%3C/path%3E%3C/svg%3E");
+    mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23333' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Crect x='9' y='9' width='13' height='13' rx='2' ry='2'%3E%3C/rect%3E%3Cpath d='M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1'%3E%3C/path%3E%3C/svg%3E");
 }
 
 /* UIボタンのSVGデータ */
 #ai-fullscreen-btn {
-  -webkit-mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3'%3E%3C/path%3E%3C/svg%3E");
-  mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3'%3E%3C/path%3E%3C/svg%3E");
+    -webkit-mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3'%3E%3C/path%3E%3C/svg%3E");
+    mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3'%3E%3C/path%3E%3C/svg%3E");
 }
 
 #ai-close-btn {
-  -webkit-mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cline x1='18' y1='6' x2='6' y2='18'%3E%3C/line%3E%3Cline x1='6' y1='6' x2='18' y2='18'%3E%3C/line%3E%3C/svg%3E");
-  mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cline x1='18' y1='6' x2='6' y2='18'%3E%3C/line%3E%3Cline x1='6' y1='6' x2='18' y2='18'%3E%3C/line%3E%3C/svg%3E");
+    -webkit-mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cline x1='18' y1='6' x2='6' y2='18'%3E%3C/line%3E%3Cline x1='6' y1='6' x2='18' y2='18'%3E%3C/line%3E%3C/svg%3E");
+    mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cline x1='18' y1='6' x2='6' y2='18'%3E%3C/line%3E%3Cline x1='6' y1='6' x2='18' y2='18'%3E%3C/line%3E%3C/svg%3E");
 }
 
 #ai-save-overwrite-btn {
-  -webkit-mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z'%3E%3C/path%3E%3Cpolyline points='17 21 17 13 7 13 7 21'%3E%3C/polyline%3E%3Cpolyline points='7 3 7 8 15 8'%3E%3C/polyline%3E%3C/svg%3E");
-  mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z'%3E%3C/path%3E%3Cpolyline points='17 21 17 13 7 13 7 21'%3E%3C/polyline%3E%3Cpolyline points='7 3 7 8 15 8'%3E%3C/polyline%3E%3C/svg%3E");
+    -webkit-mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z'%3E%3C/path%3E%3Cpolyline points='17 21 17 13 7 13 7 21'%3E%3C/polyline%3E%3Cpolyline points='7 3 7 8 15 8'%3E%3C/polyline%3E%3C/svg%3E");
+    mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z'%3E%3C/path%3E%3Cpolyline points='17 21 17 13 7 13 7 21'%3E%3C/polyline%3E%3Cpolyline points='7 3 7 8 15 8'%3E%3C/polyline%3E%3C/svg%3E");
 }
 
 #ai-save-log-btn {
-  -webkit-mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z'/%3E%3Cpath d='M17 21v-8H7v8'/%3E%3Cpath d='M7 3v5h8'/%3E%3Cline x1='12' y1='13' x2='12' y2='17'/%3E%3Cline x1='10' y1='15' x2='14' y2='15'/%3E%3C/svg%3E");
-  mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z'/%3E%3Cpath d='M17 21v-8H7v8'/%3E%3Cpath d='M7 3v5h8'/%3E%3Cline x1='12' y1='13' x2='12' y2='17'/%3E%3Cline x1='10' y1='15' x2='14' y2='15'/%3E%3C/svg%3E");
+    -webkit-mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z'/%3E%3Cpath d='M17 21v-8H7v8'/%3E%3Cpath d='M7 3v5h8'/%3E%3Cline x1='12' y1='13' x2='12' y2='17'/%3E%3Cline x1='10' y1='15' x2='14' y2='15'/%3E%3C/svg%3E");
+    mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z'/%3E%3Cpath d='M17 21v-8H7v8'/%3E%3Cpath d='M7 3v5h8'/%3E%3Cline x1='12' y1='13' x2='12' y2='17'/%3E%3Cline x1='10' y1='15' x2='14' y2='15'/%3E%3C/svg%3E");
 }
 
 #ai-load-log-btn {
-  -webkit-mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z'%3E%3C/path%3E%3Cline x1='12' y1='11' x2='12' y2='17'%3E%3C/line%3E%3Cline x1='9' y1='14' x2='15' y2='14'%3E%3C/line%3E%3C/svg%3E");
-  mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z'%3E%3C/path%3E%3Cline x1='12' y1='11' x2='12' y2='17'%3E%3C/line%3E%3Cline x1='9' y1='14' x2='15' y2='14'%3E%3C/line%3E%3C/svg%3E");
+    -webkit-mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z'%3E%3C/path%3E%3Cline x1='12' y1='11' x2='12' y2='17'%3E%3C/line%3E%3Cline x1='9' y1='14' x2='15' y2='14'%3E%3C/line%3E%3C/svg%3E");
+    mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z'%3E%3C/path%3E%3Cline x1='12' y1='11' x2='12' y2='17'%3E%3C/line%3E%3Cline x1='9' y1='14' x2='15' y2='14'%3E%3C/line%3E%3C/svg%3E");
 }
 
 #ai-clear-log-btn {
-  -webkit-mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z'%3E%3C/path%3E%3Cpolyline points='14 2 14 8 20 8'%3E%3C/polyline%3E%3C/svg%3E");
-  mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z'%3E%3C/path%3E%3Cpolyline points='14 2 14 8 20 8'%3E%3C/polyline%3E%3C/svg%3E");
+    -webkit-mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z'%3E%3C/path%3E%3Cpolyline points='14 2 14 8 20 8'%3E%3C/polyline%3E%3C/svg%3E");
+    mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z'%3E%3C/path%3E%3Cpolyline points='14 2 14 8 20 8'%3E%3C/polyline%3E%3C/svg%3E");
 }

@@ -171,6 +171,12 @@ async function setupSettings() {
     const obscuraPath = document.querySelector(
       "#obscura-path",
     ) as HTMLInputElement;
+    const tavilyApiKey = document.querySelector(
+      "#tavily-api-key",
+    ) as HTMLInputElement;
+    const enableTavily = document.querySelector(
+      "#enable-tavily",
+    ) as HTMLInputElement;
     const imageAutoSavePath = document.querySelector(
       "#image-auto-save-path",
     ) as HTMLInputElement;
@@ -842,6 +848,9 @@ async function setupSettings() {
     const obscura = (await store.get<string>("obscuraPath")) ?? "";
     if (obscuraPath) obscuraPath.value = obscura;
 
+    const tavily = (await store.get<string>("tavilyApiKey")) ?? "";
+    if (tavilyApiKey) tavilyApiKey.value = tavily;
+
     const imageAutoSave = (await store.get<string>("imageAutoSavePath")) ?? "";
     if (imageAutoSavePath) imageAutoSavePath.value = imageAutoSave;
 
@@ -945,6 +954,7 @@ async function setupSettings() {
       (await store.get<boolean>("enableCerebras")) ?? false;
     enableOpenRouter.checked =
       (await store.get<boolean>("enableOpenRouter")) ?? false;
+    enableTavily.checked = (await store.get<boolean>("enableTavily")) ?? false;
     enableCohere.checked = (await store.get<boolean>("enableCohere")) ?? false;
     enableMistral.checked =
       (await store.get<boolean>("enableMistral")) ?? false;
@@ -1396,6 +1406,7 @@ async function setupSettings() {
         const newSDPath = sdPath.value;
         const newSDModelPath = sdModelPath.value;
         const newObscuraPath = obscuraPath.value;
+        const newTavilyApiKey = tavilyApiKey.value;
         const newImageAutoSavePath = imageAutoSavePath.value;
         const newShellPath = shellPath.value;
         const newTerminalDefaultCwd = terminalDefaultCwd.value;
@@ -1440,6 +1451,7 @@ async function setupSettings() {
         const newEnableGroq = enableGroq.checked;
         const newEnableCerebras = enableCerebras.checked;
         const newEnableOpenRouter = enableOpenRouter.checked;
+        const newEnableTavily = enableTavily.checked;
         const newEnableCohere = enableCohere.checked;
         const newEnableMistral = enableMistral.checked;
         const newEnableMistralAgents = enableMistralAgents.checked;
@@ -1472,6 +1484,7 @@ async function setupSettings() {
         await store.set("sdWebUIPath", newSDPath);
         await store.set("sdModelPath", newSDModelPath);
         await store.set("obscuraPath", newObscuraPath);
+        await store.set("tavilyApiKey", newTavilyApiKey);
         await store.set("imageAutoSavePath", newImageAutoSavePath);
         await store.set("shellPath", newShellPath);
         await store.set("terminalDefaultCwd", newTerminalDefaultCwd);
@@ -1517,6 +1530,7 @@ async function setupSettings() {
         await store.set("enableGroq", newEnableGroq);
         await store.set("enableCerebras", newEnableCerebras);
         await store.set("enableOpenRouter", newEnableOpenRouter);
+        await store.set("enableTavily", newEnableTavily);
         await store.set("enableCohere", newEnableCohere);
         await store.set("enableMistral", newEnableMistral);
         await store.set("enableMistralAgents", newEnableMistralAgents);
@@ -1576,6 +1590,7 @@ async function setupSettings() {
           sdWebUIPath: newSDPath,
           sdModelPath: newSDModelPath,
           obscuraPath: newObscuraPath,
+          tavilyApiKey: newTavilyApiKey,
           imageAutoSavePath: newImageAutoSavePath,
           shellPath: newShellPath,
           terminalDefaultCwd: newTerminalDefaultCwd,
@@ -1595,6 +1610,7 @@ async function setupSettings() {
           enableGroq: newEnableGroq,
           enableCerebras: newEnableCerebras,
           enableOpenRouter: newEnableOpenRouter,
+          enableTavily: newEnableTavily,
           enableCohere: newEnableCohere,
           enableMistral: newEnableMistral,
           enableMistralAgents: newEnableMistralAgents,

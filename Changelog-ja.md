@@ -9,7 +9,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [1.10.0] - 2026-5-XX  
 
 ### Added (新機能)  
-- OpenRouterのサポートを追加  
+- OpenRouterに対応  
+- Tavily APIでの検索に対応。また、検索機能のUIを改良　　
 
 
 ### Changed (変更点)    

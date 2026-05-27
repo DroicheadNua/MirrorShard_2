@@ -7,6 +7,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [1.10.0] - 2026-05-XX
+
+### Added
+    Added native support for OpenRouter.
+
+    Added web search support via Tavily API and redesigned the search feature UI.
+
+### Changed
+    Improved the scrolling behavior in the main editor's side pane and the settings window.
+
+### Fixed
+    Updated the default Gemini preset from gemini-3.1-flash-lite-preview to gemini-3.1-flash-lite (due to the deprecation of the preview model).
+
+    Fixed an issue where the scrollbar in the settings window interfered with window dragging.
+
+    
+
 ## [1.9.0] - 2026-5-6  
 
 ### Added  

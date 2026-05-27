@@ -80,6 +80,8 @@ pub struct WebSearchArgs {
 // 2. ツールの実体
 pub struct WebSearchTool {
     pub obscura_path: String,
+    pub search_engine: String, // "duckduckgo" or "tavily"
+    pub tavily_api_key: String,
 }
 
 // 3. エラー型の定義 (既存のまま)
@@ -116,18 +118,63 @@ impl rig::tool::Tool for WebSearchTool {
     }
 
     async fn call(&self, args: Self::Args) -> Result<Self::Output, Self::Error> {
-        // 1. URLか検索クエリかを判定してベースとなるURLを作る（mut に変更）
-        let mut target_url = if args.query.starts_with("http") {
-            args.query.clone()
+        let query = args.query.clone();
+        let is_url = query.starts_with("http");
+
+        // --- 1. Tavily 検索ルート ---
+        // URL指定ではなく、Tavilyが選ばれていて、キーが設定されている場合のみ実行
+        if !is_url && self.search_engine == "tavily" && !self.tavily_api_key.is_empty() {
+            let client = reqwest::Client::new();
+            let payload = serde_json::json!({
+                "api_key": self.tavily_api_key,
+                "query": &query,
+                "search_depth": "basic",
+                "max_results": 5
+            });
+
+            if let Ok(res) = client
+                .post("https://api.tavily.com/search")
+                .json(&payload)
+                .send()
+                .await
+            {
+                if res.status().is_success() {
+                    if let Ok(json) = res.json::<serde_json::Value>().await {
+                        if let Some(results) = json.get("results").and_then(|r| r.as_array()) {
+                            let mut output = String::new();
+                            for r in results {
+                                let title = r.get("title").and_then(|t| t.as_str()).unwrap_or("");
+                                let content =
+                                    r.get("content").and_then(|c| c.as_str()).unwrap_or("");
+                                output.push_str(&format!(
+                                    "Title: {}\nContent: {}\n\n",
+                                    title, content
+                                ));
+                            }
+                            if !output.is_empty() {
+                                println!("Rig Tool: Executing -> Tavily Search API");
+                                // 既存の文字数制限(4000文字)に合わせて返す
+                                return Ok(output.chars().take(4000).collect());
+                            }
+                        }
+                    }
+                }
+            }
+            // ※ TavilyのAPI呼び出しが失敗した（無料枠切れ、通信エラー等）場合は
+            // そのままエラーを出さずに下のObscura(DuckDuckGo)ルートへフォールバック
+        }
+
+        // --- 2. 従来の Obscura 処理（URL直接指定、DDG選択時、またはTavily失敗時） ---
+        let mut target_url = if is_url {
+            query
         } else {
             // URLエンコードする
-            let encoded = urlencoding::encode(&args.query);
+            let encoded = urlencoding::encode(&query);
             format!("https://html.duckduckgo.com/html/?q={}", encoded)
         };
 
-        // 2. 特定のドメインに対するハック（Reddit対策）
-        // www.reddit.com を old.reddit.com に置換することで
-        // 重いJSを回避
+        // 特定のドメインに対するハック（Reddit対策）
+        // www.reddit.com を old.reddit.com に置換することで重いJSを回避
         if target_url.contains("www.reddit.com") {
             target_url = target_url.replace("www.reddit.com", "old.reddit.com");
         }
@@ -503,8 +550,14 @@ async fn run_web_agent(
     obscura_path: String,
     system_prompt: String,
     prompt: String,
+    search_engine: String,
+    tavily_api_key: String,
 ) -> Result<String, String> {
-    let web_search_tool = WebSearchTool { obscura_path };
+    let web_search_tool = WebSearchTool {
+        obscura_path,
+        search_engine,
+        tavily_api_key,
+    };
     let actual_key = if api_key.is_empty() {
         "sk-local".to_string()
     } else {

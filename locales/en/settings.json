@@ -194,7 +194,9 @@
     "iconSelect": "Select",
     "iconClear": "Clear",
     "defaultIcon": "(Default)",
-    "obscuraPathLabel": "Obscura Path"
+    "obscuraPathLabel": "Obscura Path",
+    "tavilyApiKeyLabel": "Tavily API Key",
+    "enableTavily": "Enable Tavily"
   },
   "alerts": {
     "settingsSaveFailed": "Failed to save settings: {{err}}",

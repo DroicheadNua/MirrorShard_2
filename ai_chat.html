@@ -1,56 +1,115 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
+    <head>
+        <meta charset="UTF-8" />
+        <title data-i18n="aiChat.windowTitle">AI Chat</title>
+        <link rel="stylesheet" href="/src/ai_chat.css" />
+    </head>
 
-<head>
-    <meta charset="UTF-8">
-    <title data-i18n="aiChat.windowTitle">AI Chat</title>
-    <link rel="stylesheet" href="/src/ai_chat.css">
-</head>
+    <body>
+        <div id="ai-wrapper">
+            <!-- タイトルバー -->
+            <div data-tauri-drag-region id="title-bar">
+                <!-- AIセレクタ (ドラッグ除外領域にする) -->
 
-<body>
-    <div id="ai-wrapper">
-        <!-- タイトルバー -->
-        <div data-tauri-drag-region id="title-bar">
-            <!-- 左側にモデル選択を追加 (ドラッグ除外領域にする) -->
+                <div class="custom-select-wrapper">
+                    <button
+                        id="api-selector-trigger"
+                        class="custom-select-trigger"
+                    >
+                        Gemini
+                    </button>
+                    <div id="api-selector-options" class="custom-options"></div>
+                </div>
 
-            <div class="custom-select-wrapper">
-                <button id="api-selector-trigger" class="custom-select-trigger">Gemini</button>
-                <div id="api-selector-options" class="custom-options">
+                <!-- 検索エンジンセレクタ -->
+                <div class="custom-select-wrapper-2 no-drag">
+                    <button
+                        id="search-selector-trigger"
+                        class="custom-select-trigger"
+                    >
+                        DuckDuckGo
+                    </button>
+                    <div
+                        id="search-selector-options"
+                        class="custom-options"
+                    ></div>
+                </div>
+
+                <div class="top-right-buttons">
+                    <button
+                        id="ai-clear-log-btn"
+                        data-i18n-title="aiChat.tooltip.clearLog"
+                        title="Clear log (Ctrl+Shift+C)"
+                    ></button>
+                    <button
+                        id="ai-save-overwrite-btn"
+                        data-i18n-title="aiChat.tooltip.saveOverwrite"
+                        title="Save (Ctrl+S)"
+                    ></button>
+                    <button
+                        id="ai-save-log-btn"
+                        data-i18n-title="aiChat.tooltip.saveAs"
+                        title="Save As..."
+                    ></button>
+                    <button
+                        id="ai-load-log-btn"
+                        data-i18n-title="aiChat.tooltip.load"
+                        title="Load (Ctrl+O)"
+                    ></button>
+                    <!-- 最大化ボタン等はTauriのAPIで実装が必要だが一旦ボタンだけ配置 -->
+                    <button
+                        id="ai-fullscreen-btn"
+                        data-i18n-title="aiChat.tooltip.fullscreen"
+                        title="Maximize (F11)"
+                    ></button>
+                    <button
+                        id="ai-close-btn"
+                        data-i18n-title="aiChat.tooltip.close"
+                        title="Close (Ctrl+Shift+A)"
+                    ></button>
                 </div>
             </div>
 
-
-            <div class="top-right-buttons">
-                <button id="ai-clear-log-btn" data-i18n-title="aiChat.tooltip.clearLog"
-                    title="Clear log (Ctrl+Shift+C)"></button>
-                <button id="ai-save-overwrite-btn" data-i18n-title="aiChat.tooltip.saveOverwrite"
-                    title="Save (Ctrl+S)"></button>
-                <button id="ai-save-log-btn" data-i18n-title="aiChat.tooltip.saveAs" title="Save As..."></button>
-                <button id="ai-load-log-btn" data-i18n-title="aiChat.tooltip.load" title="Load (Ctrl+O)"></button>
-                <!-- 最大化ボタン等はTauriのAPIで実装が必要だが一旦ボタンだけ配置 -->
-                <button id="ai-fullscreen-btn" data-i18n-title="aiChat.tooltip.fullscreen"
-                    title="Maximize (F11)"></button>
-                <button id="ai-close-btn" data-i18n-title="aiChat.tooltip.close" title="Close (Ctrl+Shift+A)"></button>
+            <!-- チャットコンテナ -->
+            <div id="chat-container">
+                <div id="chat-log"></div>
+                <form id="chat-form">
+                    <textarea
+                        id="message-input"
+                        rows="2"
+                        spellcheck="false"
+                        data-i18n-placeholder="aiChat.placeholder"
+                        placeholder="Enter a prompt..."
+                    ></textarea>
+                    <div style="display: flex; flex-direction: column">
+                        <button
+                            id="web-search"
+                            type="button"
+                            data-i18n-title="aiChat.tooltip.webSearch"
+                        >
+                            Search
+                        </button>
+                        <button
+                            id="sd-link"
+                            type="button"
+                            data-i18n-title="aiChat.tooltip.sd-link"
+                        >
+                            SD-Link
+                        </button>
+                        <button
+                            id="send-btn"
+                            type="submit"
+                            data-i18n="aiChat.run"
+                        >
+                            Run
+                        </button>
+                    </div>
+                </form>
             </div>
+
+            <div id="notification-container"></div>
         </div>
-
-        <!-- チャットコンテナ -->
-        <div id="chat-container">
-            <div id="chat-log"></div>
-            <form id="chat-form">
-                <textarea id="message-input" rows="2" spellcheck="false" data-i18n-placeholder="aiChat.placeholder"
-                    placeholder="Enter a prompt..."></textarea>
-                <div style="display: flex;flex-direction: column;">
-                    <button id="web-search" type="button" data-i18n-title="aiChat.tooltip.webSearch">Search</button>
-                    <button id="sd-link" type="button" data-i18n-title="aiChat.tooltip.sd-link">SD-Link</button>
-                    <button id="send-btn" type="submit" data-i18n="aiChat.run">Run</button>
-                </div>
-            </form>
-        </div>
-
-        <div id="notification-container"></div>
-    </div>
-    <script type="module" src="/src/ai_chat_main.ts"></script>
-</body>
-
+        <script type="module" src="/src/ai_chat_main.ts"></script>
+    </body>
 </html>

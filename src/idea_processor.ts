@@ -3203,11 +3203,12 @@ function markAsDirty() {
 // --- デバウンス関数 (連打防止) ---
 function debounce(func: Function, wait: number) {
   let timeout: any;
-  return function (...args: any[]) {
-    // @ts-ignore
-    const context = this;
+
+  // 第一引数に `this: any` を指定することでTSがthisの型を正しく認識するので@ts-ignoreは不要
+  return function (this: any, ...args: any[]) {
     clearTimeout(timeout);
-    timeout = setTimeout(() => func.apply(context, args), wait);
+    // アロー関数内なのでそのままthisを渡せば正常に機能する
+    timeout = setTimeout(() => func.apply(this, args), wait);
   };
 }
 
