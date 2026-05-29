@@ -1,7 +1,7 @@
 {
   "$schema": "https://schema.tauri.app/config/2",
   "productName": "MirrorShard 2",
-  "version": "1.9.0",
+  "version": "1.10.0",
   "identifier": "com.DroicheadNua.mirrorshard2",
   "build": {
     "beforeDevCommand": "pnpm dev",
@@ -35,9 +35,7 @@
       "csp": null,
       "assetProtocol": {
         "enable": true,
-        "scope": [
-          "**"
-        ]
+        "scope": ["**"]
       }
     },
     "macOSPrivateApi": true
@@ -59,22 +57,12 @@
   "bundle": {
     "fileAssociations": [
       {
-        "ext": [
-          "md",
-          "txt"
-        ],
+        "ext": ["md", "txt"],
         "name": "Text Document",
         "role": "Editor"
       },
       {
-        "ext": [
-          "html",
-          "css",
-          "js",
-          "ts",
-          "rs",
-          "py"
-        ],
+        "ext": ["html", "css", "js", "ts", "rs", "py"],
         "name": "Source Code",
         "role": "Editor"
       }
