@@ -19,6 +19,7 @@ MirrorShard intentionally supports AI providers that offer **free API access**, 
 - Mistral  
 - Cohere  
 - Cerebras  
+- OpenRouter
 
 All of these services allow you to obtain API keys and use them **without payment**.
 
@@ -60,6 +61,7 @@ Register for the following services and obtain API keys:
 - Mistral  
 - Cohere  
 - Cerebras
+- OpenRouter
 
 All of them support Google account login and provide free access.
 

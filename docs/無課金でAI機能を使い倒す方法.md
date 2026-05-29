@@ -4,7 +4,7 @@ MirrorShardには多種多様なAI機能が実装されていますが、これ�
 
 ――ですが、MirrorShardのAI機能は、あえて無課金での運用にこだわって設計しています。
 
-MirrorShardが対応しているAPIキーはGoogle・Groq・Mistral・Cohere・Cerebrasの5社のものですが、これらはすべて無課金で取得し、無料で使用することができるものばかりです（※ChatGPTやClaudeに対応していないのはそのため）。
+MirrorShardが対応しているAPIキーはGoogle・Groq・Mistral・Cohere・Cerebras・OpenRouterの6社のものですが、これらはすべて無課金で取得し、無料で使用することができるものばかりです（※ChatGPTやClaudeに対応していないのはそのため）。
 
 もちろん、課金プランに比べればできることの幅は狭くなりますが、実際に使っていただければ、無料枠だけでもかなりのことができるのがわかるかと思います。
 
@@ -18,7 +18,7 @@ MirrorShardが対応しているAPIキーはGoogle・Groq・Mistral・Cohere・C
 
 仮に有料モデルに接続してしまったとしても、エラーメッセージが返ってくるだけです。
 
-2. 作成したアカウントで各AI（Google・Groq・Mistral・Cohere・Cerebras）に登録し、APIキーを取得します。
+2. 作成したアカウントで各AI（Google・Groq・Mistral・Cohere・Cerebras・OpenRouter）に登録し、APIキーを取得します。
 
 これらのAIはすべてGoogleアカウントで登録することができ、無課金でもAPIキーを取得することができます。詳細な手順や各社の特徴については、ai-guide-ja.mdの「AIの導入方法」をご覧ください。
 

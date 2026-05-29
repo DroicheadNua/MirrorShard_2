@@ -34,6 +34,7 @@ Additionally:
   * Cohere
   * Mistral
   * Cerebras
+  * OpenRouter
 
 * Local AI:
 
@@ -85,6 +86,19 @@ Known for ultra-high-speed inference (up to thousands of tokens/sec).
 1. Log in and open **API Keys**
 2. Copy the default key
 3. Paste into MirrorShard
+
+---
+
+## OpenRouter
+
+OpenRouter is a cloud AI service that provides access to various AI models.
+
+1. Log in to [https://openrouter.ai/](https://openrouter.ai/)
+2. Go to **Keys** and click **Create API Key**.
+   - You can name the key anything you like.
+   - If you are on the free tier, leave the **Credit Limit** blank. As long as you do not add credits to your account, you will not be charged.
+3. Copy your key
+4. Paste into MirrorShard
 
 ---
 
@@ -262,6 +276,17 @@ You can simply say:
 * Not supported: Cohere, Cerebras
 * Mistral Large unstable
 * Local models may struggle
+
+By default, the web agent uses DuckDuckGo for search. However, you can achieve much higher search accuracy by using Tavily.
+
+#### Tavily
+
+Tavily is a web search engine optimized for AI agents. It offers 1,000 free requests per month.
+
+1. Sign up at [https://tavily.com/](https://tavily.com/).
+2. Copy the automatically generated "default" API key.
+3. Open MirrorShard Settings, go to the **AI Settings** tab, paste the key into the **Tavily API Key** field, and check the "Enable Tavily Search" box.
+4. Select "Tavily" from the search engine selector in the upper-left corner of the AI chat window.
 
 ---
 

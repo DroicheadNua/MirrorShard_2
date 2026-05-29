@@ -245,7 +245,7 @@ F2キー、または画面上部の歯車アイコンを押すことにより、
 ◯Groq API Key……GroqのAPIキーをここに入力することにより、Groqとの会話が可能になります。  
 ◯Groqを有効にする……AIセレクタにGroqを表示するかどうかを設定します。  
 ◯Groq Model……Groqのモデルを指定します。使用するモデルと料金プランによっては課金が発生する場合がありますのでご注意ください。  
-※Cerebras・Cohere・Mistralの設定項目もGroqと同様です。ただしMistralには以下の項目があります。  
+※Cerebras・Cohere・Mistral・OpenRouterの設定項目もGroqと同様です。ただしMistralには以下の項目があります。  
 ◯Mistral Agent ID……Mistral AgentのIDを指定します。Mistralでの画像生成を行う場合に必要です。  
 ◯Mistral Agentsを有効にする……Mistral Agentsを有効にします。  
 

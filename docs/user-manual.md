@@ -655,7 +655,7 @@ In addition, you can create, save, and delete your own custom themes.
 
    ※ Depending on the model and pricing plan, usage fees may apply
 
-※ Cerebras, Cohere and Mistral settings are similar to Groq
+※ Cerebras, OpenRouter, Cohere and Mistral settings are similar to Groq
 
 * **Mistral Agent ID**
 	Specifies the ID of the Mistral Agent. Required for image generation with Mistral.

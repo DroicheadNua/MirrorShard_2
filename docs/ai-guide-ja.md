@@ -19,7 +19,7 @@ Obscura（Rust製のヘッドレスブラウザ）をインストールしてい
 
 # 使用できるAI
 
-・Google Gemini・Groq・Cohere・Mistral・Cerebrasの5種類のクラウドAI（要APIキー）  
+・Google Gemini・Groq・Cohere・Mistral・Cerebras・OpenRouterの5種類のクラウドAI（要APIキー）  
 ・ローカルAI（LM Studio、OllamaなどのローカルAI実行環境が必要）  
 
 # 目次  
@@ -65,6 +65,18 @@ CerebrasはアメリカのAI企業で、AIの学習と推論に特化した独�
 2. API keysタブを開くと、すでにDefault Keyが作成されていますので、コピーボタンを押してクリップボードにコピーします。  
 3. MirrorShardの設定:  
 　・設定ウィンドウで「AI設定」タブを選択し、「Cerebras API Key」欄にコピーしたAPIキーを貼り付けてください。  
+
+## OpenRouterの場合  
+OpenRouterは、様々なAIモデルを提供するクラウドAIサービスです。  
+
+1. 公式サイト
+https://openrouter.ai  
+にアクセスし、画面右上のSign inボタンを押して、Googleアカウントなどでログインします。
+2. Create API Keyボタン、あるいは右上のKeysからAPIキーを作成します。  
+Nameは自分のわかりやすい名前にし、Credit limitには金額の上限を記入します。Creditsメニューからクレジットを追加しない限り課金されませんので、無課金の場合は空欄でOKです。
+3. 作成したAPIキーをコピーします。一度しか表示されないので注意してください。
+4. MirrorShardの設定:  
+　・設定ウィンドウで「AI設定」タブを選択し、「OpenRouter API Key」欄にAPIキーを貼り付けてください。  
 
 ## Cohereの場合  
 Cohereはカナダのスタートアップ企業で、自然言語処理に優れたAIモデルを展開しています。  
@@ -170,6 +182,7 @@ MirrorShardは多様なAIに対応しており、用途によって使い分け�
 ・高精度な回答が欲しい　→　Gemini  
 ・高速な応答が欲しい　→　Groq・Cerebras  
 ・学習データが英語圏に偏っていないAIがいい　→　Mistral  
+・いろいろなAIを試してみたい → OpenRouter  
 ・データを学習されたくない、企業製AIの厳しいポリシーから自由になりたい　→　ローカルLLM  
 　……など。
 
@@ -323,6 +336,18 @@ Stable Diffusionを使用すれば、任意のAIで画像生成が可能にな�
 2. MirrorShardの設定ウィンドウで「AI設定」タブを開き、Obscuraのパスを入力します。
 3. AIチャットウィンドウで「Search」ボタンを有効にします。
 4. AIに検索を指示すると、AIがObscuraを起動してWeb検索を開始します。
+標準ではDuckDuckgoによる検索を行うようになっていますが、Tavily（後述）を使用することで、より高精度の検索を行うことができます。  
+
+#### Tavily
+
+Tavilyは、AIにWeb検索をさせるためのサービスです。月に1000リクエストまで無料で利用できます。  
+Tavilyを使用して検索する場合は、APIキーの取得が必要になります。  
+
+1. [Tavilyのサイト](https://tavily.com/)にアクセスし、右上のSign Upからアカウントを作成します。  
+2. アカウントを作成すると、自動で「default」という名前のAPIキーが生成されますので、そのキーをコピーします。
+3. MirrorShardの設定画面を開き、「AI設定」タブの「Tavily APIキー」に貼り付け、「Tavilyで検索する」のチェックボックスをオンにします。
+
+上記の手順を行うことで、AIチャットウィンドウの左上にある検索エンジンセレクタに「Tavily」のメニューが表示されます。
 
 #### 検索機能の注意事項
 
