@@ -7,7 +7,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
-## [1.10.0] - 2026-05-XX
+## [1.10.0] - 2026-05-30
 
 ### Added
     Added native support for OpenRouter.
