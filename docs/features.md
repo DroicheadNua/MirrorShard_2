@@ -72,7 +72,7 @@ A minimal, distraction-free editor designed for immersive writing.
   Focus entirely on your text.
 
 * **Spotlight Mode**
-  Highlight only the current paragraph.
+  Highlight only the current outline level.
 
 * **Integrated AI Writing**
   Continue writing from the cursor or fill missing parts of your text.
