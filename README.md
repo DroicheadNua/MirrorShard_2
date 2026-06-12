@@ -1,5 +1,15 @@
 [日本語](README-ja.md) | **English**
 
+<details>
+<summary><b>⚠️ [Windows] Important Notice: Missing first keystroke during IME input (Click to expand)</b></summary>
+
+**[EN]**
+Since the Windows Update (KB5094126) released around June 10, 2026, a silent update to Edge WebView2 has caused a rendering bug. Users typing in languages that require an IME (Japanese, Chinese, Korean, etc.) may experience an issue where the first keystroke of a full-width space or composition is ignored. 
+This is an OS-side bug. To bypass it, please download the `MirrorShard_2.bat` workaround script from the **[Latest Release page](https://github.com/DroicheadNua/MirrorShard_2/releases/latest)** and follow the instructions provided in the release notes to use a stable WebView2 runtime.
+
+</details>
+<br>
+
 # MirrorShard 2
 
 **MirrorShard — An Open-Source AI-Powered Integrated Writing Environment**
@@ -142,4 +152,5 @@ MIT License
 
 Copyright (c) 2025–2026 DroicheadNua
 Email: [mirrorshard.dev@gmail.com](mailto:mirrorshard.dev@gmail.com)
+X: @mirrorshard_dev
 GitHub: https://github.com/DroicheadNua/MirrorShard_2

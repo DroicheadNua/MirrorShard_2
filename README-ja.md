@@ -1,5 +1,15 @@
 **日本語** | [English](README.md)
 
+<details>
+<summary><b>⚠️ [Windows] 重要なお知らせ：IME入力の不具合と回避策 (Click to expand)</b></summary>
+
+**[JA]**
+日本時間2026年6月10日のWindows Update（KB5094126）以降、WebView2ランタイムの自動更新により、日本語などIMEを使用する環境において、全角スペースや未確定入力の1回目の打鍵が無効化されるOS側のレンダリング不具合が発生しています。
+これはOS側のバグですが、一時的な回避策を用意しました。**[最新リリースページ](https://github.com/DroicheadNua/MirrorShard_2/releases/latest)** に添付されている `MirrorShard_2.bat` をダウンロードし、リリースノートの手順に従って古いランタイムを読み込ませることで、正常に執筆いただけます。
+
+</details>
+<br>
+
 # MirrorShard 2
 
 ![MirrorShard_2 Key Visual](screenshots/ScreenShot01.jpg)
@@ -146,3 +156,8 @@ https://droicheadnua.github.io/MirrorShard-Official/
 MIT License
 
 ---
+
+　Copyright (c) 2025-2026 [DroicheadNua]  
+　mirrorshard.dev@gmail.com  
+ X: @mirrorshard_dev  
+　https://github.com/DroicheadNua/MirrorShard_2

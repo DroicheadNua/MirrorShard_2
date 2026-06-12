@@ -17,6 +17,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Fixed (修正点)   
 - OpenRouterのプリセットを変更（DeepSeekのFree版がなくなったため。DeepSeek→openrouter/free）  
 
+### Other
+
+- X (Twitter) アカウントを開設しました（@mirrorshard_dev）  
+
 
 ## [1.10.0] - 2026-5-30  
 
