@@ -7,8 +7,12 @@ body {
     overflow-x: hidden;
     word-wrap: break-word;
     background-color: transparent;
-    font-family: "Palatino Linotype", "Book Antiqua", Palatino, "Times New Roman", "Hiragino Mincho ProN", "Yu Mincho", "YuMincho", serif;
+    font-family:
+        "Palatino Linotype", "Book Antiqua", Palatino, "Times New Roman",
+        "Hiragino Mincho ProN", "Yu Mincho", "YuMincho", serif;
     border-radius: 6px;
+    font-feature-settings: "vert" 1;
+    -webkit-font-feature-settings: "vert" 1;
 }
 
 #preview-wrapper {
@@ -126,16 +130,16 @@ body.dark-mode #paper-area::-webkit-scrollbar-thumb:hover {
 body.dark-mode {
     background-color: #333333;
     /* 背景色 */
-    color: #DDDDDD;
+    color: #dddddd;
     /* 文字色 */
 }
 
 body.dark-mode #paper-area {
-    color: #DDDDDD;
+    color: #dddddd;
 }
 
 body.dark-mode #content {
-    color: #DDDDDD;
+    color: #dddddd;
 }
 
 body.dark-mode .preview-controls button {
@@ -193,7 +197,9 @@ body.dark-mode .preview-controls button:hover {
     display: block;
     font-size: 13px;
     cursor: pointer;
-    font-family: "Verdana", "Arial", "Helvetica", "Hiragino Sans", "BIZ UDPGothic", "Yu Gothic", "Meiryo", sans-serif;
+    font-family:
+        "Verdana", "Arial", "Helvetica", "Hiragino Sans", "BIZ UDPGothic",
+        "Yu Gothic", "Meiryo", sans-serif;
     text-align: left;
 }
 
@@ -213,7 +219,7 @@ body.dark-mode .dropdown-content {
 }
 
 body.dark-mode .dropdown-item {
-    color: #DDDDDD;
+    color: #dddddd;
 }
 
 body.dark-mode .dropdown-item:hover {
@@ -251,13 +257,15 @@ body.dark-mode .dropdown-content hr {
     border-radius: 8px;
     width: 300px;
     box-shadow: 0 10px 25px rgba(0, 0, 0, 0.5);
-    font-family: "Verdana", "Arial", "Helvetica", "Hiragino Sans", "BIZ UDPGothic", "Yu Gothic", "Meiryo", sans-serif;
+    font-family:
+        "Verdana", "Arial", "Helvetica", "Hiragino Sans", "BIZ UDPGothic",
+        "Yu Gothic", "Meiryo", sans-serif;
     color: #333;
 }
 
 body.dark-mode .modal-content {
     background-color: #222;
-    border: 1px solid #00FF41;
+    border: 1px solid #00ff41;
     color: #eee;
     box-shadow: 0 0 15px rgba(0, 255, 65, 0.2);
 }
@@ -310,7 +318,7 @@ body.dark-mode .modal-content h3 {
 body.dark-mode .modal-buttons button.primary {
     background-color: #006400;
     /* Dark Green */
-    border: 1px solid #00FF41;
+    border: 1px solid #00ff41;
 }
 
 /* ピン留めアイコン */

@@ -1,10 +1,11 @@
 @charset "UTF-8";
 html {
-  writing-mode: vertical-rl;
-  -webkit-writing-mode: vertical-rl;
-
+    writing-mode: vertical-rl;
+    -webkit-writing-mode: vertical-rl;
 }
 body {
-  font-family: serif-ja, serif;
-  font-size: 1rem; /* ptやpxより、相対的なremがEPUBには適している */
+    font-family: serif-ja, serif;
+    font-size: 1rem; /* ptやpxより、相対的なremがEPUBには適している */
+    font-feature-settings: "vert" 1;
+    -webkit-font-feature-settings: "vert" 1;
 }

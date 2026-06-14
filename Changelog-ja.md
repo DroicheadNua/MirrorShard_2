@@ -16,6 +16,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed (修正点)   
 - OpenRouterのプリセットを変更（DeepSeekやGLMのFree版がなくなったため）  
+- Linux版の縦書きプレビューで日本語約物が横向きになっていた不具合を修正
 
 ### Other
 
