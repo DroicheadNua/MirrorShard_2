@@ -11,8 +11,12 @@ body {
         "Palatino Linotype", "Book Antiqua", Palatino, "Times New Roman",
         "Hiragino Mincho ProN", "Yu Mincho", "YuMincho", serif;
     border-radius: 6px;
-    font-feature-settings: "vert" 1;
-    -webkit-font-feature-settings: "vert" 1;
+}
+
+/* Linux専用の約物回転処理 */
+body.is-linux {
+    font-feature-settings: "vert" 1 !important;
+    -webkit-font-feature-settings: "vert" 1 !important;
 }
 
 #preview-wrapper {

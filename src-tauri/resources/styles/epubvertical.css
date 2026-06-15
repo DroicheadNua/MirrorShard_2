@@ -6,6 +6,4 @@ html {
 body {
     font-family: serif-ja, serif;
     font-size: 1rem; /* ptやpxより、相対的なremがEPUBには適している */
-    font-feature-settings: "vert" 1;
-    -webkit-font-feature-settings: "vert" 1;
 }

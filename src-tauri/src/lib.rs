@@ -1408,6 +1408,39 @@ fn apply_ruby_to_docx(file_path: &str) -> Result<(), String> {
     Ok(())
 }
 
+// Linux限定のEPUB出力用動的CSSパッチ（約物の回転処理）
+fn prepare_css_for_pandoc(app: &AppHandle, original_resource_path: &str) -> Result<String, String> {
+    // 1. まず元のCSSファイルの絶対パスを解決する
+    let resolved_path = resolve_resource_path(app, original_resource_path)?;
+
+    // 2. コンパイル・実行環境が Linux のときだけ一時ファイルを生成してパッチを当てる
+    #[cfg(target_os = "linux")]
+    {
+        // 元のCSSファイルを読み込む
+        if let Ok(content) = fs::read_to_string(&resolved_path) {
+            let mut patched_content = content;
+            // 縦書きの記号回転用パッチを末尾に追記
+            patched_content.push_str("\nbody { font-feature-settings: \"vert\" 1 !important; -webkit-font-feature-settings: \"vert\" 1 !important; }\n");
+
+            // 一時フォルダ（Temp）に、元のファイル名と同じ一時ファイルを書き出す
+            let temp_dir = std::env::temp_dir();
+            let filename = Path::new(original_resource_path)
+                .file_name()
+                .unwrap_or_default()
+                .to_string_lossy();
+            let temp_css_path = temp_dir.join(format!("temp_{}", filename));
+
+            if fs::write(&temp_css_path, patched_content).is_ok() {
+                // パッチが当たった一時ファイルのパスを返す
+                return Ok(temp_css_path.to_string_lossy().to_string());
+            }
+        }
+    }
+
+    // Windows や Mac（またはフォールバック）では元のファイルを無改造のまま直接返す
+    Ok(resolved_path)
+}
+
 #[tauri::command]
 async fn export_with_pandoc(
     app: AppHandle,
@@ -1457,10 +1490,9 @@ async fn export_with_pandoc(
         "epub" => {
             cmd.arg("-o").arg(&output_path);
             if is_vertical {
-                cmd.arg("--css").arg(resolve_resource_path(
-                    &app,
-                    "resources/styles/epubvertical.css",
-                )?);
+                let css_path = prepare_css_for_pandoc(&app, "resources/styles/epubvertical.css")?;
+                cmd.arg("--css").arg(css_path);
+
                 cmd.arg("--metadata").arg("page-progression-direction=rtl");
             }
 
