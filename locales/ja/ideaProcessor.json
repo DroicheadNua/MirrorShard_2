@@ -43,7 +43,13 @@
     "notTemplateRoot": "親グループがテンプレートのルートとして設定されていません。",
     "greimasNotSupported": "行為者モデルは構造設計用であり、自動テキスト補完には対応していません。",
     "cannotModifyCoreLink": "テンプレートのコアリンクは変更できません。",
-    "selectNodeToExpand": "AIで拡張するノードを1つ選択してください。"
+    "selectNodeToExpand": "AIで拡張するノードを1つ選択してください。",
+    "invalidResponse": "AIから有効な応答が得られませんでした。",
+    "geminiAPIError": "Gemini API Key が設定されていません。",
+    "cohereAPIError": "Cohere API Key が設定されていません。",
+    "parseFailed": "パース可能なアイデアがありませんでした。",
+    "elementFormat": "【要素 {{index}}: {{title}}】",
+    "fallbackTitle": "要素 {{index}}"
   },
   "dialog": {
     "unsavedChanges": {

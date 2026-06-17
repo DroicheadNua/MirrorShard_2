@@ -43,7 +43,13 @@
     "notTemplateRoot": "Parent group is not set as template root.",
     "greimasNotSupported": "The Actantial model is for structural design and does not support automatic text completion.",
     "cannotModifyCoreLink": "Cannot modify the template's core links.",
-    "selectNodeToExpand": "Please select 1 node to expand with AI."
+    "selectNodeToExpand": "Please select 1 node to expand with AI.",
+    "invalidResponse": "Could not obtain a valid response from the AI.",
+    "geminiAPIError": "Gemini API Key is not configured.",
+    "cohereAPIError": "Cohere API Key is not configured.",
+    "parseFailed": "No parsable ideas were found.",
+    "elementFormat": "[Element {{index}}: {{title}}]",
+    "fallbackTitle": "Element {{index}}"
   },
   "dialog": {
     "unsavedChanges": {

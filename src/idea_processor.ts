@@ -4164,7 +4164,7 @@ async function triggerFreeAssociation() {
       const model =
         (await store.get<string>("geminiModel")) || "gemini-3.1-flash-lite";
       console.log(`Loaded:${model}`);
-      if (!apiKey) throw new Error("Gemini API Key が設定されていません。");
+      if (!apiKey) throw new Error(t("ideaProcessor.ai.geminiAPIError"));
 
       const response = await fetch(
         `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`,
@@ -4186,7 +4186,7 @@ async function triggerFreeAssociation() {
       const apiKey = (await store.get<string>("cohereApiKey")) || "";
       const model =
         (await store.get<string>("cohereModel")) || "command-r-plus-08-2024";
-      if (!apiKey) throw new Error("Cohere API Key が設定されていません。");
+      if (!apiKey) throw new Error(t("ideaProcessor.ai.cohereAPIError"));
 
       resultText = await fetchCohereV2(
         apiKey,
@@ -4243,7 +4243,7 @@ async function triggerFreeAssociation() {
       );
     }
 
-    if (!resultText) throw new Error("AIから有効な応答が得られませんでした。");
+    if (!resultText) throw new Error(t("ideaProcessor.ai.invalidResponse"));
 
     // --- 結果のパースとアニメーション生成 ---
     const ideas = resultText
@@ -4251,8 +4251,7 @@ async function triggerFreeAssociation() {
       .map((line) => line.replace(/^[-・*1-9.\s]+/, "").trim())
       .filter((idea) => idea !== "");
 
-    if (ideas.length === 0)
-      throw new Error("パース可能なアイデアがありませんでした。");
+    if (ideas.length === 0) throw new Error(t("ideaProcessor.ai.parseFailed"));
     const newNodes: Konva.Group[] = [];
     const startPos = selectedNode.position();
     const bgRect = selectedNode.findOne<Konva.Rect>(".background");
@@ -4481,7 +4480,7 @@ async function triggerTemplateCompletion() {
       const apiKey = await store.get<string>("geminiApiKey");
       const model =
         (await store.get<string>("geminiModel")) || "gemini-1.5-flash";
-      if (!apiKey) throw new Error("Gemini API Key が設定されていません。");
+      if (!apiKey) throw new Error(t("ideaProcessor.ai.geminiAPIError"));
 
       const response = await fetch(
         `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`,
@@ -4503,7 +4502,7 @@ async function triggerTemplateCompletion() {
       const apiKey = (await store.get<string>("cohereApiKey")) || "";
       const model =
         (await store.get<string>("cohereModel")) || "command-r-plus-08-2024";
-      if (!apiKey) throw new Error("Cohere API Key が設定されていません。");
+      if (!apiKey) throw new Error(t("ideaProcessor.ai.cohereAPIError"));
 
       resultText = await fetchCohereV2(
         apiKey,
@@ -4559,7 +4558,7 @@ async function triggerTemplateCompletion() {
       );
     }
 
-    if (!resultText) throw new Error("AIから有効な応答が得られませんでした。");
+    if (!resultText) throw new Error(t("ideaProcessor.ai.invalidResponse"));
 
     // --- 6. 結果をテキストエリアに挿入 ---
     const newText =
@@ -4791,9 +4790,22 @@ async function triggerNodeAlchemy() {
 
     // テキスト収集
     const textNode = node.findOne<Konva.Text>(".text");
-    const title = textNode ? textNode.text() : `要素 ${index + 1}`;
+
+    // タイトルが空なら "要素 N" または "Element N" にする
+    const fallbackTitle = t("ideaProcessor.ai.fallbackTitle", {
+      index: String(index + 1),
+    });
+    const title = textNode ? textNode.text() : fallbackTitle;
+
     const content = node.getAttr("contentText") || "";
-    combinedContext += `【要素 ${index + 1}: ${title}】\n${content}\n\n`;
+
+    // 辞書からフォーマットを呼び出し
+    const elementHeader = t("ideaProcessor.ai.elementFormat", {
+      index: String(index + 1),
+      title: title,
+    });
+
+    combinedContext += `${elementHeader}\n${content}\n\n`;
   });
 
   // 割り算して平均値（最終的な出現座標）を決定
@@ -4844,7 +4856,7 @@ async function triggerNodeAlchemy() {
       const apiKey = await store.get<string>("geminiApiKey");
       const model =
         (await store.get<string>("geminiModel")) || "gemini-3.1-flash-lite";
-      if (!apiKey) throw new Error("Gemini API Key が設定されていません。");
+      if (!apiKey) throw new Error(t("ideaProcessor.ai.geminiAPIError"));
       const response = await fetch(
         `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`,
         {
@@ -4865,7 +4877,7 @@ async function triggerNodeAlchemy() {
       const apiKey = (await store.get<string>("cohereApiKey")) || "";
       const model =
         (await store.get<string>("cohereModel")) || "command-r-plus-08-2024";
-      if (!apiKey) throw new Error("Cohere API Key が設定されていません。");
+      if (!apiKey) throw new Error(t("ideaProcessor.ai.cohereAPIError"));
 
       resultText = await fetchCohereV2(
         apiKey,
@@ -4920,7 +4932,7 @@ async function triggerNodeAlchemy() {
       );
     }
 
-    if (!resultText) throw new Error("AIから有効な応答が得られませんでした。");
+    if (!resultText) throw new Error(t("ideaProcessor.ai.invalidResponse"));
 
     // --- 5. アニメーション付きでノードを生成 ---
     const isTruncated = resultText.length > 50 || resultText.includes("\n");
@@ -5187,7 +5199,7 @@ async function triggerIpMissingLink() {
       const apiKey = await store.get<string>("geminiApiKey");
       const model =
         (await store.get<string>("geminiModel")) || "gemini-3.1-flash-lite";
-      if (!apiKey) throw new Error("Gemini API Key が設定されていません。");
+      if (!apiKey) throw new Error(t("ideaProcessor.ai.geminiAPIError"));
       const response = await fetch(
         `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`,
         {
@@ -5208,7 +5220,7 @@ async function triggerIpMissingLink() {
       const apiKey = (await store.get<string>("cohereApiKey")) || "";
       const model =
         (await store.get<string>("cohereModel")) || "command-r-plus-08-2024";
-      if (!apiKey) throw new Error("Cohere API Key が設定されていません。");
+      if (!apiKey) throw new Error(t("ideaProcessor.ai.cohereAPIError"));
 
       resultText = await fetchCohereV2(
         apiKey,
@@ -5263,7 +5275,7 @@ async function triggerIpMissingLink() {
       );
     }
 
-    if (!resultText) throw new Error("AIから有効な応答が得られませんでした。");
+    if (!resultText) throw new Error(t("ideaProcessor.ai.invalidResponse"));
 
     // 7. アニメーション付きでノードを挿入し、リンクを引き直す
     const isTruncated = resultText.length > 50 || resultText.includes("\n");
