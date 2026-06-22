@@ -3,9 +3,22 @@
 <details>
 <summary><b>⚠️ [Windows] Important Notice: Missing first keystroke during IME input (Click to expand)</b></summary>
 
-**[EN]**
-Since the Windows Update (KB5094126) released around June 10, 2026, a silent update to Edge WebView2 has caused a rendering bug. Users typing in languages that require an IME (Japanese, Chinese, Korean, etc.) may experience an issue where the first keystroke of a full-width space or composition is ignored. 
-This is an OS-side bug. To bypass it, please download the `MirrorShard_2.bat` workaround script from the **[Latest Release page](https://github.com/DroicheadNua/MirrorShard_2/releases/latest)** and follow the instructions provided in the release notes to use a stable WebView2 runtime.
+**[Windows] Known Issue: Missing first keystroke during IME input**
+On Windows, users typing in languages that require an IME (Japanese, Chinese, etc.) may experience an issue where the first keystroke of a full-width space or composition is ignored. 
+This is an OS-side rendering bug caused by a conflict between a recent WebView2 update and certain graphics drivers (especially NVIDIA).
+
+Please try the following solutions:
+
+**Solution 1: Update Graphics Drivers (Recommended)**
+Update your NVIDIA or other graphics drivers to the latest version and restart your PC. In most cases, this completely resolves the issue.
+
+**Solution 2: Use an Older WebView2 Runtime (If Solution 1 fails)**
+If you cannot update your drivers or the issue persists, you can bypass the bug by forcing the app to run with an older, stable version of WebView2:
+1. Download `MirrorShard_2.bat` attached to this release.
+2. Go to the [Microsoft WebView2 Page](https://developer.microsoft.com/microsoft-edge/webview2/) and scroll to the bottom. Under **Fixed Version**, download version `148.0.3967.96` (Choose **x64** for most PCs, or **ARM64** for Surface/ARM devices).
+3. Extract the `.cab` file and rename the extracted folder to `webview2_fixed`.
+4. Place both `MirrorShard_2.bat` and the `webview2_fixed` folder in the same directory as the app's `.exe`.
+5. Double-click `MirrorShard_2.bat` to launch the app using the bug-free runtime.
 
 </details>
 <br>
