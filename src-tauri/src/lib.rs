@@ -219,6 +219,22 @@ impl rig::tool::Tool for WebSearchTool {
 
 // --- Tauriコマンドの定義 ---
 
+// 任意のテキストファイルを読み込み、UTF-8文字列として返すコマンド
+#[tauri::command]
+async fn read_local_file_content(path: String) -> Result<String, String> {
+    let bytes = fs::read(&path).map_err(|e| format!("File read error: {}", e))?;
+
+    // 1. まずUTF-8としてのデコードを試みる
+    if let Ok(utf8_str) = String::from_utf8(bytes.clone()) {
+        return Ok(utf8_str);
+    }
+
+    // 2. UTF-8で失敗した場合（Shift-JISなどの場合）は、encoding_rsで救済デコード
+    use encoding_rs::SHIFT_JIS;
+    let (cow, _encoding_used, _had_errors) = SHIFT_JIS.decode(&bytes);
+    Ok(cow.into_owned())
+}
+
 #[tauri::command]
 async fn open_sd_server(
     app: tauri::AppHandle,
@@ -2255,6 +2271,7 @@ pub fn run() {
             generate_image_cpp,
             abort_image_cpp,
             open_sd_server,
+            read_local_file_content,
         ])
         .on_window_event(|window, event| match event {
             // 1. メインウィンドウの終了確認
