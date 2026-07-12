@@ -6,9 +6,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 
-## [1.11.0] - 2026-6-XX  
+## [1.11.0] - 2026-7-XX  
 
 ### Added (新機能)  
+- shell.nix を追加し、NixOSでのビルドに対応。詳細はlinux-support.mdを参照  
 
 
 ### Changed (変更点)    

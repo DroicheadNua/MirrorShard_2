@@ -7,6 +7,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [1.11.0] - 2026-07-XX
+
+### Added
+- Added `shell.nix` to support native builds on NixOS. (See `docs/linux-support.md` for details.)
+
+### Changed
+
+
+### Fixed
+- Updated OpenRouter presets (due to the discontinuation of the free tiers for DeepSeek and GLM).
+- Fixed an issue in the Linux vertical writing preview where Japanese punctuation was occasionally rendered horizontally.
+- Fixed an issue where some error messages and UI elements in the Idea Processor were not properly internationalized (i18n).
+
+### Other
+- Launched official X (Twitter) account: @mirrorshard_dev
+
+
+
 ## [1.10.0] - 2026-05-30
 
 ### Added
