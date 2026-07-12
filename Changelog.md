@@ -13,7 +13,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Added `shell.nix` to support native builds on NixOS. (See `docs/linux-support.md` for details.)
 
 ### Changed
-
+- Added terminal glow effects
 
 ### Fixed
 - Updated OpenRouter presets (due to the discontinuation of the free tiers for DeepSeek and GLM).

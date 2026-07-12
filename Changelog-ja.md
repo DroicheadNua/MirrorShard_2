@@ -13,7 +13,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 
 ### Changed (変更点)    
- 
+- ターミナルにグローエフェクトを追加  
 
 ### Fixed (修正点)   
 - OpenRouterのプリセットを変更（DeepSeekやGLMのFree版がなくなったため）  
