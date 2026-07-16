@@ -81,26 +81,34 @@ pnpm tauri build
     *   OSの制限により、音楽データをすべてメモリ上に展開して再生します。そのため、**BGM使用時はメモリ消費量が増加します。**  
     *   特にRaspberry Pi等の低スペック環境でメモリ不足を感じる場合は、BGMをオフにすることをお勧めします。
 
+
+
 ## NixOS 環境でのビルドと実行 (NixOS Support)
 
 NixOS（およびWaylandデスクトップ環境）で MirrorShard 2 を開発・ビルド・実行するための詳細な手順と、NixOS特有の制限を回避するためのトラブルシューティングです。
 
-### 1. 開発環境の起動 (nix-shell)
+### 1. 開発およびビルド環境の起動 (nix develop)
 
-NixOSではシステム全体を汚すことなく、リポジトリルートに配置されている `shell.nix` を使って、必要な依存関係（Node.js, pnpm, Rust, WebKitGTK, GStreamer, glib-networking 等）がロードされた仮想開発環境を起動できます。
+NixOSではシステム設定を一切変更することなく、リポジトリルートに配置されている `flake.nix` を使って、必要な依存関係（Node.js, pnpm, Rust, WebKitGTK, GStreamer, glib-networking, GTK/GSettingsスキーマ 等）がすべてロードされた仮想開発環境を起動できます。
 
 ターミナルでリポジトリのルートに入り、以下を実行します。
 
-nix-shell
+```bash
+# flake.nix をGitの追跡対象にしたうえで、開発シェルを起動します
+git add flake.nix
+nix develop
+```
 
 初回のみ、起動したシェル内で以下のコマンドを実行して Rust の stable ツールチェーンを有効化し、パスを通してください。
 
+```bash
 rustup default stable
 export PATH="$HOME/.cargo/bin:$PATH"
-
-環境が整ったら、通常通り依存パッケージのインストールとビルド（または開発起動）が行えます。
-
 ```
+
+環境が整ったら、このシェル内で通常通り依存パッケージのインストールとビルドが行えます。
+
+```bash
 # 依存パッケージのインストール
 pnpm install
 
@@ -111,40 +119,58 @@ pnpm tauri dev
 pnpm tauri build
 ```
 
-2. トラブルシューティング（NixOS特有の不具合と回避策）
-① AppImageビルド時に linuxdeploy が /usr/bin/xdg-open の不在でクラッシュする場合
+---
 
-NixOSには標準の /usr/bin などのFHSディレクトリ構造が存在しないため、TauriのAppImageビルダーがエラーを吐くことがあります。
-これを回避するために、/etc/nixos/configuration.nix に以下を追記してシステムを再構築（rebuild）してください。
+### 2. システムへのクリーンな導入 (nix build)
 
+NixOS上でビルドした生バイナリを、開発シェルの外（デスクトップランチャー、ショートカットキー、あるいは素のターミナル）からそのまま起動すると、NixOSのファイルシステム隔離仕様により、GTKテーマやシステムフォントの情報（GSettingsスキーマ）、および必要な暗号化ライブラリがアプリに引き渡されず、レイアウト崩壊やAPI接続エラーの原因になります。
+
+これを解決するため、NixOS環境向けに全ての必要な依存パスを安全に埋め込んだ**「ラッパー実行ファイル」**を、以下の手順でビルドして利用します。
+
+```bash
+# 1. 開発シェル内で「pnpm tauri build」を完了させておく
+# 2. 開発シェルを出た通常のターミナルで、実体パスを指定してビルドを実行する
+nix build path:.
+```
+
+ビルドが完了すると、プロジェクトルートに `./result` というディレクトリ（シンボリックリンク）が出現します。この中のバイナリは、システム環境に依存せず、**遅延ゼロで瞬時に、かつ崩れずに起動する完全な自律パッケージ**です。
+
+システム上のランチャー（`.desktop`）からシームレスに起動できるようにするため、`~/.local/share/applications/mirrorshard2.desktop` を以下の記述で作成・編集してください。
+
+```desktop
+[Desktop Entry]
+Type=Application
+Name=MirrorShard 2
+# nix build で生成されたラッピング済みのバイナリへの絶対パスを指定します
+Exec=/absolute/path/to/MirrorShard_2/result/bin/mirrorshard2 %F
+Icon=/absolute/path/to/MirrorShard_2/src-tauri/icons/128x128.png
+Terminal=false
+Categories=Utility;
+MimeType=text/plain;
+```
+*Note: `/absolute/path/to/...` の部分は、ご自身の環境における実際の絶対パスに置き換えてください。*
+
+---
+
+### 3. トラブルシューティング（NixOS特有の不具合と回避策）
+
+#### ① AppImageビルド時に linuxdeploy が `/usr/bin/xdg-open` の不在でクラッシュする場合
+
+NixOSには標準の `/usr/bin` などのFHSディレクトリ構造が存在しないため、TauriのAppImageビルダー（linuxdeploy）がエラーを吐くことがあります。
+これを回避するために、`/etc/nixos/configuration.nix` に以下を追記してシステムを再構築（rebuild）してください。
+
+```nix
 services.envfs.enable = true;
-
-② アプリ内のAIチャットや各種通信が TypeError: Load failed で失敗する場合
-
-NixOSのサンドボックス環境では、WebKitGTK（ブラウザエンジン）が暗号化通信に必要な glib-networking モジュールやSSL証明書を見失い、HTTPS接続（SSLハンドシェイク）が強制切断されるバグ（Tauri v2 Issue #11647）があります。
-
-これをシステム全体（GUIセッション全体）で完全に解決するため、/etc/nixos/configuration.nix に以下の environment.extraInit の設定を追加し、システムを再構築したあとに一度再起動（またはログアウト・ログイン）してください。
-
-```
-# システム起動時（ログイン時）に環境変数を安全にマージしてエクスポートする設定
-environment.extraInit = ''
-  # GIOモジュール（dconf等）を維持したまま、末尾にglib-networkingのパスを追加する
-  export GIO_EXTRA_MODULES=$GIO_EXTRA_MODULES:${pkgs.glib-networking}/lib/gio/modules
-
-  # SSL/HTTPS接続の証明書の場所をシステム全体に教える
-  export SSL_CERT_FILE=/etc/ssl/certs/ca-bundle.crt
-  export NIX_SSL_CERT_FILE=/etc/ssl/certs/ca-bundle.crt
-
-  # GStreamerの音声デコーダー（タイプ音・BGM用）をシステム全体で有効化
-  export GST_PLUGIN_SYSTEM_PATH_1_0="${pkgs.gst_all_1.gstreamer.out}/lib/gstreamer-1.0:${pkgs.gst_all_1.gst-plugins-base}/lib/gstreamer-1.0:${pkgs.gst_all_1.gst-plugins-good}/lib/gstreamer-1.0:${pkgs.gst_all_1.gst-plugins-bad}/lib/gstreamer-1.0"
-'';
 ```
 
-③ 仮想環境下（VirtualBoxやUTM等）における描画の崩壊・リサイズ・ポップアップメニューの不具合
+#### ② 仮想環境下（VirtualBoxやUTM等）や一部のNvidia+Wayland環境におけるウィンドウの不整合・描画崩れ
 
-Wayland環境下の一部の仮想GPUドライバーにおいて、WebKitGTKの描画やウィンドウ配置に不整合が発生する場合は、X11互換レイヤー（Xwayland）を強制することで解決します。
-src-tauri/src/lib.rs 内で、以下の設定のコメントアウトを解除して再ビルドを行ってください。
+Wayland環境下の一部の仮想GPUや、Nvidia環境におけるWebKitGTKの描画やウィンドウ配置に不整合が発生する場合は、X11互換レイヤー（Xwayland）を強制することで完全に解決します。
 
+`src-tauri/src/lib.rs` 内で、以下の設定のコメントアウトを解除して再ビルドを行ってください。
+
+```rust
 std::env::set_var("GDK_BACKEND", "x11");
+```
 
-※KDE Plasma 6などの成熟したWaylandデスクトップであれば、X11強制（Xwayland）の状態であっても、ウィンドウ端をつまんでのリサイズやポップアップメニューの表示は完全に正常動作します。
+※X11強制（Xwayland）の状態で起動しても、現代のWaylandデスクトップ環境下（KDE PlasmaやNiriなど）であればリサイズやポップアップメニューを含め、完全に正常動作します。

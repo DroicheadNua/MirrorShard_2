@@ -24,3 +24,7 @@ lerna-debug.log*
 *.njsproj
 *.sln
 *.sw?
+
+# Nix build outputs
+result
+result*

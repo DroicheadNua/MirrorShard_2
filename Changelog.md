@@ -10,10 +10,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [1.11.0] - 2026-07-XX
 
 ### Added
-- Added `shell.nix` to support native builds on NixOS. (See `docs/linux-support.md` for details.)
+- Added `flake.nix` and `shell.nix` to support native builds on NixOS. (See `docs/linux-support.md` for details.)
 
 ### Changed
 - Added terminal glow effects
+- To work around an issue in certain environments, such as NixOS, the API key input field has been changed from <input type="password"> to a method using -webkit-text-security: disc; 
 
 ### Fixed
 - Updated OpenRouter presets (due to the discontinuation of the free tiers for DeepSeek and GLM).
