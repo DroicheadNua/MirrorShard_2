@@ -944,9 +944,9 @@ async function setupSettings() {
     groqModelInput.value =
       (await store.get<string>("groqModel")) || "llama-3.3-70b-versatile";
     cerebrasModelInput.value =
-      (await store.get<string>("cerebrasModel")) || "llama3.1-8b";
+      (await store.get<string>("cerebrasModel")) || "gemma-4-31b";
     openRouterModelInput.value =
-      (await store.get<string>("openRouterModel")) || "openrouter/owl-alpha";
+      (await store.get<string>("openRouterModel")) || "nvidia/nemotron-3-nano-omni-30b-a3b-reasoning:free";
     cohereModelInput.value = (await store.get<string>("cohereModel")) || "";
     mistralModelInput.value = (await store.get<string>("mistralModel")) || "";
     enableGroq.checked = (await store.get<boolean>("enableGroq")) ?? false;

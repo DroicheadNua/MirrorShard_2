@@ -101,11 +101,11 @@ export class AiChat {
       } else if (apiType === "cerebras") {
         url = "https://api.cerebras.ai/v1/chat/completions";
         apiKey = this.currentSettings.cerebrasApiKey || "";
-        model = this.currentSettings.cerebrasModel || "llama3.1-8b";
+        model = this.currentSettings.cerebrasModel || "gemma-4-31b";
       } else if (apiType === "openrouter") {
         url = "https://openrouter.ai/api/v1/chat/completions";
         apiKey = this.currentSettings.openRouterApiKey || "";
-        model = this.currentSettings.openRouterModel || "openrouter/owl-alpha";
+        model = this.currentSettings.openRouterModel || "nvidia/nemotron-3-nano-omni-30b-a3b-reasoning:free";
       } else if (apiType === "mistral") {
         // スイッチがON かつ IDがある場合のみ Agent モード判定
         const isAgentActive =

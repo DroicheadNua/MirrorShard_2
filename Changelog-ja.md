@@ -15,9 +15,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Changed (変更点)    
 - ターミナルにグローエフェクトを追加  
 - NixOSなど一部環境での不具合回避のため、APIキー入力欄を<input type="password">から-webkit-text-security: disc;を用いた方式に変更  
+- OpenRouter・Gemini・Groq・Cerebrasのプリセットを変更  
 
 ### Fixed (修正点)   
-- OpenRouterのプリセットを変更（DeepSeekやGLMのFree版がなくなったため）  
 - Linux版の縦書きプレビューで日本語約物が横向きになっていた不具合を修正  
 - アイデアプロセッサのエラーメッセージ等がi18n対応になっていなかった不具合を修正  
 

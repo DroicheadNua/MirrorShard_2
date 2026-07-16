@@ -4209,13 +4209,13 @@ async function triggerFreeAssociation() {
       } else if (ipAiApi === "cerebras") {
         url = "https://api.cerebras.ai/v1/chat/completions";
         apiKey = (await store.get<string>("cerebrasApiKey")) || "";
-        model = (await store.get<string>("cerebrasModel")) || "llama3.1-8b";
+        model = (await store.get<string>("cerebrasModel")) || "gemma-4-31b";
       } else if (ipAiApi === "openrouter") {
         url = "https://openrouter.ai/api/v1/chat/completions";
         apiKey = (await store.get<string>("openRouterApiKey")) || "";
         model =
           (await store.get<string>("openRouterModel")) ||
-          "openrouter/owl-alpha";
+          "nvidia/nemotron-3-nano-omni-30b-a3b-reasoning:free";
       } else if (ipAiApi === "mistral") {
         url = "https://api.mistral.ai/v1/chat/completions";
         apiKey = (await store.get<string>("mistralApiKey")) || "";
@@ -4524,13 +4524,13 @@ async function triggerTemplateCompletion() {
       } else if (ipAiApi === "cerebras") {
         url = "https://api.cerebras.ai/v1/chat/completions";
         apiKey = (await store.get<string>("cerebrasApiKey")) || "";
-        model = (await store.get<string>("cerebrasModel")) || "llama3.1-8b";
+        model = (await store.get<string>("cerebrasModel")) || "gemma-4-31b";
       } else if (ipAiApi === "openrouter") {
         url = "https://openrouter.ai/api/v1/chat/completions";
         apiKey = (await store.get<string>("openRouterApiKey")) || "";
         model =
           (await store.get<string>("openRouterModel")) ||
-          "openrouter/owl-alpha";
+          "nvidia/nemotron-3-nano-omni-30b-a3b-reasoning:free";
       } else if (ipAiApi === "mistral") {
         url = "https://api.mistral.ai/v1/chat/completions";
         apiKey = (await store.get<string>("mistralApiKey")) || "";
@@ -4899,13 +4899,13 @@ async function triggerNodeAlchemy() {
       } else if (ipAiApi === "cerebras") {
         url = "https://api.cerebras.ai/v1/chat/completions";
         apiKey = (await store.get<string>("cerebrasApiKey")) || "";
-        model = (await store.get<string>("cerebrasModel")) || "llama3.1-8b";
+        model = (await store.get<string>("cerebrasModel")) || "gemma-4-31b";
       } else if (ipAiApi === "openrouter") {
         url = "https://openrouter.ai/api/v1/chat/completions";
         apiKey = (await store.get<string>("openRouterApiKey")) || "";
         model =
           (await store.get<string>("openRouterModel")) ||
-          "openrouter/owl-alpha";
+          "nvidia/nemotron-3-nano-omni-30b-a3b-reasoning:free";
       } else if (ipAiApi === "mistral") {
         url = "https://api.mistral.ai/v1/chat/completions";
         apiKey = (await store.get<string>("mistralApiKey")) || "";
@@ -5242,13 +5242,13 @@ async function triggerIpMissingLink() {
       } else if (ipAiApi === "cerebras") {
         url = "https://api.cerebras.ai/v1/chat/completions";
         apiKey = (await store.get<string>("cerebrasApiKey")) || "";
-        model = (await store.get<string>("cerebrasModel")) || "llama3.1-8b";
+        model = (await store.get<string>("cerebrasModel")) || "gemma-4-31b";
       } else if (ipAiApi === "openrouter") {
         url = "https://openrouter.ai/api/v1/chat/completions";
         apiKey = (await store.get<string>("openRouterApiKey")) || "";
         model =
           (await store.get<string>("openRouterModel")) ||
-          "openrouter/owl-alpha";
+          "nvidia/nemotron-3-nano-omni-30b-a3b-reasoning:free";
       } else if (ipAiApi === "mistral") {
         url = "https://api.mistral.ai/v1/chat/completions";
         apiKey = (await store.get<string>("mistralApiKey")) || "";

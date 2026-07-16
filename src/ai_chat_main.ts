@@ -1709,12 +1709,12 @@ async function runWebAgentViaRust() {
     } else if (apiType === "cerebras") {
       baseUrl = "https://api.cerebras.ai/v1";
       apiKey = (await store?.get<string>("cerebrasApiKey")) || "";
-      model = (await store?.get<string>("cerebrasModel")) || "llama3.1-8b";
+      model = (await store?.get<string>("cerebrasModel")) || "gemma-4-31b";
     } else if (apiType === "openrouter") {
       baseUrl = "https://openrouter.ai/api/v1";
       apiKey = (await store?.get<string>("openRouterApiKey")) || "";
       model =
-        (await store?.get<string>("openRouterModel")) || "openrouter/owl-alpha";
+        (await store?.get<string>("openRouterModel")) || "nvidia/nemotron-3-nano-omni-30b-a3b-reasoning:free";
     } else if (apiType === "mistral") {
       baseUrl = "https://api.mistral.ai/v1";
       apiKey = (await store?.get<string>("mistralApiKey")) || "";

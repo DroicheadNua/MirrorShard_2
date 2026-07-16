@@ -15,9 +15,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Changed
 - Added terminal glow effects
 - To work around an issue in certain environments, such as NixOS, the API key input field has been changed from <input type="password"> to a method using -webkit-text-security: disc; 
+- Updated OpenRouter/Gemini/Groq/Cerebras presets.
 
 ### Fixed
-- Updated OpenRouter presets (due to the discontinuation of the free tiers for DeepSeek and GLM).
 - Fixed an issue in the Linux vertical writing preview where Japanese punctuation was occasionally rendered horizontally.
 - Fixed an issue where some error messages and UI elements in the Idea Processor were not properly internationalized (i18n).
 
