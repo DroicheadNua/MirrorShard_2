@@ -16,10 +16,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Added terminal glow effects
 - To work around an issue in certain environments, such as NixOS, the API key input field has been changed from <input type="password"> to a method using -webkit-text-security: disc; 
 - Updated OpenRouter/Gemini/Groq/Cerebras presets.
+- Change the background of the vertical text preview (in Light Mode) on the Linux version to sepia
 
 ### Fixed
 - Fixed an issue in the Linux vertical writing preview where Japanese punctuation was occasionally rendered horizontally.
 - Fixed an issue where some error messages and UI elements in the Idea Processor were not properly internationalized (i18n).
+- Fixed a bug where the input fields in the Tavily API were not masked.
 
 ### Other
 - Launched official X (Twitter) account: @mirrorshard_dev

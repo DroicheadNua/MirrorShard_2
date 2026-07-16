@@ -72,21 +72,31 @@
 
           # ソースのルートが「release」ディレクトリになったため、直接そこからコピー
           installPhase = ''
-            mkdir -p $out/bin
+                      # 1. 本物のバイナリとリソースを、名前を変えずに $out/lib/mirrorshard2/ 以下に退避させる
+                      mkdir -p $out/lib/mirrorshard2
+                      mkdir -p $out/bin
 
-            if [ -f mirrorshard2 ]; then
-              cp mirrorshard2 $out/bin/.mirrorshard2-wrapped
-            else
-              echo "Error: Run 'pnpm tauri build' first!"
-              exit 1
-            fi
+                      if [ -f mirrorshard2 ]; then
+                        # ドットを付けず、正規の名前「mirrorshard2」のままコピー
+                        cp mirrorshard2 $out/lib/mirrorshard2/mirrorshard2
 
-            makeWrapper $out/bin/.mirrorshard2-wrapped $out/bin/mirrorshard2 \
-              --prefix LD_LIBRARY_PATH : "${pkgs.lib.makeLibraryPath runtimeDeps}" \
-              --prefix GIO_EXTRA_MODULES : "${pkgs.glib-networking}/lib/gio/modules" \
-              --prefix GST_PLUGIN_SYSTEM_PATH_1_0 : "${pkgs.gst_all_1.gstreamer.out}/lib/gstreamer-1.0:${pkgs.gst_all_1.gst-plugins-base}/lib/gstreamer-1.0:${pkgs.gst_all_1.gst-plugins-good}/lib/gstreamer-1.0:${pkgs.gst_all_1.gst-plugins-bad}/lib/gstreamer-1.0" \
-              --prefix XDG_DATA_DIRS : "${pkgs.gsettings-desktop-schemas}/share/gsettings-schemas/${pkgs.gsettings-desktop-schemas.name}:${pkgs.gtk3}/share/gsettings-schemas/${pkgs.gtk3.name}"
-          '';
+                        # そのすぐ隣（同階層）に resources フォルダを配置
+                        if [ -d resources ]; then
+                          cp -r resources $out/lib/mirrorshard2/
+                        fi
+                      else
+                        echo "Error: Run 'pnpm tauri build' first!"
+                        exit 1
+                      fi
+
+                      # 2. $out/bin/mirrorshard2 をラッパースクリプトとし、
+                      #    上記で退避させた本物のバイナリ（$out/lib/mirrorshard2/mirrorshard2）を環境変数付きで呼び出す
+                      makeWrapper $out/lib/mirrorshard2/mirrorshard2 $out/bin/mirrorshard2 \
+                        --prefix LD_LIBRARY_PATH : "${pkgs.lib.makeLibraryPath runtimeDeps}" \
+                        --prefix GIO_EXTRA_MODULES : "${pkgs.glib-networking}/lib/gio/modules" \
+                        --prefix GST_PLUGIN_SYSTEM_PATH_1_0 : "${pkgs.gst_all_1.gstreamer.out}/lib/gstreamer-1.0:${pkgs.gst_all_1.gst-plugins-base}/lib/gstreamer-1.0:${pkgs.gst_all_1.gst-plugins-good}/lib/gstreamer-1.0:${pkgs.gst_all_1.gst-plugins-bad}/lib/gstreamer-1.0" \
+                        --prefix XDG_DATA_DIRS : "${pkgs.gsettings-desktop-schemas}/share/gsettings-schemas/${pkgs.gsettings-desktop-schemas.name}:${pkgs.gtk3}/share/gsettings-schemas/${pkgs.gtk3.name}"
+                    '';
         };
       }
     );

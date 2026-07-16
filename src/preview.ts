@@ -72,23 +72,34 @@ async function initPreview() {
       document.body.classList.toggle("dark-mode", isDarkMode);
 
       // 2. 背景画像設定
-      if (wrapper) {
-        if (isDarkMode) {
-          wrapper.style.backgroundImage = "none";
-        } else {
-          try {
-            const resourcePath = await resolveResource(
-              "resources/img/default_bg.jpg",
-            );
-            const url = convertFileSrc(resourcePath);
-            wrapper.style.backgroundImage = `url(${url})`;
-          } catch (e) {
-            console.error(e);
-          }
-          // ユーザーが設定したカスタム背景をプレビューにも反映させたい場合は
-          // メインウィンドウから imageUrl を payload で送る
-        }
-      }
+            if (wrapper) {
+              if (isDarkMode) {
+                wrapper.style.backgroundImage = "none";
+              } else {
+                // OSタイプを判定
+                const osType = await type();
+
+                if (osType === "linux") {
+                  // 【Linux環境特有のフォールバック】
+                  // パス解決の不整合を避け、最初から目に優しいセピアの単色背景を適用
+                  wrapper.style.backgroundImage = "none";
+                  wrapper.style.backgroundColor = "#eae3d2";
+                } else {
+                  // 【その他のOS（Windows/Mac）用の標準背景画像読み込み処理】
+                  try {
+                    const resourcePath = await resolveResource(
+                      "resources/img/default_bg.jpg",
+                    );
+                    const url = convertFileSrc(resourcePath);
+                    wrapper.style.backgroundImage = `url(${url})`;
+                  } catch (e) {
+                    console.error(e);
+                  }
+                }
+                // ユーザーが設定したカスタム背景をプレビューにも反映させたい場合は
+                // メインウィンドウから imageUrl を payload で送る
+              }
+            }
     }
 
     if (text !== undefined && contentDiv && paperArea) {

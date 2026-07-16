@@ -29,6 +29,8 @@ Starting with version 1.8.0, SillyTavern (Ctrl+Shift+J) and OpenCode (Ctrl+Shift
 
 However, unlike the Windows and macOS versions, which run in a dedicated window (WebView), the Linux version launches in the default browser.
 
+Also, for the Linux version, the background of the vertical text preview (in Light Mode) is a solid sepia color rather than the standard background image (since it may not load properly depending on the environment).  
+
 ---
 
 ## Known Issues
@@ -199,3 +201,12 @@ std::env::set_var("GDK_BACKEND", "x11");
 ```
 
 *Note: Forcing X11 (Xwayland) will still function correctly under modern Wayland environments (such as KDE Plasma or Niri), including window resizing and popup positioning.*
+
+#### ③ Limitations of Default Backgrounds and BGM in NixOS
+
+In isolated filesystem environments like NixOS (Nix store), the application may fail to resolve the default paths for the standard background images and BGM files at startup.
+
+* **Vertical Preview Background**:
+  To prevent rendering inconsistencies, the default vertical preview background is automatically set to an eye-friendly "sepia color (#eae3d2)" on Linux.
+* **If you wish to use the default BGM or backgrounds**:
+  You can still use them by manually browsing and loading the actual files from the application's resources directory within the Nix store (e.g., `/nix/store/...-mirrorshard2/bin/resources/`) using the file picker in the settings menu.
