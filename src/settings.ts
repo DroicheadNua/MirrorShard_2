@@ -291,7 +291,7 @@ async function setupSettings() {
       "#cerebras-model-preset",
     ) as HTMLSelectElement;
     const openRouterModelPresetSelect = document.querySelector(
-      "#open-router-model-preset",
+      "#openrouter-model-preset",
     ) as HTMLSelectElement;
     const cohereModelPresetSelect = document.querySelector(
       "#cohere-model-preset",

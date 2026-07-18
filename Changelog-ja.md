@@ -6,7 +6,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 
-## [1.11.0] - 2026-7-XX  
+## [1.11.0] - 2026-7-19  
 
 ### Added (新機能)  
 - flake.nixおよびshell.nix を追加し、NixOSでのビルドに対応。詳細はlinux-support-ja.mdを参照  
@@ -22,6 +22,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Linux版の縦書きプレビューで日本語約物が横向きになっていた不具合を修正  
 - アイデアプロセッサのエラーメッセージ等がi18n対応になっていなかった不具合を修正  
 - Tavily APIの入力欄がマスクされていなかった不具合を修正  
+- Linux（RPM）パッケージが、Fedora等のRedHat系システムで依存関係エラーによりインストール・起動できなかった不具合を修正（ビルド環境をFedora純正に移行）  
+- 配布バイナリに英語版のChangelogが添付されていなかったので追加  
 
 ### Other
 

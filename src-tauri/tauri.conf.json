@@ -81,6 +81,7 @@
       "../README.md",
       "../README-ja.md",
       "../Changelog-ja.md",
+      "../Changelog.md",
       "resources/**/*"
     ],
     "windows": {
