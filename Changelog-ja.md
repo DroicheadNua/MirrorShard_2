@@ -6,6 +6,21 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 
+## [1.12.0] - 2026-7-XX  
+
+### Added (新機能)  
+
+
+### Changed (変更点)    
+
+
+### Fixed (修正点)   
+- OpenRouterのプリセット表示の不具合を修正  
+ 
+
+### Other
+
+
 ## [1.11.0] - 2026-7-19  
 
 ### Added (新機能)  

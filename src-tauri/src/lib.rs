@@ -9,6 +9,7 @@ use regex::Regex;
 use rig::client::{CompletionClient, ProviderClient};
 use rig::completion::Prompt;
 use serde::Serialize;
+use serde_json::Value;
 use std::collections::HashMap;
 use std::fs;
 use std::fs::File;
@@ -214,6 +215,95 @@ impl rig::tool::Tool for WebSearchTool {
             let err_raw = String::from_utf8_lossy(&output.stderr).to_string();
             Ok(format!("Error during fetching: {}", err_raw)) // AIにエラーを伝えてリトライさせる
         }
+    }
+}
+
+// ==========================================
+// Niri関連のユーティリティ関数
+// ==========================================
+
+// Niri環境かどうかの判定
+fn is_niri() -> bool {
+    std::env::var("NIRI_SOCKET").is_ok()
+}
+
+// Niri専用のサイズ保存パスを取得
+fn get_niri_state_path(app: &AppHandle) -> std::path::PathBuf {
+    // ~/.config/com.droicheadnua.mirrorshard2/niri-window-state.json などのパスになる
+    app.path()
+        .app_config_dir()
+        .unwrap()
+        .join("niri-window-state.json")
+}
+
+// JSONから前回サイズを読み込む
+fn load_niri_size(app: &AppHandle) -> (f64, f64) {
+    let path = get_niri_state_path(app);
+    if let Ok(data) = fs::read_to_string(path) {
+        if let Ok(json) = serde_json::from_str::<Value>(&data) {
+            let w = json["width"].as_f64().unwrap_or(600.0);
+            let h = json["height"].as_f64().unwrap_or(480.0);
+            return (w, h);
+        }
+    }
+    (600.0, 480.0) // 読み込めない場合のデフォルト固定値
+}
+
+// Niri IPC を叩いて現在のサイズを取得して保存する
+// fn save_niri_size_from_ipc(app: &AppHandle, window_title: &str) {
+//     // niri msg -j windows を実行
+//     if let Ok(output) = Command::new("niri").args(["msg", "-j", "windows"]).output() {
+//         if let Ok(json_str) = String::from_utf8(output.stdout) {
+//             if let Ok(windows) = serde_json::from_str::<Value>(&json_str) {
+//                 // 配列の中から、タイトルが一致するウィンドウを探す
+//                 if let Some(win) = windows
+//                     .as_array()
+//                     .unwrap_or(&vec![])
+//                     .iter()
+//                     .find(|w| w["title"].as_str() == Some(window_title))
+//                 {
+//                     // ※ NiriのJSONのプロパティ名（width/heightかlogical_bounds等か）は、
+//                     // 事前にターミナルで `niri msg -j windows` を叩いて実際のキー名を確認して置き換えてください！
+//                     let width = win["width"].as_f64().unwrap_or(600.0);
+//                     let height = win["height"].as_f64().unwrap_or(480.0);
+
+//                     // JSONファイルに書き出し
+//                     let save_data = serde_json::json!({
+//                         "width": width,
+//                         "height": height
+//                     });
+//                     let path = get_niri_state_path(app);
+//                     if let Some(parent) = path.parent() {
+//                         let _ = fs::create_dir_all(parent);
+//                     }
+//                     let _ = fs::write(path, save_data.to_string());
+
+//                     println!("Niri: Saved size {}x{} for {}", width, height, window_title);
+//                 }
+//             }
+//         }
+//     }
+// }
+
+fn save_niri_size(app: &AppHandle, window: &tauri::WebviewWindow, window_title: &str) {
+    // Niri IPC を叩かずとも、Tauriの機能で現在のサイズを取得
+    if let Ok(size) = window.outer_size() {
+        let width = size.width as f64;
+        let height = size.height as f64;
+
+        // JSONファイルに書き出し
+        let save_data = serde_json::json!({
+            "width": width,
+            "height": height
+        });
+
+        let path = get_niri_state_path(app);
+        if let Some(parent) = path.parent() {
+            let _ = fs::create_dir_all(parent);
+        }
+        let _ = fs::write(path, save_data.to_string());
+
+        println!("Niri: Saved size {}x{} for {}", width, height, window_title);
     }
 }
 
@@ -1992,10 +2082,22 @@ async fn open_export_window(app: AppHandle) {
 #[tauri::command]
 async fn open_preview_window(app: AppHandle) {
     // 既に開いているかチェック
-    if app.get_webview_window("preview").is_some() {
-        app.get_webview_window("preview").unwrap().close().unwrap();
+    if let Some(window) = app.get_webview_window("preview") {
+        // 閉じる直前にNiri環境ならサイズを保存
+        if is_niri() {
+            save_niri_size(&app, &window, "プレビュー");
+        }
+
+        window.close().unwrap();
         return;
     }
+
+    // 1. サイズの決定（Niriならファイルから読み込む）
+    let (width, height) = if is_niri() {
+        load_niri_size(&app)
+    } else {
+        (600.0, 480.0) // 従来・他OSの固定値
+    };
 
     let builder = tauri::WebviewWindowBuilder::new(
         &app,
@@ -2004,7 +2106,7 @@ async fn open_preview_window(app: AppHandle) {
     )
     .title("プレビュー")
     .transparent(true)
-    .inner_size(600.0, 480.0)
+    .inner_size(width, height)
     .min_inner_size(600.0, 480.0)
     .resizable(true)
     .decorations(false)
@@ -2024,6 +2126,25 @@ async fn open_preview_window(app: AppHandle) {
     let _window = builder.devtools(true).build().unwrap();
     #[cfg(not(debug_assertions))]
     let _window = builder.build().unwrap();
+
+    // 2. Niri環境なら、表示されてアクティブになった直後にIPCコマンドを流し込む
+    if is_niri() {
+        // 少しだけ非同期の「タメ」が必要な場合があります（ウィンドウ生成にNiriが追いつくため）
+        std::thread::sleep(std::time::Duration::from_millis(50));
+
+        // 自動でフローティングにする
+        let _ = Command::new("niri")
+            .args(["msg", "action", "toggle-window-floating"])
+            .status();
+
+        // 保存されていたサイズを Niri のコマンドで強制適用する
+        let _ = Command::new("niri")
+            .args(["msg", "action", "set-window-width", &width.to_string()])
+            .status();
+        let _ = Command::new("niri")
+            .args(["msg", "action", "set-window-height", &height.to_string()])
+            .status();
+    }
 }
 
 // --- フロントエンドからの問い合わせに応えるコマンド ---
@@ -2042,6 +2163,14 @@ fn get_initial_file(state: State<InitialFile>) -> Option<String> {
 // ★ アプリを終了させるためだけのコマンド
 #[tauri::command]
 async fn force_close_app(app: AppHandle) {
+    // Niri環境なら開いているサブウィンドウのサイズを回収して保存
+    if is_niri() {
+        if let Some(window) = app.get_webview_window("preview") {
+            save_niri_size(&app, &window, "プレビュー");
+        }
+        // AIチャットなど他のウィンドウがあれば同様に追加
+    }
+
     app.exit(0);
 }
 

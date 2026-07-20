@@ -1,4 +1,4 @@
-# MirrorShard 2 v1.10.0 User Manual
+# MirrorShard 2 v1.11.0 User Manual
 
 ## Keyboard Shortcuts
 

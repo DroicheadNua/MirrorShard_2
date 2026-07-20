@@ -33,22 +33,24 @@ Also, for the Linux version, the background of the vertical text preview (in Lig
 
 ---
 
-## Known Issues
+## Known Issues on Linux
 
-The following issues have been observed during testing:
+Due to the varying specifications of different Linux distributions, desktop environments (Wayland / X11), and system architectures, you may encounter the following behaviors or limitations.
 
-- Rendering artifacts may appear when using a transparent background  
-  (cleared after redraw, e.g., scrolling; does not occur with opaque backgrounds)
+### 🖋 Japanese Input (IME) Limitations
+* **Fallback to Over-the-spot input**: On many environments such as MX Linux and NixOS, inline text input may not function correctly. Instead, the text currently being converted will appear in a separate "Over-the-spot" floating window provided by the IME.
+* **Duplicated display**: In some environments, both inline and Over-the-spot inputs may occasionally render simultaneously.
 
-- Environment-dependent: Search functionality in the chat window may not work as expected (search engine may block requests)
+### 🪟 Window Control and Interaction Limitations
+* **Unchanging resize cursors**: On Wayland environments (e.g., GNOME or KDE), hovering the cursor over the edge of the window might not change it to a "resize arrow" cursor. *(Note: Even if the cursor does not change, you can still resize the window by dragging the edges. On KDE, resizing with `Super` + Right Drag also works perfectly).*
+* **Window movement workarounds**: If dragging the custom title bar to move the window does not work in your environment, please use standard Linux shortcuts such as `Alt` + Left Drag (or `Super` + Left Drag) to move the window.
+* **Drag selection issues**: In certain environments (especially virtual machines or Wayland environments), selecting text by dragging the mouse may not work. You can work around this by `Clicking the start point` ➔ `Holding Shift and clicking the end point`.
+* **Inverted scroll direction**: In rare cases, dragging the scrollbar may move the content in the opposite direction.
 
-### MX Linux (X11 / Xfce)
-- Inline input does not work; IME falls back to over-the-spot mode  
-  (composition text is shown in the IME window instead of the editor)
-
-### Fedora (Wayland / GNOME, VM)
-- Window resize cursor does not change when hovering over edges  
-  (resizing is still possible, but less intuitive)
+### 🎨 Rendering and Other Issues
+* **Ghosting with translucent backgrounds**: If the application background is set to be translucent, residual text ghosting may occur. Scrolling or forcing a redraw will clear it. (This does not happen when the background is fully opaque).
+* **Copy restriction in settings**: Due to multi-window limitations, copying text within the settings window may be disabled (pasting is still supported).
+* **Search errors in the chat window**: Depending on your environment or search engine restrictions, the Web search functionality within the AI chat window may be blocked.
 
 ---
 
