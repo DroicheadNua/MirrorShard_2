@@ -3607,6 +3607,9 @@ ${instructionFiller}
           await message(translateRustError(e), { kind: "error" });
         }
       });
+    document.querySelector("#btn-vivliostyle")?.addEventListener("click", () => {
+      this.openVivliostyle();
+    });
     document.querySelector("#btn-ai-chat")?.addEventListener("click", () => {
       this.openAiChat();
     });
@@ -4101,6 +4104,10 @@ ${instructionFiller}
     if (isCtrlOrCmd && key === "e" && !isShift) {
       e.preventDefault();
       invoke("open_export_window");
+    }
+    if (isCtrlOrCmd && key === "b" && isShift) {
+      e.preventDefault();
+      this.openVivliostyle();
     }
     if (isCtrlOrCmd && key === "k" && !isShift) {
       e.preventDefault();
@@ -5152,6 +5159,10 @@ ${instructionFiller}
 
   private async openShortcut() {
     await invoke("open_shortcut");
+  }
+
+  private async openVivliostyle() {
+    await invoke("open_vivliostyle");
   }
 
   private async openIdeaProcessor() {

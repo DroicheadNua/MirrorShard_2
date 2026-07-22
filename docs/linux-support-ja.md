@@ -191,3 +191,29 @@ NixOSのような隔離されたファイルシステム環境（Nixストア）
   Linux環境では表示の不具合を防ぐため、縦書きプレビューのデフォルト背景は自動的に目に優しい「セピアカラー（#eae3d2）」に固定されます。
 * **標準BGM・背景をどうしても使用したい場合**:
   設定画面のファイル選択から、Nixストア内の該当するリソースディレクトリ（`/nix/store/...-mirrorshard2/bin/resources/` 等）にある実体ファイルを手動で選択して読み込ませることで、正常にご利用いただけます。
+
+
+## Niri (Wayland Tile Window Manager) での利用について
+
+Niriのようなタイル型ウィンドウマネージャ環境では、縦書きプレビューやAIチャット等のサブウィンドウもデフォルトでタイル（カラム）として自動配置されます。
+
+プレビューの表示幅を固定したい場合や、サブウィンドウを自動でフローティング（浮遊）表示させたい場合は、`~/.config/niri/config.kdl` に以下のウィンドウルール（`window-rule`）を追加してご使用ください。
+
+```kdl
+// ~/.config/niri/config.kdl に追加する設定例
+
+// 1. 縦書きプレビューの幅を固定してタイル配置する
+window-rule {
+    // 日本語UIの場合: title="^プレビュー" / 英語UIの場合: title="^Preview"
+    match app-id="com.DroicheadNua.mirrorshard2" title="^Preview"
+    default-column-width 600
+}
+
+// 2. AIチャット画面を最初からフローティング（浮遊）表示にする
+window-rule {
+    // 日本語UIの場合: title="^AIチャット" / 英語UIの場合: title="^AI Chat"
+    match app-id="com.DroicheadNua.mirrorshard2" title="^AI Chat"
+    open-floating true
+    default-floating-width 640
+    default-floating-height 800
+}

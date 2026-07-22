@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <link rel="stylesheet" href="/src/vivliostyle.css">
+    <title>Vivliostyle DTP Export</title>
+</head>
+<body>
+    <div id="vivliostyle-wrapper">
+        <!-- カスタムタイトルバー -->
+        <div data-tauri-drag-region id="title-bar">
+            <span class="title-text" data-tauri-drag-region>Vivliostyle DTP Export</span>
+            <div class="window-controls">
+                <button id="btn-minimize" title="Minimize"></button>
+                <button id="btn-maximize" title="Maximize"></button>
+                <button id="btn-close" title="Close"></button>
+            </div>
+        </div>
+
+        <div id="vivliostyle-container">
+            <!-- セクション1: プロジェクトフォルダ -->
+            <section class="config-section">
+                <label data-i18n="vivliostyle.projectFolder">プロジェクトフォルダ</label>
+                <div class="input-group">
+                    <input type="text" id="project-folder-path" readonly placeholder="..." />
+                    <button id="btn-select-folder" data-i18n="vivliostyle.selectFolder">参照...</button>
+                </div>
+                <button id="btn-update-files" class="full-width" data-i18n="vivliostyle.updateFiles" disabled>
+                    📁 設定ファイルを作成・更新
+                </button>
+            </section>
+
+            <!-- 書籍メタデータ & フォント設定 -->
+            <section class="config-section">
+                <div class="form-row">
+                    <label data-i18n="vivliostyle.bookTitle">書名 (タイトル)</label>
+                    <input type="text" id="book-title" placeholder="" />
+                </div>
+                <div class="form-row">
+                    <label data-i18n="vivliostyle.bookAuthor">著者名</label>
+                    <input type="text" id="book-author" placeholder="" />
+                </div>
+                <div class="form-row">
+                    <label data-i18n="vivliostyle.bookLanguage">言語</label>
+                    <select id="book-language">
+                        <option value="ja">日本語 (ja)</option>
+                        <option value="en">English (en)</option>
+                    </select>
+                </div>
+                <div class="form-row">
+                    <label data-i18n="vivliostyle.fontFamily">フォント</label>
+                    <select id="font-family-select">
+                        <!-- get_system_fonts の結果がここに挿入されます -->
+                    </select>
+                </div>
+            </section>
+
+            <!-- セクション2: プリセット＆レイアウト設定 -->
+            <section class="config-section">
+                <div class="form-row">
+                    <label data-i18n="vivliostyle.preset">プリセット</label>
+                    <select id="preset-selector">
+                        <option value="custom" data-i18n="vivliostyle.presets.custom">カスタム設定</option>
+                        <option value="a5-vertical-2col" data-i18n="vivliostyle.presets.a5Vertical2col">A5 縦書き 2段組</option>
+                        <option value="bunko-vertical-1col" data-i18n="vivliostyle.presets.bunkoVertical1col">文庫(A6) 縦書き 1段組</option>
+                        <option value="a4-horizontal-1col" data-i18n="vivliostyle.presets.a4Horizontal1col">A4 横書き 1段组</option>
+                    </select>
+                </div>
+
+                <hr class="divider">
+
+                <div class="form-row">
+                    <label data-i18n="vivliostyle.paperSize">用紙サイズ</label>
+                    <select id="paper-size">
+                        <option value="A4" data-i18n="vivliostyle.paperSizes.a4">A4 (210 × 297mm)</option>
+                            <option value="A5" data-i18n="vivliostyle.paperSizes.a5">A5 (148 × 210mm)</option>
+                            <option value="A6" data-i18n="vivliostyle.paperSizes.a6">A6・文庫 (105 × 148mm)</option>
+                            <option value="B6" data-i18n="vivliostyle.paperSizes.b6">B6 (128 × 182mm)</option>
+                            <option value="JIS-B5" data-i18n="vivliostyle.paperSizes.jisB5">JIS B5 (182 × 257mm)</option>
+                    </select>
+                </div>
+                <div class="form-row">
+                    <label data-i18n="vivliostyle.direction">印字方向</label>
+                    <select id="direction">
+                        <option value="vertical" data-i18n="vivliostyle.directions.vertical">縦書き (右綴じ / RTL)</option>
+                        <option value="horizontal" data-i18n="vivliostyle.directions.horizontal">横書き (左綴じ / LTR)</option>
+                    </select>
+                </div>
+                <div class="form-row">
+                    <label data-i18n="vivliostyle.columns">段組み</label>
+                    <select id="columns">
+                        <option value="1">1</option>
+                        <option value="2">2</option>
+                    </select>
+                </div>
+
+                <div class="margin-controls">
+                    <label data-i18n="vivliostyle.margins">余白 (天・地・ノド・小口)</label>
+                    <div class="margin-inputs">
+                        <input type="text" id="margin-top" value="20mm" title="Top">
+                        <input type="text" id="margin-bottom" value="20mm" title="Bottom">
+                        <input type="text" id="margin-inside" value="25mm" title="Inside">
+                        <input type="text" id="margin-outside" value="15mm" title="Outside">
+                    </div>
+                </div>
+            </section>
+
+            <!-- セクション3: 実行アクション -->
+            <section class="actions-section">
+                <button id="btn-open-terminal" class="secondary" data-i18n="vivliostyle.openTerminal">
+                    >_ ターミナルを開く
+                </button>
+                <div class="main-actions">
+                    <button id="btn-preview" class="primary" data-i18n="vivliostyle.preview" disabled>👁️ プレビューを開く</button>
+                    <button id="btn-build-pdf" class="success" data-i18n="vivliostyle.exportPdf" disabled>📄 PDFエクスポート</button>
+                </div>
+            </section>
+        </div>
+    </div>
+    <script type="module" src="/src/vivliostyle.ts"></script>
+</body>
+</html>

@@ -1,0 +1,40 @@
+{
+  "title": "Vivliostyle 出版・組版設定",
+  "projectFolder": "プロジェクトフォルダ",
+  "selectFolder": "参照...",
+  "updateFiles": "📁 設定ファイル (config / css) を作成・更新",
+  "preset": "プリセット",
+  "presets": {
+    "custom": "カスタム設定",
+    "a5Vertical2col": "A5 縦書き 2段組 (同人誌向け)",
+    "bunkoVertical1col": "文庫(A6) 縦書き 1段組 (小説向け)",
+    "a4Horizontal1col": "A4 横書き 1段組 (レポート向け)"
+  },
+  "paperSize": "用紙サイズ",
+  "paperSizes": {
+    "a4": "A4 (210 × 297mm)",
+    "a5": "A5 (148 × 210mm)",
+    "a6": "A6・文庫 (105 × 148mm)",
+    "b6": "B6 (128 × 182mm)",
+    "jisB5": "JIS B5 (182 × 257mm)"
+  },
+  "direction": "組版方向",
+  "directions": {
+    "vertical": "縦書き (右綴じ / RTL)",
+    "horizontal": "横書き (左綴じ / LTR)"
+  },
+  "columns": "段組み",
+  "margins": "余白 (天・地・ノド・小口)",
+  "openTerminal": ">_ ターミナルを開く",
+  "preview": "👁️ プレビューを開く",
+  "exportPdf": "📄 PDFエクスポート",
+  "alerts": {
+    "updateSuccess": "設定ファイルを更新しました。",
+    "exportSuccess": "PDFの出力が完了しました。",
+    "selectFolderFirst": "最初にプロジェクトフォルダを選択してください。"
+  },
+  "bookTitle": "タイトル",
+  "bookAuthor": "著者名",
+  "bookLanguage": "言語",
+  "fontFamily": "フォント"
+}

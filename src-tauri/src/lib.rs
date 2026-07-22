@@ -9,7 +9,6 @@ use regex::Regex;
 use rig::client::{CompletionClient, ProviderClient};
 use rig::completion::Prompt;
 use serde::Serialize;
-use serde_json::Value;
 use std::collections::HashMap;
 use std::fs;
 use std::fs::File;
@@ -218,96 +217,30 @@ impl rig::tool::Tool for WebSearchTool {
     }
 }
 
-// ==========================================
-// Niri関連のユーティリティ関数
-// ==========================================
-
-// Niri環境かどうかの判定
-fn is_niri() -> bool {
-    std::env::var("NIRI_SOCKET").is_ok()
-}
-
-// Niri専用のサイズ保存パスを取得
-fn get_niri_state_path(app: &AppHandle) -> std::path::PathBuf {
-    // ~/.config/com.droicheadnua.mirrorshard2/niri-window-state.json などのパスになる
-    app.path()
-        .app_config_dir()
-        .unwrap()
-        .join("niri-window-state.json")
-}
-
-// JSONから前回サイズを読み込む
-fn load_niri_size(app: &AppHandle) -> (f64, f64) {
-    let path = get_niri_state_path(app);
-    if let Ok(data) = fs::read_to_string(path) {
-        if let Ok(json) = serde_json::from_str::<Value>(&data) {
-            let w = json["width"].as_f64().unwrap_or(600.0);
-            let h = json["height"].as_f64().unwrap_or(480.0);
-            return (w, h);
-        }
-    }
-    (600.0, 480.0) // 読み込めない場合のデフォルト固定値
-}
-
-// Niri IPC を叩いて現在のサイズを取得して保存する
-// fn save_niri_size_from_ipc(app: &AppHandle, window_title: &str) {
-//     // niri msg -j windows を実行
-//     if let Ok(output) = Command::new("niri").args(["msg", "-j", "windows"]).output() {
-//         if let Ok(json_str) = String::from_utf8(output.stdout) {
-//             if let Ok(windows) = serde_json::from_str::<Value>(&json_str) {
-//                 // 配列の中から、タイトルが一致するウィンドウを探す
-//                 if let Some(win) = windows
-//                     .as_array()
-//                     .unwrap_or(&vec![])
-//                     .iter()
-//                     .find(|w| w["title"].as_str() == Some(window_title))
-//                 {
-//                     // ※ NiriのJSONのプロパティ名（width/heightかlogical_bounds等か）は、
-//                     // 事前にターミナルで `niri msg -j windows` を叩いて実際のキー名を確認して置き換えてください！
-//                     let width = win["width"].as_f64().unwrap_or(600.0);
-//                     let height = win["height"].as_f64().unwrap_or(480.0);
-
-//                     // JSONファイルに書き出し
-//                     let save_data = serde_json::json!({
-//                         "width": width,
-//                         "height": height
-//                     });
-//                     let path = get_niri_state_path(app);
-//                     if let Some(parent) = path.parent() {
-//                         let _ = fs::create_dir_all(parent);
-//                     }
-//                     let _ = fs::write(path, save_data.to_string());
-
-//                     println!("Niri: Saved size {}x{} for {}", width, height, window_title);
-//                 }
-//             }
-//         }
-//     }
-// }
-
-fn save_niri_size(app: &AppHandle, window: &tauri::WebviewWindow, window_title: &str) {
-    // Niri IPC を叩かずとも、Tauriの機能で現在のサイズを取得
-    if let Ok(size) = window.outer_size() {
-        let width = size.width as f64;
-        let height = size.height as f64;
-
-        // JSONファイルに書き出し
-        let save_data = serde_json::json!({
-            "width": width,
-            "height": height
-        });
-
-        let path = get_niri_state_path(app);
-        if let Some(parent) = path.parent() {
-            let _ = fs::create_dir_all(parent);
-        }
-        let _ = fs::write(path, save_data.to_string());
-
-        println!("Niri: Saved size {}x{} for {}", width, height, window_title);
-    }
-}
-
 // --- Tauriコマンドの定義 ---
+
+// フォルダ内のMarkdownファイルを検出して配列で返すコマンド（Vivliostyle用）
+#[tauri::command]
+async fn get_markdown_files(dir_path: String) -> Result<Vec<String>, String> {
+    let mut files = Vec::new();
+    let entries = std::fs::read_dir(&dir_path).map_err(|e| e.to_string())?;
+
+    for entry in entries.flatten() {
+        let path = entry.path();
+        if path.is_file() {
+            if let Some(ext) = path.extension() {
+                if ext == "md" {
+                    if let Some(file_name) = path.file_name().and_then(|n| n.to_str()) {
+                        files.push(file_name.to_string());
+                    }
+                }
+            }
+        }
+    }
+
+    files.sort(); // ファイル名順（01_xxx.md, 02_xxx.md等）でソート
+    Ok(files)
+}
 
 // 任意のテキストファイルを読み込み、UTF-8文字列として返すコマンド
 #[tauri::command]
@@ -1418,6 +1351,47 @@ async fn open_idea_processor(app: AppHandle) {
 }
 
 #[tauri::command]
+async fn open_vivliostyle(app: AppHandle) {
+    if app.get_webview_window("vivliostyle").is_some() {
+        app.get_webview_window("vivliostyle")
+            .unwrap()
+            .close()
+            .unwrap();
+        return;
+    }
+
+    let builder = tauri::WebviewWindowBuilder::new(
+        &app,
+        "vivliostyle",
+        tauri::WebviewUrl::App("vivliostyle.html".into()),
+    )
+    .title("Vivliostyle")
+    .inner_size(640.0, 800.0)
+    .min_inner_size(640.0, 480.0)
+    .resizable(true)
+    .decorations(false)
+    .transparent(true)
+    .visible(false)
+    .devtools(true);
+    #[cfg(target_os = "macos")]
+    let builder = builder.title_bar_style(tauri::TitleBarStyle::Transparent);
+    #[cfg(any(windows, target_os = "macos"))]
+    let builder = builder.effects(tauri::utils::config::WindowEffectsConfig {
+        effects: vec![],
+        state: None,
+        radius: Some(24.0),
+        color: None,
+    });
+
+    #[cfg(debug_assertions)]
+    let window = builder.devtools(true).build().unwrap();
+    #[cfg(not(debug_assertions))]
+    let window = builder.build().unwrap();
+    window.show().unwrap();
+    window.set_focus().unwrap();
+}
+
+#[tauri::command]
 async fn open_markdown_preview(app: AppHandle) {
     if app.get_webview_window("markdown").is_some() {
         app.get_webview_window("markdown").unwrap().close().unwrap();
@@ -1885,6 +1859,10 @@ async fn get_window_title(window_key: String) -> Result<String, String> {
             [("ja", "Markdownプレビュー"), ("en", "Markdown Preview")].into(),
         ),
         (
+            "vivliostyle",
+            [("ja", "Vivliostyle"), ("en", "Vivliostyle")].into(),
+        ),
+        (
             "shortcut",
             [("ja", "ショートカット"), ("en", "Shortcuts")].into(),
         ),
@@ -2082,22 +2060,10 @@ async fn open_export_window(app: AppHandle) {
 #[tauri::command]
 async fn open_preview_window(app: AppHandle) {
     // 既に開いているかチェック
-    if let Some(window) = app.get_webview_window("preview") {
-        // 閉じる直前にNiri環境ならサイズを保存
-        if is_niri() {
-            save_niri_size(&app, &window, "プレビュー");
-        }
-
-        window.close().unwrap();
+    if app.get_webview_window("preview").is_some() {
+        app.get_webview_window("preview").unwrap().close().unwrap();
         return;
     }
-
-    // 1. サイズの決定（Niriならファイルから読み込む）
-    let (width, height) = if is_niri() {
-        load_niri_size(&app)
-    } else {
-        (600.0, 480.0) // 従来・他OSの固定値
-    };
 
     let builder = tauri::WebviewWindowBuilder::new(
         &app,
@@ -2106,7 +2072,7 @@ async fn open_preview_window(app: AppHandle) {
     )
     .title("プレビュー")
     .transparent(true)
-    .inner_size(width, height)
+    .inner_size(600.0, 480.0)
     .min_inner_size(600.0, 480.0)
     .resizable(true)
     .decorations(false)
@@ -2126,25 +2092,6 @@ async fn open_preview_window(app: AppHandle) {
     let _window = builder.devtools(true).build().unwrap();
     #[cfg(not(debug_assertions))]
     let _window = builder.build().unwrap();
-
-    // 2. Niri環境なら、表示されてアクティブになった直後にIPCコマンドを流し込む
-    if is_niri() {
-        // 少しだけ非同期の「タメ」が必要な場合があります（ウィンドウ生成にNiriが追いつくため）
-        std::thread::sleep(std::time::Duration::from_millis(50));
-
-        // 自動でフローティングにする
-        let _ = Command::new("niri")
-            .args(["msg", "action", "toggle-window-floating"])
-            .status();
-
-        // 保存されていたサイズを Niri のコマンドで強制適用する
-        let _ = Command::new("niri")
-            .args(["msg", "action", "set-window-width", &width.to_string()])
-            .status();
-        let _ = Command::new("niri")
-            .args(["msg", "action", "set-window-height", &height.to_string()])
-            .status();
-    }
 }
 
 // --- フロントエンドからの問い合わせに応えるコマンド ---
@@ -2163,14 +2110,6 @@ fn get_initial_file(state: State<InitialFile>) -> Option<String> {
 // ★ アプリを終了させるためだけのコマンド
 #[tauri::command]
 async fn force_close_app(app: AppHandle) {
-    // Niri環境なら開いているサブウィンドウのサイズを回収して保存
-    if is_niri() {
-        if let Some(window) = app.get_webview_window("preview") {
-            save_niri_size(&app, &window, "プレビュー");
-        }
-        // AIチャットなど他のウィンドウがあれば同様に追加
-    }
-
     app.exit(0);
 }
 
@@ -2381,6 +2320,7 @@ pub fn run() {
             export_with_pandoc,
             open_markdown_preview,
             open_idea_processor,
+            open_vivliostyle,
             open_in_browser,
             open_terminal_window, // ウィンドウを開く
             init_pty,             // PTYを開始する
@@ -2401,6 +2341,7 @@ pub fn run() {
             abort_image_cpp,
             open_sd_server,
             read_local_file_content,
+            get_markdown_files,
         ])
         .on_window_event(|window, event| match event {
             // 1. メインウィンドウの終了確認

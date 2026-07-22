@@ -7,6 +7,7 @@
     "save": "Save (Ctrl+S)",
     "saveAs": "Save As",
     "export": "Export / Print (Ctrl+E)",
+    "vivliostyle": "Typesetting / DTP (Ctrl+Shift+B)",
     "open": "Open (Ctrl+O)",
     "new": "New (Ctrl+N)",
     "bgm": "BGM Play/Stop (Ctrl+Shift+P)",

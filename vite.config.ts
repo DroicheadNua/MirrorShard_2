@@ -35,6 +35,7 @@ export default defineConfig(async () => ({
         settings: resolve(__dirname, 'settings.html'),
         preview: resolve(__dirname, 'preview.html'),
         export: resolve(__dirname, 'export.html'),
+        vivliostyle: resolve(__dirname, 'vivliostyle.html'),
         ai_chat: resolve(__dirname, 'ai_chat.html'),
         shortcut: resolve(__dirname, 'shortcut.html'),
         markdown: resolve(__dirname, "markdown.html"),

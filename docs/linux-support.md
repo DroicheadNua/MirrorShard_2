@@ -212,3 +212,31 @@ In isolated filesystem environments like NixOS (Nix store), the application may 
   To prevent rendering inconsistencies, the default vertical preview background is automatically set to an eye-friendly "sepia color (#eae3d2)" on Linux.
 * **If you wish to use the default BGM or backgrounds**:
   You can still use them by manually browsing and loading the actual files from the application's resources directory within the Nix store (e.g., `/nix/store/...-mirrorshard2/bin/resources/`) using the file picker in the settings menu.
+
+
+## Usage with Niri (Wayland Tiling Window Manager)
+
+In tiling window manager environments like Niri, sub-windows (such as the Vertical Preview or AI Chat) are automatically arranged as tiled columns by default.
+
+If you wish to set a fixed width for the preview or force specific sub-windows to open as floating windows by default, please add the following `window-rule` configurations to your `~/.config/niri/config.kdl`:
+
+```kdl
+// Configuration example for ~/.config/niri/config.kdl
+
+// 1. Fix the column width for the Vertical Preview
+window-rule {
+    // For English UI : title="^Preview"
+    // For Japanese UI: title="^プレビュー"
+    match app-id="com.DroicheadNua.mirrorshard2" title="^Preview"
+    default-column-width 600
+}
+
+// 2. Open the AI Chat window as a floating window by default
+window-rule {
+    // For English UI : title="^AI Chat"
+    // For Japanese UI: title="^AIチャット"
+    match app-id="com.DroicheadNua.mirrorshard2" title="^AI Chat"
+    open-floating true
+    default-floating-width 640
+    default-floating-height 800
+}

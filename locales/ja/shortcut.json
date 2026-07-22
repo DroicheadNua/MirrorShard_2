@@ -38,6 +38,7 @@
     "typeSoundToggle": "タイプ音 ON/OFF",
     "settings": "設定",
     "export": "エクスポート",
+    "vivliostyle": "組版 / PDF出力",
     "terminalToggle": "ターミナルを開く/閉じる",
     "terminalHere": "選択中のファイルの場所でターミナルを開く",
     "undo": "元に戻す (Undo)",

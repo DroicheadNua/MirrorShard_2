@@ -1,0 +1,40 @@
+{
+  "title": "Vivliostyle DTP / Book Export",
+  "projectFolder": "Project Folder",
+  "selectFolder": "Browse...",
+  "updateFiles": "📁 Create / Update Config Files",
+  "preset": "Preset",
+  "presets": {
+    "custom": "Custom Settings",
+    "a5Vertical2col": "A5 Vertical 2-Column (Book / Zine)",
+    "bunkoVertical1col": "Pocket Book (A6) Vertical (Novel)",
+    "a4Horizontal1col": "A4 Horizontal 1-Column (Report)"
+  },
+  "paperSize": "Paper Size",
+  "paperSizes": {
+    "a4": "A4 (210 × 297mm)",
+    "a5": "A5 (148 × 210mm)",
+    "a6": "A6 / Pocket Book (105 × 148mm)",
+    "b6": "B6 (128 × 182mm)",
+    "jisB5": "JIS B5 (182 × 257mm)"
+  },
+  "direction": "Writing Direction",
+  "directions": {
+    "vertical": "Vertical (Right-to-Left)",
+    "horizontal": "Horizontal (Left-to-Right)"
+  },
+  "columns": "Columns",
+  "margins": "Margins (Top, Bottom, Inside, Outside)",
+  "openTerminal": ">_ Open Terminal",
+  "preview": "👁️ Open Preview",
+  "exportPdf": "📄 Export PDF",
+  "alerts": {
+    "updateSuccess": "Settings updated successfully.",
+    "exportSuccess": "PDF export completed successfully.",
+    "selectFolderFirst": "Please select a project folder first."
+  },
+  "bookTitle": "Book Title",
+  "bookAuthor": "Author Name",
+  "bookLanguage": "Language",
+  "fontFamily": "Font"
+}

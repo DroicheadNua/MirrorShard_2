@@ -8,7 +8,7 @@ let translations: Record<string, any> = {};
 export async function initI18n(locale: Locale) {
     currentLocale = locale;
     try {
-        const [common, editor, ideaProcessor, settings, prompts, main, shortcut, markdown, export_, preview, aiChat] = await Promise.all([
+        const [common, editor, ideaProcessor, settings, prompts, main, shortcut, markdown, export_, preview, aiChat, vivliostyle] = await Promise.all([
             import(`../locales/${locale}/common.json`),
             import(`../locales/${locale}/editor.json`),
             import(`../locales/${locale}/ideaProcessor.json`),
@@ -20,6 +20,7 @@ export async function initI18n(locale: Locale) {
             import(`../locales/${locale}/export.json`),
             import(`../locales/${locale}/preview.json`),
             import(`../locales/${locale}/ai_chat.json`),
+            import(`../locales/${locale}/vivliostyle.json`),
         ]);
 
         translations = {
@@ -33,7 +34,8 @@ export async function initI18n(locale: Locale) {
             markdown: markdown.default,
             export: export_.default,
             preview: preview.default,
-            aiChat: aiChat.default
+            aiChat: aiChat.default,
+            vivliostyle: vivliostyle.default,
         };
     } catch (e) {
         console.error(`[i18n] Failed to load translations for ${locale}`, e);

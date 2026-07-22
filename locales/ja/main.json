@@ -7,6 +7,7 @@
     "save": "保存 (Ctrl+S)",
     "saveAs": "名前を付けて保存",
     "export": "エクスポート / 印刷 (Ctrl+E)",
+    "vivliostyle": "組版 / PDF出力 (Ctrl+Shift+B)",
     "open": "開く (Ctrl+O)",
     "new": "新規作成 (Ctrl+N)",
     "bgm": "BGM再生/停止 (Ctrl+Shift+P)",
