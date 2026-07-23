@@ -143,6 +143,7 @@ CSS組版エンジン Vivliostyle を使用して、原稿フォルダ内のMark
      `npm install -g @vivliostyle/cli`
    * インストール処理が完了したら、ターミナルを閉じてください。
 
+※VivliostyleによるプレビューおよびPDF出力機能を利用するには、PCに Google Chrome（または Chromium）がインストールされている必要があります。  
 ※プレビュー表示時、OSのデフォルトブラウザ設定に関わらず **Google Chrome**（またはChromium）が起動します。
 
 ---

@@ -367,6 +367,7 @@ This feature requires **Node.js** installed on your computer.
      `npm install -g @vivliostyle/cli`  
    * Close the terminal once the process completes.
 
+*Note: The Vivliostyle preview and PDF export features require Google Chrome (or Chromium) installed on your system.*
 *Note: The preview viewer specifically launches **Google Chrome** (or Chromium) regardless of your system's default browser setting.*
 
 ---

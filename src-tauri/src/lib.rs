@@ -314,7 +314,29 @@ async fn build_vivliostyle_pdf(project_path: String) -> Result<String, String> {
         c
     } else {
         let mut c = std::process::Command::new("npx");
-        c.args(["-y", "@vivliostyle/cli", "build"]);
+        let mut args = vec![
+            "-y".to_string(),
+            "@vivliostyle/cli".to_string(),
+            "build".to_string(),
+        ];
+
+        // Linux/NixOSの場合のみ、CLI引数で直接システムChromeを指定する
+        #[cfg(target_os = "linux")]
+        {
+            let chrome_path =
+                if std::path::Path::new("/run/current-system/sw/bin/google-chrome-stable").exists()
+                {
+                    "/run/current-system/sw/bin/google-chrome-stable"
+                } else if std::path::Path::new("/run/current-system/sw/bin/chromium").exists() {
+                    "/run/current-system/sw/bin/chromium"
+                } else {
+                    "google-chrome-stable" // システム標準パス
+                };
+            args.push("--executable-browser".to_string());
+            args.push(chrome_path.to_string());
+        }
+
+        c.args(args);
         c
     };
 
@@ -366,9 +388,32 @@ async fn start_vivliostyle_preview(
             c
         } else {
             let mut c = std::process::Command::new("npx");
-            c.args(["-y", "@vivliostyle/cli", "preview", "--port", "8123"]);
-            c.stdout(std::process::Stdio::null());
-            c.stderr(std::process::Stdio::null());
+            let mut args = vec![
+                "-y".to_string(),
+                "@vivliostyle/cli".to_string(),
+                "preview".to_string(),
+                "--port".to_string(),
+                "8123".to_string(),
+            ];
+
+            // Linux/NixOSの場合のみ、CLI引数で直接システムChromeを指定する
+            #[cfg(target_os = "linux")]
+            {
+                let chrome_path =
+                    if std::path::Path::new("/run/current-system/sw/bin/google-chrome-stable")
+                        .exists()
+                    {
+                        "/run/current-system/sw/bin/google-chrome-stable"
+                    } else if std::path::Path::new("/run/current-system/sw/bin/chromium").exists() {
+                        "/run/current-system/sw/bin/chromium"
+                    } else {
+                        "google-chrome-stable" // システム標準パス
+                    };
+                args.push("--executable-browser".to_string());
+                args.push(chrome_path.to_string());
+            }
+
+            c.args(args);
             c
         };
 

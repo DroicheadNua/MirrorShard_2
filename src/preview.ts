@@ -37,6 +37,28 @@ function applyAutoTcy(text: string): string {
   return text.replace(/\b(\d{1,2})\b/g, '<span class="tcy">$1</span>');
 }
 
+// 単一改行を自動的に段落（\n\n）に補正するヘルパー
+function normalizeNovelParagraphs(text: string): string {
+  // 1. 改行コードを \n に統一し、全角/半角スペースのみの行を完全な空行に掃除
+  const cleaned = text.replace(/\r\n/g, "\n").replace(/^[ 　\t]+$/gm, "");
+
+  // 2. 行ごとに分割
+  const lines = cleaned.split("\n");
+  const processedBlocks: string[] = [];
+
+  for (const line of lines) {
+    if (line.trim() === "") {
+      // ⚠️ 空行（文字のない改行のみの行）は明示的に <br> に変換して1行空けを保証
+      processedBlocks.push("<br>");
+    } else {
+      processedBlocks.push(line);
+    }
+  }
+
+  // 3. 各行を二重改行（\n\n）で連結して Markdown の独立した段落にする
+  return processedBlocks.join("\n\n");
+}
+
 async function initPreview() {
   const contentDiv = document.getElementById("content");
   const exportMenuBtn = document.getElementById("btn-export-menu");
@@ -325,24 +347,26 @@ async function initPreview() {
 
       const pandocPath = await store.get<string>("pandocPath");
 
-      // テキスト整形 (既存ロジック)
-      let processedText = currentRawText.replace(/(?<!\n)\n(?!\n)/g, "  \n");
-      processedText = processedText.replace(
-        /｜([^《]+)《([^》]+)》/g,
-        "<ruby>$1<rt>$2</rt></ruby>",
-      );
-      const kanjiRange = "\\u4E00-\\u9FFF\\uF900-\\uFAFF\\u3400-\\u4DBF";
-      const kanjiRubyRegex = new RegExp(
-        `([^｜|])([${kanjiRange}]+)《([^》\\n]+?)》`,
-        "gu",
-      );
-      processedText = processedText.replace(
-        kanjiRubyRegex,
-        "$1<ruby>$2<rt>$3</rt></ruby>",
-      );
+            // 1. 小説用段落補正（単一改行の段落化と空行の <br> 化）
+            let processedText = normalizeNovelParagraphs(currentRawText);
 
-      // 縦中横 (TCY) の自動適用
-      processedText = applyAutoTcy(processedText);
+            // 2. ルビ変換 (既存ロジック)
+            processedText = processedText.replace(
+              /｜([^《]+)《([^》]+)》/g,
+              "<ruby>$1<rt>$2</rt></ruby>",
+            );
+            const kanjiRange = "\\u4E00-\\u9FFF\\uF900-\\uFAFF\\u3400-\\u4DBF";
+            const kanjiRubyRegex = new RegExp(
+              `([^｜|])([${kanjiRange}]+)《([^》\\n]+?)》`,
+              "gu",
+            );
+            processedText = processedText.replace(
+              kanjiRubyRegex,
+              "$1<ruby>$2<rt>$3</rt></ruby>",
+            );
+
+            // 3. 縦中横 (TCY) の自動適用
+            processedText = applyAutoTcy(processedText);
 
       // メタデータの決定
       // HTMLの場合はファイル名をタイトルにする等の簡易処理

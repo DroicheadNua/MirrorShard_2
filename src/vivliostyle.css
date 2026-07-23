@@ -298,7 +298,28 @@ button.success:hover:not(:disabled) {
     gap: 12px;
 }
 
+/* vivliostyle.css の末尾に追加 */
+select {
+    -webkit-appearance: none;
+    -moz-appearance: none;
+    appearance: none;
 
+    background-color: #3c3c3c;
+    color: #ffffff;
+    border: 1px solid var(--border-color);
+    padding: 6px 28px 6px 10px;
+
+    /* 矢印（▼）アイコンの自前描画 */
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23cccccc' stroke-width='2'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 8px center;
+    background-size: 14px;
+}
+
+select option {
+    background-color: #252526;
+    color: #ffffff;
+}
 
 #btn-minimize {
     -webkit-mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M8 18h8'%3E%3C/path%3E%3C/svg%3E");

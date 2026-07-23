@@ -1,7 +1,7 @@
 {
   "name": "mirrorshard2",
   "private": true,
-  "version": "1.11.0",
+  "version": "1.12.0",
   "packageManager": "pnpm@11.0.9",
   "type": "module",
   "scripts": {

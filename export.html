@@ -92,274 +92,293 @@
         import { initI18n, applyTranslationsToDOM, t } from '/src/i18n.ts';
 
         async function initExport() {
-            const contentDiv = document.getElementById('content');
-            const fontSelect = document.getElementById('font-select');
-            const fontSizeInput = document.getElementById('font-size');
-            const lineHeightInput = document.getElementById('line-height');
-            const epubModal = document.getElementById('epub-modal');
-            const epubTitleInput = document.getElementById('epub-title');
-            const epubAuthorInput = document.getElementById('epub-author');
-            const epubCoverPathInput = document.getElementById('epub-cover-path');
-            let rawMarkdownText = "";
+                    const contentDiv = document.getElementById('content');
+                    const fontSelect = document.getElementById('font-select');
+                    const fontSizeInput = document.getElementById('font-size');
+                    const lineHeightInput = document.getElementById('line-height');
+                    const epubModal = document.getElementById('epub-modal');
+                    const epubTitleInput = document.getElementById('epub-title');
+                    const epubAuthorInput = document.getElementById('epub-author');
+                    const epubCoverPathInput = document.getElementById('epub-cover-path');
+                    let rawMarkdownText = "";
 
-            const store = await Store.load('.settings.dat');
-            const appLang = (await store.get('appLanguage')) ?? 'ja';
-            await initI18n(appLang === 'en' ? 'en' : 'ja');
-            applyTranslationsToDOM();
-            const title = await invoke('get_window_title', { windowKey: 'export' }).catch(() => '');
-            if (title) { await getCurrentWindow().setTitle(title); }
+                    // --- 小説用段落補正（空行を <br> 化）のヘルパー ---
+                    function normalizeNovelParagraphs(text) {
+                        const cleaned = text.replace(/\r\n/g, "\n").replace(/^[ 　\t]+$/gm, "");
+                        const lines = cleaned.split("\n");
+                        const processedBlocks = [];
+                        for (const line of lines) {
+                            if (line.trim() === "") {
+                                processedBlocks.push("<br>");
+                            } else {
+                                processedBlocks.push(line);
+                            }
+                        }
+                        return processedBlocks.join("\n\n");
+                    }
 
-            // 言語変更同期
-            listen('app:language-changed', async (event) => {
-                await initI18n(event.payload === 'en' ? 'en' : 'ja');
-                applyTranslationsToDOM();
-                const newTitle = await invoke('get_window_title', { windowKey: 'export' }).catch(() => '');
-                if (newTitle) { await getCurrentWindow().setTitle(newTitle); }
-            });
+                    const store = await Store.load('.settings.dat');
+                    const appLang = (await store.get('appLanguage')) ?? 'ja';
+                    await initI18n(appLang === 'en' ? 'en' : 'ja');
+                    applyTranslationsToDOM();
+                    const title = await invoke('get_window_title', { windowKey: 'export' }).catch(() => '');
+                    if (title) { await getCurrentWindow().setTitle(title); }
 
-            // データ受信
-            await listen('export-data', (event) => {
-                const { text } = event.payload;
-                if (contentDiv) {
-                    rawMarkdownText = text;
-                    contentDiv.innerHTML = text.replace(/\n/g, '<br>');
-                    updateArticle(contentDiv);
-                    updateStyles();
-                }
-            });
+                    // 言語変更同期
+                    listen('app:language-changed', async (event) => {
+                        await initI18n(event.payload === 'en' ? 'en' : 'ja');
+                        applyTranslationsToDOM();
+                        const newTitle = await invoke('get_window_title', { windowKey: 'export' }).catch(() => '');
+                        if (newTitle) { await getCurrentWindow().setTitle(newTitle); }
+                    });
 
-            // --- スタイル更新関数 ---
-            function updateStyles() {
-                if (!contentDiv) return;
-                const font = fontSelect.value;
-                const size = fontSizeInput.value;
-                const lh = lineHeightInput.value;
+                    // データ受信
+                    await listen('export-data', (event) => {
+                        const { text } = event.payload;
+                        if (contentDiv) {
+                            rawMarkdownText = text;
+                            contentDiv.innerHTML = text.replace(/\n/g, '<br>');
+                            updateArticle(contentDiv);
+                            updateStyles();
+                        }
+                    });
 
-                contentDiv.style.fontFamily = font === 'serif'
-                    ? '"Palatino Linotype", "Book Antiqua", Palatino, "Times New Roman", "Yu Mincho", serif'
-                    : font === 'sans-serif'
-                        ? '"Verdana", "Arial", "Helvetica", "Hiragino Sans", sans-serif'
-                        : '"Menlo", "Monaco", "Consolas", monospace';
-                contentDiv.style.fontSize = `${size}px`;
-                contentDiv.style.lineHeight = lh;
-            }
+                    // --- スタイル更新関数 ---
+                    function updateStyles() {
+                        if (!contentDiv) return;
+                        const font = fontSelect.value;
+                        const size = fontSizeInput.value;
+                        const lh = lineHeightInput.value;
 
-            // イベントリスナー
-            fontSelect.addEventListener('change', updateStyles);
-            fontSizeInput.addEventListener('input', updateStyles);
-            lineHeightInput.addEventListener('input', updateStyles);
+                        contentDiv.style.fontFamily = font === 'serif'
+                            ? '"Palatino Linotype", "Book Antiqua", Palatino, "Times New Roman", "Yu Mincho", serif'
+                            : font === 'sans-serif'
+                                ? '"Verdana", "Arial", "Helvetica", "Hiragino Sans", sans-serif'
+                                : '"Menlo", "Monaco", "Consolas", monospace';
+                        contentDiv.style.fontSize = `${size}px`;
+                        contentDiv.style.lineHeight = lh;
+                    }
 
-            // データ要求 (起動直後)
-            setTimeout(() => emit('export-request-data'), 100);
+                    // イベントリスナー
+                    fontSelect.addEventListener('change', updateStyles);
+                    fontSizeInput.addEventListener('input', updateStyles);
+                    lineHeightInput.addEventListener('input', updateStyles);
 
-            // --- 印刷 ---
-            document.getElementById('btn-print')?.addEventListener('click', () => {
-                window.print();
-            });
+                    // データ要求 (起動直後)
+                    setTimeout(() => emit('export-request-data'), 100);
 
-            // --- HTML保存 ---
-            document.getElementById('btn-html')?.addEventListener('click', async () => {
-                const path = await save({ filters: [{ name: 'HTML', extensions: ['html'] }] });
-                if (path && contentDiv) {
-                    const currentFont = contentDiv.style.fontFamily;
-                    const currentSize = contentDiv.style.fontSize;
-                    const currentLineHeight = contentDiv.style.lineHeight;
+                    // --- 印刷 ---
+                    document.getElementById('btn-print')?.addEventListener('click', () => {
+                        window.print();
+                    });
 
-                    const style = `
-            <style>
-                body {
-                    background-color: #555;
-                    margin: 0;
-                    padding: 20px;
-                    display: flex;
-                    justify-content: center;
-                }
-                .paper {
-                    background-color: white;
-                    color: black;
-                    width: 210mm;
-                    min-height: 297mm;
-                    padding: 20mm;
-                    box-sizing: border-box;
-                    margin: 0 auto;
-                    box-shadow: 0 0 10px rgba(0,0,0,0.5);
-                    font-family: ${currentFont};
-                    font-size: ${currentSize};
-                    line-height: ${currentLineHeight};
-                    word-wrap: break-word;
-                }
-                @media print {
-                    body { background: none; display: block; padding: 0; }
-                    .paper { width: 100%; margin: 0; box-shadow: none; min-height: auto; }
-                }
-            </style>`;
+                    // --- HTML保存 ---
+                    document.getElementById('btn-html')?.addEventListener('click', async () => {
+                        const path = await save({ filters: [{ name: 'HTML', extensions: ['html'] }] });
+                        if (path && contentDiv) {
+                            const currentFont = contentDiv.style.fontFamily;
+                            const currentSize = contentDiv.style.fontSize;
+                            const currentLineHeight = contentDiv.style.lineHeight;
 
-                    const fullHtml = `<!DOCTYPE html><html><head><meta charset="UTF-8">${style}</head><body><div class="paper">${contentDiv.innerHTML}</div></body></html>`;
+                            const style = `
+                    <style>
+                        body {
+                            background-color: #555;
+                            margin: 0;
+                            padding: 20px;
+                            display: flex;
+                            justify-content: center;
+                        }
+                        .paper {
+                            background-color: white;
+                            color: black;
+                            width: 210mm;
+                            min-height: 297mm;
+                            padding: 20mm;
+                            box-sizing: border-box;
+                            margin: 0 auto;
+                            box-shadow: 0 0 10px rgba(0,0,0,0.5);
+                            font-family: ${currentFont};
+                            font-size: ${currentSize};
+                            line-height: ${currentLineHeight};
+                            word-wrap: break-word;
+                        }
+                        @media print {
+                            body { background: none; display: block; padding: 0; }
+                            .paper { width: 100%; margin: 0; box-shadow: none; min-height: auto; }
+                        }
+                    </style>`;
 
-                    await invoke('write_file', { path, content: fullHtml, encoding: 'UTF-8' });
-                    alert(t('export.alert.saved'));
-                }
-            });
+                            const fullHtml = `<!DOCTYPE html><html><head><meta charset="UTF-8">${style}</head><body><div class="paper">${contentDiv.innerHTML}</div></body></html>`;
 
-            // --- MS-Word (DOCX) 保存 ---
-            document.getElementById('btn-docx')?.addEventListener('click', async () => {
-                const text = rawMarkdownText;
-                if (!text || !text.trim()) { alert(t('export.alert.noContent')); return; }
+                            await invoke('write_file', { path, content: fullHtml, encoding: 'UTF-8' });
+                            alert(t('export.alert.saved'));
+                        }
+                    });
 
-                const path = await save({
-                    title: t('export.dialog.docxTitle'),
-                    defaultPath: 'Untitled.docx',
-                    filters: [{ name: 'Word Document', extensions: ['docx'] }]
-                });
+                    // --- MS-Word (DOCX) 保存 ---
+                    document.getElementById('btn-docx')?.addEventListener('click', async () => {
+                        const text = rawMarkdownText;
+                        if (!text || !text.trim()) { alert(t('export.alert.noContent')); return; }
 
-                if (path) {
-                    try {
-                        const pandocPath = await store.get('pandocPath');
-                        const contentForPandoc = rawMarkdownText.replace(/\n/g, '  \n');
-
-                        await invoke('export_with_pandoc', {
-                            sourceContent: contentForPandoc,
-                            outputPath: path,
-                            format: "docx",
-                            isVertical: false,
-                            pandocPathSetting: pandocPath || null,
-                            metadata: {}
+                        const path = await save({
+                            title: t('export.dialog.docxTitle'),
+                            defaultPath: 'Untitled.docx',
+                            filters: [{ name: 'Word Document', extensions: ['docx'] }]
                         });
 
-                        alert(t('export.alert.docxSuccess'));
-                    } catch (e) {
-                        console.error(e);
-                        alert(`${t('export.alert.docxFailed')}:\n${e}`);
-                    }
-                }
-            });
+                        if (path) {
+                            try {
+                                const pandocPath = await store.get('pandocPath');
+                                // ⚠️単一改行・空行を補正したテキストを Pandoc へ渡す
+                                const contentForPandoc = normalizeNovelParagraphs(rawMarkdownText);
 
-            // --- EPUB保存 ---
-            document.getElementById('btn-epub')?.addEventListener('click', async () => {
-                epubTitleInput.value = "";
-                epubModal.style.display = 'flex';
-            });
+                                await invoke('export_with_pandoc', {
+                                    sourceContent: contentForPandoc,
+                                    outputPath: path,
+                                    format: "docx",
+                                    isVertical: false,
+                                    pandocPathSetting: pandocPath || null,
+                                    metadata: {}
+                                });
 
-            // --- 表紙画像選択 ---
-            document.getElementById('btn-select-cover')?.addEventListener('click', async () => {
-                const path = await open({
-                    filters: [{ name: 'Image', extensions: ['jpg', 'jpeg', 'png'] }]
-                });
-                if (path) epubCoverPathInput.value = path;
-            });
-
-            document.getElementById('btn-clear-cover')?.addEventListener('click', () => {
-                epubCoverPathInput.value = "";
-            });
-
-            // --- キャンセル ---
-            document.getElementById('btn-cancel-epub')?.addEventListener('click', () => {
-                epubModal.style.display = 'none';
-            });
-
-            // --- 実行 (保存) ---
-            document.getElementById('btn-exec-epub')?.addEventListener('click', async () => {
-                const title = epubTitleInput.value || "Untitled";
-                const author = epubAuthorInput.value || "Author";
-                const coverPath = epubCoverPathInput.value || null;
-
-                epubModal.style.display = 'none';
-
-                const path = await save({
-                    defaultPath: title + ".epub",
-                    filters: [{ name: 'EPUB Book', extensions: ['epub'] }]
-                });
-
-                if (path && contentDiv) {
-                    const fileName = path.split(/[/\\]/).pop() || 'Untitled';
-                    const epubTitle = fileName.replace(/\.[^/.]+$/, "");
-
-                    const rawHtml = contentDiv.innerHTML;
-                    const lines = rawHtml.split(/<br\s*\/?>/i);
-
-                    const sections = [];
-                    let currentSection = { title: epubTitle, content: "" };
-                    let isFirstSectionEmpty = true;
-
-                    lines.forEach((line) => {
-                        const cleanLine = line.trim();
-                        const match = cleanLine.match(/^(#+)\s+(.*)/);
-
-                        if (match) {
-                            if (!isFirstSectionEmpty || currentSection.content.trim() !== "") {
-                                sections.push(currentSection);
-                            }
-
-                            const level = match[1].length;
-                            const headingText = match[2];
-
-                            currentSection = {
-                                title: headingText,
-                                content: `<h${level}>${headingText}</h${level}>`
-                            };
-                            isFirstSectionEmpty = false;
-
-                        } else {
-                            if (cleanLine !== "") {
-                                currentSection.content += `<p>${line}</p>`;
+                                alert(t('export.alert.docxSuccess'));
+                            } catch (e) {
+                                console.error(e);
+                                alert(`${t('export.alert.docxFailed')}:\n${e}`);
                             }
                         }
                     });
 
-                    if (currentSection.content.trim() !== "") {
-                        sections.push(currentSection);
-                    }
-
-                    const sanitizedSections = sections.map(sec => {
-                        return {
-                            title: sec.title,
-                            content: sec.content
-                                .replace(/&nbsp;/g, '&#160;')
-                                .replace(/<hr>/g, '<hr />')
-                        };
+                    // --- EPUB保存 ---
+                    document.getElementById('btn-epub')?.addEventListener('click', async () => {
+                        epubTitleInput.value = "";
+                        epubModal.style.display = 'flex';
                     });
 
-                    try {
-                        await invoke('export_epub', {
-                            path,
-                            title: epubTitle,
-                            author,
-                            coverPath,
-                            sections: sanitizedSections,
+                    // --- 表紙画像選択 ---
+                    document.getElementById('btn-select-cover')?.addEventListener('click', async () => {
+                        const path = await open({
+                            filters: [{ name: 'Image', extensions: ['jpg', 'jpeg', 'png'] }]
                         });
-                        alert(t('export.alert.epubSuccess'));
-                    } catch (e) {
-                        console.error(e);
-                        alert(`${t('export.alert.epubFailed')}: ${e}`);
-                    }
+                        if (path) epubCoverPathInput.value = path;
+                    });
+
+                    document.getElementById('btn-clear-cover')?.addEventListener('click', () => {
+                        epubCoverPathInput.value = "";
+                    });
+
+                    // --- キャンセル ---
+                    document.getElementById('btn-cancel-epub')?.addEventListener('click', () => {
+                        epubModal.style.display = 'none';
+                    });
+
+                    // --- 実行 (保存) ---
+                    document.getElementById('btn-exec-epub')?.addEventListener('click', async () => {
+                        const title = epubTitleInput.value || "Untitled";
+                        const author = epubAuthorInput.value || "Author";
+                        const coverPath = epubCoverPathInput.value || null;
+
+                        epubModal.style.display = 'none';
+
+                        const path = await save({
+                            defaultPath: title + ".epub",
+                            filters: [{ name: 'EPUB Book', extensions: ['epub'] }]
+                        });
+
+                        if (path && contentDiv) {
+                            const fileName = path.split(/[/\\]/).pop() || 'Untitled';
+                            const epubTitle = fileName.replace(/\.[^/.]+$/, "");
+
+                            const rawHtml = contentDiv.innerHTML;
+                            const lines = rawHtml.split(/<br\s*\/?>/i);
+
+                            const sections = [];
+                            let currentSection = { title: epubTitle, content: "" };
+                            let isFirstSectionEmpty = true;
+
+                            lines.forEach((line) => {
+                                const cleanLine = line.trim();
+                                const match = cleanLine.match(/^(#+)\s+(.*)/);
+
+                                if (match) {
+                                    if (!isFirstSectionEmpty || currentSection.content.trim() !== "") {
+                                        sections.push(currentSection);
+                                    }
+
+                                    const level = match[1].length;
+                                    const headingText = match[2];
+
+                                    currentSection = {
+                                        title: headingText,
+                                        content: `<h${level}>${headingText}</h${level}>`
+                                    };
+                                    isFirstSectionEmpty = false;
+
+                                } else {
+                                    // ⚠️EPUBリーダーで潰れないよう &#160; (空白文字) を入れる
+                                    if (cleanLine === "") {
+                                        currentSection.content += `<p>&#160;</p>`;
+                                    } else {
+                                        currentSection.content += `<p>${line}</p>`;
+                                    }
+                                }
+                            });
+
+                            if (currentSection.content.trim() !== "") {
+                                sections.push(currentSection);
+                            }
+
+                            const sanitizedSections = sections.map(sec => {
+                                return {
+                                    title: sec.title,
+                                    content: sec.content
+                                        .replace(/&nbsp;/g, '&#160;')
+                                        .replace(/<hr>/g, '<hr />')
+                                };
+                            });
+
+                            try {
+                                await invoke('export_epub', {
+                                    path,
+                                    title: epubTitle,
+                                    author,
+                                    coverPath,
+                                    sections: sanitizedSections,
+                                });
+                                alert(t('export.alert.epubSuccess'));
+                            } catch (e) {
+                                console.error(e);
+                                alert(`${t('export.alert.epubFailed')}: ${e}`);
+                            }
+                        }
+                    });
+
+                    // 閉じる
+                    document.getElementById('btn-close')?.addEventListener('click', () => getCurrentWindow().close());
+
+                    // ショートカット
+                    document.addEventListener('keydown', (e) => {
+                        const isCtrlOrCmd = e.ctrlKey || e.metaKey;
+                        const key = e.key.toLowerCase();
+                        if (isCtrlOrCmd && e.key.toLowerCase() === 'p') {
+                            e.preventDefault();
+                            window.print();
+                        }
+                        if (isCtrlOrCmd && e.key.toLowerCase() === 'e') {
+                            e.preventDefault();
+                            getCurrentWindow().close();
+                        }
+                        if (isCtrlOrCmd && key === 'r') { e.preventDefault(); }
+                        if (isCtrlOrCmd && key === 'r' && e.shiftKey) { e.preventDefault(); }
+                    });
+
+                    // --- 右クリックメニューの無効化 ---
+                    document.addEventListener('contextmenu', (e) => {
+                        e.preventDefault();
+                    });
                 }
-            });
 
-
-            // 閉じる
-            document.getElementById('btn-close')?.addEventListener('click', () => getCurrentWindow().close());
-
-            // ショートカット
-            document.addEventListener('keydown', (e) => {
-                const isCtrlOrCmd = e.ctrlKey || e.metaKey;
-                const key = e.key.toLowerCase();
-                if (isCtrlOrCmd && e.key.toLowerCase() === 'p') {
-                    e.preventDefault();
-                    window.print();
-                }
-                if (isCtrlOrCmd && e.key.toLowerCase() === 'e') {
-                    e.preventDefault();
-                    getCurrentWindow().close();
-                }
-                if (isCtrlOrCmd && key === 'r') { e.preventDefault(); }
-                if (isCtrlOrCmd && key === 'r' && e.shiftKey) { e.preventDefault(); }
-            });
-
-            // --- 右クリックメニューの無効化 ---
-            document.addEventListener('contextmenu', (e) => {
-                e.preventDefault();
-            });
-        }
         window.addEventListener('DOMContentLoaded', initExport);
     </script>
 </body>

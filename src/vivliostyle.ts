@@ -30,7 +30,24 @@ function convertAozoraRubyToHtml(rawText: string): string {
 
 // 単一改行を自動的に段落（\n\n）に補正するヘルパー
 function normalizeNovelParagraphs(text: string): string {
-  return text.replace(/([^\n])\r?\n([^\n])/g, "$1\n\n$2");
+  // 1. 改行コードを \n に統一し、全角/半角スペースのみの行を完全な空行に掃除
+  const cleaned = text.replace(/\r\n/g, "\n").replace(/^[ 　\t]+$/gm, "");
+
+  // 2. 行ごとに分割
+  const lines = cleaned.split("\n");
+  const processedBlocks: string[] = [];
+
+  for (const line of lines) {
+    if (line.trim() === "") {
+      // ⚠️ 空行（文字のない改行のみの行）は明示的に <br> に変換して1行空けを保証
+      processedBlocks.push("<br>");
+    } else {
+      processedBlocks.push(line);
+    }
+  }
+
+  // 3. 各行を二重改行（\n\n）で連結して Markdown の独立した段落にする
+  return processedBlocks.join("\n\n");
 }
 
 // 自動縦中横を適用するヘルパー
@@ -397,6 +414,12 @@ p {
   margin-block-start: 0;
   margin-block-end: 0;
   padding: 0;
+}
+
+/* ⚠️追加: 空の段落（意図的な1行空け）の表示高さを1行分(1.8em)確保する */
+p:empty::before,
+p:blank::before {
+  content: "\\00a0"; /* 不可視のスペースを入れて潰れを防止 */
 }
 
 /* 縦中横 */

@@ -210,6 +210,7 @@ In isolated filesystem environments like NixOS (Nix store), the application may 
 
 * **Vertical Preview Background**:
   To prevent rendering inconsistencies, the default vertical preview background is automatically set to an eye-friendly "sepia color (#eae3d2)" on Linux.
+  Additionally, NixOS does not support exporting from the vertical-writing preview screen (vertical-writing EPUB or HTML output); the export will fail. 
 * **If you wish to use the default BGM or backgrounds**:
   You can still use them by manually browsing and loading the actual files from the application's resources directory within the Nix store (e.g., `/nix/store/...-mirrorshard2/bin/resources/`) using the file picker in the settings menu.
 
