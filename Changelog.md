@@ -11,6 +11,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 - Implemented DTP typesetting and PDF export features via Vivliostyle integration.
+- Added an “Info” tab to the settings screen. You can now check the version information and see if updates are available.
 
 ### Changed
 - Added Tate-chu-yoko (TCY / Vertical-in-Horizontal) support to the live vertical preview.

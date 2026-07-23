@@ -10,6 +10,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added (新機能)  
 - Vivliostyleによる組版・PDF出力機能を実装  
+- 設定画面に「情報」タブを追加。バージョン情報とアップデートの有無を確認可能に  
 
 ### Changed (変更点)    
 - 縦書きプレビューに縦中横を実装。設定画面のチェックボックスでオン/オフ  

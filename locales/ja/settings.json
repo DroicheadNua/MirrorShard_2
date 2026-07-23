@@ -8,7 +8,8 @@
   "tab": {
     "general": "一般",
     "ai": "AI設定",
-    "code": "コードエディタ"
+    "code": "コードエディタ",
+    "about": "情報"
   },
   "apply": "適用",
   "language": {
@@ -202,5 +203,15 @@
   "alerts": {
     "settingsSaveFailed": "設定の保存に失敗しました: {{err}}",
     "settingsScreenError": "設定画面のエラー: {{error}}"
+  },
+  "about": {
+    "title": "情報",
+    "currentVersion": "現在のバージョン:",
+    "checkUpdate": "アップデートを確認",
+    "updateChecking": "確認中...",
+    "updateAvailable": "新バージョン {{version}} が利用可能です！",
+    "updateNotAvailable": "お使いのバージョンは最新です。",
+    "updateError": "確認に失敗しました。",
+    "downloadLink": "ダウンロードページを開く"
   }
 }

@@ -8,7 +8,8 @@
   "tab": {
     "general": "General",
     "ai": "AI Settings",
-    "code": "Code Editor"
+    "code": "Code Editor",
+    "about": "About"
   },
   "apply": "Apply",
   "language": {
@@ -202,5 +203,15 @@
   "alerts": {
     "settingsSaveFailed": "Failed to save settings: {{err}}",
     "settingsScreenError": "Settings screen error: {{error}}"
+  },
+  "about": {
+    "title": "About",
+    "currentVersion": "Current Version:",
+    "checkUpdate": "Check for Updates",
+    "updateChecking": "Checking...",
+    "updateAvailable": "New version {{version}} is available!",
+    "updateNotAvailable": "You are using the latest version.",
+    "updateError": "Failed to check for updates.",
+    "downloadLink": "Open Download Page"
   }
 }

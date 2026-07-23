@@ -42,6 +42,7 @@
                     >
                         コードエディタ
                     </button>
+                    <button class="tab-btn" data-tab="tab-about" data-i18n="settings.tab.about">情報</button>
                     <hr
                         class="separator"
                         style="color: transparent; border: none"
@@ -1733,6 +1734,19 @@
                         </div>
                     </div>
                 </div>
+
+                <!-- ===== タブ4: アプリ情報 ===== -->
+                <div id="tab-about" class="tab-content">
+                    <div class="setting-item">
+                        <h3>MirrorShard 2</h3>
+                        <p>Current Version: <span id="current-app-version">v1.12.0</span></p>
+                    </div>
+                    <div class="setting-item">
+                        <button id="btn-check-update" class="secondary"  data-i18n="settings.about.checkUpdate" style="width: 140px;">アップデートを確認</button>
+                        <span id="update-status-msg" style="margin-left: 12px; font-size: 13px;"></span>
+                    </div>
+                </div>
+
             </div>
         </div>
         <script type="module" src="/src/settings.ts"></script>

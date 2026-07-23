@@ -6,30 +6,37 @@ import { getCurrentWindow } from "@tauri-apps/api/window";
 import { open, ask } from "@tauri-apps/plugin-dialog";
 import { type } from "@tauri-apps/plugin-os";
 import { invoke } from "@tauri-apps/api/core";
+import { getVersion } from "@tauri-apps/api/app";
 import Picker from "vanilla-picker";
 // CSSのインポート
 import "./settings.css";
 
 async function setupSettings() {
   try {
-    // --- 0. タブ切り替えロジック ---
-    const tabs = document.querySelectorAll(".tab-btn");
-    const contents = document.querySelectorAll(".tab-content");
+  // --- 0. タブ切り替えロジック ---
+      const tabs = document.querySelectorAll(".tab-btn");
+      const contents = document.querySelectorAll(".tab-content");
+      const updateStatusMsg = document.getElementById("update-status-msg");
 
-    tabs.forEach((tab) => {
-      tab.addEventListener("click", () => {
-        // 全て非アクティブ化
-        tabs.forEach((t) => t.classList.remove("active"));
-        contents.forEach((c) => c.classList.remove("active"));
+      tabs.forEach((tab) => {
+        tab.addEventListener("click", () => {
+          // 全て非アクティブ化
+          tabs.forEach((t) => t.classList.remove("active"));
+          contents.forEach((c) => c.classList.remove("active"));
 
-        // クリックされたものをアクティブ化
-        tab.classList.add("active");
-        const targetId = tab.getAttribute("data-tab");
-        if (targetId) {
-          document.getElementById(targetId)?.classList.add("active");
-        }
+          // クリックされたものをアクティブ化
+          tab.classList.add("active");
+          const targetId = tab.getAttribute("data-tab");
+          if (targetId) {
+            document.getElementById(targetId)?.classList.add("active");
+          }
+
+          // タブを切り替えたらステータスメッセージをクリア
+          if (updateStatusMsg) {
+            updateStatusMsg.textContent = "";
+          }
+        });
       });
-    });
     // --- 1. OSごとの見た目調整 ---
     const wrapper = document.querySelector("#settings-wrapper") as HTMLElement;
     const body = document.querySelector("body") as HTMLElement;
@@ -1706,6 +1713,63 @@ async function setupSettings() {
     document.addEventListener("contextmenu", (e) => {
       e.preventDefault();
     });
+
+    // バージョン比較のヘルパー (例: "1.12.0" < "1.13.0")
+    function isNewerVersion(current: string, latest: string): boolean {
+      const c = current.split(".").map(Number);
+      const l = latest.split(".").map(Number);
+      for (let i = 0; i < 3; i++) {
+        if ((l[i] || 0) > (c[i] || 0)) return true;
+        if ((l[i] || 0) < (c[i] || 0)) return false;
+      }
+      return false;
+    }
+
+    // アップデート確認処理
+    async function setupAboutTab() {
+      const versionEl = document.getElementById("current-app-version");
+      const checkBtn = document.getElementById("btn-check-update");
+      const statusEl = document.getElementById("update-status-msg");
+
+      // Tauriアプリの package.json から現在のバージョンを取得して表示
+      const currentVersion = await getVersion();
+      if (versionEl) versionEl.textContent = `v${currentVersion}`;
+
+      checkBtn?.addEventListener("click", async () => {
+        if (statusEl) statusEl.textContent = t("settings.about.updateChecking");
+
+        try {
+          const res = await fetch("https://api.github.com/repos/DroicheadNua/MirrorShard_2/releases/latest");
+          if (!res.ok) throw new Error("API error");
+
+          const data = await res.json();
+          const latestTag = data.tag_name || ""; // 例: "v1.13.0"
+          const latestVersion = latestTag.replace(/^v/, "");
+
+          if (isNewerVersion(currentVersion, latestVersion)) {
+            if (statusEl) {
+              const msg = t("settings.about.updateAvailable", { version: latestTag });
+              const linkText = t("settings.about.downloadLink");
+
+              statusEl.innerHTML = `${msg} <a href="#" id="link-download">${linkText}</a>`;
+
+              document.getElementById("link-download")?.addEventListener("click", (e) => {
+                e.preventDefault();
+                open(data.html_url);
+              });
+            }
+          } else {
+            if (statusEl) statusEl.textContent = t("settings.about.updateNotAvailable");
+          }
+        } catch (e) {
+          if (statusEl) statusEl.textContent = t("settings.about.updateError");
+          console.error("Update check failed:", e);
+        }
+      });
+    }
+
+    await setupAboutTab();
+
   } catch (error) {
     // スクリプト全体のエラーをキャッチ
     alert(`設定画面のエラー: ${error}`);
