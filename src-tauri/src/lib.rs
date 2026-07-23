@@ -22,6 +22,9 @@ use tauri_plugin_opener::OpenerExt;
 use tauri_plugin_window_state::{Builder, StateFlags};
 use zip::{write::SimpleFileOptions, ZipArchive, ZipWriter};
 
+// Vivliostyle プレビュープロセス管理用
+struct VivliostyleProcess(Mutex<Option<Child>>);
+
 struct OpenCodeProcess(Mutex<Option<Child>>);
 
 struct SillyTavernProcess(Mutex<Option<Child>>);
@@ -219,6 +222,45 @@ impl rig::tool::Tool for WebSearchTool {
 
 // --- Tauriコマンドの定義 ---
 
+// Pandoc(Haskell)用にUNCプレフィックス(\\?\)を除去し、スラッシュ区切りに整える関数
+fn normalize_path_for_pandoc(path: &str) -> String {
+    let s = path.replace("\\", "/");
+    // //?/ や \\?\ で始まるWindows拡張パスの頭を綺麗に削る
+    if let Some(stripped) = s.strip_prefix("//?/") {
+        stripped.to_string()
+    } else if let Some(stripped) = s.strip_prefix("\\\\?\\") {
+        stripped.to_string()
+    } else {
+        s
+    }
+}
+
+#[tauri::command]
+async fn open_project_folder(path: String) -> Result<(), String> {
+    #[cfg(target_os = "windows")]
+    {
+        std::process::Command::new("explorer")
+            .arg(&path)
+            .spawn()
+            .map_err(|e| e.to_string())?;
+    }
+    #[cfg(target_os = "macos")]
+    {
+        std::process::Command::new("open")
+            .arg(&path)
+            .spawn()
+            .map_err(|e| e.to_string())?;
+    }
+    #[cfg(target_os = "linux")]
+    {
+        std::process::Command::new("xdg-open")
+            .arg(&path)
+            .spawn()
+            .map_err(|e| e.to_string())?;
+    }
+    Ok(())
+}
+
 // フォルダ内のMarkdownファイルを検出して配列で返すコマンド（Vivliostyle用）
 #[tauri::command]
 async fn get_markdown_files(dir_path: String) -> Result<Vec<String>, String> {
@@ -228,8 +270,9 @@ async fn get_markdown_files(dir_path: String) -> Result<Vec<String>, String> {
     for entry in entries.flatten() {
         let path = entry.path();
         if path.is_file() {
-            if let Some(ext) = path.extension() {
-                if ext == "md" {
+            if let Some(ext) = path.extension().and_then(|s| s.to_str()) {
+                // .md と .txt の両方を収集対象にする
+                if ext == "md" || ext == "txt" {
                     if let Some(file_name) = path.file_name().and_then(|n| n.to_str()) {
                         files.push(file_name.to_string());
                     }
@@ -238,7 +281,7 @@ async fn get_markdown_files(dir_path: String) -> Result<Vec<String>, String> {
         }
     }
 
-    files.sort(); // ファイル名順（01_xxx.md, 02_xxx.md等）でソート
+    files.sort(); // 01.txt, 02.md 等をまとめて昇順ソート
     Ok(files)
 }
 
@@ -256,6 +299,89 @@ async fn read_local_file_content(path: String) -> Result<String, String> {
     use encoding_rs::SHIFT_JIS;
     let (cow, _encoding_used, _had_errors) = SHIFT_JIS.decode(&bytes);
     Ok(cow.into_owned())
+}
+
+#[tauri::command]
+async fn build_vivliostyle_pdf(project_path: String) -> Result<String, String> {
+    let mut cmd = if cfg!(target_os = "windows") {
+        let mut c = std::process::Command::new("cmd");
+        c.args(["/C", "npx", "-y", "@vivliostyle/cli", "build"]);
+        #[cfg(target_os = "windows")]
+        {
+            use std::os::windows::process::CommandExt;
+            c.creation_flags(0x08000000); // コマンドプロンプト表示を抑制
+        }
+        c
+    } else {
+        let mut c = std::process::Command::new("npx");
+        c.args(["-y", "@vivliostyle/cli", "build"]);
+        c
+    };
+
+    cmd.current_dir(&project_path);
+
+    // PDF生成が完了するまで待機する (.output())
+    let output = cmd
+        .output()
+        .map_err(|e| format!("PDFビルドプロセスの実行に失敗しました: {}", e))?;
+
+    if output.status.success() {
+        Ok("PDFの生成が完了しました。".to_string())
+    } else {
+        let err_msg = String::from_utf8_lossy(&output.stderr).to_string();
+        Err(format!("PDF生成エラー: {}", err_msg))
+    }
+}
+
+#[tauri::command]
+async fn start_vivliostyle_preview(
+    _app: tauri::AppHandle,
+    project_path: String,
+    state: tauri::State<'_, VivliostyleProcess>,
+) -> Result<(), String> {
+    // 1. 既存のプレビュープロセスがあれば殺す（再起動対応）
+    {
+        let mut lock = state.inner().0.lock().unwrap();
+        if let Some(mut child) = lock.take() {
+            kill_child_tree(&mut child);
+        }
+
+        // 2. npx で Vivliostyle プレビューサーバーを起動(標準ブラウザ)
+        let mut cmd = if cfg!(target_os = "windows") {
+            let mut c = std::process::Command::new("cmd");
+            c.args([
+                "/C",
+                "npx",
+                "-y",
+                "@vivliostyle/cli",
+                "preview",
+                "--port",
+                "8123",
+            ]);
+            #[cfg(target_os = "windows")]
+            {
+                use std::os::windows::process::CommandExt;
+                c.creation_flags(0x08000000);
+            }
+            c
+        } else {
+            let mut c = std::process::Command::new("npx");
+            c.args(["-y", "@vivliostyle/cli", "preview", "--port", "8123"]);
+            c.stdout(std::process::Stdio::null());
+            c.stderr(std::process::Stdio::null());
+            c
+        };
+
+        cmd.current_dir(&project_path);
+
+        let child = cmd
+            .spawn()
+            .map_err(|e| format!("ERR_VIVLIOSTYLE_SPAWN:{}", e))?;
+
+        *lock = Some(child);
+    }
+
+    Ok(())
 }
 
 #[tauri::command]
@@ -1546,12 +1672,19 @@ async fn export_with_pandoc(
     // ここに渡す。今回は source_content をそのまま書き込む
     fs::write(&input_md, &source_content).map_err(|e| e.to_string())?;
 
+    // Windowsのバックスラッシュ(\)をすべてスラッシュ(/)に置換してPandocのバグを回避する
+    let clean_input_md = normalize_path_for_pandoc(&input_md.to_string_lossy());
+    let clean_output_path = normalize_path_for_pandoc(&output_path);
+
     // 3. コマンド構築
     let mut cmd = Command::new(&pandoc_exe);
-    cmd.arg(&input_md);
+    cmd.arg(&clean_input_md);
 
     // 共通オプション
     cmd.arg("--standalone");
+
+    // HTMLタグ (<ruby> や <span class="tcy">) を保持して読み込ませる
+    cmd.arg("--from").arg("markdown+raw_html");
 
     // メタデータ設定
     if let Some(title) = metadata.get("title").and_then(|v| v.as_str()) {
@@ -1563,42 +1696,40 @@ async fn export_with_pandoc(
 
     let cover_image = metadata.get("cover").and_then(|v| v.as_str());
 
-    cmd.arg("--metadata").arg("lang=ja-JP");
+    cmd.arg("--metadata").arg("lang=ja");
 
     // フォーマット別処理
     match format.as_str() {
         "epub" => {
-            cmd.arg("-o").arg(&output_path);
+            cmd.arg("-o").arg(&clean_output_path);
             if is_vertical {
                 let css_path = prepare_css_for_pandoc(&app, "resources/styles/epubvertical.css")?;
-                cmd.arg("--css").arg(css_path);
-
+                cmd.arg("--css").arg(normalize_path_for_pandoc(&css_path));
                 cmd.arg("--metadata").arg("page-progression-direction=rtl");
             }
 
             if let Some(cover) = cover_image {
                 if !cover.is_empty() {
-                    cmd.arg(format!("--epub-cover-image={}", cover));
+                    cmd.arg(format!(
+                        "--epub-cover-image={}",
+                        normalize_path_for_pandoc(&cover)
+                    ));
                 }
             }
         }
 
         "html" => {
-            cmd.arg("-o").arg(&output_path);
-            // ★ HTMLの場合はリソース埋め込みが必須 (画像やCSSを1ファイルにするため)
+            cmd.arg("-o").arg(&clean_output_path);
             cmd.arg("--embed-resources");
             cmd.arg("--standalone");
 
             if is_vertical {
-                // HTMLプレビュー用の縦書きCSSを適用
-                cmd.arg("--css").arg(resolve_resource_path(
-                    &app,
-                    "resources/styles/vertical.css",
-                )?);
+                let css_path = prepare_css_for_pandoc(&app, "resources/styles/vertical.css")?;
+                cmd.arg("--css").arg(normalize_path_for_pandoc(&css_path));
             }
         }
         "docx" => {
-            cmd.arg("-o").arg(&output_path);
+            cmd.arg("-o").arg(&clean_output_path);
         }
         _ => return Err("ERR_UNSUPPORTED_FORMAT".to_string()),
     }
@@ -2250,6 +2381,7 @@ pub fn run() {
         .manage(SillyTavernProcess(Mutex::new(None)))
         .manage(SdCppProcess(Mutex::new(None)))
         .manage(SdServerProcess(Mutex::new(None)))
+        .manage(VivliostyleProcess(Mutex::new(None)))
         .setup(|app| {
             // ---  起動時引数を解析し、状態に書き込む ---
             if let Ok(matches) = app.cli().matches() {
@@ -2342,6 +2474,9 @@ pub fn run() {
             open_sd_server,
             read_local_file_content,
             get_markdown_files,
+            start_vivliostyle_preview,
+            build_vivliostyle_pdf,
+            open_project_folder,
         ])
         .on_window_event(|window, event| match event {
             // 1. メインウィンドウの終了確認
@@ -2360,6 +2495,15 @@ pub fn run() {
                         if let Ok(mut lock) = state.inner().0.lock() {
                             if let Some(mut child) = lock.take() {
                                 kill_child_tree(&mut child);
+                            }
+                        }
+                    }
+                    "vivliostyle_preview" => {
+                        if let Some(state) = window.try_state::<VivliostyleProcess>() {
+                            if let Ok(mut lock) = state.0.lock() {
+                                if let Some(mut child) = lock.take() {
+                                    kill_child_tree(&mut child);
+                                }
                             }
                         }
                     }
@@ -2429,6 +2573,13 @@ pub fn run() {
                 if let Ok(mut lock) = app_handle.state::<OpenCodeProcess>().inner().0.lock() {
                     if let Some(mut child) = lock.take() {
                         kill_child_tree(&mut child);
+                    }
+                }
+                if let Some(state) = app_handle.try_state::<VivliostyleProcess>() {
+                    if let Ok(mut lock) = state.0.lock() {
+                        if let Some(mut child) = lock.take() {
+                            kill_child_tree(&mut child);
+                        }
                     }
                 }
                 if let Ok(mut lock) = app_handle.state::<SillyTavernProcess>().inner().0.lock() {

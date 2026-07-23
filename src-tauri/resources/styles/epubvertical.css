@@ -7,3 +7,7 @@ body {
     font-family: serif-ja, serif;
     font-size: 1rem; /* ptやpxより、相対的なremがEPUBには適している */
 }
+.tcy {
+  -webkit-text-combine: horizontal;
+  text-combine-upright: all;
+}

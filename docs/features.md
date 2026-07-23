@@ -102,7 +102,8 @@ A minimal, distraction-free editor designed for immersive writing.
 
 Export your work into multiple formats.
 
-* PDF
+* PDF / Book Publishing (Vivliostyle Integration)  
+  Integrates with the Vivliostyle CSS typesetting engine to generate publication-ready PDFs (Vertical RTL, 2-Column, Pocket Book / A5 / A4 layouts). Includes automatic manuscript concatenation, Ruby annotation, and Tate-chu-yoko (TCY) conversion.
 
 * DOCX (with Ruby support)
 
@@ -110,8 +111,12 @@ Export your work into multiple formats.
 
 * EPUB
 
-* **Vertical Writing Preview**
-  Supports traditional Japanese vertical text layout with ruby annotations.
+## 🇯🇵 Japanese & RTL Support
+
+* **Vivliostyle CSS Typesetting (DTP)**  
+  Supports Aozora Bunko ruby syntax (`｜漢字《かんじ》`) and automatic Tate-chu-yoko (TCY) for vertical Japanese books. Includes one-click preview and PDF export with book/zine presets.
+* **Vertical Writing Preview**  
+  Live vertical writing preview with Aozora Bunko ruby support.
 
 ---
 

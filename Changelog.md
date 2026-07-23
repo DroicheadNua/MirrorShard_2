@@ -7,6 +7,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [1.12.0] - 2026-07-XX
+
+### Added
+- Implemented DTP typesetting and PDF export features via Vivliostyle integration.
+
+### Changed
+- Added Tate-chu-yoko (TCY / Vertical-in-Horizontal) support to the live vertical preview.
+
+### Fixed
+- Fixed an issue with the display of OpenRouter model presets.
+- Fixed a file path error when exporting vertical preview text to HTML via Pandoc.
+
+
 ## [1.11.0] - 2026-07-19
 
 ### Added

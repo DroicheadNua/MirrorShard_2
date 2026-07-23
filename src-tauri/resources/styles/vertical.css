@@ -16,10 +16,10 @@ body {
   /* ★ 埋め込まれたNoto Serif JPを参照 */
   font-family: "Noto Serif JP", serif;
   font-size: 12pt; /* pt単位が印刷には適している */
-  
+
   /* 1行の長さを約40字に (A4横の高さと相談) */
   height: 160mm; /* A4横の短辺210mm - マージン50mm = 160mm */
-  
+
   /* 複数段組にする場合は、column-countを使う */
   /* column-count: 2;
   column-gap: 1.5em; */
@@ -28,6 +28,10 @@ body {
   width: auto;
   margin: 0;
   padding: 0;
+}
+.tcy {
+  -webkit-text-combine: horizontal;
+  text-combine-upright: all;
 }
 
 

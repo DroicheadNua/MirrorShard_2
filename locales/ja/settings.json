@@ -1,6 +1,7 @@
 {
   "general": {
-    "title": "設定"
+    "title": "設定",
+    "enableAutoTcy": "縦書きプレビューで自動縦中横を有効にする"
   },
   "windowTitle": "設定",
   "closeWindow": "閉じる (F2)",

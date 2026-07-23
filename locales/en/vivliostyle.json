@@ -2,6 +2,7 @@
   "title": "Vivliostyle DTP / Book Export",
   "projectFolder": "Project Folder",
   "selectFolder": "Browse...",
+  "openFolder": "Open",
   "updateFiles": "📁 Create / Update Config Files",
   "preset": "Preset",
   "presets": {
@@ -36,5 +37,8 @@
   "bookTitle": "Book Title",
   "bookAuthor": "Author Name",
   "bookLanguage": "Language",
-  "fontFamily": "Font"
+  "fontFamily": "Font",
+  "fontSize": "Font Size",
+  "lineHeight": "Line Height",
+  "enableTcy": "Auto tate-chu-yoko"
 }

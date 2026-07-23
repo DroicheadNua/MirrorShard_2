@@ -23,20 +23,27 @@ const osType = type();
 // --- メモリ上の DOM を使って文字列の青空ルビを HTML ルビに変換するヘルパー ---
 function convertAozoraRubyToHtml(rawText: string): string {
   const tempDiv = document.createElement("div");
-  // 改行や特殊文字を維持したままテキストノードとしてセット
   tempDiv.textContent = rawText;
-
-  // ruby.ts
   updateArticle(tempDiv);
-
-  // 変換後の HTML 文字列を返す
   return tempDiv.innerHTML;
+}
+
+// 単一改行を自動的に段落（\n\n）に補正するヘルパー
+function normalizeNovelParagraphs(text: string): string {
+  return text.replace(/([^\n])\r?\n([^\n])/g, "$1\n\n$2");
+}
+
+// 自動縦中横を適用するヘルパー
+function applyAutoTcy(text: string, enabled: boolean = true): string {
+  if (!enabled) return text;
+  return text.replace(/\b(\d{1,2})\b/g, '<span class="tcy">$1</span>');
 }
 
 class VivliostyleManager {
   // DOM要素
   private folderPathInput = document.getElementById("project-folder-path") as HTMLInputElement;
   private btnSelectFolder = document.getElementById("btn-select-folder") as HTMLButtonElement;
+  private btnOpenFolder = document.getElementById("btn-open-folder") as HTMLButtonElement;
   private btnUpdateFiles = document.getElementById("btn-update-files") as HTMLButtonElement;
 
   private presetSelector = document.getElementById("preset-selector") as HTMLSelectElement;
@@ -48,6 +55,10 @@ class VivliostyleManager {
   private marginBottom = document.getElementById("margin-bottom") as HTMLInputElement;
   private marginInside = document.getElementById("margin-inside") as HTMLInputElement;
   private marginOutside = document.getElementById("margin-outside") as HTMLInputElement;
+  private titleInput = document.getElementById("book-title") as HTMLInputElement;
+  private authorInput = document.getElementById("book-author") as HTMLInputElement;
+  private fontSizeInput = document.getElementById("font-size-input") as HTMLInputElement;
+  private lineHeightInput = document.getElementById("line-height-input") as HTMLInputElement;
 
   private btnOpenTerminal = document.getElementById("btn-open-terminal") as HTMLButtonElement;
   private btnPreview = document.getElementById("btn-preview") as HTMLButtonElement;
@@ -57,11 +68,17 @@ class VivliostyleManager {
   private minimizeBtn = document.getElementById("btn-minimize") as HTMLButtonElement;
   private closeBtn = document.getElementById("btn-close") as HTMLButtonElement;
   private wrapper = document.getElementById("vivliostyle-wrapper") as HTMLDivElement;
+  private enableTcy = document.getElementById("enable-tcy") as HTMLInputElement;
 
   // 現在選択中のフォルダパス
   private currentProjectPath: string | null = null;
   private store: Store | null = null;
   private isSimpleFullscreen = false;
+
+  constructor() {
+    this.setupWindowControls();
+    this.setupEventListeners();
+  }
 
   // 非同期の初期化を順番に実行する
   public async init() {
@@ -87,11 +104,6 @@ class VivliostyleManager {
     });
   }
 
-  constructor() {
-    this.setupWindowControls();
-    this.setupEventListeners();
-  }
-
   // --- 1. カスタムタイトルバーの操作 ---
   private setupWindowControls() {
     this.minimizeBtn?.addEventListener("click", () => appWindow.minimize());
@@ -114,34 +126,38 @@ class VivliostyleManager {
     });
 
     // フォルダ選択
-    this.btnSelectFolder.addEventListener("click", async () => {
+    this.btnSelectFolder?.addEventListener("click", async () => {
       await this.selectProjectFolder();
     });
 
+    // フォルダ開く
+    this.btnOpenFolder?.addEventListener("click", async () => {
+      await this.openProjectFolder();
+    });
+
     // プリセット変更
-    this.presetSelector.addEventListener("change", () => {
+    this.presetSelector?.addEventListener("change", async () => {
       this.applyPreset(this.presetSelector.value);
-      this.saveSettings()
+      await this.saveSettings();
     });
 
     // 設定ファイル更新・作成
-    this.btnUpdateFiles.addEventListener("click", async () => {
-      await this.updateConfigurationFiles();
-      this.saveSettings();
+    this.btnUpdateFiles?.addEventListener("click", async () => {
+      await this.updateConfigurationFiles(true);
     });
 
     // ターミナルを開く
-    this.btnOpenTerminal.addEventListener("click", async () => {
+    this.btnOpenTerminal?.addEventListener("click", async () => {
       await this.openTerminalInProject();
     });
 
     // プレビュー
-    this.btnPreview.addEventListener("click", async () => {
+    this.btnPreview?.addEventListener("click", async () => {
       await this.startPreview();
     });
 
     // PDFエクスポート
-    this.btnBuildPdf.addEventListener("click", async () => {
+    this.btnBuildPdf?.addEventListener("click", async () => {
       await this.buildPdf();
     });
 
@@ -153,7 +169,6 @@ class VivliostyleManager {
         await this.store.save();
       }
     });
-
   }
 
   // ショートカット
@@ -165,28 +180,24 @@ class VivliostyleManager {
     const isCtrl = e.ctrlKey;
     const isCmd = e.metaKey;
 
-    // Ctrl + Shift + B : 閉じる (メイン画面と統一)
     if (isCtrlOrCmd && isShift && key === "b") {
       e.preventDefault();
       invoke("open_vivliostyle");
       return;
     }
 
-    // Ctrl + H : 最小化
     if (isCtrlOrCmd && key === "h") {
       e.preventDefault();
       appWindow.minimize();
       return;
     }
 
-    // Ctrl + Cmd + F (Mac) : フルスクリーン
     if (isMac && isCtrl && isCmd && key === "f") {
       e.preventDefault();
       this.vivliostyleToggleFullscreen();
       return;
     }
 
-    // F11 (Win/Linux) : フルスクリーン
     if (!isMac && e.key === "f11") {
       e.preventDefault();
       this.vivliostyleToggleFullscreen();
@@ -197,40 +208,61 @@ class VivliostyleManager {
   // 設定の復元（初期化時に呼び出す）
   private async loadSavedSettings() {
     try {
-      const store = await Store.load(".settings.dat");
+      if (!this.store) {
+        this.store = await Store.load(".settings.dat");
+      }
 
       // 最後に使ったプロジェクトパス
-      const lastPath = await store.get<string>("vivliostyleLastProjectPath");
+      const lastPath = await this.store.get<string>("vivliostyleLastProjectPath");
       if (lastPath) {
         this.currentProjectPath = lastPath;
-        this.folderPathInput.value = lastPath;
+        if (this.folderPathInput) this.folderPathInput.value = lastPath;
         this.enableButtons(true);
       }
 
       // 各フォーム値の復元
-      const preset = await store.get<string>("vivliostylePreset");
-      if (preset) this.presetSelector.value = preset;
+      const preset = await this.store.get<string>("vivliostylePreset");
+      if (preset && this.presetSelector) this.presetSelector.value = preset;
 
-      const paper = await store.get<string>("vivliostylePaperSize");
-      if (paper) this.paperSize.value = paper;
+      const paper = await this.store.get<string>("vivliostylePaperSize");
+      if (paper && this.paperSize) this.paperSize.value = paper;
 
-      const dir = await store.get<string>("vivliostyleDirection");
-      if (dir) this.direction.value = dir;
+      const dir = await this.store.get<string>("vivliostyleDirection");
+      if (dir && this.direction) this.direction.value = dir;
 
-      const cols = await store.get<string>("vivliostyleColumns");
-      if (cols) this.columns.value = cols;
+      const cols = await this.store.get<string>("vivliostyleColumns");
+      if (cols && this.columns) this.columns.value = cols;
 
-      const marginTop = await store.get<string>("vivliostyleMarginTop");
-      if (marginTop) this.marginTop.value = marginTop;
+      const marginTop = await this.store.get<string>("vivliostyleMarginTop");
+      if (marginTop && this.marginTop) this.marginTop.value = marginTop;
 
-      const marginBottom = await store.get<string>("vivliostyleMarginBottom");
-      if (marginBottom) this.marginBottom.value = marginBottom;
+      const marginBottom = await this.store.get<string>("vivliostyleMarginBottom");
+      if (marginBottom && this.marginBottom) this.marginBottom.value = marginBottom;
 
-      const marginInside = await store.get<string>("vivliostyleMarginInside");
-      if (marginInside) this.marginInside.value = marginInside;
+      const marginInside = await this.store.get<string>("vivliostyleMarginInside");
+      if (marginInside && this.marginInside) this.marginInside.value = marginInside;
 
-      const marginOutside = await store.get<string>("vivliostyleMarginOutside");
-      if (marginOutside) this.marginOutside.value = marginOutside;
+      const marginOutside = await this.store.get<string>("vivliostyleMarginOutside");
+      if (marginOutside && this.marginOutside) this.marginOutside.value = marginOutside;
+
+      const title = await this.store.get<string>("vivliostyleBookTitle");
+      if (title && this.titleInput) this.titleInput.value = title;
+
+      const author = await this.store.get<string>("vivliostyleBookAuthor");
+      if (author && this.authorInput) this.authorInput.value = author;
+
+      const fontSize = await this.store.get<string>("vivliostyleFontSize");
+      if (fontSize && this.fontSizeInput) this.fontSizeInput.value = fontSize;
+
+      const lineHeight = await this.store.get<string>("vivliostyleLineHeight");
+      if (lineHeight && this.lineHeightInput) this.lineHeightInput.value = lineHeight;
+
+      const savedTcy = await this.store.get<boolean>("vivliostyleEnableTcy");
+      if (savedTcy !== undefined && this.enableTcy) {
+        this.enableTcy.checked = savedTcy;
+      } else if (this.enableTcy) {
+        this.enableTcy.checked = true; // デフォルトはON
+      }
 
     } catch (e) {
       console.error("Vivliostyle設定の読み込みに失敗しました:", e);
@@ -240,22 +272,30 @@ class VivliostyleManager {
   // 設定の保存（フォーム変更時や「設定更新」ボタン押下時に呼び出す）
   private async saveSettings() {
     try {
-      const store = await Store.load(".settings.dat");
+      if (!this.store) {
+        this.store = await Store.load(".settings.dat");
+      }
 
       if (this.currentProjectPath) {
-        await store.set("vivliostyleLastProjectPath", this.currentProjectPath);
+        await this.store.set("vivliostyleLastProjectPath", this.currentProjectPath);
       }
-      await store.set("vivliostylePreset", this.presetSelector.value);
-      await store.set("vivliostylePaperSize", this.paperSize.value);
-      await store.set("vivliostyleDirection", this.direction.value);
-      await store.set("vivliostyleColumns", this.columns.value);
+      if (this.presetSelector) await this.store.set("vivliostylePreset", this.presetSelector.value);
+      if (this.paperSize) await this.store.set("vivliostylePaperSize", this.paperSize.value);
+      if (this.direction) await this.store.set("vivliostyleDirection", this.direction.value);
+      if (this.columns) await this.store.set("vivliostyleColumns", this.columns.value);
 
-      await store.set("vivliostyleMarginTop", this.marginTop.value);
-      await store.set("vivliostyleMarginBottom", this.marginBottom.value);
-      await store.set("vivliostyleMarginInside", this.marginInside.value);
-      await store.set("vivliostyleMarginOutside", this.marginOutside.value);
+      if (this.marginTop) await this.store.set("vivliostyleMarginTop", this.marginTop.value);
+      if (this.marginBottom) await this.store.set("vivliostyleMarginBottom", this.marginBottom.value);
+      if (this.marginInside) await this.store.set("vivliostyleMarginInside", this.marginInside.value);
+      if (this.marginOutside) await this.store.set("vivliostyleMarginOutside", this.marginOutside.value);
 
-      await store.save();
+      if (this.titleInput) await this.store.set("vivliostyleBookTitle", this.titleInput.value);
+      if (this.authorInput) await this.store.set("vivliostyleBookAuthor", this.authorInput.value);
+      if (this.fontSizeInput) await this.store.set("vivliostyleFontSize", this.fontSizeInput.value);
+      if (this.lineHeightInput) await this.store.set("vivliostyleLineHeight", this.lineHeightInput.value);
+      if (this.enableTcy) await this.store.set("vivliostyleEnableTcy", this.enableTcy.checked);
+
+      await this.store.save();
     } catch (e) {
       console.error("Vivliostyle設定の保存に失敗しました:", e);
     }
@@ -263,15 +303,13 @@ class VivliostyleManager {
 
   // ボタンの活性/非活性を切り替えるヘルパー
   private enableButtons(enabled: boolean) {
-    this.btnUpdateFiles.disabled = !enabled;
-    this.btnPreview.disabled = !enabled;
-    this.btnBuildPdf.disabled = !enabled;
-    this.btnOpenTerminal.disabled = !enabled;
+    if (this.btnUpdateFiles) this.btnUpdateFiles.disabled = !enabled;
+    if (this.btnPreview) this.btnPreview.disabled = !enabled;
+    if (this.btnBuildPdf) this.btnBuildPdf.disabled = !enabled;
+    if (this.btnOpenTerminal) this.btnOpenTerminal.disabled = !enabled;
   }
 
-  // --- 3. コア機能の実装 (TODO) ---
-
-  // --- 1. システムフォントのロード関数 ---
+  // --- システムフォントのロード関数 ---
   private async loadSystemFonts() {
     const fontSelect = document.getElementById("font-family-select") as HTMLSelectElement;
     if (!fontSelect) return;
@@ -279,7 +317,7 @@ class VivliostyleManager {
     try {
       const fonts = await invoke<string[]>("get_system_fonts");
 
-      // デフォルト（指定なし）の選択肢
+      fontSelect.innerHTML = ""; // 初期化
       const defaultOpt = document.createElement("option");
       defaultOpt.value = "default";
       defaultOpt.text = "標準フォント (Default)";
@@ -292,7 +330,6 @@ class VivliostyleManager {
         fontSelect.appendChild(opt);
       });
 
-      // 保存されていたフォントがあればセット
       const savedFont = await this.store?.get<string>("vivliostyleFontFamily");
       if (savedFont) fontSelect.value = savedFont;
 
@@ -301,12 +338,20 @@ class VivliostyleManager {
     }
   }
 
-  // --- 2. custom.css の文字列を自動生成する ---
+  // --- custom.css の文字列を自動生成する ---
   private generateCustomCss(): string {
-    const paperSize = this.paperSize.value;
-    const isVertical = this.direction.value === "vertical";
-    const cols = this.columns.value;
-    const font = (document.getElementById("font-family-select") as HTMLSelectElement).value;
+    const isVertical = this.direction?.value === "vertical";
+    const fontSelect = document.getElementById("font-family-select") as HTMLSelectElement;
+    const font = fontSelect?.value || "default";
+
+    const fontSize = this.fontSizeInput?.value || "10.5pt";
+    const lineHeight = this.lineHeightInput?.value || "1.8";
+
+    // 縦書き(右綴じ)と横書き(左綴じ)の左右余白の切り替え
+    const rightPageMarginLeft = isVertical ? this.marginOutside?.value : this.marginInside?.value;
+    const rightPageMarginRight = isVertical ? this.marginInside?.value : this.marginOutside?.value;
+    const leftPageMarginLeft = isVertical ? this.marginInside?.value : this.marginOutside?.value;
+    const leftPageMarginRight = isVertical ? this.marginOutside?.value : this.marginInside?.value;
 
     const fontFamilyCss = font && font !== "default"
       ? `font-family: "${font}", "Yu Mincho", serif;`
@@ -314,55 +359,79 @@ class VivliostyleManager {
 
     return `/* Generated by MirrorShard Vivliostyle Export */
 
-  @page {
-    size: ${paperSize};
-    margin-top: ${this.marginTop.value};
-    margin-bottom: ${this.marginBottom.value};
-    margin-inside: ${this.marginInside.value};
-    margin-outside: ${this.marginOutside.value};
+@page {
+  size: ${this.paperSize?.value || "A5"};
+  margin-top: ${this.marginTop?.value || "20mm"};
+  margin-bottom: ${this.marginBottom?.value || "20mm"};
+}
+
+@page :right {
+  margin-left: ${rightPageMarginLeft || "15mm"};
+  margin-right: ${rightPageMarginRight || "25mm"};
+}
+
+@page :left {
+  margin-left: ${leftPageMarginLeft || "25mm"};
+  margin-right: ${leftPageMarginRight || "15mm"};
+}
+
+:root {
+  font-size: ${fontSize};
+}
+
+html, body {
+  font-size: ${fontSize};
+  line-height: ${lineHeight};
+  writing-mode: ${isVertical ? "vertical-rl" : "horizontal-tb"};
+  ${fontFamilyCss}
+}
+
+body {
+  column-count: ${this.columns?.value || "1"};
+  column-gap: 8mm;
+}
+
+/* 段落（pタグ）のデフォルト余白を消去 */
+p {
+  margin: 0;
+  margin-block-start: 0;
+  margin-block-end: 0;
+  padding: 0;
+}
+
+/* 縦中横 */
+.tcy {
+  -webkit-text-combine: horizontal;
+  text-combine-upright: all;
+}
+`;
   }
 
-  html {
-    writing-mode: ${isVertical ? "vertical-rl" : "horizontal-tb"};
-    ${fontFamilyCss}
-  }
-
-  body {
-    column-count: ${cols};
-    column-gap: 8mm;
-  }
-  `;
-  }
-
-  // --- 3. vivliostyle.config.js の文字列を自動生成する ---
+  // --- vivliostyle.config.js の文字列を自動生成する ---
   private async generateVivliostyleConfig(markdownFiles: string[]): Promise<string> {
-    const title = (document.getElementById("book-title") as HTMLInputElement).value || "無題";
-    const author = (document.getElementById("book-author") as HTMLInputElement).value || "作者不明";
-    const lang = (document.getElementById("book-language") as HTMLSelectElement).value || "ja";
+    const title = this.titleInput?.value || "無題";
+    const author = this.authorInput?.value || "作者不明";
+    const langSelect = document.getElementById("book-language") as HTMLSelectElement;
+    const lang = langSelect?.value || "ja";
 
-    // エントリーファイル（Markdown一覧）の配列をJSON化
-    // ファイル指定がない場合はデフォルトで 'novel.md' にフォールバック
-    const entries = markdownFiles.length > 0 ? markdownFiles : ["novel.md"];
+    const entries = markdownFiles.length > 0 ? markdownFiles : ["vivliostylepublishing.md"];
     const entryJson = JSON.stringify(entries, null, 4);
 
-    return `// @ts-check
-  import { defineConfig } from '@vivliostyle/cli';
-
-  export default defineConfig({
-    title: ${JSON.stringify(title)},
-    author: ${JSON.stringify(author)},
-    language: ${JSON.stringify(lang)},
-    theme: [
-      "@vivliostyle/theme-bunko@^2.0.1",
-      "./custom.css",
-    ],
-    entry: ${entryJson},
-    toc: {
-      title: "目次",
-      sectionDepth: 1,
-    },
-  });
-  `;
+    return `module.exports = {
+  title: ${JSON.stringify(title)},
+  author: ${JSON.stringify(author)},
+  language: ${JSON.stringify(lang)},
+  openViewer: false,
+  theme: [
+    "./custom.css",
+  ],
+  entry: ${entryJson},
+  toc: {
+    title: "目次",
+    sectionDepth: 1,
+  },
+};
+`;
   }
 
   // フォルダ選択ダイアログを開く
@@ -376,189 +445,221 @@ class VivliostyleManager {
 
       if (selectedPath && typeof selectedPath === 'string') {
         this.currentProjectPath = selectedPath;
-        this.folderPathInput.value = selectedPath;
-
-        // フォルダが選ばれたらアクションボタンを有効化する
-        this.btnUpdateFiles.disabled = false;
-        this.btnPreview.disabled = false;
-        this.btnBuildPdf.disabled = false;
-        this.btnOpenTerminal.disabled = false;
+        if (this.folderPathInput) this.folderPathInput.value = selectedPath;
+        this.enableButtons(true);
+        await this.saveSettings();
       }
     } catch (e) {
       console.error("フォルダの選択に失敗しました:", e);
     }
   }
 
+  private async openProjectFolder() {
+    if (!this.currentProjectPath) return;
+    await invoke("open_project_folder", { path: this.currentProjectPath });
+  }
+
   // プリセットを各入力欄に適用する
   private applyPreset(preset: string) {
     if (preset === "a5-vertical-2col") {
-      this.paperSize.value = "A5";
-      this.direction.value = "vertical";
-      this.columns.value = "2";
-      this.marginTop.value = "20mm";
-      this.marginBottom.value = "20mm";
-      this.marginInside.value = "25mm";
-      this.marginOutside.value = "15mm";
+      if (this.paperSize) this.paperSize.value = "A5";
+      if (this.direction) this.direction.value = "vertical";
+      if (this.columns) this.columns.value = "2";
+      if (this.marginTop) this.marginTop.value = "20mm";
+      if (this.marginBottom) this.marginBottom.value = "20mm";
+      if (this.marginInside) this.marginInside.value = "25mm";
+      if (this.marginOutside) this.marginOutside.value = "15mm";
+      if (this.fontSizeInput) this.fontSizeInput.value = "10.5pt";
+      if (this.lineHeightInput) this.lineHeightInput.value = "1.75";
     } else if (preset === "bunko-vertical-1col") {
-      this.paperSize.value = "A6";
-      this.direction.value = "vertical";
-      this.columns.value = "1";
-      this.marginTop.value = "15mm";
-      this.marginBottom.value = "15mm";
-      this.marginInside.value = "20mm";
-      this.marginOutside.value = "12mm";
+      if (this.paperSize) this.paperSize.value = "A6";
+      if (this.direction) this.direction.value = "vertical";
+      if (this.columns) this.columns.value = "1";
+      if (this.marginTop) this.marginTop.value = "15mm";
+      if (this.marginBottom) this.marginBottom.value = "15mm";
+      if (this.marginInside) this.marginInside.value = "20mm";
+      if (this.marginOutside) this.marginOutside.value = "12mm";
+      if (this.fontSizeInput) this.fontSizeInput.value = "9pt";
+      if (this.lineHeightInput) this.lineHeightInput.value = "1.8";
     } else if (preset === "a4-horizontal-1col") {
-      this.paperSize.value = "A4";
-      this.direction.value = "horizontal";
-      this.columns.value = "1";
-      this.marginTop.value = "25mm";
-      this.marginBottom.value = "25mm";
-      this.marginInside.value = "25mm";
-      this.marginOutside.value = "25mm";
+      if (this.paperSize) this.paperSize.value = "A4";
+      if (this.direction) this.direction.value = "horizontal";
+      if (this.columns) this.columns.value = "1";
+      if (this.marginTop) this.marginTop.value = "25mm";
+      if (this.marginBottom) this.marginBottom.value = "25mm";
+      if (this.marginInside) this.marginInside.value = "25mm";
+      if (this.marginOutside) this.marginOutside.value = "25mm";
+      if (this.fontSizeInput) this.fontSizeInput.value = "11pt";
+      if (this.lineHeightInput) this.lineHeightInput.value = "1.6";
     }
   }
 
-  private async updateConfigurationFiles() {
-      if (!this.currentProjectPath) {
-        alert(t("vivliostyle.alerts.selectFolderFirst"));
-        return;
-      }
+  private async updateConfigurationFiles(showAlert: boolean = true) {
+    if (!this.currentProjectPath) {
+      if (showAlert) alert(t("vivliostyle.alerts.selectFolderFirst"));
+      return;
+    }
 
-      try {
-        const sep = this.currentProjectPath.includes("\\") ? "\\" : "/";
-        const compiledFileName = "vivliostylepublishing.md";
+    try {
+      const sep = this.currentProjectPath.includes("\\") ? "\\" : "/";
+      const compiledFileName = "vivliostylepublishing.md";
 
-        // 1. フォルダ内の .md ファイル一覧を取得
-        const markdownFiles = await invoke<string[]>("get_markdown_files", {
-          dirPath: this.currentProjectPath,
-        });
+      // 1. フォルダ内の .md/.txt ファイル一覧を取得
+      const markdownFiles = await invoke<string[]>("get_markdown_files", {
+        dirPath: this.currentProjectPath,
+      });
 
-        // 2. 原稿ファイルを順番に連結する（生成物自身は除外する）
-        let combinedRawText = "";
-        for (const fileName of markdownFiles) {
-          // 前回のビルド用ファイル（vivliostylepublishing.md）は連結対象から除外
-          if (fileName === compiledFileName) continue;
+      // 2. 原稿ファイルを順番に連結する
+      let combinedRawText = "";
+      for (const fileName of markdownFiles) {
+        if (fileName === compiledFileName) continue;
 
-          const filePath = `${this.currentProjectPath}${sep}${fileName}`;
-          try {
-            const fileData = await invoke<FileData>("read_file", { path: filePath });
-            // 各ファイル間に改行を挟んで連結
-            combinedRawText += fileData.content.trim() + "\n\n";
-          } catch (e) {
-            console.error(`[Vivliostyle] ${fileName} の読み込みに失敗:`, e);
-          }
+        const filePath = `${this.currentProjectPath}${sep}${fileName}`;
+        try {
+          const fileData = await invoke<FileData>("read_file", { path: filePath });
+          combinedRawText += fileData.content.trim() + "\n\n";
+        } catch (e) {
+          console.error(`[Vivliostyle] ${fileName} の読み込みに失敗:`, e);
         }
-
-        // 3. 連結したテキスト全体にルビ変換をかける
-        const convertedText = convertAozoraRubyToHtml(combinedRawText);
-
-        // 4. ビルド用の単一ファイル (vivliostylepublishing.md) として保存 (元の原稿は無傷)
-        const compiledFilePath = `${this.currentProjectPath}${sep}${compiledFileName}`;
-        await invoke("write_file", {
-          path: compiledFilePath,
-          content: convertedText,
-          encoding: "UTF-8",
-        });
-
-        // 5. custom.css の保存
-        const cssContent = this.generateCustomCss();
-        const cssPath = `${this.currentProjectPath}${sep}custom.css`;
-        await invoke("write_file", {
-          path: cssPath,
-          content: cssContent,
-          encoding: "UTF-8",
-        });
-
-        // 6. vivliostyle.config.js の保存 (entry には vivliostylepublishing.md のみを指定)
-        const configContent = await this.generateVivliostyleConfig([compiledFileName]);
-        const configPath = `${this.currentProjectPath}${sep}vivliostyle.config.js`;
-        await invoke("write_file", {
-          path: configPath,
-          content: configContent,
-          encoding: "UTF-8",
-        });
-
-        // 7. 設定の保存
-        await this.saveSettings();
-
-        alert(t("vivliostyle.alerts.updateSuccess"));
-      } catch (e) {
-        console.error("設定ファイルの更新に失敗しました:", e);
-        alert(`Error updating configuration: ${String(e)}`);
       }
+
+      const isTcyEnabled = this.enableTcy?.checked ?? true;
+
+      // 3. ルビ変換・段落補正・縦中横処理
+      const convertedText = convertAozoraRubyToHtml(normalizeNovelParagraphs(combinedRawText));
+      const autoTcyText = applyAutoTcy(convertedText, isTcyEnabled);
+
+      // 4. vivliostylepublishing.md として保存
+      const compiledFilePath = `${this.currentProjectPath}${sep}${compiledFileName}`;
+      await invoke("write_file", {
+        path: compiledFilePath,
+        content: autoTcyText,
+        encoding: "UTF-8",
+      });
+
+      // 5. custom.css の保存
+      const cssContent = this.generateCustomCss();
+      const cssPath = `${this.currentProjectPath}${sep}custom.css`;
+      await invoke("write_file", {
+        path: cssPath,
+        content: cssContent,
+        encoding: "UTF-8",
+      });
+
+      // 6. vivliostyle.config.js の保存
+      const configContent = await this.generateVivliostyleConfig([compiledFileName]);
+      const configPath = `${this.currentProjectPath}${sep}vivliostyle.config.js`;
+      await invoke("write_file", {
+        path: configPath,
+        content: configContent,
+        encoding: "UTF-8",
+      });
+
+      // 7. 設定の保存
+      await this.saveSettings();
+
+      if (showAlert) {
+        alert(t("vivliostyle.alerts.updateSuccess"));
+      }
+    } catch (e) {
+      console.error("設定ファイルの更新に失敗しました:", e);
+      if (showAlert) alert(`Error updating configuration: ${String(e)}`);
+    }
   }
 
   private async openTerminalInProject() {
-      if (!this.store) {
-        this.store = await Store.load(".settings.dat");
-      }
-
-      const targetPath =
-        this.currentProjectPath ||
-        (await this.store.get<string>("vivliostyleLastProjectPath"));
-
-      if (!targetPath) {
-        alert(t("vivliostyle.alerts.selectFolderFirst"));
-        return;
-      }
-
-      try {
-        await this.store.set("terminalTempCwd", targetPath);
-        await this.store.save();
-
-        await invoke("open_terminal_window");
-      } catch (e) {
-        console.error("ターミナル起動エラー:", e);
-      }
+    if (!this.store) {
+      this.store = await Store.load(".settings.dat");
     }
 
-  // プレビュー用のローカルサーバーを起動し、子ウィンドウを開く
+    const targetPath =
+      this.currentProjectPath ||
+      (await this.store.get<string>("vivliostyleLastProjectPath"));
+
+    if (!targetPath) {
+      alert(t("vivliostyle.alerts.selectFolderFirst"));
+      return;
+    }
+
+    try {
+      await this.store.set("terminalTempCwd", targetPath);
+      await this.store.save();
+
+      await invoke("open_terminal_window");
+    } catch (e) {
+      console.error("ターミナル起動エラー:", e);
+    }
+  }
+
+  // プレビュー用のローカルサーバーを起動
   private async startPreview() {
-    if (!this.currentProjectPath) return;
-    this.btnPreview.disabled = true;
-    this.btnPreview.textContent = "⌛ プレビューを準備中...";
+    if (!this.currentProjectPath) {
+      alert(t("vivliostyle.alerts.selectFolderFirst"));
+      return;
+    }
 
-    console.log("プレビューを起動します:", this.currentProjectPath);
-    // TODO: await invoke("start_vivliostyle_preview", { path: this.currentProjectPath });
+    try {
+      this.btnPreview.disabled = true;
+      this.btnPreview.textContent = "⌛ プレビューを準備中...";
 
-    // 起動完了後にボタンを戻す
-    setTimeout(() => {
+      await this.updateConfigurationFiles(false);
+
+      await invoke("start_vivliostyle_preview", {
+        projectPath: this.currentProjectPath,
+      });
+
+      setTimeout(() => {
+        this.btnPreview.disabled = false;
+        this.btnPreview.textContent = "👁️ プレビューを開く";
+      }, 5000);
+
+    } catch (e) {
+      console.error("プレビュー起動エラー:", e);
       this.btnPreview.disabled = false;
       this.btnPreview.textContent = "👁️ プレビューを開く";
-    }, 3000);
+    }
   }
 
   // PDFビルドコマンドを実行する
   private async buildPdf() {
-    if (!this.currentProjectPath) return;
-    this.btnBuildPdf.disabled = true;
-    this.btnBuildPdf.textContent = "⌛ PDFを出力中...";
+    if (!this.currentProjectPath) {
+      alert(t("vivliostyle.alerts.selectFolderFirst"));
+      return;
+    }
 
-    console.log("PDFを出力します:", this.currentProjectPath);
-    // TODO: await invoke("build_vivliostyle_pdf", { path: this.currentProjectPath });
+    try {
+      this.btnBuildPdf.disabled = true;
+      this.btnBuildPdf.textContent = "⌛ PDFを出力中...";
 
-    setTimeout(() => {
+      await this.updateConfigurationFiles(false);
+
+      await invoke("build_vivliostyle_pdf", {
+        projectPath: this.currentProjectPath,
+      });
+
+      alert(t("vivliostyle.alerts.exportSuccess"));
+      await this.openProjectFolder();
+    } catch (e) {
+      console.error("PDFエクスポートエラー:", e);
+      alert(`PDF Export Failed: ${String(e)}`);
+    } finally {
       this.btnBuildPdf.disabled = false;
       this.btnBuildPdf.textContent = "📄 PDFエクスポート";
-      alert(t("vivliostyle.alerts.exportSuccess"));
-    }, 3000);
+    }
   }
 
   private async vivliostyleToggleFullscreen() {
     this.isSimpleFullscreen = !this.isSimpleFullscreen;
     await invoke("set_simple_fullscreen", { enable: this.isSimpleFullscreen });
-    // CSS調整
     if (osType !== "macos" && this.wrapper) {
       this.wrapper.style.borderRadius = this.isSimpleFullscreen ? "0px" : "6px";
     }
   }
-
 }
 
 // 起動処理
 window.addEventListener("DOMContentLoaded", async () => {
-  // OSの検出と body へのクラス付与（mac/linux固有のスタイル調整用）
-  const osType = await type();
+  const osType = type();
   if (osType === "macos") {
     document.body.classList.add("is-mac");
   }
@@ -566,7 +667,6 @@ window.addEventListener("DOMContentLoaded", async () => {
     document.body.classList.add("is-linux");
   }
 
-  // バックエンドからウィンドウタイトルを取得してセット
   const title: string = await invoke<string>("get_window_title", {
     windowKey: "vivliostyle",
   }).catch((): string => "");
@@ -575,7 +675,6 @@ window.addEventListener("DOMContentLoaded", async () => {
     await getCurrentWindow().setTitle(title);
   }
 
-  // Vivliostyle のマネージャーインスタンス生成
   const manager = new VivliostyleManager();
-  await manager.init(); // 非同期で順番に完了させる
+  await manager.init();
 });

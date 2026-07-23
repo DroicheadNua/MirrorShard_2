@@ -104,7 +104,8 @@ MirrorShardはStable DiffusionやMisral Agentsと連携し、テキストから�
 
 作成したファイルを複数の形式でエクスポートできます。
 
-* PDF
+* PDF / DTP出版 (Vivliostyle連携)    
+  CSS組版エンジン Vivliostyle と連携し、本格的な書籍レイアウト（縦書き・2段組・文庫サイズ等）でPDFを出力できます。原稿の自動結合やルビ・縦中横変換にも対応しています。  
 
 * DOCX（ルビ対応）
 
@@ -114,8 +115,10 @@ MirrorShardはStable DiffusionやMisral Agentsと連携し、テキストから�
 
 ## 🇯🇵 日本語対応
 
-* **縦書きプレビュー**
-  日本語の縦書きレイアウトと、青空文庫形式のルビに対応しています。
+* **Vivliostyle CSS組版 (DTP出力)**  
+  青空文庫形式のルビ（｜漢字《かんじ》）や半角数字の自動縦中横変換に対応。文庫本や同人誌向けのプリセットを備え、ボタン一発でWebプレビュー＆PDF化が可能です。  
+* **縦書きプレビュー**  
+  日本語の縦書きレイアウトと、青空文庫形式のルビに対応しています。  
 
   ![vertical_writing](../screenshots/ScreenShot01.jpg)
 

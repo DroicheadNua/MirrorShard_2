@@ -2,6 +2,7 @@
   "title": "Vivliostyle 出版・組版設定",
   "projectFolder": "プロジェクトフォルダ",
   "selectFolder": "参照...",
+  "openFolder": "開く",
   "updateFiles": "📁 設定ファイル (config / css) を作成・更新",
   "preset": "プリセット",
   "presets": {
@@ -36,5 +37,8 @@
   "bookTitle": "タイトル",
   "bookAuthor": "著者名",
   "bookLanguage": "言語",
-  "fontFamily": "フォント"
+  "fontFamily": "フォント",
+  "fontSize": "フォントサイズ",
+  "lineHeight": "行間",
+  "enableTcy": "自動縦中横"
 }

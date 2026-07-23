@@ -1,6 +1,7 @@
 {
   "general": {
-    "title": "Settings"
+    "title": "Settings",
+    "enableAutoTcy": "Enable auto tate-chu-yoko in vertical preview"
   },
   "windowTitle": "Settings",
   "closeWindow": "Close (F2)",

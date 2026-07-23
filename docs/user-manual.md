@@ -1,4 +1,4 @@
-# MirrorShard 2 v1.11.0 User Manual
+# MirrorShard 2 v1.12.0 User Manual
 
 ## Keyboard Shortcuts
 
@@ -57,6 +57,10 @@ Open SillyTavern Ctrl + Shift + J Launch SillyTavern (must be installed)
 
 Open Stable Diffusion Ctrl + Shift + W Launch Stable Diffusion (must be installed)
 
+Export Ctrl + E (Cmd + E) Open export window
+
+Publish / PDF Export (Vivliostyle)	Ctrl + Shift + B (Cmd + Shift + B)	Opens the Vivliostyle DTP / Book Export window.
+
 ---
 
 ### ◯ Edit / Settings
@@ -82,8 +86,6 @@ Settings F2 Open settings window
 Open Terminal Ctrl + @
 
 Open Terminal in Current File Location Ctrl + Shift + @
-
-Export Ctrl + E (Cmd + E) Open export window
 
 ---
 
@@ -327,9 +329,7 @@ You can also export your document in vertical format (**HTML / EPUB**) from this
 ※ Pandoc is required for vertical export.
  See **Pandoc Setup Guide (pandoc-guide.md)** for installation instructions.
 
-※ Direct printing or PDF export in vertical writing is **not supported**.
-
- To print or save as PDF, export as HTML and open it in a web browser.
+※ Note: For vertical printing and PDF export, please use the Vivliostyle integration (`Ctrl + Shift + B` / `Cmd + Shift + B`) described below instead of this window.*
 
 ---
 
@@ -344,6 +344,68 @@ You can also export your document in vertical format (**HTML / EPUB**) from this
 
 * **Always on Top**
    Keep the preview window always on top
+
+---
+
+## Vivliostyle (DTP / Book Export & Publishing)
+
+Press `Ctrl + Shift + B` (Mac: `Cmd + Shift + B`) or click the book icon on the toolbar to open the Vivliostyle DTP Export window.  
+This feature integrates with the Vivliostyle CSS typesetting engine to concatenate Markdown/text files in your project directory and export publication-ready PDFs or open live previews (Vertical RTL, 2-Column, Pocket Book / A5 / A4 layouts).
+
+---
+
+### 🛠️ Prerequisites & Setup (First-time Users)
+
+This feature requires **Node.js** installed on your computer.
+
+1. **Install Node.js**  
+   Visit the [Node.js Official Download Page](https://nodejs.org/en/download) and download the installer for your OS. Proceed with the standard default installation options.
+2. **Install Vivliostyle CLI (Recommended)**  
+   To prevent delay on first launch:  
+   * Click the **">_ Open Terminal"** button in the Vivliostyle window.  
+   * Type the following command and press Enter:  
+     `npm install -g @vivliostyle/cli`  
+   * Close the terminal once the process completes.
+
+*Note: The preview viewer specifically launches **Google Chrome** (or Chromium) regardless of your system's default browser setting.*
+
+---
+
+### Key Features & Workflow
+
+1. **Select Project Folder**  
+   Click "Browse..." to select the folder containing your draft files (`.md` or `.txt`).
+2. **Presets & Layout Customization**  
+   * **Presets:** Quick-apply standard layouts such as Doujinshi/Book (A5 Vertical 2-Column), Pocket Novel (A6 Vertical 1-Column), or Report (A4 Horizontal).
+   * **Detailed Options:** Customize Book Title, Author Name, Paper Size, Writing Direction (Vertical RTL / Horizontal LTR), Columns, Font Size, Line Height, and Margins.
+3. **Create / Update Config Files**  
+   Generates `vivliostyle.config.js` and `custom.css` inside your project folder.  
+   It automatically concatenates all `.md` and `.txt` files in alphabetical order, converts Aozora Bunko ruby syntax (`｜漢字《かんじ》`) to HTML `<ruby>` tags, applies auto-TCY, and saves the compiled file as `vivliostylepublishing.md`.  
+   *Note: Your original source files will never be modified or overwritten.*
+4. **Open Preview**  
+   Launches a local Vivliostyle preview server and opens the live book preview in Google Chrome.
+5. **Export PDF**  
+   Compiles and exports a high-resolution PDF for printing. Upon completion, the project directory opens automatically in your file explorer / Finder.
+6. **>_ Open Terminal**  
+   Launches MirrorShard's integrated terminal with the working directory set to your current project folder.
+
+---
+
+### 💡 Tate-chu-yoko (TCY / Vertical-in-Horizontal)
+During compilation, 1-to-2-digit numbers (e.g., `20` or `99`) are automatically converted to vertical-in-horizontal elements (`<span class="tcy">XX</span>`).  
+For 3-digit numbers or punctuation marks like `!?`, wrap them directly in `<span class="tcy">!?</span>` inside your draft text.
+
+---
+
+### 🗑️ Uninstallation Guide
+
+If you no longer need this feature, you can remove these components from your PC:
+
+* **Remove Vivliostyle:**  
+  Run `npm uninstall -g @vivliostyle/cli` in your terminal.
+* **Remove Node.js:**  
+  Uninstall "Node.js" via your OS Settings (Windows: Installed Apps / Mac & Linux: Package Manager).  
+  *(Note: Be cautious if other development applications on your system depend on Node.js)*
 
 ---
 

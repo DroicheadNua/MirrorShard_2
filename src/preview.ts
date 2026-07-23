@@ -26,6 +26,16 @@ interface PreviewPayload {
 // 現在のテキストを保持する変数（印刷用）
 let currentRawText = "";
 let isSimpleFullscreen = false;
+let isAutoTcyEnabled = false;
+
+// --- 縦中横用のヘルパー関数 ---
+function applyAutoTcy(text: string): string {
+  // フラグがOFFなら何もせず原稿のまま返す
+  if (!isAutoTcyEnabled) return text;
+
+  // 単語境界の半角1〜2桁数字を自動で縦中横化
+  return text.replace(/\b(\d{1,2})\b/g, '<span class="tcy">$1</span>');
+}
 
 async function initPreview() {
   const contentDiv = document.getElementById("content");
@@ -110,8 +120,10 @@ async function initPreview() {
         .map((line: string, index: number) => {
           // 空行でも高さを持たせるためにスペースを入れる等の処理
           const content = line || " ";
+          // 各行の生テキストに自動縦中横を適用
+                    const tcyContent = applyAutoTcy(content);
           // IDは line-1, line-2... となる
-          return `<span id="line-${index + 1}" class="preview-line">${content}</span>`;
+          return `<span id="line-${index + 1}" class="preview-line">${tcyContent}</span>`;
         })
         .join("<br>");
 
@@ -162,13 +174,21 @@ async function initPreview() {
     emit("preview-request-update");
   });
 
+  isAutoTcyEnabled = (await store.get<boolean>("enableAutoTcy")) ?? false;
+  await listen<any>("settings-changed", (event) => {
+    if (event.payload.enableAutoTcy !== undefined) {
+      isAutoTcyEnabled = event.payload.enableAutoTcy;
+      // 必要に応じて最新の `currentRawText` で画面の再描画を呼び出す
+    }
+  });
+
   // --- 言語変更同期 ---
   await listen<string>("app:language-changed", async (event) => {
     await initI18n(event.payload === "en" ? "en" : "ja");
     applyTranslationsToDOM();
   });
 
-  const osType = await type();
+  const osType = type();
   if (osType === "macos") {
     document.body.classList.add("is-mac");
   }
@@ -320,6 +340,9 @@ async function initPreview() {
         kanjiRubyRegex,
         "$1<ruby>$2<rt>$3</rt></ruby>",
       );
+
+      // 縦中横 (TCY) の自動適用
+      processedText = applyAutoTcy(processedText);
 
       // メタデータの決定
       // HTMLの場合はファイル名をタイトルにする等の簡易処理

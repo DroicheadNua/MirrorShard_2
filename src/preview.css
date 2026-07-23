@@ -336,3 +336,9 @@ body.dark-mode .modal-buttons button.primary {
 #btn-pin.active {
     opacity: 1;
 }
+
+/* 縦中横 */
+.tcy {
+  -webkit-text-combine: horizontal;
+  text-combine-upright: all;
+}

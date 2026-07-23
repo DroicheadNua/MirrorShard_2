@@ -67,9 +67,20 @@ html, body {
 
 /* 3. メインコンテナ */
 #vivliostyle-container {
+    display: flex;
+    flex-direction: column;
+    height: calc(100% - 32px); /* タイトルバー分を引く */
+    padding: 16px;
+    box-sizing: border-box;
+    overflow: hidden; /* コンテナ自体はスクロールさせない */
+}
+
+/* 設定入力部分だけをスクロール対象にする */
+.scrollable-settings {
     flex-grow: 1;
     overflow-y: auto;
-    padding: 16px 20px;
+    padding-right: 4px;
+    margin-bottom: 12px;
     display: flex;
     flex-direction: column;
     gap: 16px;
@@ -197,11 +208,11 @@ button.success:hover:not(:disabled) {
     background-color: #f44336;
 }
 
-#vivliostyle-container::-webkit-scrollbar {
+.scrollable-settings::-webkit-scrollbar {
     width: 18px;
 }
 
-#vivliostyle-container::-webkit-scrollbar-thumb {
+.scrollable-settings::-webkit-scrollbar-thumb {
     background-color: rgba(100, 100, 100, 0.15) !important;
     border-radius: 9px;
     border: 3px solid transparent;
@@ -209,7 +220,7 @@ button.success:hover:not(:disabled) {
     min-height: 40px;
 }
 
-#vivliostyle-container::-webkit-scrollbar-track {
+.scrollable-settings::-webkit-scrollbar-track {
     background-color: transparent !important;
     border: none !important;
 }
@@ -231,6 +242,37 @@ button.success:hover:not(:disabled) {
     flex-basis: 65%;
 }
 
+/* コントロール群を横並びにするレイアウトクラス */
+.row-controls {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    flex-basis: 65%; /* 左側のラベルとバランスを取る */
+}
+
+/* セレクトボックスを可能な限り伸ばす */
+.row-controls select {
+    flex-grow: 1;
+    min-width: 0; /* はみ出し防止 */
+}
+
+/* チェックボックスとテキストの揃え */
+.checkbox-label {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    white-space: nowrap; /* テキストが途中で改行されるのを防ぐ */
+    font-size: 12px;
+    color: var(--text-color);
+    cursor: pointer;
+    user-select: none;
+}
+
+.checkbox-label input[type="checkbox"] {
+    cursor: pointer;
+    margin: 0;
+}
+
 .margin-inputs {
     display: flex;
     gap: 8px;
@@ -243,10 +285,12 @@ button.success:hover:not(:disabled) {
 
 /* 6. 最下部アクション領域 */
 .actions-section {
+    flex-shrink: 0;
     display: flex;
     justify-content: space-between;
-    margin-top: auto; /* 下に張り付かせる */
-    padding-top: 10px;
+    padding-top: 12px;
+    border-top: 1px solid var(--border-color);
+    background: var(--bg-color);
 }
 
 .main-actions {

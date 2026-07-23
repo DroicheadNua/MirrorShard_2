@@ -18,12 +18,14 @@
         </div>
 
         <div id="vivliostyle-container">
+            <div class="scrollable-settings">
             <!-- セクション1: プロジェクトフォルダ -->
             <section class="config-section">
                 <label data-i18n="vivliostyle.projectFolder">プロジェクトフォルダ</label>
                 <div class="input-group">
                     <input type="text" id="project-folder-path" readonly placeholder="..." />
                     <button id="btn-select-folder" data-i18n="vivliostyle.selectFolder">参照...</button>
+                    <button id="btn-open-folder" data-i18n="vivliostyle.openFolder">開く</button>
                 </div>
                 <button id="btn-update-files" class="full-width" data-i18n="vivliostyle.updateFiles" disabled>
                     📁 設定ファイルを作成・更新
@@ -50,8 +52,16 @@
                 <div class="form-row">
                     <label data-i18n="vivliostyle.fontFamily">フォント</label>
                     <select id="font-family-select">
-                        <!-- get_system_fonts の結果がここに挿入されます -->
+                        <!-- get_system_fonts の結果がここに挿入される -->
                     </select>
+                </div>
+                <div class="form-row">
+                    <label data-i18n="vivliostyle.fontSize">文字サイズ</label>
+                    <input type="text" id="font-size-input" value="10.5pt" placeholder="例: 9pt, 10.5pt">
+                </div>
+                <div class="form-row">
+                    <label data-i18n="vivliostyle.lineHeight">行間</label>
+                    <input type="text" id="line-height-input" value="1.8" placeholder="例: 1.75, 1.8">
                 </div>
             </section>
 
@@ -80,11 +90,17 @@
                     </select>
                 </div>
                 <div class="form-row">
-                    <label data-i18n="vivliostyle.direction">印字方向</label>
-                    <select id="direction">
-                        <option value="vertical" data-i18n="vivliostyle.directions.vertical">縦書き (右綴じ / RTL)</option>
-                        <option value="horizontal" data-i18n="vivliostyle.directions.horizontal">横書き (左綴じ / LTR)</option>
-                    </select>
+                    <label data-i18n="vivliostyle.direction">組版方向</label>
+                    <div class="row-controls">
+                        <select id="direction">
+                            <option value="vertical" data-i18n="vivliostyle.directions.vertical">縦書き (右綴じ / RTL)</option>
+                            <option value="horizontal" data-i18n="vivliostyle.directions.horizontal">横書き (左綴じ / LTR)</option>
+                        </select>
+                        <label class="checkbox-label">
+                            <input type="checkbox" id="enable-tcy" />
+                            <span data-i18n="vivliostyle.enableTcy">自動縦中横</span>
+                        </label>
+                    </div>
                 </div>
                 <div class="form-row">
                     <label data-i18n="vivliostyle.columns">段組み</label>
@@ -104,7 +120,7 @@
                     </div>
                 </div>
             </section>
-
+            </div>
             <!-- セクション3: 実行アクション -->
             <section class="actions-section">
                 <button id="btn-open-terminal" class="secondary" data-i18n="vivliostyle.openTerminal">

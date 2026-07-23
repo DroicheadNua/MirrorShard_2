@@ -237,6 +237,9 @@ async function setupSettings() {
     const enableCohere = document.querySelector(
       "#enable-cohere",
     ) as HTMLInputElement;
+    const enableAutoTcy = document.querySelector(
+          "#enable-auto-tcy",
+        ) as HTMLInputElement;
     const enableMistral = document.querySelector(
       "#enable-mistral",
     ) as HTMLInputElement;
@@ -956,6 +959,7 @@ async function setupSettings() {
       (await store.get<boolean>("enableOpenRouter")) ?? false;
     enableTavily.checked = (await store.get<boolean>("enableTavily")) ?? false;
     enableCohere.checked = (await store.get<boolean>("enableCohere")) ?? false;
+    enableAutoTcy.checked = (await store.get<boolean>("enableAutoTcy")) ?? false;
     enableMistral.checked =
       (await store.get<boolean>("enableMistral")) ?? false;
     enableMistralAgents.checked =
@@ -1453,6 +1457,7 @@ async function setupSettings() {
         const newEnableOpenRouter = enableOpenRouter.checked;
         const newEnableTavily = enableTavily.checked;
         const newEnableCohere = enableCohere.checked;
+        const newEnableAutoTcy = enableAutoTcy.checked;
         const newEnableMistral = enableMistral.checked;
         const newEnableMistralAgents = enableMistralAgents.checked;
         const newEnableStTerminal = enableStTerminal.checked;
@@ -1532,6 +1537,7 @@ async function setupSettings() {
         await store.set("enableOpenRouter", newEnableOpenRouter);
         await store.set("enableTavily", newEnableTavily);
         await store.set("enableCohere", newEnableCohere);
+        await store.set("enableAutoTcy", newEnableAutoTcy);
         await store.set("enableMistral", newEnableMistral);
         await store.set("enableMistralAgents", newEnableMistralAgents);
         await store.set("enableStTerminal", newEnableStTerminal);
@@ -1612,6 +1618,7 @@ async function setupSettings() {
           enableOpenRouter: newEnableOpenRouter,
           enableTavily: newEnableTavily,
           enableCohere: newEnableCohere,
+          enableAutoTcy: newEnableAutoTcy,
           enableMistral: newEnableMistral,
           enableMistralAgents: newEnableMistralAgents,
           enableStTerminal: newEnableStTerminal,
