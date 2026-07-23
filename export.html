@@ -230,8 +230,10 @@
                         if (path) {
                             try {
                                 const pandocPath = await store.get('pandocPath');
-                                // ⚠️単一改行・空行を補正したテキストを Pandoc へ渡す
-                                const contentForPandoc = normalizeNovelParagraphs(rawMarkdownText);
+                                // ⚠️空行(スペースのみの行含む)を &nbsp; に置換してWord側で1行段落にする
+                                let contentForPandoc = rawMarkdownText.replace(/\r\n/g, "\n");
+                                contentForPandoc = contentForPandoc.replace(/^[ 　\t]*$/gm, "&nbsp;");
+                                contentForPandoc = contentForPandoc.replace(/(?<!\n)\n(?!\n)/g, "  \n");
 
                                 await invoke('export_with_pandoc', {
                                     sourceContent: contentForPandoc,

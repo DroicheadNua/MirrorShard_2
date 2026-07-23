@@ -34,6 +34,16 @@ body {
   text-combine-upright: all;
 }
 
+html, body, p {
+  line-height: 1.8; /* 適切な行間を指定 */
+}
+
+p {
+  margin: 0;
+  margin-block-start: 0;
+  margin-block-end: 0;
+  padding: 0;
+}
 
 
 /* ★★★ HTMLで表示したときだけ、中央揃えにする ★★★ */

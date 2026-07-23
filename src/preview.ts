@@ -48,8 +48,8 @@ function normalizeNovelParagraphs(text: string): string {
 
   for (const line of lines) {
     if (line.trim() === "") {
-      // ⚠️ 空行（文字のない改行のみの行）は明示的に <br> に変換して1行空けを保証
-      processedBlocks.push("<br>");
+      // ⚠️ 空行（文字のない改行のみの行）は明示的に <br /> に変換して1行空けを保証
+      processedBlocks.push("<br />");
     } else {
       processedBlocks.push(line);
     }

@@ -11,3 +11,9 @@ body {
   -webkit-text-combine: horizontal;
   text-combine-upright: all;
 }
+p {
+  margin: 0;
+  margin-block-start: 0;
+  margin-block-end: 0;
+  padding: 0;
+}

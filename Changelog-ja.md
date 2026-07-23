@@ -9,13 +9,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [1.12.0] - 2026-7-XX  
 
 ### Added (新機能)  
-
+- Vivliostyleによる組版・PDF出力機能を実装  
 
 ### Changed (変更点)    
-
+- 縦書きプレビューに縦中横を実装。設定画面のチェックボックスでオン/オフ  
 
 ### Fixed (修正点)   
 - OpenRouterのプリセット表示の不具合を修正  
+- 縦書きプレビューのEPUB・HTML出力の不具合を修正  
  
 
 ### Other

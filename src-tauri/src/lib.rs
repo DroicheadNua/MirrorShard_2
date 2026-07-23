@@ -314,6 +314,7 @@ async fn build_vivliostyle_pdf(project_path: String) -> Result<String, String> {
         c
     } else {
         let mut c = std::process::Command::new("npx");
+        #[allow(unused_mut)]
         let mut args = vec![
             "-y".to_string(),
             "@vivliostyle/cli".to_string(),
@@ -388,6 +389,7 @@ async fn start_vivliostyle_preview(
             c
         } else {
             let mut c = std::process::Command::new("npx");
+            #[allow(unused_mut)]
             let mut args = vec![
                 "-y".to_string(),
                 "@vivliostyle/cli".to_string(),
