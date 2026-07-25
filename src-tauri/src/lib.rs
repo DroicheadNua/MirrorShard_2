@@ -320,6 +320,64 @@ fn find_linux_chrome_path() -> Option<String> {
     None
 }
 
+// Linux/macOS用: npx の絶対パスと、node が存在する PATH を完全自動検出する
+fn resolve_npx_and_path() -> (String, String) {
+    let home = std::env::var("HOME").unwrap_or_default();
+    let mut path_dirs = Vec::new();
+    let mut found_npx = None;
+
+    // 1. nvm のインストールディレクトリを最新バージョン優先で検索
+    let nvm_base = format!("{}/.nvm/versions/node", home);
+    if let Ok(entries) = std::fs::read_dir(&nvm_base) {
+        let mut node_dirs: Vec<_> = entries.flatten().map(|e| e.path()).collect();
+        node_dirs.sort(); // 昇順ソート
+        node_dirs.reverse(); // 最新バージョンを先頭に
+
+        for dir in node_dirs {
+            let bin_dir = dir.join("bin");
+            if bin_dir.exists() {
+                let npx_bin = bin_dir.join("npx");
+                if found_npx.is_none() && npx_bin.exists() {
+                    found_npx = Some(npx_bin.to_string_lossy().to_string());
+                }
+                path_dirs.push(bin_dir.to_string_lossy().to_string());
+            }
+        }
+    }
+
+    // 2. その他の標準設置パス候補
+    let standard_dirs = [
+        format!("{}/.npm-global/bin", home),
+        format!("{}/.nodebrew/current/bin", home),
+        format!("{}/.n/bin", home),
+        format!("{}/.local/bin", home),
+        "/opt/homebrew/bin".to_string(),
+        "/usr/local/bin".to_string(),
+        "/usr/bin".to_string(),
+        "/bin".to_string(),
+    ];
+
+    for dir_str in standard_dirs {
+        let p = std::path::Path::new(&dir_str);
+        if p.exists() {
+            let npx_bin = p.join("npx");
+            if found_npx.is_none() && npx_bin.exists() {
+                found_npx = Some(npx_bin.to_string_lossy().to_string());
+            }
+            path_dirs.push(dir_str);
+        }
+    }
+
+    if let Ok(current) = std::env::var("PATH") {
+        path_dirs.push(current);
+    }
+
+    let final_npx = found_npx.unwrap_or_else(|| "npx".to_string());
+    let final_path = path_dirs.join(":");
+
+    (final_npx, final_path)
+}
+
 // 🛠️ 共通ヘルパー: OS別の Vivliostyle コマンド（preview / build）を一括構築する
 fn create_vivliostyle_command(
     subcommand: &str,
@@ -339,31 +397,28 @@ fn create_vivliostyle_command(
         c.current_dir(project_path);
         c
     } else {
-        // 👇 Linux / macOS: /bin/sh 経由で実行し、シバンの node 探索失敗を防ぐ
-        let home = std::env::var("HOME").unwrap_or_default();
+        // 👇 動的に検出した npx 絶対パス と 拡張PATH を使用
+        let (npx_path, extended_path) = resolve_npx_and_path();
 
-        // nvm / npm-global / Homebrew パスを含めた PATH エクスポート文
-        let path_export = format!(
-            "export PATH=\"{}/.nvm/versions/node/$(ls {}/.nvm/versions/node 2>/dev/null | tail -n 1)/bin:{}/.npm-global/bin:{}/.nodebrew/current/bin:/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin:$PATH\";",
-            home, home, home, home
-        );
+        let mut c = std::process::Command::new(npx_path);
+        c.env("PATH", extended_path); // node が見つかるよう PATH を渡す
 
-        let mut cli_args = vec![
+        let mut args = vec![
             "-y".to_string(),
             "@vivliostyle/cli".to_string(),
             subcommand.to_string(),
         ];
 
         for extra in extra_args {
-            cli_args.push(extra.to_string());
+            args.push(extra.to_string());
         }
 
         // Linux 用 Chrome / Chromium 解決
         #[cfg(target_os = "linux")]
         {
             if let Some(chrome_path) = find_linux_chrome_path() {
-                cli_args.push("--executable-browser".to_string());
-                cli_args.push(chrome_path);
+                args.push("--executable-browser".to_string());
+                args.push(chrome_path);
             }
         }
 
@@ -372,16 +427,12 @@ fn create_vivliostyle_command(
         {
             let mac_chrome = "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome";
             if std::path::Path::new(mac_chrome).exists() {
-                cli_args.push("--executable-browser".to_string());
-                cli_args.push(mac_chrome.to_string());
+                args.push("--executable-browser".to_string());
+                args.push(mac_chrome.to_string());
             }
         }
 
-        // シェルコマンドの組み立て (export PATH=...; npx -y @vivliostyle/cli ...)
-        let full_shell_cmd = format!("{} npx {}", path_export, cli_args.join(" "));
-
-        let mut c = std::process::Command::new("sh");
-        c.args(["-c", &full_shell_cmd]);
+        c.args(args);
         c.current_dir(project_path);
         c
     }
