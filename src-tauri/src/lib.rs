@@ -222,27 +222,6 @@ impl rig::tool::Tool for WebSearchTool {
 
 // --- Tauriコマンドの定義 ---
 
-// macOSのGUIアプリ用に nodebrew / npm-global / Homebrew の全パスを網羅するヘルパー
-#[cfg(target_os = "macos")]
-fn get_mac_env_path() -> String {
-    let home = std::env::var("HOME").unwrap_or_default();
-    let extra_paths = vec![
-        format!("{}/.nodebrew/current/bin", home),
-        format!("{}/.npm-global/bin", home),
-        format!("{}/.n/bin", home),
-        "/opt/homebrew/bin".to_string(),
-        "/usr/local/bin".to_string(),
-        "/usr/bin".to_string(),
-        "/bin".to_string(),
-    ];
-
-    if let Ok(current) = std::env::var("PATH") {
-        format!("{}:{}", extra_paths.join(":"), current)
-    } else {
-        extra_paths.join(":")
-    }
-}
-
 // Pandoc(Haskell)用にUNCプレフィックス(\\?\)を除去し、スラッシュ区切りに整える関数
 fn normalize_path_for_pandoc(path: &str) -> String {
     let s = path.replace("\\", "/");
@@ -322,6 +301,54 @@ async fn read_local_file_content(path: String) -> Result<String, String> {
     Ok(cow.into_owned())
 }
 
+// Linux用: システム上の Chrome / Chromium の絶対パスを優先順位で探す
+#[cfg(target_os = "linux")]
+fn find_linux_chrome_path() -> Option<String> {
+    let candidates = [
+        "/usr/bin/chromium",             // Debian / Ubuntu / Arch (ARM64 & x86_64)
+        "/usr/bin/chromium-browser",     // Raspberry Pi OS
+        "/usr/bin/google-chrome-stable", // 一般的な Linux 版 Chrome
+        "/run/current-system/sw/bin/google-chrome-stable", // NixOS Chrome
+        "/run/current-system/sw/bin/chromium", // NixOS Chromium
+    ];
+
+    for path in candidates {
+        if std::path::Path::new(path).exists() {
+            return Some(path.to_string());
+        }
+    }
+    None
+}
+
+// 全OS用: NVM, nodebrew, npm-global 等の動的パスを包含した PATH 文字列を生成する
+fn get_extended_path_env() -> String {
+    let home = std::env::var("HOME").unwrap_or_default();
+    let mut extra_paths = vec![
+        format!("{}/.npm-global/bin", home),
+        format!("{}/.nodebrew/current/bin", home),
+        format!("{}/.n/bin", home),
+        format!("{}/.local/bin", home),
+        "/opt/homebrew/bin".to_string(),
+        "/usr/local/bin".to_string(),
+        "/usr/bin".to_string(),
+        "/bin".to_string(),
+    ];
+
+    // NVM (Node Version Manager) のパスを動的検索して追加
+    let nvm_dir = format!("{}/.nvm/versions/node", home);
+    if let Ok(entries) = std::fs::read_dir(&nvm_dir) {
+        for entry in entries.flatten() {
+            extra_paths.insert(0, entry.path().join("bin").to_string_lossy().to_string());
+        }
+    }
+
+    if let Ok(current) = std::env::var("PATH") {
+        format!("{}:{}", extra_paths.join(":"), current)
+    } else {
+        extra_paths.join(":")
+    }
+}
+
 // 🛠️ 共通ヘルパー: OS別の Vivliostyle コマンド（preview / build）を一括構築する
 fn create_vivliostyle_command(
     subcommand: &str,
@@ -336,52 +363,34 @@ fn create_vivliostyle_command(
         #[cfg(target_os = "windows")]
         {
             use std::os::windows::process::CommandExt;
-            c.creation_flags(0x08000000); // コマンドプロンプト非表示
+            c.creation_flags(0x08000000);
         }
         c
     } else {
-        // macOS / Linux での npx フルパス解決
-        let npx_cmd = if cfg!(target_os = "macos") {
-            if std::path::Path::new("/opt/homebrew/bin/npx").exists() {
-                "/opt/homebrew/bin/npx"
-            } else if std::path::Path::new("/usr/local/bin/npx").exists() {
-                "/usr/local/bin/npx"
-            } else {
-                "npx"
-            }
-        } else {
-            "npx"
-        };
+        // NVMやHomebrew等を含めた環境変数 PATH をセットして npx を呼び出す
+        let mut c = std::process::Command::new("npx");
+        c.env("PATH", get_extended_path_env());
 
-        let mut c = std::process::Command::new(npx_cmd);
         let mut args = vec![
             "-y".to_string(),
             "@vivliostyle/cli".to_string(),
             subcommand.to_string(),
         ];
 
-        // 追加引数 (例: --port 8123)
         for extra in extra_args {
             args.push(extra.to_string());
         }
 
-        // Linux/NixOS 用 Chrome パス解決
+        // Linux用 Chrome / Chromium 自動検出
         #[cfg(target_os = "linux")]
         {
-            let chrome_path =
-                if std::path::Path::new("/run/current-system/sw/bin/google-chrome-stable").exists()
-                {
-                    "/run/current-system/sw/bin/google-chrome-stable"
-                } else if std::path::Path::new("/run/current-system/sw/bin/chromium").exists() {
-                    "/run/current-system/sw/bin/chromium"
-                } else {
-                    "google-chrome-stable"
-                };
-            args.push("--executable-browser".to_string());
-            args.push(chrome_path.to_string());
+            if let Some(chrome_path) = find_linux_chrome_path() {
+                args.push("--executable-browser".to_string());
+                args.push(chrome_path);
+            }
         }
 
-        // macOS 用 Chrome パス解決
+        // macOS用 Chrome 検出
         #[cfg(target_os = "macos")]
         {
             let mac_chrome = "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome";
@@ -392,13 +401,6 @@ fn create_vivliostyle_command(
         }
 
         c.args(args);
-
-        // macOS GUIアプリ用の PATH 環境変数補強
-        #[cfg(target_os = "macos")]
-        {
-            c.env("PATH", get_mac_env_path());
-        }
-
         c
     };
 
