@@ -397,42 +397,48 @@ fn create_vivliostyle_command(
         c.current_dir(project_path);
         c
     } else {
-        // 👇 動的に検出した npx 絶対パス と 拡張PATH を使用
+        // 👇 Linux/macOS: /bin/sh を経由し、PATHを確実に反映させてから実行する
         let (npx_path, extended_path) = resolve_npx_and_path();
 
-        let mut c = std::process::Command::new(npx_path);
-        c.env("PATH", extended_path); // node が見つかるよう PATH を渡す
+        let mut c = std::process::Command::new("sh");
+        c.arg("-c");
+        // シェル内でPATHをエクスポートし、$0(npx) に $@(引数リスト) を渡して実行
+        c.arg(format!("export PATH=\"{}\"; \"$0\" \"$@\"", extended_path));
 
-        let mut args = vec![
+        // $0 の中身
+        c.arg(npx_path);
+
+        // $@ の中身 (引数リスト)
+        let mut cli_args = vec![
             "-y".to_string(),
             "@vivliostyle/cli".to_string(),
             subcommand.to_string(),
         ];
 
         for extra in extra_args {
-            args.push(extra.to_string());
+            cli_args.push(extra.to_string());
         }
 
-        // Linux 用 Chrome / Chromium 解決
+        // Linux 用 Chrome / Chromium 自動検出
         #[cfg(target_os = "linux")]
         {
             if let Some(chrome_path) = find_linux_chrome_path() {
-                args.push("--executable-browser".to_string());
-                args.push(chrome_path);
+                cli_args.push("--executable-browser".to_string());
+                cli_args.push(chrome_path);
             }
         }
 
-        // macOS 用 Chrome 解決
+        // macOS 用 Chrome 検出
         #[cfg(target_os = "macos")]
         {
             let mac_chrome = "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome";
             if std::path::Path::new(mac_chrome).exists() {
-                args.push("--executable-browser".to_string());
-                args.push(mac_chrome.to_string());
+                cli_args.push("--executable-browser".to_string());
+                cli_args.push(mac_chrome.to_string());
             }
         }
 
-        c.args(args);
+        c.args(cli_args);
         c.current_dir(project_path);
         c
     }
