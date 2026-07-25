@@ -320,42 +320,13 @@ fn find_linux_chrome_path() -> Option<String> {
     None
 }
 
-// 全OS用: NVM, nodebrew, npm-global 等の動的パスを包含した PATH 文字列を生成する
-fn get_extended_path_env() -> String {
-    let home = std::env::var("HOME").unwrap_or_default();
-    let mut extra_paths = vec![
-        format!("{}/.npm-global/bin", home),
-        format!("{}/.nodebrew/current/bin", home),
-        format!("{}/.n/bin", home),
-        format!("{}/.local/bin", home),
-        "/opt/homebrew/bin".to_string(),
-        "/usr/local/bin".to_string(),
-        "/usr/bin".to_string(),
-        "/bin".to_string(),
-    ];
-
-    // NVM (Node Version Manager) のパスを動的検索して追加
-    let nvm_dir = format!("{}/.nvm/versions/node", home);
-    if let Ok(entries) = std::fs::read_dir(&nvm_dir) {
-        for entry in entries.flatten() {
-            extra_paths.insert(0, entry.path().join("bin").to_string_lossy().to_string());
-        }
-    }
-
-    if let Ok(current) = std::env::var("PATH") {
-        format!("{}:{}", extra_paths.join(":"), current)
-    } else {
-        extra_paths.join(":")
-    }
-}
-
 // 🛠️ 共通ヘルパー: OS別の Vivliostyle コマンド（preview / build）を一括構築する
 fn create_vivliostyle_command(
     subcommand: &str,
     extra_args: &[&str],
     project_path: &str,
 ) -> std::process::Command {
-    let mut cmd = if cfg!(target_os = "windows") {
+    if cfg!(target_os = "windows") {
         let mut c = std::process::Command::new("cmd");
         let mut c_args = vec!["/C", "npx", "-y", "@vivliostyle/cli", subcommand];
         c_args.extend(extra_args);
@@ -365,47 +336,55 @@ fn create_vivliostyle_command(
             use std::os::windows::process::CommandExt;
             c.creation_flags(0x08000000);
         }
+        c.current_dir(project_path);
         c
     } else {
-        // NVMやHomebrew等を含めた環境変数 PATH をセットして npx を呼び出す
-        let mut c = std::process::Command::new("npx");
-        c.env("PATH", get_extended_path_env());
+        // 👇 Linux / macOS: /bin/sh 経由で実行し、シバンの node 探索失敗を防ぐ
+        let home = std::env::var("HOME").unwrap_or_default();
 
-        let mut args = vec![
+        // nvm / npm-global / Homebrew パスを含めた PATH エクスポート文
+        let path_export = format!(
+            "export PATH=\"{}/.nvm/versions/node/$(ls {}/.nvm/versions/node 2>/dev/null | tail -n 1)/bin:{}/.npm-global/bin:{}/.nodebrew/current/bin:/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin:$PATH\";",
+            home, home, home, home
+        );
+
+        let mut cli_args = vec![
             "-y".to_string(),
             "@vivliostyle/cli".to_string(),
             subcommand.to_string(),
         ];
 
         for extra in extra_args {
-            args.push(extra.to_string());
+            cli_args.push(extra.to_string());
         }
 
-        // Linux用 Chrome / Chromium 自動検出
+        // Linux 用 Chrome / Chromium 解決
         #[cfg(target_os = "linux")]
         {
             if let Some(chrome_path) = find_linux_chrome_path() {
-                args.push("--executable-browser".to_string());
-                args.push(chrome_path);
+                cli_args.push("--executable-browser".to_string());
+                cli_args.push(chrome_path);
             }
         }
 
-        // macOS用 Chrome 検出
+        // macOS 用 Chrome 解決
         #[cfg(target_os = "macos")]
         {
             let mac_chrome = "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome";
             if std::path::Path::new(mac_chrome).exists() {
-                args.push("--executable-browser".to_string());
-                args.push(mac_chrome.to_string());
+                cli_args.push("--executable-browser".to_string());
+                cli_args.push(mac_chrome.to_string());
             }
         }
 
-        c.args(args);
-        c
-    };
+        // シェルコマンドの組み立て (export PATH=...; npx -y @vivliostyle/cli ...)
+        let full_shell_cmd = format!("{} npx {}", path_export, cli_args.join(" "));
 
-    cmd.current_dir(project_path);
-    cmd
+        let mut c = std::process::Command::new("sh");
+        c.args(["-c", &full_shell_cmd]);
+        c.current_dir(project_path);
+        c
+    }
 }
 
 #[tauri::command]
