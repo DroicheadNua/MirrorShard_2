@@ -321,26 +321,37 @@ fn find_linux_chrome_path() -> Option<String> {
 }
 
 // Linux/macOS用: npx の絶対パスと、node が存在する PATH を完全自動検出する
+// Linux/macOS用: npx の絶対パスと、node が存在する PATH を完全自動検出する
 fn resolve_npx_and_path() -> (String, String) {
     let home = std::env::var("HOME").unwrap_or_default();
     let mut path_dirs = Vec::new();
     let mut found_npx = None;
 
-    // 1. nvm のインストールディレクトリを最新バージョン優先で検索
-    let nvm_base = format!("{}/.nvm/versions/node", home);
-    if let Ok(entries) = std::fs::read_dir(&nvm_base) {
-        let mut node_dirs: Vec<_> = entries.flatten().map(|e| e.path()).collect();
-        node_dirs.sort(); // 昇順ソート
-        node_dirs.reverse(); // 最新バージョンを先頭に
+    // 1. nvm のベースディレクトリの候補（標準、XDG準拠、環境変数）
+    let mut nvm_base_dirs = vec![
+        format!("{}/.nvm/versions/node", home),
+        format!("{}/.config/nvm/versions/node", home), // NixOS等で使われるパスを追加
+    ];
+    if let Ok(nvm_dir_env) = std::env::var("NVM_DIR") {
+        nvm_base_dirs.push(format!("{}/versions/node", nvm_dir_env));
+    }
 
-        for dir in node_dirs {
-            let bin_dir = dir.join("bin");
-            if bin_dir.exists() {
-                let npx_bin = bin_dir.join("npx");
-                if found_npx.is_none() && npx_bin.exists() {
-                    found_npx = Some(npx_bin.to_string_lossy().to_string());
+    // NVMの各候補ディレクトリを探索し、最新バージョンの bin を探す
+    for nvm_base in nvm_base_dirs {
+        if let Ok(entries) = std::fs::read_dir(&nvm_base) {
+            let mut node_dirs: Vec<_> = entries.flatten().map(|e| e.path()).collect();
+            node_dirs.sort(); // 昇順ソート
+            node_dirs.reverse(); // 最新バージョンを先頭に
+
+            for dir in node_dirs {
+                let bin_dir = dir.join("bin");
+                if bin_dir.exists() {
+                    let npx_bin = bin_dir.join("npx");
+                    if found_npx.is_none() && npx_bin.exists() {
+                        found_npx = Some(npx_bin.to_string_lossy().to_string());
+                    }
+                    path_dirs.push(bin_dir.to_string_lossy().to_string());
                 }
-                path_dirs.push(bin_dir.to_string_lossy().to_string());
             }
         }
     }
@@ -364,7 +375,7 @@ fn resolve_npx_and_path() -> (String, String) {
             if found_npx.is_none() && npx_bin.exists() {
                 found_npx = Some(npx_bin.to_string_lossy().to_string());
             }
-            path_dirs.push(dir_str);
+            path_dirs.push(dir_str.to_string());
         }
     }
 
