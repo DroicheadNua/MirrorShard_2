@@ -369,6 +369,7 @@ This feature requires **Node.js** installed on your computer.
 
 *Note: The Vivliostyle preview and PDF export features require Google Chrome (or Chromium) installed on your system.*
 *Note: The preview viewer specifically launches **Google Chrome** (or Chromium) regardless of your system's default browser setting.*
+*Note for macOS users: In "System Settings" ➔ "Privacy & Security" ➔ "App Management", you must grant MirrorShard 2 permission to update or modify other applications.*
 
 ---
 

@@ -222,6 +222,27 @@ impl rig::tool::Tool for WebSearchTool {
 
 // --- Tauriコマンドの定義 ---
 
+// macOSのGUIアプリ用に nodebrew / npm-global / Homebrew の全パスを網羅するヘルパー
+#[cfg(target_os = "macos")]
+fn get_mac_env_path() -> String {
+    let home = std::env::var("HOME").unwrap_or_default();
+    let extra_paths = vec![
+        format!("{}/.nodebrew/current/bin", home),
+        format!("{}/.npm-global/bin", home),
+        format!("{}/.n/bin", home),
+        "/opt/homebrew/bin".to_string(),
+        "/usr/local/bin".to_string(),
+        "/usr/bin".to_string(),
+        "/bin".to_string(),
+    ];
+
+    if let Ok(current) = std::env::var("PATH") {
+        format!("{}:{}", extra_paths.join(":"), current)
+    } else {
+        extra_paths.join(":")
+    }
+}
+
 // Pandoc(Haskell)用にUNCプレフィックス(\\?\)を除去し、スラッシュ区切りに整える関数
 fn normalize_path_for_pandoc(path: &str) -> String {
     let s = path.replace("\\", "/");
@@ -301,27 +322,50 @@ async fn read_local_file_content(path: String) -> Result<String, String> {
     Ok(cow.into_owned())
 }
 
-#[tauri::command]
-async fn build_vivliostyle_pdf(project_path: String) -> Result<String, String> {
+// 🛠️ 共通ヘルパー: OS別の Vivliostyle コマンド（preview / build）を一括構築する
+fn create_vivliostyle_command(
+    subcommand: &str,
+    extra_args: &[&str],
+    project_path: &str,
+) -> std::process::Command {
     let mut cmd = if cfg!(target_os = "windows") {
         let mut c = std::process::Command::new("cmd");
-        c.args(["/C", "npx", "-y", "@vivliostyle/cli", "build"]);
+        let mut c_args = vec!["/C", "npx", "-y", "@vivliostyle/cli", subcommand];
+        c_args.extend(extra_args);
+        c.args(c_args);
         #[cfg(target_os = "windows")]
         {
             use std::os::windows::process::CommandExt;
-            c.creation_flags(0x08000000); // コマンドプロンプト表示を抑制
+            c.creation_flags(0x08000000); // コマンドプロンプト非表示
         }
         c
     } else {
-        let mut c = std::process::Command::new("npx");
-        #[allow(unused_mut)]
+        // macOS / Linux での npx フルパス解決
+        let npx_cmd = if cfg!(target_os = "macos") {
+            if std::path::Path::new("/opt/homebrew/bin/npx").exists() {
+                "/opt/homebrew/bin/npx"
+            } else if std::path::Path::new("/usr/local/bin/npx").exists() {
+                "/usr/local/bin/npx"
+            } else {
+                "npx"
+            }
+        } else {
+            "npx"
+        };
+
+        let mut c = std::process::Command::new(npx_cmd);
         let mut args = vec![
             "-y".to_string(),
             "@vivliostyle/cli".to_string(),
-            "build".to_string(),
+            subcommand.to_string(),
         ];
 
-        // Linux/NixOSの場合のみ、CLI引数で直接システムChromeを指定する
+        // 追加引数 (例: --port 8123)
+        for extra in extra_args {
+            args.push(extra.to_string());
+        }
+
+        // Linux/NixOS 用 Chrome パス解決
         #[cfg(target_os = "linux")]
         {
             let chrome_path =
@@ -331,19 +375,41 @@ async fn build_vivliostyle_pdf(project_path: String) -> Result<String, String> {
                 } else if std::path::Path::new("/run/current-system/sw/bin/chromium").exists() {
                     "/run/current-system/sw/bin/chromium"
                 } else {
-                    "google-chrome-stable" // システム標準パス
+                    "google-chrome-stable"
                 };
             args.push("--executable-browser".to_string());
             args.push(chrome_path.to_string());
         }
 
+        // macOS 用 Chrome パス解決
+        #[cfg(target_os = "macos")]
+        {
+            let mac_chrome = "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome";
+            if std::path::Path::new(mac_chrome).exists() {
+                args.push("--executable-browser".to_string());
+                args.push(mac_chrome.to_string());
+            }
+        }
+
         c.args(args);
+
+        // macOS GUIアプリ用の PATH 環境変数補強
+        #[cfg(target_os = "macos")]
+        {
+            c.env("PATH", get_mac_env_path());
+        }
+
         c
     };
 
-    cmd.current_dir(&project_path);
+    cmd.current_dir(project_path);
+    cmd
+}
 
-    // PDF生成が完了するまで待機する (.output())
+#[tauri::command]
+async fn build_vivliostyle_pdf(project_path: String) -> Result<String, String> {
+    let mut cmd = create_vivliostyle_command("build", &[], &project_path);
+
     let output = cmd
         .output()
         .map_err(|e| format!("PDFビルドプロセスの実行に失敗しました: {}", e))?;
@@ -362,64 +428,15 @@ async fn start_vivliostyle_preview(
     project_path: String,
     state: tauri::State<'_, VivliostyleProcess>,
 ) -> Result<(), String> {
-    // 1. 既存のプレビュープロセスがあれば殺す（再起動対応）
+    // 既存のプレビュープロセスがあれば殺す
     {
         let mut lock = state.inner().0.lock().unwrap();
         if let Some(mut child) = lock.take() {
             kill_child_tree(&mut child);
         }
 
-        // 2. npx で Vivliostyle プレビューサーバーを起動(標準ブラウザ)
-        let mut cmd = if cfg!(target_os = "windows") {
-            let mut c = std::process::Command::new("cmd");
-            c.args([
-                "/C",
-                "npx",
-                "-y",
-                "@vivliostyle/cli",
-                "preview",
-                "--port",
-                "8123",
-            ]);
-            #[cfg(target_os = "windows")]
-            {
-                use std::os::windows::process::CommandExt;
-                c.creation_flags(0x08000000);
-            }
-            c
-        } else {
-            let mut c = std::process::Command::new("npx");
-            #[allow(unused_mut)]
-            let mut args = vec![
-                "-y".to_string(),
-                "@vivliostyle/cli".to_string(),
-                "preview".to_string(),
-                "--port".to_string(),
-                "8123".to_string(),
-            ];
-
-            // Linux/NixOSの場合のみ、CLI引数で直接システムChromeを指定する
-            #[cfg(target_os = "linux")]
-            {
-                let chrome_path =
-                    if std::path::Path::new("/run/current-system/sw/bin/google-chrome-stable")
-                        .exists()
-                    {
-                        "/run/current-system/sw/bin/google-chrome-stable"
-                    } else if std::path::Path::new("/run/current-system/sw/bin/chromium").exists() {
-                        "/run/current-system/sw/bin/chromium"
-                    } else {
-                        "google-chrome-stable" // システム標準パス
-                    };
-                args.push("--executable-browser".to_string());
-                args.push(chrome_path.to_string());
-            }
-
-            c.args(args);
-            c
-        };
-
-        cmd.current_dir(&project_path);
+        // 共通関数でコマンド生成 (--port 8123 を付与)
+        let mut cmd = create_vivliostyle_command("preview", &["--port", "8123"], &project_path);
 
         let child = cmd
             .spawn()
