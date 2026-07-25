@@ -357,6 +357,7 @@ fn resolve_npx_and_path() -> (String, String) {
     }
 
     // 2. その他の標準設置パス候補
+    let user = std::env::var("USER").unwrap_or_default();
     let standard_dirs = [
         format!("{}/.npm-global/bin", home),
         format!("{}/.nodebrew/current/bin", home),
@@ -364,6 +365,8 @@ fn resolve_npx_and_path() -> (String, String) {
         format!("{}/.local/bin", home),
         "/opt/homebrew/bin".to_string(),
         "/usr/local/bin".to_string(),
+        "/run/current-system/sw/bin".to_string(),
+        format!("/etc/profiles/per-user/{}/bin", user),
         "/usr/bin".to_string(),
         "/bin".to_string(),
     ];

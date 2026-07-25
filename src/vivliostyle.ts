@@ -40,7 +40,7 @@ function normalizeNovelParagraphs(text: string): string {
   for (const line of lines) {
     if (line.trim() === "") {
       // ⚠️ 空行（文字のない改行のみの行）は明示的に <br> に変換して1行空けを保証
-      processedBlocks.push("<br>");
+      processedBlocks.push("<br />");
     } else {
       processedBlocks.push(line);
     }
@@ -552,11 +552,14 @@ p:blank::before {
       const convertedText = convertAozoraRubyToHtml(normalizeNovelParagraphs(combinedRawText));
       const autoTcyText = applyAutoTcy(convertedText, isTcyEnabled);
 
+      // Linux(WebKitGTK) の一部の環境で勝手にエスケープされた改行タグを強制復元する
+      const finalText = autoTcyText.replace(/&lt;br\s*\/?&gt;/gi, "<br />");
+
       // 4. vivliostylepublishing.md として保存
       const compiledFilePath = `${this.currentProjectPath}${sep}${compiledFileName}`;
       await invoke("write_file", {
         path: compiledFilePath,
-        content: autoTcyText,
+        content: finalText,
         encoding: "UTF-8",
       });
 
