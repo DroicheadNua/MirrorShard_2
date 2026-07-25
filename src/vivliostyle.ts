@@ -406,6 +406,7 @@ html, body {
 body {
   column-count: ${this.columns?.value || "1"};
   column-gap: 8mm;
+  column-fill: auto; /* 均等割り振りを禁止し、1段目から順に埋める */
 }
 
 /* 段落（pタグ）のデフォルト余白を消去 */
