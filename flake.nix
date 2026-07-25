@@ -63,7 +63,13 @@
 
           # プロジェクト全体ではなくリリースバイナリが存在するディレクトリだけをソースにする
           # これによりnode_modules等の不要なコピーを完全にスキップ
-          src = ./src-tauri/target/release;
+          # deps や incremental などの巨大なビルド中間ゴミを除外
+          src = pkgs.lib.cleanSourceWith {
+            src = ./src-tauri/target/release;
+            filter = path: type:
+              let name = baseNameOf (toString path);
+              in !(name == "deps" || name == "build" || name == "incremental" || name == ".fingerprint");
+          };
 
           buildInputs = runtimeDeps;
           nativeBuildInputs = [ pkgs.makeWrapper ];
