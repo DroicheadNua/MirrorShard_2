@@ -38,8 +38,9 @@ Also, for the Linux version, the background of the vertical text preview (in Lig
 Due to the varying specifications of different Linux distributions, desktop environments (Wayland / X11), and system architectures, you may encounter the following behaviors or limitations.
 
 ### 🖋 Japanese Input (IME) Limitations
-* **Fallback to Over-the-spot input**: On many environments such as MX Linux and NixOS, inline text input may not function correctly. Instead, the text currently being converted will appear in a separate "Over-the-spot" floating window provided by the IME.
-* **Duplicated display**: In some environments, both inline and Over-the-spot inputs may occasionally render simultaneously.
+* **Fallback to Over-the-spot Input**: Depending on your input method framework (Fcitx5 / IBus) and desktop environment, inline text composition may not function directly inside the editor canvas. In many Linux environments, composition text will be rendered via a floating "Over-the-spot" candidate window instead.  
+  *Note: A relatively stable inline composition experience has been confirmed under GNOME + IBus environments.*  
+* **Duplicate Text Rendering**: In some Linux desktop environments, inline composition text and the floating Over-the-spot window may render simultaneously.
 
 ### 🪟 Window Control and Interaction Limitations
 * **Unchanging resize cursors**: On Wayland environments (e.g., GNOME or KDE), hovering the cursor over the edge of the window might not change it to a "resize arrow" cursor. *(Note: Even if the cursor does not change, you can still resize the window by dragging the edges. On KDE, resizing with `Super` + Right Drag also works perfectly).*

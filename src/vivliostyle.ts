@@ -541,7 +541,7 @@ p:blank::before {
         const filePath = `${this.currentProjectPath}${sep}${fileName}`;
         try {
           const fileData = await invoke<FileData>("read_file", { path: filePath });
-          combinedRawText += fileData.content.trim() + "\n\n";
+          combinedRawText += fileData.content.trimEnd() + "\n\n";
         } catch (e) {
           console.error(`[Vivliostyle] ${fileName} の読み込みに失敗:`, e);
         }
