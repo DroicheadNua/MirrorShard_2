@@ -6,6 +6,21 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 
+## [1.13.0] - 2026-8-XX  
+
+### Added (新機能)  
+
+
+### Changed (変更点)    
+- Linux: Niriデスクトップのときに限りGPUコンポジットを有効に（手動で無効化することも可能）  
+
+### Fixed (修正点)   
+ 
+
+### Other
+
+
+
 ## [1.12.0] - 2026-7-27  
 
 ### Added (新機能)  

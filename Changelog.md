@@ -7,6 +7,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [1.12.0] - 2026-08-XX
+
+### Added
+
+
+### Changed
+- Linux: Enabled GPU compositing automatically when running under Niri (with a manual disable override option).
+
+
+### Fixed
+
+
 ## [1.12.0] - 2026-07-27
 
 ### Added
