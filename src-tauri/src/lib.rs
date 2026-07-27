@@ -2473,15 +2473,25 @@ async fn write_file(path: String, content: String, encoding: String) -> Result<(
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
-    // Linux環境でのみ起動時に環境変数を強制セットする
-    #[cfg(target_os = "linux")]
-    {
-        println!("Linux detected: Disabling WebKit compositing mode for stability.");
-        std::env::set_var("WEBKIT_DISABLE_COMPOSITING_MODE", "1");
-        // もしWayland環境でウィンドウが表示されない等の問題が続く場合は
-        // 以下の「X11バックエンド強制」もセットで試す
-        // std::env::set_var("GDK_BACKEND", "x11");
+// Linux環境での起動時判定
+#[cfg(target_os = "linux")]
+{
+    // Niri または Wayland 環境かどうかの判定
+    let is_niri = std::env::var("NIRI_SOCKET").is_ok()
+        || std::env::var("XDG_CURRENT_DESKTOP").map(|v| v.to_lowercase().contains("niri")).unwrap_or(false);
+
+    // ユーザーが手動で強制フラグを立てていない場合
+    if std::env::var("MIRRORSHARD_DISABLE_COMPOSITING").is_err() {
+        if is_niri {
+            // Niri環境ではGPUコンポジット（高速描画）を有効化のまま維持する
+            println!("Niri compositor detected: Enabling WebKit GPU compositing.");
+        } else {
+            // その他のLinux環境では安定性重視でコンポジットをオフにする
+            println!("Linux detected (non-Niri): Disabling WebKit compositing mode for stability.");
+            std::env::set_var("WEBKIT_DISABLE_COMPOSITING_MODE", "1");
+        }
     }
+}
     tauri::Builder::default()
         .plugin(tauri_plugin_opener::init())
         .plugin(tauri_plugin_http::init())
