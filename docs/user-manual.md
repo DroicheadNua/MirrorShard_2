@@ -386,6 +386,7 @@ This feature requires **Node.js** installed on your computer.
    *Note: Your original source files will never be modified or overwritten.*
 4. **Open Preview**  
    Launches a local Vivliostyle preview server and opens the live book preview in Google Chrome.
+    *Note: On the very first preview launch or PDF export, it may take 30 to 60 seconds to download and initialize the Vivliostyle packages and Puppeteer. Subsequent launches will open instantly.*
 5. **Export PDF**  
    Compiles and exports a high-resolution PDF for printing. Upon completion, the project directory opens automatically in your file explorer / Finder.
 6. **>_ Open Terminal**  

@@ -63,6 +63,26 @@ If you previously installed the Electron version of MirrorShard:
 
 ---
 
+### Q. Japanese IME behavior is strange (e.g., the first keystroke of a full-width space disappears).
+
+**A.** This may be a rendering issue caused by a compatibility glitch between Windows Update (WebView2) and graphics drivers (especially NVIDIA).
+
+#### Solution 1: Update Graphics Drivers (Recommended)
+Update your graphics driver (NVIDIA / AMD / Intel) to the latest version and restart your PC.
+
+#### Solution 2: Apply a Fixed WebView2 Runtime
+1. Create a batch file named `MirrorShard_2.bat` in the same directory as `mirrorshard2.exe` with the following content:
+   ```
+   @echo off
+   cd /d "%~dp0"
+   set WEBVIEW2_BROWSER_EXECUTABLE_FOLDER=%~dp0webview2_fixed
+   start "" "mirrorshard2.exe"
+   ```
+2. Download fixed WebView2 runtime CAB file (e.g. `148.0.3967.96`) from Microsoft, extract it, and rename the folder to `webview2_fixed`.
+3. Place `webview2_fixed` in the same directory as `mirrorshard2.exe` and launch via `MirrorShard_2.bat`.
+
+---
+
 ### Q. The text is garbled or unreadable.
 
 **A.** The file may use an unsupported encoding.
