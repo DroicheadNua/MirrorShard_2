@@ -2473,25 +2473,29 @@ async fn write_file(path: String, content: String, encoding: String) -> Result<(
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
-// Linux環境での起動時判定
-#[cfg(target_os = "linux")]
-{
-    // Niri または Wayland 環境かどうかの判定
-    let is_niri = std::env::var("NIRI_SOCKET").is_ok()
-        || std::env::var("XDG_CURRENT_DESKTOP").map(|v| v.to_lowercase().contains("niri")).unwrap_or(false);
+    // Linux環境での起動時判定
+    #[cfg(target_os = "linux")]
+    {
+        // x86_64（PC）かつ Niri の場合のみ GPU コンポジットを有効化
+        let is_x86_64_niri = cfg!(target_arch = "x86_64")
+            && (std::env::var("NIRI_SOCKET").is_ok()
+                || std::env::var("XDG_CURRENT_DESKTOP")
+                    .map(|v| v.to_lowercase().contains("niri"))
+                    .unwrap_or(false));
 
-    // ユーザーが手動で強制フラグを立てていない場合
-    if std::env::var("MIRRORSHARD_DISABLE_COMPOSITING").is_err() {
-        if is_niri {
-            // Niri環境ではGPUコンポジット（高速描画）を有効化のまま維持する
-            println!("Niri compositor detected: Enabling WebKit GPU compositing.");
-        } else {
-            // その他のLinux環境では安定性重視でコンポジットをオフにする
-            println!("Linux detected (non-Niri): Disabling WebKit compositing mode for stability.");
-            std::env::set_var("WEBKIT_DISABLE_COMPOSITING_MODE", "1");
+        // ユーザーが手動で強制フラグを立てていない場合
+        if std::env::var("MIRRORSHARD_DISABLE_COMPOSITING").is_err() {
+            if is_x86_64_niri {
+                println!("Niri (x86_64) detected: Enabling WebKit GPU compositing.");
+            } else {
+                // その他のLinux環境では安定性重視でコンポジットをオフにする
+                println!(
+                    "Linux detected (non-Niri or ARM): Disabling WebKit compositing mode for stability."
+                );
+                std::env::set_var("WEBKIT_DISABLE_COMPOSITING_MODE", "1");
+            }
         }
     }
-}
     tauri::Builder::default()
         .plugin(tauri_plugin_opener::init())
         .plugin(tauri_plugin_http::init())
