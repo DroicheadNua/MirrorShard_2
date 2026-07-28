@@ -2476,22 +2476,22 @@ pub fn run() {
     // Linux環境での起動時判定
     #[cfg(target_os = "linux")]
     {
-        // x86_64（PC）かつ Niri の場合のみ GPU コンポジットを有効化
-        let is_x86_64_niri = cfg!(target_arch = "x86_64")
-            && (std::env::var("NIRI_SOCKET").is_ok()
-                || std::env::var("XDG_CURRENT_DESKTOP")
-                    .map(|v| v.to_lowercase().contains("niri"))
-                    .unwrap_or(false));
+        // Smithay系コンポジター（Niri または COSMIC）か否かを判定
+        let desktop = std::env::var("XDG_CURRENT_DESKTOP")
+            .map(|v| v.to_lowercase())
+            .unwrap_or_default();
 
-        // ユーザーが手動で強制フラグを立てていない場合
+        // Niri・COSMICのいずれかであり、かつx64のときのみGPUコンポジットを許可
+        let is_smithay_compositor = cfg!(target_arch = "x86_64")
+            && (std::env::var("NIRI_SOCKET").is_ok()
+                || desktop.contains("niri")
+                || desktop.contains("cosmic"));
+
+        // ユーザーが手動でMIRRORSHARD_DISABLE_COMPOSITINGを指定したときはGPUコンポジットをオフに
         if std::env::var("MIRRORSHARD_DISABLE_COMPOSITING").is_err() {
-            if is_x86_64_niri {
-                println!("Niri (x86_64) detected: Enabling WebKit GPU compositing.");
+            if is_smithay_compositor {
+                println!("Smithay-based compositor detected (Niri/COSMIC): Enabling WebKit GPU compositing.");
             } else {
-                // その他のLinux環境では安定性重視でコンポジットをオフにする
-                println!(
-                    "Linux detected (non-Niri or ARM): Disabling WebKit compositing mode for stability."
-                );
                 std::env::set_var("WEBKIT_DISABLE_COMPOSITING_MODE", "1");
             }
         }
