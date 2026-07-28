@@ -13,7 +13,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 
 ### Changed
-- Linux: Enabled GPU compositing automatically when running under Niri (with a manual disable override option).
+- Linux: Enabled GPU compositing automatically when running under Niri or COSMIC (with a manual disable override option).
 
 
 ### Fixed

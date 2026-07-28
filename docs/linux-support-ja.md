@@ -222,6 +222,6 @@ window-rule {
 ```
 
 * **GPUコンポジットの自動有効化**:  
-  今まで、Linux（特にWayland環境やNvidia製グラフィックボード使用時）ではGPUコンポジットを無効化しないと画面描画が正常に行われないことが多かったのですが、NixOS + Niri + GTX 1050Ti環境でGPU描画が正常に動作することが確認されました。  
-  それに伴い、Niriコンポジター（`NIRI_SOCKET`）の起動を自動検知し、WebKitGTKのGPUコンポジット描画を有効化する仕様に変更しました。これによりCPU負荷が大幅に低下し、半透明ウィンドウやエフェクトがフリッカーなしに正常に動作します。  
+  今まで、Linux（特にWayland環境やNvidia製グラフィックボード使用時）ではGPUコンポジットを無効化しないと画面描画が正常に行われないことが多かったのですが、NixOS + Niri / COSMIC Desktop + GTX 1050Ti環境でGPU描画が正常に動作することが確認されました。  
+  それに伴い、Smithay系コンポジターである Niri（`NIRI_SOCKET`）または COSMIC Desktop の起動を自動検知し、WebKitGTKのGPUコンポジット描画を有効化する仕様に変更しました。これによりCPU負荷が大幅に低下し、半透明ウィンドウやエフェクトがフリッカーなしに正常に動作します。  
   万が一描画に不具合が発生した場合は、ターミナルやランチャーから `MIRRORSHARD_DISABLE_COMPOSITING=1 mirrorshard2` とオプション付きで実行することで、手動でGPUコンポジットを強制オフにして起動できます。

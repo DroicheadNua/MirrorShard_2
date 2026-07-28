@@ -245,6 +245,6 @@ window-rule {
 ```
 
 * **Automatic GPU Compositing**:  
-  Previously on Linux (especially under Wayland or with NVIDIA graphics cards), GPU compositing frequently caused rendering glitches and had to be force-disabled. However, testing confirmed that GPU compositing runs smoothly under NixOS + Niri + GTX 1050Ti.  
-  Accordingly, MirrorShard now automatically detects the Niri compositor (`NIRI_SOCKET`) and enables WebKitGTK GPU compositing. This significantly reduces CPU load and delivers smooth, flicker-free rendering with transparent windows and visual effects.  
+  Previously on Linux (especially under Wayland or with NVIDIA graphics cards), GPU compositing frequently caused rendering glitches and had to be force-disabled. However, testing confirmed that GPU compositing runs smoothly under NixOS + Niri / COSMIC Desktop + GTX 1050Ti.  
+  Accordingly, MirrorShard now automatically detects Smithay-based compositors like Niri (`NIRI_SOCKET`) or COSMIC Desktop and enables WebKitGTK GPU compositing. This significantly reduces CPU load and delivers smooth, flicker-free rendering with transparent windows and visual effects.  
   *Note: If you experience any rendering issues on your specific GPU/driver setup, you can manually force-disable GPU compositing by launching via terminal or desktop launcher with `MIRRORSHARD_DISABLE_COMPOSITING=1 mirrorshard2`.*

@@ -12,7 +12,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 
 ### Changed (変更点)    
-- Linux: Niriデスクトップのときに限りGPUコンポジットを有効に（手動で無効化することも可能）  
+- Linux: NiriまたはCOSMICデスクトップのときに限りGPUコンポジットを有効に（手動で無効化することも可能）  
 
 ### Fixed (修正点)   
  
