@@ -300,6 +300,7 @@ class App {
   // 全ての拡張機能を管理する区画
   private mainCompartment = new Compartment();
   private codeFontCompartment = new Compartment();
+  private isFullFeatureAvailable = true;
   private tokyoNightCustomTheme: Extension = [
     tokyoNight, // tokyoNightの全設定を継承
     EditorView.theme({
@@ -2290,9 +2291,14 @@ ${instructionFiller}
       return;
     }
 
+    // Linux の場合は Rust 側にフル機能許可フラグを問い合わせる
+    if (this.currentOs === "linux") {
+      this.isFullFeatureAvailable = await invoke<boolean>("is_full_feature_supported");
+    }
+
     // Linuxのときは一部機能を使用不可に
     if (
-      this.currentOs === "linux" &&
+      !this.isFullFeatureAvailable &&
       this.markdownBtn &&
       this.typesoundBtn &&
       this.spotlightBtn
@@ -4540,7 +4546,7 @@ ${instructionFiller}
   }
 
   private async openMarkdownPreviewWithCheck() {
-    if (this.currentOs === "linux") return;
+    if (!this.isFullFeatureAvailable) return;
     const textLength = this.editorView.state.doc.length;
     const limit = 50000;
     let shouldTruncate = false;
@@ -4600,7 +4606,7 @@ ${instructionFiller}
 
   // トグル関数
   private toggleSpotlightMode() {
-    if (this.currentOs === "linux") return;
+    if (!this.isFullFeatureAvailable) return;
     if (this.isCodeMode) return;
     if (this.isSpotlightMode) {
       this.isSpotlightMode = false;
@@ -4748,7 +4754,7 @@ ${instructionFiller}
 
   // 音を鳴らす関数
   private playTypeSound() {
-    if (this.currentOs === "linux") return;
+    if (!this.isFullFeatureAvailable) return;
     if (!this.isTypeSoundEnabled || !this.audioContext || !this.typeSoundBuffer)
       return;
 
@@ -4772,7 +4778,7 @@ ${instructionFiller}
   }
 
   private async toggleTypeSound() {
-    if (this.currentOs === "linux") return;
+    if (!this.isFullFeatureAvailable) return;
     if (this.isTypeSoundEnabled) {
       this.isTypeSoundEnabled = false;
     } else {

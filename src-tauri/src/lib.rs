@@ -222,6 +222,28 @@ impl rig::tool::Tool for WebSearchTool {
 
 // --- Tauriコマンドの定義 ---
 
+// Linuxで全機能（スポットライト、タイプ音、MDプレビュー等）を許可する環境か判定する
+#[tauri::command]
+fn is_full_feature_supported() -> bool {
+    #[cfg(target_os = "linux")]
+    {
+        let desktop = std::env::var("XDG_CURRENT_DESKTOP")
+            .map(|v| v.to_lowercase())
+            .unwrap_or_default();
+
+        // x86_64 かつ Smithay系（Niri / COSMIC）の場合のみフル機能を解禁
+        cfg!(target_arch = "x86_64")
+            && (std::env::var("NIRI_SOCKET").is_ok()
+                || desktop.contains("niri")
+                || desktop.contains("cosmic"))
+    }
+    #[cfg(not(target_os = "linux"))]
+    {
+        // Windows と macOS は常に全機能利用可能
+        true
+    }
+}
+
 // Pandoc(Haskell)用にUNCプレフィックス(\\?\)を除去し、スラッシュ区切りに整える関数
 fn normalize_path_for_pandoc(path: &str) -> String {
     let s = path.replace("\\", "/");
@@ -2607,6 +2629,7 @@ pub fn run() {
             start_vivliostyle_preview,
             build_vivliostyle_pdf,
             open_project_folder,
+            is_full_feature_supported,
         ])
         .on_window_event(|window, event| match event {
             // 1. メインウィンドウの終了確認

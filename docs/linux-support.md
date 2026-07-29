@@ -21,6 +21,8 @@ The following features are **not available** on Linux:
 - Typewriter sound
 - Spotlight mode
 
+However, if your desktop environment is Niri or COSMIC, these restrictions are lifted, and you can use it as usual (since GPU compositing is supported).
+
 ---
 
 ### Different Specifications
