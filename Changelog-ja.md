@@ -6,14 +6,15 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 
-## [1.13.0] - 2026-8-XX  
+## [unreleased]  
 
 ### Added (新機能)  
 
 
 ### Changed (変更点)    
+- Linux: GTK_IM_MODULEをwaylandに設定するように変更。これによりWayland環境でのインライン変換が可能に  
 - Linux: NiriまたはCOSMICデスクトップのときに限りGPUコンポジットを有効に（手動で無効化することも可能）  
-- - Linux: NiriまたはCOSMICデスクトップのときに限り一部機能の機能制限を解除。タイプ音・スポットライトモード・マークダウン/HTMLプレビューが使用可能に  
+- Linux: NiriまたはCOSMICデスクトップのときに限り、一部機能の機能制限を解除。タイプ音・スポットライトモード・マークダウン/HTMLプレビューが使用可能に  
 
 ### Fixed (修正点)   
  

@@ -2498,7 +2498,16 @@ pub fn run() {
     // Linux環境での起動時判定
     #[cfg(target_os = "linux")]
     {
-        // Smithay系コンポジター（Niri または COSMIC）か否かを判定
+        // 1. Wayland環境（WAYLAND_DISPLAYが存在する）かつ未設定の時のみ GTK_IM_MODULE=wayland をセット
+        let is_wayland = std::env::var("WAYLAND_DISPLAY").is_ok()
+            || std::env::var("XDG_SESSION_TYPE").map(|v| v == "wayland").unwrap_or(false);
+
+        if is_wayland && std::env::var("GTK_IM_MODULE").is_err() {
+            println!("Wayland detected: Setting GTK_IM_MODULE=wayland for inline IME composition.");
+            std::env::set_var("GTK_IM_MODULE", "wayland");
+        }
+
+        // 2. Smithay系コンポジター（Niri または COSMIC）か否かを判定
         let desktop = std::env::var("XDG_CURRENT_DESKTOP")
             .map(|v| v.to_lowercase())
             .unwrap_or_default();
@@ -2509,7 +2518,7 @@ pub fn run() {
                 || desktop.contains("niri")
                 || desktop.contains("cosmic"));
 
-        // ユーザーが手動でMIRRORSHARD_DISABLE_COMPOSITINGを指定したときはGPUコンポジットをオフに
+        // 3. ユーザーが手動でMIRRORSHARD_DISABLE_COMPOSITINGを指定したときはGPUコンポジットをオフに
         if std::env::var("MIRRORSHARD_DISABLE_COMPOSITING").is_err() {
             if is_smithay_compositor {
                 println!("Smithay-based compositor detected (Niri/COSMIC): Enabling WebKit GPU compositing.");

@@ -7,14 +7,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
-## [1.12.0] - 2026-08-XX
+## [unreleased]
 
 ### Added
 
 
 ### Changed
-- Linux: Enabled GPU compositing automatically when running under Niri or COSMIC (with a manual disable override option).
-
+- Linux: Changed the setting for GTK_IM_MODULE to Wayland. This enables inline conversion in Wayland environments.
+- Linux: Enabled GPU compositing only when using the Niri or COSMIC desktop (can also be manually disabled).
+- Linux: Functionality restrictions on certain features are lifted only when using the Niri or COSMIC desktop. Typing sounds, Spotlight mode, and Markdown/HTML preview are now available.
 
 ### Fixed
 
