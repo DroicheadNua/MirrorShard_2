@@ -2498,14 +2498,14 @@ pub fn run() {
     // Linux環境での起動時判定
     #[cfg(target_os = "linux")]
     {
-        // 1. Wayland環境（WAYLAND_DISPLAYが存在する）かつ未設定の時のみ GTK_IM_MODULE=wayland をセット
-        let is_wayland = std::env::var("WAYLAND_DISPLAY").is_ok()
-            || std::env::var("XDG_SESSION_TYPE").map(|v| v == "wayland").unwrap_or(false);
+        // 1. Wayland環境であれば、GTK_IM_MODULE を "wayland" に上書きしてインライン変換を有効化
+                let is_wayland = std::env::var("WAYLAND_DISPLAY").is_ok()
+                    || std::env::var("XDG_SESSION_TYPE").map(|v| v == "wayland").unwrap_or(false);
 
-        if is_wayland && std::env::var("GTK_IM_MODULE").is_err() {
-            println!("Wayland detected: Setting GTK_IM_MODULE=wayland for inline IME composition.");
-            std::env::set_var("GTK_IM_MODULE", "wayland");
-        }
+                if is_wayland {
+                    println!("Wayland detected: Setting GTK_IM_MODULE=wayland for inline IME composition.");
+                    std::env::set_var("GTK_IM_MODULE", "wayland");
+                }
 
         // 2. Smithay系コンポジター（Niri または COSMIC）か否かを判定
         let desktop = std::env::var("XDG_CURRENT_DESKTOP")
