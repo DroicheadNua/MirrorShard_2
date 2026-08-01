@@ -8,11 +8,13 @@ use portable_pty::{native_pty_system, CommandBuilder, MasterPty, PtySize};
 use regex::Regex;
 use rig::client::{CompletionClient, ProviderClient};
 use rig::completion::Prompt;
+use rodio::source::Source;
+use rodio::{Decoder, DeviceSinkBuilder, MixerDeviceSink, Player};
 use serde::Serialize;
 use std::collections::HashMap;
 use std::fs;
 use std::fs::File;
-use std::io::{Read, Write};
+use std::io::{BufReader, Read, Write};
 use std::path::{Path, PathBuf};
 use std::process::{Child, Command, Stdio};
 use std::sync::Mutex;
@@ -22,6 +24,8 @@ use tauri_plugin_opener::OpenerExt;
 use tauri_plugin_window_state::{Builder, StateFlags};
 use zip::{write::SimpleFileOptions, ZipArchive, ZipWriter};
 
+// BGMの状態保持用 (OutputStream も一緒に保持しないと音が出なくなる)
+struct BgmState(Mutex<Option<(MixerDeviceSink, Player)>>);
 // Vivliostyle プレビュープロセス管理用
 struct VivliostyleProcess(Mutex<Option<Child>>);
 
@@ -221,6 +225,41 @@ impl rig::tool::Tool for WebSearchTool {
 }
 
 // --- Tauriコマンドの定義 ---
+
+#[tauri::command]
+fn play_bgm_rust(path: String, state: tauri::State<'_, BgmState>) -> Result<(), String> {
+    let mut lock = state.0.lock().map_err(|e| e.to_string())?;
+
+    if let Some((_handle, player)) = lock.take() {
+        player.stop();
+    }
+
+    let handle =
+        DeviceSinkBuilder::open_default_sink().map_err(|e| format!("Audio device error: {}", e))?;
+    let player = Player::connect_new(&handle.mixer());
+
+    let file = File::open(&path).map_err(|e| format!("BGM file not found: {}", e))?;
+
+    // BufReader::new(file) で包んでから Decoder へ渡す
+    let source =
+        Decoder::try_from(BufReader::new(file)).map_err(|e| format!("BGM decode error: {}", e))?;
+
+    player.append(source.repeat_infinite());
+    player.set_volume(0.5);
+
+    *lock = Some((handle, player));
+
+    Ok(())
+}
+
+#[tauri::command]
+fn stop_bgm_rust(state: tauri::State<'_, BgmState>) {
+    if let Ok(mut lock) = state.0.lock() {
+        if let Some((_handle, player)) = lock.take() {
+            player.stop();
+        }
+    }
+}
 
 // Linuxで全機能（スポットライト、タイプ音、MDプレビュー等）を許可する環境か判定する
 #[tauri::command]
@@ -2499,13 +2538,15 @@ pub fn run() {
     #[cfg(target_os = "linux")]
     {
         // 1. Wayland環境であれば、GTK_IM_MODULE を "wayland" に上書きしてインライン変換を有効化
-                let is_wayland = std::env::var("WAYLAND_DISPLAY").is_ok()
-                    || std::env::var("XDG_SESSION_TYPE").map(|v| v == "wayland").unwrap_or(false);
+        let is_wayland = std::env::var("WAYLAND_DISPLAY").is_ok()
+            || std::env::var("XDG_SESSION_TYPE")
+                .map(|v| v == "wayland")
+                .unwrap_or(false);
 
-                if is_wayland {
-                    println!("Wayland detected: Setting GTK_IM_MODULE=wayland for inline IME composition.");
-                    std::env::set_var("GTK_IM_MODULE", "wayland");
-                }
+        if is_wayland {
+            println!("Wayland detected: Setting GTK_IM_MODULE=wayland for inline IME composition.");
+            std::env::set_var("GTK_IM_MODULE", "wayland");
+        }
 
         // 2. Smithay系コンポジター（Niri または COSMIC）か否かを判定
         let desktop = std::env::var("XDG_CURRENT_DESKTOP")
@@ -2533,6 +2574,7 @@ pub fn run() {
         .plugin(tauri_plugin_shell::init())
         .plugin(tauri_plugin_os::init())
         .plugin(tauri_plugin_cli::init())
+        .manage(BgmState(Mutex::new(None)))
         .manage(MacFileBuffer(Mutex::new(None)))
         .manage(InitialFile(Mutex::new(None))) // 最初の起動用
         .manage(SecondInstanceFile(Mutex::new(None))) // 2回目以降の起動用
@@ -2639,6 +2681,8 @@ pub fn run() {
             build_vivliostyle_pdf,
             open_project_folder,
             is_full_feature_supported,
+            play_bgm_rust,
+            stop_bgm_rust,
         ])
         .on_window_event(|window, event| match event {
             // 1. メインウィンドウの終了確認

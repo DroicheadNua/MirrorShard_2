@@ -100,20 +100,6 @@ After a successful build, installers will be generated under:
 src-tauri/target/release/bundle/
 ```
 
-🎵 BGM Feature and Performance
-
-The behavior and memory usage of the BGM feature differ by OS:
-
-Windows / macOS
-Audio files (mp3/wav/ogg) are streamed from disk
-Minimal memory usage
-Linux (including Raspberry Pi)
-Due to platform limitations, audio is fully loaded into memory
-Higher memory usage when BGM is enabled
-
-On low-spec environments (e.g., Raspberry Pi), disabling BGM is recommended if memory usage becomes an issue.
-
-
 
 ## NixOS Support (Building and Running MirrorShard 2)
 

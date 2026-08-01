@@ -13,6 +13,7 @@
 
         # 実行に必要なライブラリ群
         runtimeDeps = with pkgs; [
+          alsa-lib
           gtk3
           libsoup_3
           webkitgtk_4_1

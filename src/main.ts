@@ -258,9 +258,6 @@ class App {
   private userBackgroundImagePath = "";
   private userBgmPath = "";
   private bgmElement: HTMLAudioElement | null = null; // Win/Mac用
-  private bgmContext: AudioContext | null = null; // Linux用
-  private bgmBuffer: AudioBuffer | null = null; // Linux用
-  private bgmSource: AudioBufferSourceNode | null = null; // Linux用
   private isBgmPlaying = false;
   private currentOs: string | null = null;
   private isLoading = false;
@@ -3453,58 +3450,35 @@ ${instructionFiller}
       ".cm-gutters": { fontSize: `${size}pt` },
     });
 
-  /**
-   * BGMデータを読み込む（再生はしない）
-   */
-  private async loadBGMData() {
-    this.stopBGM(); // 既存停止
+    /**
+       * BGMデータを準備・ロードする（Win/Macのみ事前にHTML5 Audio要素を作成）
+       */
+      private async loadBGMData() {
+        if (this.currentOs !== "linux") {
+          this.stopBGM();
+          try {
+            // 再生すべきファイルのパスを決定する
+            let targetPath = "";
+            // ユーザー指定がある場合
+            if (this.userBgmPath && this.userBgmPath.trim() !== "") {
+              targetPath = this.userBgmPath;
+            } else {
+              // デフォルトの場合：リソースパスを解決する
+              const { resolveResource } = await import("@tauri-apps/api/path");
+              targetPath = await resolveResource("resources/bgm/marine_snow.ogg");
+            }
 
-    try {
-      // 1. 再生すべきファイルのパスを決定する
-      let targetPath = "";
+            const { convertFileSrc } = await import("@tauri-apps/api/core");
+            const audioUrl = convertFileSrc(targetPath);
 
-      if (this.userBgmPath && this.userBgmPath.trim() !== "") {
-        // ユーザー指定がある場合
-        targetPath = this.userBgmPath;
-      } else {
-        // デフォルトの場合：リソースパスを解決する
-        const { resolveResource } = await import("@tauri-apps/api/path");
-        targetPath = await resolveResource("resources/bgm/marine_snow.ogg");
-      }
-
-      if (this.currentOs === "linux") {
-        // --- Linux (Web Audio API / メモリ展開) ---
-        if (!this.bgmContext) {
-          this.bgmContext = new (
-            window.AudioContext || (window as any).webkitAudioContext
-          )();
+            this.bgmElement = new Audio(audioUrl);
+            this.bgmElement.loop = true;
+            this.bgmElement.volume = 0.5;
+          } catch (e) {
+            console.error("Failed to load BGM data:", e);
+          }
         }
-
-        // (read_binary_file は絶対パスを受け取れるはずなのでそのまま渡す)
-        const data = await invoke<number[]>("read_binary_file", {
-          path: targetPath,
-        });
-        const uint8Array = new Uint8Array(data);
-
-        // デコード
-        this.bgmBuffer = await this.bgmContext.decodeAudioData(
-          uint8Array.buffer,
-        );
-      } else {
-        // --- Win/Mac (HTML5 Audio / ストリーミング) ---
-        // assetプロトコルURLに変換
-        const { convertFileSrc } = await import("@tauri-apps/api/core");
-        const audioUrl = convertFileSrc(targetPath);
-
-        this.bgmElement = new Audio(audioUrl);
-        this.bgmElement.loop = true;
       }
-
-      console.log("BGM Data loaded:", targetPath);
-    } catch (e) {
-      console.error("Failed to load BGM data", e);
-    }
-  }
 
   // --- イベントリスナー ---
   private setupEventListeners() {
@@ -4652,75 +4626,72 @@ ${instructionFiller}
     });
   }
 
+  /**
+   * BGMの再生/停止切り替え
+   */
   private async toggleBGM() {
     const bgmButton = document.querySelector("#btn-bgm-toggle");
 
     if (this.isBgmPlaying) {
-      this.stopBGM(); // 停止処理を共通化
+      await this.stopBGM();
       this.isBgmPlaying = false;
       if (bgmButton) bgmButton.classList.remove("playing");
     } else {
-      // まだデータがない場合のみ、ここで初めてロードする (遅延ロード)
-      // Linuxならbuffer, Win/Macならelementをチェック
-      const isLoaded =
-        this.currentOs === "linux" ? !!this.bgmBuffer : !!this.bgmElement;
+      document.body.style.cursor = "wait";
+      await this.playBGM();
+      document.body.style.cursor = "default";
 
-      if (!isLoaded) {
-        // ロード中であることを示すカーソル
-        document.body.style.cursor = "wait";
-        await this.loadBGMData();
-        document.body.style.cursor = "default";
-      }
-
-      // ロード完了後に再生
-      this.playBGM();
       this.isBgmPlaying = true;
       if (bgmButton) bgmButton.classList.add("playing");
     }
   }
 
-  // 実際の再生処理
-  private playBGM() {
+  /**
+   * 実際の再生処理
+   */
+  private async playBGM() {
     if (this.currentOs === "linux") {
-      // Linux (Web Audio API)
-      if (this.bgmContext && this.bgmBuffer) {
-        if (this.bgmContext.state === "suspended") this.bgmContext.resume();
-        this.bgmSource = this.bgmContext.createBufferSource();
-        this.bgmSource.buffer = this.bgmBuffer;
-        this.bgmSource.loop = true;
-        // 音量調整
-        const gainNode = this.bgmContext.createGain();
-        gainNode.gain.value = 0.5;
-        this.bgmSource.connect(gainNode);
-        gainNode.connect(this.bgmContext.destination);
-        this.bgmSource.start(0);
+      // ⚠️ Linux用: Rustバックエンド (rodio) で再生
+      try {
+        let targetPath = "";
+        if (this.userBgmPath && this.userBgmPath.trim() !== "") {
+          targetPath = this.userBgmPath;
+        } else {
+          const { resolveResource } = await import("@tauri-apps/api/path");
+          targetPath = await resolveResource("resources/bgm/marine_snow.ogg");
+        }
+
+        await invoke("play_bgm_rust", { path: targetPath });
+      } catch (e) {
+        console.error("Linux Rust BGM play failed:", e);
       }
     } else {
-      // Win/Mac (HTML5 Audio)
+      // Win/Mac用 (HTML5 Audio 処理)
+      if (!this.bgmElement) {
+        await this.loadBGMData();
+      }
       if (this.bgmElement) {
         this.bgmElement.volume = 0.5;
-        this.bgmElement
-          .play()
-          .catch((e) => console.error("BGM play failed:", e));
+        this.bgmElement.play().catch((e) => console.error("BGM play failed:", e));
       }
     }
   }
 
-  // 実際の停止処理
-  private stopBGM() {
+  /**
+   * 実際の停止処理
+   */
+  private async stopBGM() {
     if (this.currentOs === "linux") {
-      if (this.bgmSource) {
-        try {
-          this.bgmSource.stop();
-        } catch {}
-        this.bgmSource = null;
+      // ⚠️ Linux用: Rust側のBGM停止コマンド
+      try {
+        await invoke("stop_bgm_rust");
+      } catch (e) {
+        console.error("Linux Rust BGM stop failed:", e);
       }
     } else {
+      // Win/Mac用
       if (this.bgmElement) {
         this.bgmElement.pause();
-        // ストリーミングの場合は位置を0に戻すのが一般的（停止挙動）
-        // 一時停止のままにしたいなら currentTime = 0 は削除
-        // this.bgmElement.currentTime = 0;
       }
     }
   }
