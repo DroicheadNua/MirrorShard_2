@@ -13,8 +13,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed (変更点)    
 - Linux: GTK_IM_MODULEをwaylandに設定するように変更。これによりWayland環境でのインライン変換が可能に  
-- Linux: NiriまたはCOSMICデスクトップのときに限りGPUコンポジットを有効に（手動で無効化することも可能）  
-- Linux: NiriまたはCOSMICデスクトップのときに限り、一部機能の機能制限を解除。タイプ音・スポットライトモード・マークダウン/HTMLプレビューが使用可能に  
+- Linux: 一部の環境を除いてGPUコンポジットを有効に（手動で無効化することも可能）  
+- Linux: GPUコンポジットが有効なとき、タイプ音・スポットライトモード・マークダウン/HTMLプレビューが使用可能に  
 - Linux: Linux版もBGMのストリーミング再生が可能に  
 
 ### Fixed (修正点)   

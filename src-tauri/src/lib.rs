@@ -261,25 +261,73 @@ fn stop_bgm_rust(state: tauri::State<'_, BgmState>) {
     }
 }
 
-// Linuxで全機能（スポットライト、タイプ音、MDプレビュー等）を許可する環境か判定する
+// --- Linux用GPUコンポジット処理分岐ヘルパー群 ---
+
+#[cfg(target_os = "linux")]
+fn is_nvidia_gpu() -> bool {
+    std::path::Path::new("/proc/driver/nvidia").exists()
+}
+
+#[cfg(target_os = "linux")]
+fn is_virtual_machine() -> bool {
+    if let Ok(vendor) = std::fs::read_to_string("/sys/class/dmi/id/sys_vendor") {
+        let v = vendor.to_lowercase();
+        if v.contains("qemu")
+            || v.contains("kvm")
+            || v.contains("innotek")
+            || v.contains("vmware")
+            || v.contains("bochs")
+        {
+            return true;
+        }
+    }
+    if let Ok(prod) = std::fs::read_to_string("/sys/class/dmi/id/product_name") {
+        let p = prod.to_lowercase();
+        if p.contains("virtualbox") || p.contains("kvm") || p.contains("qemu") || p.contains("utm")
+        {
+            return true;
+        }
+    }
+    false
+}
+
+#[cfg(target_os = "linux")]
+fn is_compatible_compositor_for_nvidia() -> bool {
+    let desktop = std::env::var("XDG_CURRENT_DESKTOP")
+        .map(|v| v.to_lowercase())
+        .unwrap_or_default();
+
+    std::env::var("NIRI_SOCKET").is_ok()
+        || desktop.contains("niri")
+        || desktop.contains("cosmic")
+        || desktop.contains("drift")
+}
+
+// 共通判定: GPUコンポジットをオフにすべきか
+#[cfg(target_os = "linux")]
+fn should_disable_gpu_compositing() -> bool {
+    if std::env::var("MIRRORSHARD_DISABLE_COMPOSITING").is_ok() {
+        true // 手動指定時
+    } else if is_virtual_machine() {
+        true // 仮想環境(VM)の時
+    } else if is_nvidia_gpu() {
+        !is_compatible_compositor_for_nvidia() // NVIDIA実機: 対応コンポジター以外はOFF
+    } else {
+        false // Intel / AMD 実機: 無条件でオン
+    }
+}
+
+// --- フロントエンドからの呼び出しコマンド ---
 #[tauri::command]
 fn is_full_feature_supported() -> bool {
     #[cfg(target_os = "linux")]
     {
-        let desktop = std::env::var("XDG_CURRENT_DESKTOP")
-            .map(|v| v.to_lowercase())
-            .unwrap_or_default();
-
-        // x86_64 かつ Smithay系（Niri / COSMIC）の場合のみフル機能を解禁
-        cfg!(target_arch = "x86_64")
-            && (std::env::var("NIRI_SOCKET").is_ok()
-                || desktop.contains("niri")
-                || desktop.contains("cosmic"))
+        // GPUコンポジットが有効（= should_disable が false）な環境なら全機能を解禁
+        !should_disable_gpu_compositing()
     }
     #[cfg(not(target_os = "linux"))]
     {
-        // Windows と macOS は常に全機能利用可能
-        true
+        true // Windows / macOS は常に全機能解禁
     }
 }
 
@@ -2537,35 +2585,11 @@ pub fn run() {
     // Linux環境での起動時判定
     #[cfg(target_os = "linux")]
     {
-        // 1. Wayland環境であれば、GTK_IM_MODULE を "wayland" に上書きしてインライン変換を有効化
-        let is_wayland = std::env::var("WAYLAND_DISPLAY").is_ok()
-            || std::env::var("XDG_SESSION_TYPE")
-                .map(|v| v == "wayland")
-                .unwrap_or(false);
-
-        if is_wayland {
-            println!("Wayland detected: Setting GTK_IM_MODULE=wayland for inline IME composition.");
-            std::env::set_var("GTK_IM_MODULE", "wayland");
-        }
-
-        // 2. Smithay系コンポジター（Niri または COSMIC）か否かを判定
-        let desktop = std::env::var("XDG_CURRENT_DESKTOP")
-            .map(|v| v.to_lowercase())
-            .unwrap_or_default();
-
-        // Niri・COSMICのいずれかであり、かつx64のときのみGPUコンポジットを許可
-        let is_smithay_compositor = cfg!(target_arch = "x86_64")
-            && (std::env::var("NIRI_SOCKET").is_ok()
-                || desktop.contains("niri")
-                || desktop.contains("cosmic"));
-
-        // 3. ユーザーが手動でMIRRORSHARD_DISABLE_COMPOSITINGを指定したときはGPUコンポジットをオフに
-        if std::env::var("MIRRORSHARD_DISABLE_COMPOSITING").is_err() {
-            if is_smithay_compositor {
-                println!("Smithay-based compositor detected (Niri/COSMIC): Enabling WebKit GPU compositing.");
-            } else {
-                std::env::set_var("WEBKIT_DISABLE_COMPOSITING_MODE", "1");
-            }
+        if should_disable_gpu_compositing() {
+            println!("Linux: Disabling WebKit GPU compositing mode for stability.");
+            std::env::set_var("WEBKIT_DISABLE_COMPOSITING_MODE", "1");
+        } else {
+            println!("Linux: Enabling WebKit GPU compositing mode.");
         }
     }
     tauri::Builder::default()
