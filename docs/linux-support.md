@@ -1,90 +1,84 @@
-# Running MirrorShard 2 on Linux
+# Linux Support & Troubleshooting Guide
 
-Starting from v0.3.0, Linux binaries for MirrorShard 2 were discontinued.  
-As of v1.7.0, distribution has been **resumed on an experimental basis**.
+MirrorShard 2 natively supports Linux (x86_64 / ARM64). This document details Linux-specific behaviors, performance optimizations, known limitations, and build instructions.
 
-Due to environment-dependent issues in Linux GUI systems—especially those related to WebKitGTK (used by Tauri)—Linux support had been unstable.  
-However, by disabling WebKitGTK hardware acceleration, the application now runs on environments where it previously failed, including systems with NVIDIA GPUs and Wayland-based desktops.
-
-That said, the Linux version still has some limitations (see below).
-
-The previous version (Electron-based) is also available for Linux:  
-https://github.com/DroicheadNua/MirrorShard
+In earlier versions, several features were restricted due to WebKitGTK and Tauri compatibility issues. Most of these have been resolved in recent updates. However, certain edge cases remain depending on your Linux environment.
 
 ---
 
-## Limitations
+## ⚡️ GPU Compositing & Performance
 
-The following features are **not available** on Linux:
+MirrorShard automatically optimizes its rendering pipeline depending on your system configuration (GPU drivers and desktop compositors).
 
-- Markdown / HTML preview
-- Typewriter sound
-- Spotlight mode
+* **Automatic GPU Compositing (High Performance)**  
+  For Intel / AMD GPUs (Mesa drivers) or Smithay-based compositors (Niri / COSMIC / DriftWM), GPU compositing is enabled automatically. This significantly reduces CPU usage and delivers smooth, flicker-free rendering with transparent windows and visual effects.
+* **Automatic Safety Fallback**  
+  For NVIDIA GPUs (under non-Smithay compositors) or Virtual Machines (UTM / VirtualBox / QEMU), GPU compositing is automatically disabled (`WEBKIT_DISABLE_COMPOSITING_MODE=1`) to prevent Wayland protocol crashes (`Error 71`) and rendering artifacts.
+* **Manual Override**  
+  If you encounter rendering issues, you can force-disable GPU compositing by running `MIRRORSHARD_DISABLE_COMPOSITING=1 mirrorshard2` in your terminal.
 
-However, if your desktop environment is Niri or COSMIC, these restrictions are lifted, and you can use it as usual (since GPU compositing is supported).
+### Restricted Features (When GPU Compositing is Disabled)
+When GPU compositing is disabled, the following features will be hidden/unavailable:
+* Live Markdown / HTML Preview
+* Typing Sound Effects
+* Spotlight Mode
+
+### 🎨 Rendering & Linux-Specific Quirks
+
+When GPU compositing is disabled, the following minor quirks may occur:
+
+* **Ghosting on Semi-Transparent Backgrounds**: If window background transparency is enabled, character ghosting may appear during editing. Scrolling will force a re-render and clear it (this does not occur if the background is opaque).
+* **Copy Limitation in Sub-Windows**: Due to multi-window IPC constraints on Linux, copying text inside sub-windows (such as the Settings modal) may be restricted (pasting remains functional).
+* **AI Search Restrictions**: Depending on your Linux environment and search engine policies, the Web Search feature in the AI Chat window may be blocked or restricted.
+* **Resize Cursor Shape (Wayland)**: On certain Wayland environments (GNOME, KDE), hovering over window edges may not change the cursor to the resize arrow. (Window resizing via dragging still works normally. In KDE, `Super + Right-Click Drag` is also available).
+* **Window Dragging Workaround**: If dragging the titlebar does not move the window on your compositor, use standard Linux shortcuts: `Alt + Left-Click Drag` or `Super + Left-Click Drag`.
+* **Text Selection via Dragging**: In some virtualized or Wayland environments, mouse drag selection may fail. Use `Click start point ➔ Hold Shift + Click end point` to select text cleanly.
+* **Scroll Direction Inversion**: In rare cases, dragging the scrollbar thumb may invert direction.
 
 ---
 
-### Different Specifications
+## Specification Differences on Linux
 
-Starting with version 1.8.0, SillyTavern (Ctrl+Shift+J) and OpenCode (Ctrl+Shift+K) can now be launched using keyboard shortcuts.
-
-However, unlike the Windows and macOS versions, which run in a dedicated window (WebView), the Linux version launches in the default browser.
-
-Also, for the Linux version, the background of the vertical text preview (in Light Mode) is a solid sepia color rather than the standard background image (since it may not load properly depending on the environment).  
+* **External Tools (SillyTavern & OpenCode)**: Unlike Windows/macOS where SillyTavern (`Ctrl+Shift+J`) and OpenCode (`Ctrl+Shift+K`) launch in dedicated embedded WebViews, Linux launches them in your system's default browser.
+* **Vertical Preview Background**: In Light Mode, the vertical preview background is set to a fixed sepia color (`#eae3d2`) on Linux to prevent asset loading failures.
 
 ---
 
-## Known Issues on Linux
+## 🖋 Japanese & CJK Input (IME) Specifications
 
-Due to the varying specifications of different Linux distributions, desktop environments (Wayland / X11), and system architectures, you may encounter the following behaviors or limitations.
+* **Inline Composition on Wayland**: Under Wayland environments (Niri / GNOME / COSMIC, etc.), `GTK_IM_MODULE=wayland` is applied automatically, enabling smooth native inline CJK input (Fcitx5 / IBus).
+* **Over-the-spot Fallback (X11 / Legacy)**: In X11 environments or certain legacy setups, text composition falls back to "Over-the-spot" input (floating candidate window).
 
-### 🖋 Japanese Input (IME) Specifications
-* **Inline Composition on Wayland**:  
-  Under Wayland environments (Niri / GNOME / COSMIC, etc.), MirrorShard automatically applies `GTK_IM_MODULE=wayland`, enabling smooth native inline Japanese input (Fcitx5 / IBus) directly in the editor.
-* **Over-the-spot Fallback (X11 / Legacy)**:  
-  In X11 environments or certain desktop setups, text composition may fall back to "Over-the-spot" input, where pre-edit text renders inside a floating candidate window.
+---
 
-### 🪟 Window Control and Interaction Limitations
-* **Unchanging resize cursors**: On Wayland environments (e.g., GNOME or KDE), hovering the cursor over the edge of the window might not change it to a "resize arrow" cursor. *(Note: Even if the cursor does not change, you can still resize the window by dragging the edges. On KDE, resizing with `Super` + Right Drag also works perfectly).*
-* **Window movement workarounds**: If dragging the custom title bar to move the window does not work in your environment, please use standard Linux shortcuts such as `Alt` + Left Drag (or `Super` + Left Drag) to move the window.
-* **Drag selection issues**: In certain environments (especially virtual machines or Wayland environments), selecting text by dragging the mouse may not work. You can work around this by `Clicking the start point` ➔ `Holding Shift and clicking the end point`.
-* **Inverted scroll direction**: In rare cases, dragging the scrollbar may move the content in the opposite direction.
+## 🎵 Background Music (BGM) Streaming
 
-### 🎨 Rendering and Other Issues
-* **Ghosting with translucent backgrounds**: If the application background is set to be translucent, residual text ghosting may occur. Scrolling or forcing a redraw will clear it. (This does not happen when the background is fully opaque).
-* **Copy restriction in settings**: Due to multi-window limitations, copying text within the settings window may be disabled (pasting is still supported).
-* **Search errors in the chat window**: Depending on your environment or search engine restrictions, the Web search functionality within the AI chat window may be blocked.
+* Powered by a native Rust audio engine (`rodio`), BGM streaming is fully supported on Linux (including Raspberry Pi) with minimal RAM overhead (~1-2MB).
+
+---
+
+## 📦 Vivliostyle DTP Typesetting & PDF Export
+
+* This feature requires **Node.js (npm / npx)** and **Google Chrome (or Chromium)** installed on your system.
+* On NixOS, ensure `pkgs.chromium` is installed and `PUPPETEER_EXECUTABLE_PATH` is configured properly (refer to `flake.nix`).
 
 ---
 
 ## Distribution Formats
 
-Only the following formats are provided:
-
-- `.deb` (x64)
-- `.rpm` (x64)
-- `.deb` (arm64)
-
-For other distributions (e.g., Arch Linux), please build from source.
-
----
+Pre-built binaries are provided for `.deb` (x86_64), `.rpm` (x86_64), and `.deb` (ARM64 for Raspberry Pi). For other distributions, please build from source using the steps below.
 
 ## Building from Source
 
-If you understand the above limitations and still want to use MirrorShard 2 on your environment, please build it from source.
+### Prerequisites
+* Rust (Cargo)
+* Node.js & pnpm
+* WebKitGTK Development Libraries (`libwebkit2gtk-4.0-dev` on Debian/Ubuntu)
 
-### Requirements
-
-- Rust (Cargo)
-- Node.js & pnpm
-- WebKitGTK development libraries  
-  (e.g., `libwebkit2gtk-4.0-dev` on Debian-based systems)
-
-For Tauri and Rust setup, refer to the official documentation:  
+Refer to the official Tauri v2 prerequisites guide:  
 https://v2.tauri.app/start/prerequisites/
 
-```
+```bash
 # Clone repository
 git clone https://github.com/DroicheadNua/MirrorShard_2.git
 cd MirrorShard_2
@@ -92,148 +86,114 @@ cd MirrorShard_2
 # Install dependencies
 pnpm install
 
-# Build (release mode)
+# Build release binary
 pnpm tauri build
-
-After a successful build, installers will be generated under:
-
-src-tauri/target/release/bundle/
 ```
+Upon successful build, installer packages will be generated under `src-tauri/target/release/bundle/`.
 
+---
 
-## NixOS Support (Building and Running MirrorShard 2)
+## NixOS Support (Flakes & Build Guide)
 
-Detailed instructions for developing, building, and running MirrorShard 2 on NixOS (and Wayland desktop environments), along with troubleshooting steps for NixOS-specific limitations.
+Detailed instructions for building, running, and troubleshooting MirrorShard 2 on NixOS.
 
-### 1. Development and Build Environment (`nix develop`)
+### 1. Developer Shell (`nix develop`)
 
-NixOS allows you to boot a temporary, self-contained development environment using the provided `flake.nix` in the repository root, without modifying your global system configuration. This automatically loads all necessary dependencies (Node.js, pnpm, Rust, WebKitGTK, GStreamer, glib-networking, GTK/GSettings schemas, etc.).
-
-Run the following commands in your terminal at the repository root:
+You can enter a fully configured virtual development environment containing all dependencies (Node.js, pnpm, Rust, WebKitGTK, GStreamer, glib-networking, GTK/GSettings schemas) using `flake.nix` without modifying your system configuration:
 
 ```bash
-# Ensure flake.nix is tracked by Git, then start the development shell
 git add flake.nix
 nix develop
 ```
 
-For first-time setup inside the shell, enable the stable Rust toolchain and configure your PATH:
+On first launch inside the shell, set the stable Rust toolchain:
 
 ```bash
 rustup default stable
 export PATH="$HOME/.cargo/bin:$PATH"
 ```
 
-Once the environment is ready, you can install dependencies and build or run the application as usual inside this shell:
+Inside the shell, you can develop and build normally:
 
 ```bash
-# Install dependencies
 pnpm install
-
-# Run in development mode (with hot reloading)
-pnpm tauri dev
-
-# Build the release binary
-pnpm tauri build
+pnpm tauri dev   # Live preview / dev mode
+pnpm tauri build # Release build
 ```
 
 ---
 
-### 2. Clean Integration and System Execution (`nix build`)
+### 2. Clean System Package Wrapping (`nix build path:.`)
 
-If you run the compiled raw binary directly from outside the development shell (e.g., via desktop application launchers, keyboard shortcuts, or a standard terminal), the application will fail to load GTK themes, system fonts (GSettings schemas), or SSL certificates due to NixOS's file isolation. This can cause the GUI layout to break or API connections to fail.
+Running raw compiled binaries outside `nix develop` on NixOS can cause GTK layout breakage or API connection failures due to NixOS path isolation.
 
-To resolve this cleanly without polluting your global system configuration (`configuration.nix`), you can package the application with all its required environment variables pre-embedded using `nix build`.
+To create a fully self-contained wrapper binary with all Nix library paths baked in:
 
-1. Complete the standard build (`pnpm tauri build`) inside the development shell (`nix develop`).
-2. Exit the development shell, and run the following build command using the raw directory path:
-   ```bash
-   nix build path:.
-   ```
+```bash
+# 1. Complete "pnpm tauri build" inside "nix develop"
+# 2. Exit the dev shell, and run the following in a standard terminal:
+nix build path:.
+```
 
-Once the build completes, a `./result` directory (symbolic link) will appear in your project root. The executable in this directory is a completely self-contained wrapper that **runs instantly with no delay** and loads all assets correctly.
+This generates a `./result` directory containing an isolated wrapper binary (`./result/bin/mirrorshard2`) that launches instantly without system path dependencies.
 
-To launch the application seamlessly from desktop environment launchers, create or edit `~/.local/share/applications/mirrorshard2.desktop` with the following content:
+To integrate with your desktop launcher, create `~/.local/share/applications/mirrorshard2.desktop`:
 
 ```desktop
 [Desktop Entry]
 Type=Application
 Name=MirrorShard 2
-# Point directly to the wrapped binary generated by nix build (instant launch with no latency)
 Exec=/absolute/path/to/MirrorShard_2/result/bin/mirrorshard2 %F
 Icon=/absolute/path/to/MirrorShard_2/src-tauri/icons/128x128.png
 Terminal=false
 Categories=Utility;
 MimeType=text/plain;
 ```
-*Note: Replace `/absolute/path/to/...` with the actual absolute path of your project directory.*
 
 ---
 
-### 3. Troubleshooting (NixOS-Specific Issues)
+### 3. NixOS Troubleshooting
 
-#### ① AppImage build fails because linuxdeploy cannot find `/usr/bin/xdg-open`
-
-Since NixOS does not conform to the standard FHS (Filesystem Hierarchy Standard) directory structure and lacks a global `/usr/bin` directory by default, the Tauri AppImage builder (linuxdeploy) may fail with an error. 
-
-To resolve this, enable `envfs` by adding the following to your `/etc/nixos/configuration.nix` and rebuilding your system:
-
+#### ① AppImage Build Crash (`linuxdeploy` fails finding `/usr/bin/xdg-open`)
+Add the following to `/etc/nixos/configuration.nix` and rebuild:
 ```nix
 services.envfs.enable = true;
 ```
 
-#### ② Windowing inconsistencies or rendering glitches in virtual machines or certain Nvidia+Wayland setups
-
-If you encounter rendering glitches, window resizing issues, or misplaced popup menus under Wayland—particularly on certain virtual GPUs or Nvidia drivers—forcing the X11 compatibility layer (Xwayland) can resolve them.
-
-Uncomment the following line in `src-tauri/src/lib.rs` and rebuild the application:
-
+#### ② Window Rendering Artifacts under Virtualization (VirtualBox / UTM)
+If window rendering artifacts occur under virtualized GPUs, force X11 compatibility mode by uncommenting the following line in `src-tauri/src/lib.rs` and rebuilding:
 ```rust
 std::env::set_var("GDK_BACKEND", "x11");
 ```
 
-*Note: Forcing X11 (Xwayland) will still function correctly under modern Wayland environments (such as KDE Plasma or Niri), including window resizing and popup positioning.*
+#### ③ Resource Path Resolution in Nix Store (Default BGM / Backgrounds)
+In isolated Nix Store paths, default BGM or background image asset resolution may fail.
+* **Vertical Preview**: Default light mode background is automatically locked to Sepia (`#eae3d2`). (Vertical EPUB/HTML export from the vertical preview window is not supported on NixOS).
+* **Manual Asset Selection**: You can manually load default BGM/background assets via the Settings file picker by navigating directly to the Nix Store resource directory (`/nix/store/...-mirrorshard2/bin/resources/`).
 
-#### ③ Limitations of Default Backgrounds and BGM in NixOS
+---
 
-In isolated filesystem environments like NixOS (Nix store), the application may fail to resolve the default paths for the standard background images and BGM files at startup.
+## Using under Niri (Wayland Tiling Window Manager)
 
-* **Vertical Preview Background**:
-  To prevent rendering inconsistencies, the default vertical preview background is automatically set to an eye-friendly "sepia color (#eae3d2)" on Linux.
-  Additionally, NixOS does not support exporting from the vertical-writing preview screen (vertical-writing EPUB or HTML output); the export will fail. 
-* **If you wish to use the default BGM or backgrounds**:
-  You can still use them by manually browsing and loading the actual files from the application's resources directory within the Nix store (e.g., `/nix/store/...-mirrorshard2/bin/resources/`) using the file picker in the settings menu.
+Under tiling window managers like Niri, sub-windows (Vertical Preview, AI Chat, Vivliostyle) tile automatically into columns by default.
 
-
-## Usage with Niri (Wayland Tiling Window Manager)
-
-In tiling window manager environments like Niri, sub-windows (such as the Vertical Preview or AI Chat) are automatically arranged as tiled columns by default.
-
-If you wish to set a fixed width for the preview or force specific sub-windows to open as floating windows by default, please add the following `window-rule` configurations to your `~/.config/niri/config.kdl`:
+To fix preview widths or force specific sub-windows to float automatically, add the following `window-rule` blocks to `~/.config/niri/config.kdl`:
 
 ```kdl
-// Configuration example for ~/.config/niri/config.kdl
+// Example config for ~/.config/niri/config.kdl
 
-// 1. Fix the column width for the Vertical Preview
+// 1. Lock Vertical Preview column width
 window-rule {
-    // For English UI : title="^Preview"
-    // For Japanese UI: title="^プレビュー"
     match app-id="com.DroicheadNua.mirrorshard2" title="^Preview"
     default-column-width 600
 }
 
-// 2. Open the AI Chat window as a floating window by default
+// 2. Open AI Chat window as floating by default
 window-rule {
-    // For English UI : title="^AI Chat"
-    // For Japanese UI: title="^AIチャット"
     match app-id="com.DroicheadNua.mirrorshard2" title="^AI Chat"
     open-floating true
     default-floating-width 640
     default-floating-height 800
 }
 ```
-
-* **Automatic GPU Compositing**:  
-  Previously on Linux (especially under Wayland or with NVIDIA graphics cards), GPU compositing frequently caused rendering glitches and had to be force-disabled. However, testing confirmed that GPU compositing runs smoothly under NixOS + Niri / COSMIC Desktop + GTX 1050Ti.  
-  Accordingly, MirrorShard now automatically detects Smithay-based compositors like Niri (`NIRI_SOCKET`) or COSMIC Desktop and enables WebKitGTK GPU compositing. This significantly reduces CPU load and delivers smooth, flicker-free rendering with transparent windows and visual effects.  
-  *Note: If you experience any rendering issues on your specific GPU/driver setup, you can manually force-disable GPU compositing by launching via terminal or desktop launcher with `MIRRORSHARD_DISABLE_COMPOSITING=1 mirrorshard2`.*
+```

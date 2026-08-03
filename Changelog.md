@@ -13,10 +13,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 
 ### Changed
-- Linux: Changed the setting for GTK_IM_MODULE to Wayland. This enables inline conversion in Wayland environments.
-- Linux: Enabled GPU compositing only when using the Niri or COSMIC desktop (can also be manually disabled).
-- Linux: Functionality restrictions on certain features are lifted only when using the Niri or COSMIC desktop. Typing sounds, Spotlight mode, and Markdown/HTML preview are now available.
-- Linux: The Linux version now supports streaming background music
+- Linux: Automatically set `GTK_IM_MODULE=wayland` under Wayland environments, enabling native inline Japanese IME composition (Fcitx5 / IBus).
+- Linux: Enabled GPU compositing by default for Intel/AMD GPUs and Smithay-based compositors (Niri, COSMIC, DriftWM), with automatic safety fallbacks for NVIDIA/VMs.
+- Linux: Unlocked Spotlight Mode, Typing Sounds, and Live Markdown/HTML Preview whenever GPU compositing is active.
+- Linux: Enabled lightweight background music (BGM) streaming via native Rust audio backend (`rodio`), drastically reducing memory usage.
 
 ### Fixed
 
