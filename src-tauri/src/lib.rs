@@ -2585,6 +2585,16 @@ pub fn run() {
     // Linux環境での起動時判定
     #[cfg(target_os = "linux")]
     {
+        // 1. Wayland環境であれば GTK_IM_MODULE=wayland を強制セット（インライン変換の有効化）
+        let is_wayland = std::env::var("WAYLAND_DISPLAY").is_ok()
+            || std::env::var("XDG_SESSION_TYPE").map(|v| v == "wayland").unwrap_or(false);
+
+        if is_wayland {
+            println!("Wayland detected: Setting GTK_IM_MODULE=wayland for inline IME composition.");
+            std::env::set_var("GTK_IM_MODULE", "wayland");
+        }
+
+        // 2. GPUコンポジットの自動判定
         if should_disable_gpu_compositing() {
             println!("Linux: Disabling WebKit GPU compositing mode for stability.");
             std::env::set_var("WEBKIT_DISABLE_COMPOSITING_MODE", "1");
@@ -2592,6 +2602,7 @@ pub fn run() {
             println!("Linux: Enabling WebKit GPU compositing mode.");
         }
     }
+
     tauri::Builder::default()
         .plugin(tauri_plugin_opener::init())
         .plugin(tauri_plugin_http::init())

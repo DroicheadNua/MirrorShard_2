@@ -25,6 +25,8 @@ lerna-debug.log*
 *.njsproj
 *.sln
 *.sw?
+.envrc
+.direnv
 
 # Nix build outputs
 result
