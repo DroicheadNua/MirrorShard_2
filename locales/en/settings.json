@@ -213,5 +213,15 @@
     "updateNotAvailable": "You are using the latest version.",
     "updateError": "Failed to check for updates.",
     "downloadLink": "Open Download Page"
+  },
+  "linux": {
+    "disableGpuCompositing": "Disable GPU Compositing",
+    "gpuDesc": "*If you experience transparency issues or screen freezes, check this and restart.",
+    "editorSize": "Main Editor Size (Niri/tiling)",
+    "sizeDefault": "Default (OS management)",
+    "size90x40": "Middle (90% height × 40% width)",
+    "size80x35": "Small (80% height × 35% width)",
+    "size100x50": "Large (100% height × 50% width)",
+    "size45x35": "Floating Mini (45% height × 35% width)"
   }
 }

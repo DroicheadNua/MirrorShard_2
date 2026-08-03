@@ -2733,6 +2733,9 @@ ${instructionFiller}
     }
 
     await getCurrentWindow().show();
+    // Niriの場合、画面表示の直前にサイズプリセットを反映する
+    await this.applyMainWindowSizePreset();
+
   }
 
   private async loadSettings(): Promise<string[]> {
@@ -5295,6 +5298,26 @@ ${instructionFiller}
       this.setAiLoading(false);
     }
   }
+
+  // Linux(Niri)専用のエディタサイズ指定
+  private async applyMainWindowSizePreset() {
+      // Linux以外は即リターン
+      if (this.currentOs !== "linux") return;
+
+      // ⚠️ ピンポイントガード: Niri環境以外（GNOME, KDE等）は即リターンして安全を保証
+      const isNiri = await invoke<boolean>("is_niri_compositor");
+      if (!isNiri) return;
+
+      const preset = (await this.store.get<string>("mainEditorSizePreset")) ?? "default";
+      if (preset === "default") return;
+
+      try {
+        // Rust経由で Niri IPC を直接叩いて幅と高さを反映させる
+        await invoke("apply_niri_size_preset", { preset });
+      } catch (e) {
+        console.error("Niriサイズプリセットの適用に失敗しました:", e);
+      }
+    }
 
   /**
    * エディタから見出しを解析する

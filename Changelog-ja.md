@@ -16,6 +16,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Linux: 一部の環境を除いてGPUコンポジットを有効に（手動で無効化することも可能）  
 - Linux: GPUコンポジットが有効なとき、タイプ音・スポットライトモード・マークダウン/HTMLプレビューが使用可能に  
 - Linux: Linux版もBGMのストリーミング再生が可能に  
+- Linux: 設定ウィンドウに「Linux」タブを設置  
+- Linux: Niri環境のとき内蔵ターミナルをフローティング化  
+- Linux: Niri環境のときメインエディタのサイズをプリセットから選択可能に  
 
 ### Fixed (修正点)   
  

@@ -303,10 +303,158 @@ fn is_compatible_compositor_for_nvidia() -> bool {
         || desktop.contains("drift")
 }
 
+// Niri の IPC コマンドを叩いてカラム幅と高さを指定する
+#[tauri::command]
+async fn apply_niri_size_preset(preset: String) -> Result<(), String> {
+    #[cfg(target_os = "linux")]
+    {
+        let is_niri = std::env::var("NIRI_SOCKET").is_ok();
+        if !is_niri {
+            return Ok(());
+        }
+
+        // 1. Niri IPC から全ウィンドウの情報を JSON で取得
+        let output = std::process::Command::new("niri")
+            .args(["msg", "--json", "windows"])
+            .output();
+
+        if let Ok(out) = output {
+            if let Ok(json_str) = String::from_utf8(out.stdout) {
+                if let Ok(windows) = serde_json::from_str::<serde_json::Value>(&json_str) {
+                    if let Some(win_list) = windows.as_array() {
+                        // 2. メインエディタのウィンドウ ("mirrorshard-ver02") を直接ピンポイントで特定
+                        let main_win = win_list.iter().find(|w| {
+                            let title = w.get("title").and_then(|t| t.as_str()).unwrap_or("");
+                            title == "mirrorshard-ver02" || title.contains("mirrorshard-ver02")
+                        });
+
+                        // 3. メインエディタが見つかったら ID を使ってフォーカスを当ててからリサイズ
+                        if let Some(target) = main_win {
+                            if let Some(win_id) = target.get("id").and_then(|i| i.as_u64()) {
+                                // 現在のフローティング状態を取得
+                                let is_currently_floating = target
+                                    .get("is_floating")
+                                    .and_then(|f| f.as_bool())
+                                    .unwrap_or(false);
+
+                                let want_floating = preset == "45x35";
+
+                                // ターゲット指定してフォーカス
+                                let _ = std::process::Command::new("niri")
+                                    .args([
+                                        "msg",
+                                        "action",
+                                        "focus-window",
+                                        "--id",
+                                        &win_id.to_string(),
+                                    ])
+                                    .status();
+
+                                // 状態が食い違っている時だけ toggle する（フロート解除、またはフロート化）
+                                if is_currently_floating != want_floating {
+                                    let _ = std::process::Command::new("niri")
+                                        .args(["msg", "action", "toggle-window-floating"])
+                                        .status();
+                                }
+
+                                // 各プリセットのサイズ変更
+                                if want_floating {
+                                    let _ = std::process::Command::new("niri")
+                                        .args(["msg", "action", "set-window-width", "35%"])
+                                        .status();
+                                    let _ = std::process::Command::new("niri")
+                                        .args(["msg", "action", "set-window-height", "45%"])
+                                        .status();
+                                } else {
+                                    match preset.as_str() {
+                                        "80x35" => {
+                                            let _ = std::process::Command::new("niri")
+                                                .args(["msg", "action", "set-column-width", "35%"])
+                                                .status();
+                                            let _ = std::process::Command::new("niri")
+                                                .args(["msg", "action", "set-window-height", "80%"])
+                                                .status();
+                                        }
+                                        "90x40" => {
+                                            let _ = std::process::Command::new("niri")
+                                                .args(["msg", "action", "set-column-width", "40%"])
+                                                .status();
+                                            let _ = std::process::Command::new("niri")
+                                                .args(["msg", "action", "set-window-height", "90%"])
+                                                .status();
+                                        }
+                                        "100x50" => {
+                                            let _ = std::process::Command::new("niri")
+                                                .args(["msg", "action", "set-column-width", "50%"])
+                                                .status();
+                                            let _ = std::process::Command::new("niri")
+                                                .args([
+                                                    "msg",
+                                                    "action",
+                                                    "set-window-height",
+                                                    "100%",
+                                                ])
+                                                .status();
+                                        }
+                                        _ => {}
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+    Ok(())
+}
+
+// フロントエンドから「Niri環境か否か」だけを直接問い合わせるコマンド
+#[tauri::command]
+fn is_niri_compositor() -> bool {
+    #[cfg(target_os = "linux")]
+    {
+        std::env::var("NIRI_SOCKET").is_ok()
+            || std::env::var("XDG_CURRENT_DESKTOP")
+                .map(|v| v.to_lowercase().contains("niri"))
+                .unwrap_or(false)
+    }
+    #[cfg(not(target_os = "linux"))]
+    {
+        false // Linux以外は Niri ではないため false
+    }
+}
+
+// .settings.dat から disableGpuCompositing の設定値を直接読み取るヘルパー
+#[cfg(target_os = "linux")]
+fn is_user_disabled_gpu_compositing() -> bool {
+    if let Ok(home) = std::env::var("HOME") {
+        let store_path = std::path::PathBuf::from(home)
+            .join(".local/share/com.DroicheadNua.mirrorshard2/.settings.dat");
+
+        if store_path.exists() {
+            if let Ok(content) = std::fs::read(&store_path) {
+                if let Ok(json_str) = String::from_utf8(content) {
+                    if let Ok(data) = serde_json::from_str::<serde_json::Value>(&json_str) {
+                        return data
+                            .get("disableGpuCompositing")
+                            .and_then(|v| v.as_bool())
+                            .unwrap_or(false);
+                    }
+                }
+            }
+        }
+    }
+    false
+}
+
 // 共通判定: GPUコンポジットをオフにすべきか
 #[cfg(target_os = "linux")]
 fn should_disable_gpu_compositing() -> bool {
-    if std::env::var("MIRRORSHARD_DISABLE_COMPOSITING").is_ok() {
+    let forced_by_env = std::env::var("MIRRORSHARD_DISABLE_COMPOSITING").is_ok();
+    let forced_by_settings = is_user_disabled_gpu_compositing(); // 👈 設定画面のチェック
+
+    if forced_by_env || forced_by_settings {
         true // 手動指定時
     } else if is_virtual_machine() {
         true // 仮想環境(VM)の時
@@ -1440,6 +1588,8 @@ async fn open_terminal_window(app: tauri::AppHandle, id: Option<String>) -> Resu
     // ユニークなIDをURLに渡す
     let url = format!("terminal.html?id={}", session_id);
 
+    let is_niri = is_niri_compositor();
+
     let builder =
         tauri::WebviewWindowBuilder::new(&app, &label, tauri::WebviewUrl::App(url.into()))
             .title(match session_id.as_str() {
@@ -1450,7 +1600,7 @@ async fn open_terminal_window(app: tauri::AppHandle, id: Option<String>) -> Resu
             })
             .inner_size(640.0, 480.0) // デフォルトサイズ
             .min_inner_size(640.0, 480.0)
-            .resizable(true)
+            .resizable(!is_niri) // Niri環境では resizable(false) にして自動フロート小窓化
             .decorations(false)
             .transparent(true)
             .visible(false);
@@ -2587,7 +2737,9 @@ pub fn run() {
     {
         // 1. Wayland環境であれば GTK_IM_MODULE=wayland を強制セット（インライン変換の有効化）
         let is_wayland = std::env::var("WAYLAND_DISPLAY").is_ok()
-            || std::env::var("XDG_SESSION_TYPE").map(|v| v == "wayland").unwrap_or(false);
+            || std::env::var("XDG_SESSION_TYPE")
+                .map(|v| v == "wayland")
+                .unwrap_or(false);
 
         if is_wayland {
             println!("Wayland detected: Setting GTK_IM_MODULE=wayland for inline IME composition.");
@@ -2718,6 +2870,8 @@ pub fn run() {
             is_full_feature_supported,
             play_bgm_rust,
             stop_bgm_rust,
+            is_niri_compositor,
+            apply_niri_size_preset,
         ])
         .on_window_event(|window, event| match event {
             // 1. メインウィンドウの終了確認

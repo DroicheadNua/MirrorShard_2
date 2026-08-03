@@ -255,7 +255,8 @@ body {
 #local-llm-url,
 #silly-tavern-path,
 #image-auto-save-path,
-#sd-model-path {
+#sd-model-path,
+#main-editor-size-preset{
     flex-grow: 1;
     flex-shrink: 1;
     min-width: 250px;

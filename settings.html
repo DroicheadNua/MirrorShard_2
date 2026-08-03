@@ -21,27 +21,10 @@
             </div>
             <div id="settings-container">
                 <div class="tabs">
-                    <button
-                        class="tab-btn active"
-                        data-tab="tab-general"
-                        data-i18n="settings.tab.general"
-                    >
-                        一般
-                    </button>
-                    <button
-                        class="tab-btn"
-                        data-tab="tab-ai"
-                        data-i18n="settings.tab.ai"
-                    >
-                        AI設定
-                    </button>
-                    <button
-                        class="tab-btn"
-                        data-tab="tab-code"
-                        data-i18n="settings.tab.code"
-                    >
-                        コードエディタ
-                    </button>
+                    <button class="tab-btn active" data-tab="tab-general" data-i18n="settings.tab.general">一般</button>
+                    <button class="tab-btn" data-tab="tab-ai" data-i18n="settings.tab.ai">AI設定</button>
+                    <button class="tab-btn" data-tab="tab-code" data-i18n="settings.tab.code">コードエディタ</button>
+                    <button class="tab-btn" data-tab="tab-linux">Linux</button>
                     <button class="tab-btn" data-tab="tab-about" data-i18n="settings.tab.about">情報</button>
                     <hr
                         class="separator"
@@ -1735,7 +1718,28 @@
                     </div>
                 </div>
 
-                <!-- ===== タブ4: アプリ情報 ===== -->
+                <!-- ===== タブ4: Linux専用設定 ===== -->
+                <div id="tab-linux" class="tab-content">
+                    <div class="setting-item">
+                        <label for="disable-gpu-compositing" class="inline">
+                            <input type="checkbox" id="disable-gpu-compositing" />
+                            <span data-i18n="settings.linux.disableGpuCompositing">GPUコンポジットを強制的に無効化する</span>
+                        </label>
+                    </div>
+                    <small class="setting-desc" data-i18n="settings.linux.gpuDesc">※画面が透明化・フリーズする場合はチェックを入れて再起動してください。</small>
+                    <div class="setting-item">
+                        <label for="main-editor-size-preset" data-i18n="settings.linux.editorSize">メインエディタの初期サイズ (Niri/タイリング用)</label>
+                        <select id="main-editor-size-preset">
+                            <option value="default" data-i18n="settings.linux.sizeDefault">デフォルト (OS管理)</option>
+                            <option value="90x40" data-i18n="settings.linux.size90x40">Middle (高90% × 幅40%)</option>
+                            <option value="80x35" data-i18n="settings.linux.size80x35">Small (高80% × 幅35%)</option>
+                            <option value="100x50" data-i18n="settings.linux.size100x50">Large (高100% × 幅50%)</option>
+                            <option value="45x35" data-i18n="settings.linux.size45x35">Floating Mini (高45% × 幅35% フロート)</option>
+                        </select>
+                    </div>
+                </div>
+
+                <!-- ===== タブ5: アプリ情報 ===== -->
                 <div id="tab-about" class="tab-content">
                     <div class="setting-item">
                         <h3>MirrorShard 2</h3>

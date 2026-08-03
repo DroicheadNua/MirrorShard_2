@@ -213,5 +213,15 @@
     "updateNotAvailable": "お使いのバージョンは最新です。",
     "updateError": "確認に失敗しました。",
     "downloadLink": "ダウンロードページを開く"
+  },
+  "linux": {
+    "disableGpuCompositing": "GPUコンポジットを強制的に無効化する",
+    "gpuDesc": "※画面が透明化・フリーズする場合はチェックを入れて再起動してください。",
+    "editorSize": "メインエディタの初期サイズ (Niri/タイリング用)",
+    "sizeDefault": "デフォルト (OS管理)",
+    "size90x40": "Middle (高90% × 幅40%)",
+    "size80x35": "Small (高80% × 幅35%)",
+    "size100x50": "Large (高100% × 幅50%)",
+    "size45x35": "Floating Mini (高45% × 幅35% フロート)"
   }
 }

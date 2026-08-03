@@ -355,6 +355,14 @@ async function setupSettings() {
       return;
     }
 
+    // Linux固有の設定
+    const checkDisableGpuCompositing = document.querySelector(
+      "#disable-gpu-compositing",
+    ) as HTMLInputElement;
+    const editorSizeSelect = document.querySelector(
+      "#main-editor-size-preset",
+    ) as HTMLSelectElement;
+
     // --- 4. 一時保存用変数 & 初期値の読み込み ---
     let pendingBgPath =
       (await store.get<string>("userBackgroundImagePath")) || null;
@@ -1078,6 +1086,13 @@ async function setupSettings() {
       }
     }
 
+    if (checkDisableGpuCompositing) {
+      checkDisableGpuCompositing.checked = (await store.get<boolean>("disableGpuCompositing")) ?? false;
+    }
+    if (editorSizeSelect) {
+      editorSizeSelect.value = (await store.get<string>("mainEditorSizePreset")) ?? "default";
+    }
+
     // --- 5. イベントリスナー (ファイル選択) ---
 
     document
@@ -1480,6 +1495,8 @@ async function setupSettings() {
           parseInt(aiContextLimitInput.value, 10) || 2000;
         const newLocalModel = localLlmModelInput.value.trim();
         const newAiThinkingOverlay = aiThinkingOverlayCheck.checked;
+        const newDisableGpuCompositing = checkDisableGpuCompositing?.checked;
+        const newEditorSizePreset = editorSizeSelect?.value;
 
         // Storeに保存
         await store.set("editorMaxWidth", numValue.toString());
@@ -1581,6 +1598,18 @@ async function setupSettings() {
 
         if (pendingBgmPath) await store.set("userBgmPath", pendingBgmPath);
         else await store.delete("userBgmPath");
+
+        if (newDisableGpuCompositing !== undefined)
+          await store.set("disableGpuCompositing", newDisableGpuCompositing);
+        if (newEditorSizePreset !== undefined) {
+          await store.set("mainEditorSizePreset", newEditorSizePreset);
+          // Niri環境なら「適用」を押した瞬間に即座にリアルタイムリサイズを実行！
+          try {
+            await invoke("apply_niri_size_preset", { preset: newEditorSizePreset });
+        } catch (e) {
+          console.error("Niri resize failed:", e);
+          }
+        }
 
         await store.save();
 

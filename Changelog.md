@@ -13,10 +13,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 
 ### Changed
-- Linux: Automatically set `GTK_IM_MODULE=wayland` under Wayland environments, enabling native inline Japanese IME composition (Fcitx5 / IBus).
-- Linux: Enabled GPU compositing by default for Intel/AMD GPUs and Smithay-based compositors (Niri, COSMIC, DriftWM), with automatic safety fallbacks for NVIDIA/VMs.
-- Linux: Unlocked Spotlight Mode, Typing Sounds, and Live Markdown/HTML Preview whenever GPU compositing is active.
-- Linux: Enabled lightweight background music (BGM) streaming via native Rust audio backend (`rodio`), drastically reducing memory usage.
+- Linux: Automatically applied `GTK_IM_MODULE=wayland` under Wayland environments, enabling native inline CJK/Japanese IME composition (Fcitx5 / IBus).
+- Linux: Enabled GPU compositing by default for Intel/AMD GPUs and Smithay-based compositors (Niri, COSMIC, DriftWM), with an auto-fallback and a manual override toggle.
+- Linux: Unlocked Spotlight Mode, Typing Sound Effects, and Live Markdown/HTML Preview whenever GPU compositing is active.
+- Linux: Enabled lightweight background music (BGM) streaming via native Rust audio backend (`rodio`), drastically reducing memory consumption.
+- Linux: Added a dedicated "Linux" tab to the Settings window.
+- Linux: Automatically opens the integrated terminal as a floating window when running under Niri.
+- Linux: Added main editor initial window size presets specifically tuned for Niri / tiling window managers.
 
 ### Fixed
 
