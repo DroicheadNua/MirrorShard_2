@@ -2264,10 +2264,20 @@ function setupKeyboardEvents() {
       }
     }
 
+    // サブウィンドウ
     if (e.key === "F2") {
       e.preventDefault();
-      e.stopPropagation();
       invoke("open_settings_window");
+    }
+
+    if (isCtrl && isShift && key === "a") {
+      e.preventDefault();
+      invoke("open_ai_chat");
+    }
+
+    if (isCtrl && key === "b" && isShift) {
+      e.preventDefault();
+      invoke("open_vivliostyle");
     }
 
     // Shift + Enter : 画面中央にノード作成

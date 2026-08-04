@@ -925,13 +925,6 @@ function setupEventListeners() {
       return;
     }
 
-    // Ctrl + Shift + A : ウィンドウを閉じる
-    if (isCtrlOrCmd && isShift && key === "a") {
-      e.preventDefault();
-      await getCurrentWindow().close();
-      return;
-    }
-
     // F11 : 最大化トグル(Win/Linux)
     if (!isMac && e.key === "F11") {
       e.preventDefault();
@@ -945,11 +938,25 @@ function setupEventListeners() {
       return;
     }
 
-    // F2 : 設定
+    // サブウィンドウ
     if (e.key === "F2") {
       e.preventDefault();
-      await emit("open-settings");
-      return;
+      invoke("open_settings_window");
+    }
+
+    if (isCtrlOrCmd && isShift && key === "a") {
+      e.preventDefault();
+      invoke("open_ai_chat");
+    }
+
+    if (isCtrlOrCmd && key === "i" && !isShift) {
+      e.preventDefault();
+      invoke("open_idea_processor");
+    }
+
+    if (isCtrlOrCmd && key === "b" && isShift) {
+      e.preventDefault();
+      invoke("open_vivliostyle");
     }
 
     if (isCtrlOrCmd && key === "f" && !isShift) {

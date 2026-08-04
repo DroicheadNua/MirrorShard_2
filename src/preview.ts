@@ -441,6 +441,28 @@ async function initPreview() {
       e.preventDefault();
       emit("preview-font-size", "reset");
     }
+
+    // サブウィンドウ
+    if (e.key === "F2") {
+      e.preventDefault();
+      invoke("open_settings_window");
+    }
+
+    if (isCtrlOrCmd && isShift && key === "a") {
+      e.preventDefault();
+      invoke("open_ai_chat");
+    }
+
+    if (isCtrlOrCmd && key === "i" && !isShift) {
+      e.preventDefault();
+      invoke("open_idea_processor");
+    }
+
+    if (isCtrlOrCmd && key === "b" && isShift) {
+      e.preventDefault();
+      invoke("open_vivliostyle");
+    }
+
   });
 
   // --- 右クリックメニューの無効化 ---

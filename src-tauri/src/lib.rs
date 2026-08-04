@@ -481,11 +481,14 @@ fn is_full_feature_supported() -> bool {
 }
 
 // スタック（上下2段組）の対象となる6つのサブウィンドウかを判定する
+// 6つのサブウィンドウだけを厳密に判定する（メインエディタの誤認識を防止）
 fn is_eligible_stack_target(title: &str) -> bool {
     let t = title.to_lowercase();
 
-    // メインエディタおよび除外対象（Terminal, OpenCode, SillyTavern, SD, ショートカット）をはじく
+    // メインエディタ（ファイル名や mirrorshard-ver02）を確実に排除
     if t.contains("mirrorshard-ver02")
+        || t.ends_with(".md")
+        || t.ends_with(".txt")
         || t.contains("terminal")
         || t.contains("opencode")
         || t.contains("silly")
@@ -495,13 +498,19 @@ fn is_eligible_stack_target(title: &str) -> bool {
         return false;
     }
 
-    // 以下の6つのサブウィンドウ（日本語名・英語名ともに対応）のいずれかであれば true
-    t.contains("idea") || t.contains("アイデア")         // 1. Idea Processor
-        || t.contains("vivliostyle")                    // 2. Vivliostyle
-        || t.contains("markdown") || t.contains("マークダウン") // 3. Markdown Preview
-        || t.contains("ai chat") || t.contains("aiチャット")   // 4. AI Chat
-        || t.contains("settings") || t.contains("設定")       // 5. 設定
-        || t.contains("preview") || t.contains("プレビュー") // 6. 縦書きプレビュー
+    // 6つのサブウィンドウの専用タイトルのみを判定
+    t == "ai chat"
+        || t == "aiチャット"
+        || t == "idea processor"
+        || t == "アイデアプロセッサ"
+        || t == "vivliostyle dtp export"
+        || t == "vivliostyle"
+        || t == "markdown preview"
+        || t == "markdownプレビュー"
+        || t == "settings"
+        || t == "設定"
+        || t == "preview"
+        || t == "プレビュー"
 }
 
 // .settings.dat から subWindowHalfHeight (サブウィンドウ2段組化フラグ) を読み出す
@@ -611,19 +620,18 @@ fn find_niri_stack_target_id() -> Option<u64> {
 // スタック実行ヘルパー
 #[cfg(target_os = "linux")]
 async fn try_niri_stack_window(target_id: Option<u64>) {
-    // そもそも設定で「ハーフサイズ」が有効になっていなければ何もしない
+    // そもそも設定で「ハーフサイズ」が有効になっていなければ何もせず終了
     if !is_user_enabled_subwindow_half_height() {
         return;
     }
-
-    // 新規ウィンドウがマウントされフォーカスされるのを待つ
-    tokio::time::sleep(Duration::from_millis(150)).await;
 
     match target_id {
         // -------------------------------------------------------------
         // パターンA: 吸い込み対象（隣接サブウィンドウ）が存在する場合
         // -------------------------------------------------------------
         Some(_target_id) => {
+            tokio::time::sleep(Duration::from_millis(150)).await;
+
             let output = std::process::Command::new("niri")
                 .args(["msg", "--json", "windows"])
                 .output();
@@ -646,28 +654,49 @@ async fn try_niri_stack_window(target_id: Option<u64>) {
                                 .find(|w| w.get("id").and_then(|i| i.as_u64()) == Some(_target_id));
 
                             if let (Some(new_w), Some(target_w)) = (new_win, target_win) {
-                                let new_col = get_niri_column_idx(new_w);
                                 let target_col = get_niri_column_idx(target_w);
+                                let target_ws =
+                                    target_w.get("workspace_id").and_then(|i| i.as_u64());
+                                let new_col = get_niri_column_idx(new_w);
 
-                                if let (Some(nc), Some(tc)) = (new_col, target_col) {
-                                    // 隣接カラムへ吸い込み実行
-                                    if nc > tc {
+                                // ターゲット列の現在の枚数を再確認 (3段組防止)
+                                let current_count = win_list
+                                    .iter()
+                                    .filter(|w| {
+                                        w.get("workspace_id").and_then(|i| i.as_u64()) == target_ws
+                                            && get_niri_column_idx(w) == target_col
+                                    })
+                                    .count();
+
+                                // ターゲット列が単一パネル（1枚）の時だけ吸い込み
+                                if current_count == 1 {
+                                    if let (Some(nc), Some(tc)) = (new_col, target_col) {
+                                        if nc > tc {
+                                            let _ = std::process::Command::new("niri")
+                                                .args([
+                                                    "msg",
+                                                    "action",
+                                                    "consume-or-expel-window-left",
+                                                ])
+                                                .status();
+                                        } else if nc < tc {
+                                            let _ = std::process::Command::new("niri")
+                                                .args([
+                                                    "msg",
+                                                    "action",
+                                                    "consume-window-into-column",
+                                                ])
+                                                .status();
+                                        }
+
+                                        // 吸い込み後に幅40% × 高さ50% に調整
                                         let _ = std::process::Command::new("niri")
-                                            .args(["msg", "action", "consume-or-expel-window-left"])
+                                            .args(["msg", "action", "set-column-width", "40%"])
                                             .status();
-                                    } else if nc < tc {
                                         let _ = std::process::Command::new("niri")
-                                            .args(["msg", "action", "consume-window-into-column"])
-                                            .status();
+                                            .args(["msg", "action", "set-window-height", "50%"])
+                                            .spawn();
                                     }
-
-                                    // 吸い込み後に幅と高さを調整
-                                    let _ = std::process::Command::new("niri")
-                                        .args(["msg", "action", "set-column-width", "40%"])
-                                        .status();
-                                    let _ = std::process::Command::new("niri")
-                                        .args(["msg", "action", "set-window-height", "50%"])
-                                        .spawn();
                                 }
                             }
                         }
@@ -680,6 +709,8 @@ async fn try_niri_stack_window(target_id: Option<u64>) {
         // パターンB: 単独（1つだけ）でサブウィンドウを開いた場合
         // -------------------------------------------------------------
         None => {
+            tokio::time::sleep(Duration::from_millis(150)).await;
+
             // 単独で開いたサブウィンドウのカラム幅を 40%、高さを 60% に直接指定
             let _ = std::process::Command::new("niri")
                 .args(["msg", "action", "set-column-width", "40%"])

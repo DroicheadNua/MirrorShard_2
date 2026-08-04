@@ -432,6 +432,28 @@ async function init() {
         }
         if (isCtrlOrCmd && key === 'p' && !isShift) { e.preventDefault(); }
         if (isCtrlOrCmd && key === 'r' && isShift) { e.preventDefault(); }
+
+        // サブウィンドウ
+        if (e.key === "F2") {
+          e.preventDefault();
+          invoke("open_settings_window");
+        }
+
+        if (isCtrlOrCmd && isShift && key === "a") {
+          e.preventDefault();
+          invoke("open_ai_chat");
+        }
+
+        if (isCtrlOrCmd && key === "i" && !isShift) {
+          e.preventDefault();
+          invoke("open_idea_processor");
+        }
+
+        if (isCtrlOrCmd && key === "b" && isShift) {
+          e.preventDefault();
+          invoke("open_vivliostyle");
+        }
+
     });
 
     document.addEventListener('wheel', (e) => {

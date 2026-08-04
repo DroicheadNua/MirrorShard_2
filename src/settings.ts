@@ -1729,16 +1729,32 @@ async function setupSettings() {
       const isShift = e.shiftKey;
       const key = e.key.toLowerCase();
       const isCtrlOrCmd = e.ctrlKey || e.metaKey;
-      if (e.key === "F2") {
-        e.preventDefault();
-        hideWindow();
-      }
+
       if (isCtrlOrCmd && key === "f" && !isShift) {
         e.preventDefault();
       }
-      if (isCtrlOrCmd && key === "p" && !isShift) {
+
+      // サブウィンドウ
+      if (e.key === "F2") {
         e.preventDefault();
+        invoke("open_settings_window");
       }
+
+      if (isCtrlOrCmd && isShift && key === "a") {
+        e.preventDefault();
+        invoke("open_ai_chat");
+      }
+
+      if (isCtrlOrCmd && key === "i" && !isShift) {
+        e.preventDefault();
+        invoke("open_idea_processor");
+      }
+
+      if (isCtrlOrCmd && key === "b" && isShift) {
+        e.preventDefault();
+        invoke("open_vivliostyle");
+      }
+
       if (isCtrlOrCmd && key === "r") {
         e.preventDefault();
       }
