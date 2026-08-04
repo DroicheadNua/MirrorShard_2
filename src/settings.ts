@@ -362,6 +362,10 @@ async function setupSettings() {
     const editorSizeSelect = document.querySelector(
       "#main-editor-size-preset",
     ) as HTMLSelectElement;
+    const checkSubWindowHalfHeight = document.querySelector(
+      "#sub-window-half-height",
+    ) as HTMLInputElement;
+
 
     // --- 4. 一時保存用変数 & 初期値の読み込み ---
     let pendingBgPath =
@@ -1092,6 +1096,9 @@ async function setupSettings() {
     if (editorSizeSelect) {
       editorSizeSelect.value = (await store.get<string>("mainEditorSizePreset")) ?? "default";
     }
+    if (checkSubWindowHalfHeight) {
+      checkSubWindowHalfHeight.checked = (await store.get<boolean>("subWindowHalfHeight")) ?? false;
+    }
 
     // --- 5. イベントリスナー (ファイル選択) ---
 
@@ -1497,6 +1504,7 @@ async function setupSettings() {
         const newAiThinkingOverlay = aiThinkingOverlayCheck.checked;
         const newDisableGpuCompositing = checkDisableGpuCompositing?.checked;
         const newEditorSizePreset = editorSizeSelect?.value;
+        const newSubWindowHalfHeight = checkSubWindowHalfHeight?.checked;
 
         // Storeに保存
         await store.set("editorMaxWidth", numValue.toString());
@@ -1610,6 +1618,9 @@ async function setupSettings() {
           console.error("Niri resize failed:", e);
           }
         }
+        if (newSubWindowHalfHeight !== undefined)
+          await store.set("subWindowHalfHeight", newSubWindowHalfHeight);
+
 
         await store.save();
 

@@ -18,6 +18,7 @@ use std::io::{BufReader, Read, Write};
 use std::path::{Path, PathBuf};
 use std::process::{Child, Command, Stdio};
 use std::sync::Mutex;
+use std::time::Duration;
 use tauri::{AppHandle, Emitter, Manager, State};
 use tauri_plugin_cli::CliExt;
 use tauri_plugin_opener::OpenerExt;
@@ -477,6 +478,243 @@ fn is_full_feature_supported() -> bool {
     {
         true // Windows / macOS は常に全機能解禁
     }
+}
+
+// スタック（上下2段組）の対象となる6つのサブウィンドウかを判定する
+fn is_eligible_stack_target(title: &str) -> bool {
+    let t = title.to_lowercase();
+
+    // メインエディタおよび除外対象（Terminal, OpenCode, SillyTavern, SD, ショートカット）をはじく
+    if t.contains("mirrorshard-ver02")
+        || t.contains("terminal")
+        || t.contains("opencode")
+        || t.contains("silly")
+        || t.contains("diffusion")
+        || t.contains("shortcut")
+    {
+        return false;
+    }
+
+    // 以下の6つのサブウィンドウ（日本語名・英語名ともに対応）のいずれかであれば true
+    t.contains("idea") || t.contains("アイデア")         // 1. Idea Processor
+        || t.contains("vivliostyle")                    // 2. Vivliostyle
+        || t.contains("markdown") || t.contains("マークダウン") // 3. Markdown Preview
+        || t.contains("ai chat") || t.contains("aiチャット")   // 4. AI Chat
+        || t.contains("settings") || t.contains("設定")       // 5. 設定
+        || t.contains("preview") || t.contains("プレビュー") // 6. 縦書きプレビュー
+}
+
+// .settings.dat から subWindowHalfHeight (サブウィンドウ2段組化フラグ) を読み出す
+#[cfg(target_os = "linux")]
+fn is_user_enabled_subwindow_half_height() -> bool {
+    if let Ok(home) = std::env::var("HOME") {
+        let store_path = std::path::PathBuf::from(home)
+            .join(".local/share/com.DroicheadNua.mirrorshard2/.settings.dat");
+
+        if store_path.exists() {
+            if let Ok(content) = std::fs::read(&store_path) {
+                if let Ok(json_str) = String::from_utf8(content) {
+                    if let Ok(data) = serde_json::from_str::<serde_json::Value>(&json_str) {
+                        return data
+                            .get("subWindowHalfHeight")
+                            .and_then(|v| v.as_bool())
+                            .unwrap_or(false);
+                    }
+                }
+            }
+        }
+    }
+    false
+}
+
+// 隣接カラムをスキャンして、条件を満たすターゲットウィンドウの ID を返す
+#[cfg(target_os = "linux")]
+fn find_niri_stack_target_id() -> Option<u64> {
+    let output = std::process::Command::new("niri")
+        .args(["msg", "--json", "windows"])
+        .output()
+        .ok()?;
+
+    let json_str = String::from_utf8(output.stdout).ok()?;
+    let windows = serde_json::from_str::<serde_json::Value>(&json_str).ok()?;
+    let win_list = windows.as_array()?;
+
+    let active_win = win_list.iter().find(|w| {
+        w.get("is_focused")
+            .and_then(|f| f.as_bool())
+            .unwrap_or(false)
+            || w.get("is_active")
+                .and_then(|f| f.as_bool())
+                .unwrap_or(false)
+    });
+
+    if let Some(active) = active_win {
+        let active_title = active.get("title").and_then(|t| t.as_str()).unwrap_or("");
+        let curr_col = get_niri_column_idx(active)?;
+        println!(
+            "🔍 [Niri Scan] 現在フォーカス中の窓: '{}' (列: {})",
+            active_title, curr_col
+        );
+
+        let check_column = |col_idx: u64| -> Option<u64> {
+            let col_wins: Vec<_> = win_list
+                .iter()
+                .filter(|w| {
+                    let is_same_ws = w.get("workspace_id").and_then(|i| i.as_u64())
+                        == active.get("workspace_id").and_then(|i| i.as_u64());
+                    let is_same_col = get_niri_column_idx(w) == Some(col_idx);
+                    is_same_ws && is_same_col
+                })
+                .collect();
+
+            if col_wins.len() == 1 {
+                let w = col_wins[0];
+                let title = w.get("title").and_then(|t| t.as_str()).unwrap_or("");
+                let is_floating = w
+                    .get("is_floating")
+                    .and_then(|f| f.as_bool())
+                    .unwrap_or(false);
+
+                if !is_floating && is_eligible_stack_target(title) {
+                    println!(
+                        "🎯 [Niri Scan] 条件に一致するターゲット窓を発見: '{}' (ID: {})",
+                        title,
+                        w.get("id").unwrap()
+                    );
+                    return w.get("id").and_then(|i| i.as_u64());
+                }
+            }
+            None
+        };
+
+        // 1. 現在のカラム
+        if let Some(id) = check_column(curr_col) {
+            return Some(id);
+        }
+        // 2. 左隣のカラム
+        if curr_col > 0 {
+            if let Some(id) = check_column(curr_col - 1) {
+                return Some(id);
+            }
+        }
+        // 3. 右隣のカラム
+        if let Some(id) = check_column(curr_col + 1) {
+            return Some(id);
+        }
+    } else {
+        println!("⚠️ [Niri Scan] フォーカス中のウィンドウが検出できませんでした");
+    }
+
+    None
+}
+
+// スタック実行ヘルパー
+#[cfg(target_os = "linux")]
+async fn try_niri_stack_window(target_id: Option<u64>) {
+    // そもそも設定で「ハーフサイズ」が有効になっていなければ何もしない
+    if !is_user_enabled_subwindow_half_height() {
+        return;
+    }
+
+    // 新規ウィンドウがマウントされフォーカスされるのを待つ
+    tokio::time::sleep(Duration::from_millis(150)).await;
+
+    match target_id {
+        // -------------------------------------------------------------
+        // パターンA: 吸い込み対象（隣接サブウィンドウ）が存在する場合
+        // -------------------------------------------------------------
+        Some(_target_id) => {
+            let output = std::process::Command::new("niri")
+                .args(["msg", "--json", "windows"])
+                .output();
+
+            if let Ok(out) = output {
+                if let Ok(json_str) = String::from_utf8(out.stdout) {
+                    if let Ok(windows) = serde_json::from_str::<serde_json::Value>(&json_str) {
+                        if let Some(win_list) = windows.as_array() {
+                            let new_win = win_list.iter().find(|w| {
+                                w.get("is_focused")
+                                    .and_then(|f| f.as_bool())
+                                    .unwrap_or(false)
+                                    || w.get("is_active")
+                                        .and_then(|f| f.as_bool())
+                                        .unwrap_or(false)
+                            });
+
+                            let target_win = win_list
+                                .iter()
+                                .find(|w| w.get("id").and_then(|i| i.as_u64()) == Some(_target_id));
+
+                            if let (Some(new_w), Some(target_w)) = (new_win, target_win) {
+                                let new_col = get_niri_column_idx(new_w);
+                                let target_col = get_niri_column_idx(target_w);
+
+                                if let (Some(nc), Some(tc)) = (new_col, target_col) {
+                                    // 隣接カラムへ吸い込み実行
+                                    if nc > tc {
+                                        let _ = std::process::Command::new("niri")
+                                            .args(["msg", "action", "consume-or-expel-window-left"])
+                                            .status();
+                                    } else if nc < tc {
+                                        let _ = std::process::Command::new("niri")
+                                            .args(["msg", "action", "consume-window-into-column"])
+                                            .status();
+                                    }
+
+                                    // 吸い込み後に幅と高さを調整
+                                    let _ = std::process::Command::new("niri")
+                                        .args(["msg", "action", "set-column-width", "40%"])
+                                        .status();
+                                    let _ = std::process::Command::new("niri")
+                                        .args(["msg", "action", "set-window-height", "50%"])
+                                        .spawn();
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        // -------------------------------------------------------------
+        // パターンB: 単独（1つだけ）でサブウィンドウを開いた場合
+        // -------------------------------------------------------------
+        None => {
+            // 単独で開いたサブウィンドウのカラム幅を 40%、高さを 60% に直接指定
+            let _ = std::process::Command::new("niri")
+                .args(["msg", "action", "set-column-width", "40%"])
+                .status();
+
+            let _ = std::process::Command::new("niri")
+                .args(["msg", "action", "set-window-height", "60%"])
+                .spawn();
+        }
+    }
+}
+
+// NiriのウィンドウJSONから列番号(column_idx)を抽出するヘルパー
+fn get_niri_column_idx(win: &serde_json::Value) -> Option<u64> {
+    win.get("layout")?
+        .get("pos_in_scrolling_layout")?
+        .get(0)?
+        .as_u64()
+}
+
+// フロントエンドから show() 直後に呼び出す用のTauriコマンド
+#[tauri::command]
+async fn trigger_niri_stack() -> Result<(), String> {
+    #[cfg(target_os = "linux")]
+    {
+        let is_niri = is_niri_compositor();
+        let is_half_enabled = is_user_enabled_subwindow_half_height();
+
+        if is_niri && is_half_enabled {
+            // target_id が None (単独起動) の時でも try_niri_stack_window(None) を呼ぶ
+            let target_id = find_niri_stack_target_id();
+            try_niri_stack_window(target_id).await;
+        }
+    }
+    Ok(())
 }
 
 // Pandoc(Haskell)用にUNCプレフィックス(\\?\)を除去し、スラッシュ区切りに整える関数
@@ -1843,12 +2081,19 @@ async fn open_idea_processor(app: AppHandle) {
         color: None,
     });
 
+    let target_id = if is_niri_compositor() && is_user_enabled_subwindow_half_height() {
+        find_niri_stack_target_id()
+    } else {
+        None
+    };
+
     #[cfg(debug_assertions)]
     let window = builder.devtools(true).build().unwrap();
     #[cfg(not(debug_assertions))]
     let window = builder.build().unwrap();
     window.show().unwrap();
     window.set_focus().unwrap();
+    try_niri_stack_window(target_id).await;
 }
 
 #[tauri::command]
@@ -1884,12 +2129,19 @@ async fn open_vivliostyle(app: AppHandle) {
         color: None,
     });
 
+    let target_id = if is_niri_compositor() && is_user_enabled_subwindow_half_height() {
+        find_niri_stack_target_id()
+    } else {
+        None
+    };
+
     #[cfg(debug_assertions)]
     let window = builder.devtools(true).build().unwrap();
     #[cfg(not(debug_assertions))]
     let window = builder.build().unwrap();
     window.show().unwrap();
     window.set_focus().unwrap();
+    try_niri_stack_window(target_id).await;
 }
 
 #[tauri::command]
@@ -2471,12 +2723,19 @@ async fn open_ai_chat(app: AppHandle) {
         color: None,
     });
 
+    let target_id = if is_niri_compositor() && is_user_enabled_subwindow_half_height() {
+        find_niri_stack_target_id()
+    } else {
+        None
+    };
+
     #[cfg(debug_assertions)]
     let window = builder.devtools(true).build().unwrap();
     #[cfg(not(debug_assertions))]
     let window = builder.build().unwrap();
 
     window.show().unwrap();
+    try_niri_stack_window(target_id).await;
 }
 
 #[tauri::command]
@@ -2514,6 +2773,12 @@ async fn open_settings_window(app: AppHandle) {
         color: None,
     });
 
+    let target_id = if is_niri_compositor() && is_user_enabled_subwindow_half_height() {
+        find_niri_stack_target_id()
+    } else {
+        None
+    };
+
     #[cfg(debug_assertions)]
     let window = builder.devtools(true).build().unwrap();
     #[cfg(not(debug_assertions))]
@@ -2521,6 +2786,7 @@ async fn open_settings_window(app: AppHandle) {
 
     window.show().unwrap();
     window.set_focus().unwrap();
+    try_niri_stack_window(target_id).await;
 }
 
 #[tauri::command]
@@ -2872,6 +3138,7 @@ pub fn run() {
             stop_bgm_rust,
             is_niri_compositor,
             apply_niri_size_preset,
+            trigger_niri_stack,
         ])
         .on_window_event(|window, event| match event {
             // 1. メインウィンドウの終了確認

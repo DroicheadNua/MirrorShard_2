@@ -222,6 +222,7 @@
     "size90x40": "Middle (90% height × 40% width)",
     "size80x35": "Small (80% height × 35% width)",
     "size100x50": "Large (100% height × 50% width)",
-    "size45x35": "Floating Mini (45% height × 35% width)"
+    "size45x35": "Floating Mini (45% height × 35% width)",
+    "subWindowHalfHeight": "Sub-window Half Height (Niri)"
   }
 }

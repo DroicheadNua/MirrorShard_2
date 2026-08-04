@@ -10,16 +10,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [unreleased]
 
 ### Added
-
+- Linux: Added a dedicated "Linux" tab to the Settings window.
+- Linux: Added an "Open Sub-windows at Half-Height" option for Niri tiling WM (automatically stacks sub-windows vertically at 40% W × 60% H).
+- Linux: Added main editor initial window size presets specifically tuned for Niri / tiling window managers.
 
 ### Changed
 - Linux: Automatically applied `GTK_IM_MODULE=wayland` under Wayland environments, enabling native inline CJK/Japanese IME composition (Fcitx5 / IBus).
-- Linux: Enabled GPU compositing by default for Intel/AMD GPUs and Smithay-based compositors (Niri, COSMIC, DriftWM), with an auto-fallback and a manual override toggle.
+- Linux: Enabled GPU compositing by default for Intel/AMD GPUs and Smithay-based compositors (Niri, COSMIC, DriftWM), with an auto-fallback and a manual override toggle in settings.
 - Linux: Unlocked Spotlight Mode, Typing Sound Effects, and Live Markdown/HTML Preview whenever GPU compositing is active.
 - Linux: Enabled lightweight background music (BGM) streaming via native Rust audio backend (`rodio`), drastically reducing memory consumption.
-- Linux: Added a dedicated "Linux" tab to the Settings window.
 - Linux: Automatically opens the integrated terminal as a floating window when running under Niri.
-- Linux: Added main editor initial window size presets specifically tuned for Niri / tiling window managers.
 
 ### Fixed
 

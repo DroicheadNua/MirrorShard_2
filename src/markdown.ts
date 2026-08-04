@@ -225,6 +225,12 @@ async function init() {
                 await win.setFocus();
             }
         }, 100);
+
+        // Niriスタックウィンドウのトリガー (Linuxのみ)
+        const osType = await type();
+        if (osType === "linux") {
+          await invoke("trigger_niri_stack");
+        }
     });
 
     // ダークモード同期
@@ -268,7 +274,7 @@ async function init() {
 
         if (contentDiv) {
             contentDiv.style.zoom = `${zoomLevel}%`; // Chromium系のみ有効な簡易ズーム
-            // または transform: scale() 
+            // または transform: scale()
         }
     };
 

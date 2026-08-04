@@ -9,16 +9,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [unreleased]  
 
 ### Added (新機能)  
+- Linux: 設定画面に「Linux」タブを追加。  
+- Linux: Niri環境向けに「サブウィンドウをハーフサイズ（2段組）で開く」オプションを追加（幅40%×高さ60%で起動し、自動的に2段組スタック化されます）。  
+- Linux: Niri等のタイリングWM向けに、メインエディタの初期ウィンドウサイズプリセット機能を追加。  
 
-
-### Changed (変更点)    
-- Linux: GTK_IM_MODULEをwaylandに設定するように変更。これによりWayland環境でのインライン変換が可能に  
-- Linux: 一部の環境を除いてGPUコンポジットを有効に（手動で無効化することも可能）  
-- Linux: GPUコンポジットが有効なとき、タイプ音・スポットライトモード・マークダウン/HTMLプレビューが使用可能に  
-- Linux: Linux版もBGMのストリーミング再生が可能に  
-- Linux: 設定ウィンドウに「Linux」タブを設置  
-- Linux: Niri環境のとき内蔵ターミナルをフローティング化  
-- Linux: Niri環境のときメインエディタのサイズをプリセットから選択可能に  
+### Changed (変更点)  
+- Linux: Wayland環境下で `GTK_IM_MODULE=wayland` を自動適用し、直接インライン日本語入力（Fcitx5 / IBus）に対応。  
+- Linux: Intel/AMDグラボおよびSmithay系コンポジター（Niri, COSMIC, DriftWM）でGPUコンポジットを自動有効化（手動で無効化するトグルも追加）。  
+- Linux: GPUコンポジット有効時、スポットライトモード・タイプ音・マークダウン/HTMLプレビューの機能制限を解除。  
+- Linux: Native Rust オーディオエンジン（`rodio`）による軽量BGMストリーミング再生に対応し、メモリ消費量を削減。  
+- Linux: Niri環境において、内蔵ターミナルを自動的にフローティング小窓として開くように変更。  
 
 ### Fixed (修正点)   
  

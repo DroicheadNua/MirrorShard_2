@@ -222,6 +222,7 @@
     "size90x40": "Middle (高90% × 幅40%)",
     "size80x35": "Small (高80% × 幅35%)",
     "size100x50": "Large (高100% × 幅50%)",
-    "size45x35": "Floating Mini (高45% × 幅35% フロート)"
+    "size45x35": "Floating Mini (高45% × 幅35% フロート)",
+    "subWindowHalfHeight": "サブウィンドウをハーフサイズ（2段組）で開く (Niri)"
   }
 }

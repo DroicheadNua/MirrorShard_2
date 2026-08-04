@@ -177,6 +177,12 @@ async function initPreview() {
         await getCurrentWindow().show();
         await getCurrentWindow().setFocus();
       }, 100);
+
+      // Niriスタックウィンドウのトリガー (Linuxのみ)
+      const osType = await type();
+      if (osType === "linux") {
+        await invoke("trigger_niri_stack");
+      }
     }
 
     if (contentDiv) {
