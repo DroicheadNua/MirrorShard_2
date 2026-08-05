@@ -89,6 +89,7 @@
         import { open, save } from '@tauri-apps/plugin-dialog';
         import updateArticle from '/src/scripts/ruby.ts';
         import { Store } from '@tauri-apps/plugin-store';
+        import { type } from "@tauri-apps/plugin-os";
         import { initI18n, applyTranslationsToDOM, t } from '/src/i18n.ts';
 
         async function initExport() {
@@ -379,6 +380,13 @@
                     document.addEventListener('contextmenu', (e) => {
                         e.preventDefault();
                     });
+
+                    await invoke("ping_window_ready", { label: "Export" });
+                    await getCurrentWindow().show();
+                    const osType = type();
+                    if (osType === "linux") {
+                      await invoke("trigger_niri_stack");
+                    }
                 }
 
         window.addEventListener('DOMContentLoaded', initExport);

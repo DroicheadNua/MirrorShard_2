@@ -1825,6 +1825,11 @@ async function setupSettings() {
     }
 
     await setupAboutTab();
+    await invoke("ping_window_ready", { label: "Settings" });
+    await getCurrentWindow().show();
+    if (osType === "linux") {
+      await invoke("trigger_niri_stack");
+    }
 
   } catch (error) {
     // スクリプト全体のエラーをキャッチ

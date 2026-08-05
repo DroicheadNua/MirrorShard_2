@@ -294,6 +294,7 @@ class App {
   private mdHardBreaks = false;
   private codeExtras: any = null;
   private isCodeExtrasLoaded = false;
+  private shouldTruncateExport = false;
   // 全ての拡張機能を管理する区画
   private mainCompartment = new Compartment();
   private codeFontCompartment = new Compartment();
@@ -2657,12 +2658,13 @@ ${instructionFiller}
 
     // --- エクスポートウィンドウとの連携 ---
     await listen("export-request-data", async () => {
-      // 現在のテキストを取得
-      const text = this.editorView.state.doc.toString();
+      let text = this.editorView.state.doc.toString();
+      const limit = 50000;
 
-      // 必要ならここでMarkdownをHTMLに変換したり、ルビ変換をかけたりする
-      // とりあえず生テキストと、簡易HTMLを送る
-      // (本格的なMarkdown変換は marked.js などを導入すると楽)
+      // フラグが立っていればテキストを先頭5万字に切り詰める
+      if (this.shouldTruncateExport && text.length > limit) {
+        text = text.substring(0, limit) + "\n\n" + t("editor.preview.truncated");
+      }
 
       await emit("export-data", {
         text: text,
@@ -3582,13 +3584,8 @@ ${instructionFiller}
     });
     document
       .querySelector("#btn-export")
-      ?.addEventListener("click", async () => {
-        try {
-          await invoke("open_export_window");
-        } catch (e) {
-          console.error(e);
-          await message(translateRustError(e), { kind: "error" });
-        }
+      ?.addEventListener("click", () => {
+        this.openExportWindowWithCheck();
       });
     document.querySelector("#btn-vivliostyle")?.addEventListener("click", () => {
       this.openVivliostyle();
@@ -4086,7 +4083,7 @@ ${instructionFiller}
     }
     if (isCtrlOrCmd && key === "e" && !isShift) {
       e.preventDefault();
-      invoke("open_export_window");
+      this.openExportWindowWithCheck();
     }
     if (isCtrlOrCmd && key === "b" && isShift) {
       e.preventDefault();
@@ -4558,6 +4555,40 @@ ${instructionFiller}
 
     // ウィンドウのロード待ちをしてからデータを送る
     setTimeout(() => this.sendDataToMarkdownPreview(shouldTruncate), 200);
+  }
+
+  private async openExportWindowWithCheck() {
+    const textLength = this.editorView.state.doc.length;
+    const limit = 50000;
+    this.shouldTruncateExport = false;
+
+    // 5万文字超の巨大ファイルチェック
+    if (textLength > limit) {
+      const { ask } = await import("@tauri-apps/plugin-dialog");
+      const confirmed = await ask(
+        t("editor.preview.longTextExport", {
+          charCount: textLength,
+          limit: limit,
+        }),
+        {
+          title: t("editor.preview.confirmTitleExport"),
+          kind: "warning",
+          okLabel: t("editor.preview.okLabel"),
+          cancelLabel: t("editor.preview.cancelLabel"),
+        },
+      );
+
+      if (!confirmed) return; // キャンセルならウィンドウを開かない
+
+      this.shouldTruncateExport = true; // 切り詰めフラグを立てる
+    }
+
+    try {
+      await invoke("open_export_window");
+    } catch (e) {
+      console.error(e);
+      await message(translateRustError(e), { kind: "error" });
+    }
   }
 
   private async sendDataToMarkdownPreview(truncate: boolean = false) {

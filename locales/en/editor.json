@@ -31,7 +31,9 @@
     "truncatedLong": "... Text too long, preview omitted.",
     "confirmTitle": "Preview Confirmation",
     "confirmTitleMd": "Markdown Preview Confirmation",
+    "confirmTitleExport": "Export Confirmation",
     "longTextWarning": "The text is very long ({{charCount}} characters), so generating the preview may take time.\n\nWould you like to preview only the first {{limit}} characters?\n(Pressing Cancel will abort the operation.)",
+    "longTextExport": "The text is very long ({{charCount}} characters), so cannot be exported in its entirety.\n\nWould you like to export only the first {{limit}} characters?\n(Pressing Cancel will abort the operation.)",
     "okLabel": "Preview Limited",
     "cancelLabel": "Cancel"
   },

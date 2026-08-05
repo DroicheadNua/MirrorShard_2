@@ -21,6 +21,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Linux: Niri環境において、内蔵ターミナルを自動的にフローティング小窓として開くように変更。  
 
 ### Fixed (修正点)   
+- 巨大テキスト選択時にエクスポートウィンドウを開くとフリーズする問題があったため、エクスポートウィンドウに送る文字数を冒頭5万字に制限  
+- サブウィンドウ生成時のフリッカーを抑制  
  
 
 ### Other

@@ -488,10 +488,9 @@ async function init() {
       }
     }
   });
-  await invoke("enable_window_shadow");
+  await invoke("ping_window_ready", { label: "AI Chat" });
   await getCurrentWindow().show();
   // Niriスタックウィンドウのトリガー (Linuxのみ)
-  const osType = type();
   if (osType === "linux") {
     await invoke("trigger_niri_stack");
   }

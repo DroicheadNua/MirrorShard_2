@@ -719,4 +719,10 @@ window.addEventListener("DOMContentLoaded", async () => {
 
   const manager = new VivliostyleManager();
   await manager.init();
+  await invoke("ping_window_ready", { label: "Vivliostyle" });
+  await getCurrentWindow().show();
+  // Niriスタックウィンドウのトリガー (Linuxのみ)
+  if (osType === "linux") {
+    await invoke("trigger_niri_stack");
+  }
 });

@@ -2109,19 +2109,10 @@ async fn open_idea_processor(app: AppHandle) {
         color: None,
     });
 
-    let target_id = if is_niri_compositor() && is_user_enabled_subwindow_half_height() {
-        find_niri_stack_target_id()
-    } else {
-        None
-    };
-
     #[cfg(debug_assertions)]
-    let window = builder.devtools(true).build().unwrap();
+    let _window = builder.devtools(true).build().unwrap();
     #[cfg(not(debug_assertions))]
-    let window = builder.build().unwrap();
-    window.show().unwrap();
-    window.set_focus().unwrap();
-    try_niri_stack_window(target_id).await;
+    let _window = builder.build().unwrap();
 }
 
 #[tauri::command]
@@ -2157,19 +2148,10 @@ async fn open_vivliostyle(app: AppHandle) {
         color: None,
     });
 
-    let target_id = if is_niri_compositor() && is_user_enabled_subwindow_half_height() {
-        find_niri_stack_target_id()
-    } else {
-        None
-    };
-
     #[cfg(debug_assertions)]
-    let window = builder.devtools(true).build().unwrap();
+    let _window = builder.devtools(true).build().unwrap();
     #[cfg(not(debug_assertions))]
-    let window = builder.build().unwrap();
-    window.show().unwrap();
-    window.set_focus().unwrap();
-    try_niri_stack_window(target_id).await;
+    let _window = builder.build().unwrap();
 }
 
 #[tauri::command]
@@ -2710,15 +2692,13 @@ async fn open_shortcut(app: AppHandle) {
     });
 
     #[cfg(debug_assertions)]
-    let window = builder.devtools(true).build().unwrap();
+    let _window = builder.devtools(true).build().unwrap();
     #[cfg(not(debug_assertions))]
-    let window = builder.build().unwrap();
+    let _window = builder.build().unwrap();
     #[cfg(target_os = "macos")]
     {
         let _ = window.eval("document.body.classList.add('is-mac');");
     }
-    window.show().unwrap();
-    window.set_focus().unwrap();
 }
 
 #[tauri::command]
@@ -2738,7 +2718,6 @@ async fn open_ai_chat(app: AppHandle) {
     .min_inner_size(400.0, 480.0)
     .resizable(true)
     .decorations(false)
-    .shadow(false)
     .transparent(true)
     .visible(false)
     .devtools(false);
@@ -2758,13 +2737,14 @@ async fn open_ai_chat(app: AppHandle) {
     let _window = builder.build().unwrap();
 }
 
-// フェードイン完了後にフロントエンドから呼ばれ、OSの影を復活させるコマンド
+// フロントエンドからの表示準備完了を検知するハンドシェイク用コマンド
 #[tauri::command]
-async fn enable_window_shadow(window: tauri::WebviewWindow) -> Result<(), String> {
-    #[cfg(any(windows, target_os = "macos"))]
-    {
-        let _ = window.set_shadow(true); // 影をオンにする
-    }
+fn ping_window_ready(label: String) -> Result<(), String> {
+    #[cfg(debug_assertions)]
+    println!(
+        "[IPC Handshake] Sub-window '{}' is fully rendered and ready to show.",
+        label
+    );
     Ok(())
 }
 
@@ -2803,20 +2783,10 @@ async fn open_settings_window(app: AppHandle) {
         color: None,
     });
 
-    let target_id = if is_niri_compositor() && is_user_enabled_subwindow_half_height() {
-        find_niri_stack_target_id()
-    } else {
-        None
-    };
-
     #[cfg(debug_assertions)]
-    let window = builder.devtools(true).build().unwrap();
+    let _window = builder.devtools(true).build().unwrap();
     #[cfg(not(debug_assertions))]
-    let window = builder.build().unwrap();
-
-    window.show().unwrap();
-    window.set_focus().unwrap();
-    try_niri_stack_window(target_id).await;
+    let _window = builder.build().unwrap();
 }
 
 #[tauri::command]
@@ -2852,11 +2822,9 @@ async fn open_export_window(app: AppHandle) {
     });
 
     #[cfg(debug_assertions)]
-    let window = builder.devtools(true).build().unwrap();
+    let _window = builder.devtools(true).build().unwrap();
     #[cfg(not(debug_assertions))]
-    let window = builder.build().unwrap();
-
-    window.show().unwrap();
+    let _window = builder.build().unwrap();
 }
 
 #[tauri::command]
@@ -2879,7 +2847,6 @@ async fn open_preview_window(app: AppHandle) {
     .resizable(true)
     .decorations(false)
     .visible(false)
-    .shadow(false)
     .devtools(false);
     #[cfg(target_os = "macos")]
     let builder = builder.title_bar_style(tauri::TitleBarStyle::Transparent);
@@ -3170,7 +3137,7 @@ pub fn run() {
             is_niri_compositor,
             apply_niri_size_preset,
             trigger_niri_stack,
-            enable_window_shadow,
+            ping_window_ready,
         ])
         .on_window_event(|window, event| match event {
             // 1. メインウィンドウの終了確認

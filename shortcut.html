@@ -176,6 +176,7 @@
   </script>
   <script type="module">
     import { getCurrentWindow } from '@tauri-apps/api/window';
+    import { invoke } from "@tauri-apps/api/core";
     document.addEventListener('keydown', (e) => {
       const isShift = e.shiftKey;
       const key = e.key.toLowerCase();
@@ -194,6 +195,8 @@
     document.addEventListener('contextmenu', (e) => {
       e.preventDefault();
     });
+    await invoke('ping_window_ready', { label: 'Shortcut' });
+    await getCurrentWindow().show();
   </script>
 </body>
 

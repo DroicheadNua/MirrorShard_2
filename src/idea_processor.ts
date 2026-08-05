@@ -5927,7 +5927,11 @@ document.addEventListener("DOMContentLoaded", async () => {
     recordHistory("Initial Empty State");
     isDirty = false; // 初期状態はクリーン
   }
-  // 4. 準備完了を通知
-  console.log("[Tauri] Sending idea-processor-ready...");
-  await emit("idea-processor-ready");
+  // 4. ウィンドウ表示とシャドウ無効解除 ＆ Niriスタック
+  await invoke("ping_window_ready", { label: "Idea Processor" });
+  await getCurrentWindow().show();
+
+  if (osType === "linux") {
+    await invoke("trigger_niri_stack");
+  }
 });

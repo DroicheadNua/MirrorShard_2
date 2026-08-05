@@ -31,7 +31,9 @@
     "truncatedLong": "……テキストが長すぎるため、プレビューは省略されました",
     "confirmTitle": "プレビューの確認",
     "confirmTitleMd": "Markdownプレビューの確認",
+    "confirmTitleExport": "エクスポートの確認",
     "longTextWarning": "テキストが非常に長いため（{{charCount}}文字）、プレビューの生成に時間がかかる可能性があります。\n\n先頭の {{limit}} 文字だけをプレビューしますか？\n（「キャンセル」を押すと処理を中止します）",
+    "longTextExport": "テキストが非常に長いため（{{charCount}}文字）、全てをエクスポートすることはできません。\n\n先頭の {{limit}} 文字だけをエクスポートしますか？\n（「キャンセル」を押すと処理を中止します）",
     "okLabel": "制限して表示",
     "cancelLabel": "キャンセル"
   },
