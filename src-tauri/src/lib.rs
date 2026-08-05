@@ -537,6 +537,7 @@ fn is_user_enabled_subwindow_half_height() -> bool {
 }
 
 // 隣接カラムをスキャンして、条件を満たすターゲットウィンドウの ID を返す
+#[allow(dead_code)]
 fn find_niri_stack_target_id() -> Option<u64> {
     let output = std::process::Command::new("niri")
         .args(["msg", "--json", "windows"])
@@ -617,6 +618,7 @@ fn find_niri_stack_target_id() -> Option<u64> {
 }
 
 // スタック実行ヘルパー
+#[allow(dead_code)]
 async fn try_niri_stack_window(target_id: Option<u64>) {
     // そもそも設定で「ハーフサイズ」が有効になっていなければ何もせず終了
     if !is_user_enabled_subwindow_half_height() {
@@ -722,6 +724,7 @@ async fn try_niri_stack_window(target_id: Option<u64>) {
 }
 
 // NiriのウィンドウJSONから列番号(column_idx)を抽出するヘルパー
+#[allow(dead_code)]
 fn get_niri_column_idx(win: &serde_json::Value) -> Option<u64> {
     win.get("layout")?
         .get("pos_in_scrolling_layout")?

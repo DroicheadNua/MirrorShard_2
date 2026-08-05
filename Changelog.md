@@ -22,8 +22,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Linux: Automatically opens the integrated terminal as a floating window when running under Niri.
 
 ### Fixed
-- Exporting large text files no longer freezes the application.
-- Suppress Flickering When Creating Subwindows.
+- Fixed an issue where opening the export window with massive text files would freeze the application by adding a 50,000-character limit prompt.
+- Suppressed initial window flickering when spawning sub-windows across all operating systems.
 
 ## [1.12.0] - 2026-07-27
 
