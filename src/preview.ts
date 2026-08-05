@@ -174,12 +174,13 @@ async function initPreview() {
       }, 200);
       // 5. 描画完了後にウィンドウを表示
       setTimeout(async () => {
+        await invoke("enable_window_shadow");
         await getCurrentWindow().show();
         await getCurrentWindow().setFocus();
       }, 100);
 
       // Niriスタックウィンドウのトリガー (Linuxのみ)
-      const osType = await type();
+      const osType = type();
       if (osType === "linux") {
         await invoke("trigger_niri_stack");
       }

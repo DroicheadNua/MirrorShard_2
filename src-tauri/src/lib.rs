@@ -264,12 +264,12 @@ fn stop_bgm_rust(state: tauri::State<'_, BgmState>) {
 
 // --- Linux用GPUコンポジット処理分岐ヘルパー群 ---
 
-#[cfg(target_os = "linux")]
+#[allow(dead_code)]
 fn is_nvidia_gpu() -> bool {
     std::path::Path::new("/proc/driver/nvidia").exists()
 }
 
-#[cfg(target_os = "linux")]
+#[allow(dead_code)]
 fn is_virtual_machine() -> bool {
     if let Ok(vendor) = std::fs::read_to_string("/sys/class/dmi/id/sys_vendor") {
         let v = vendor.to_lowercase();
@@ -292,7 +292,7 @@ fn is_virtual_machine() -> bool {
     false
 }
 
-#[cfg(target_os = "linux")]
+#[allow(dead_code)]
 fn is_compatible_compositor_for_nvidia() -> bool {
     let desktop = std::env::var("XDG_CURRENT_DESKTOP")
         .map(|v| v.to_lowercase())
@@ -306,6 +306,7 @@ fn is_compatible_compositor_for_nvidia() -> bool {
 
 // Niri の IPC コマンドを叩いてカラム幅と高さを指定する
 #[tauri::command]
+#[allow(unused_variables)]
 async fn apply_niri_size_preset(preset: String) -> Result<(), String> {
     #[cfg(target_os = "linux")]
     {
@@ -427,7 +428,7 @@ fn is_niri_compositor() -> bool {
 }
 
 // .settings.dat から disableGpuCompositing の設定値を直接読み取るヘルパー
-#[cfg(target_os = "linux")]
+#[allow(dead_code)]
 fn is_user_disabled_gpu_compositing() -> bool {
     if let Ok(home) = std::env::var("HOME") {
         let store_path = std::path::PathBuf::from(home)
@@ -450,7 +451,7 @@ fn is_user_disabled_gpu_compositing() -> bool {
 }
 
 // 共通判定: GPUコンポジットをオフにすべきか
-#[cfg(target_os = "linux")]
+#[allow(dead_code)]
 fn should_disable_gpu_compositing() -> bool {
     let forced_by_env = std::env::var("MIRRORSHARD_DISABLE_COMPOSITING").is_ok();
     let forced_by_settings = is_user_disabled_gpu_compositing(); // 👈 設定画面のチェック
@@ -514,7 +515,6 @@ fn is_eligible_stack_target(title: &str) -> bool {
 }
 
 // .settings.dat から subWindowHalfHeight (サブウィンドウ2段組化フラグ) を読み出す
-#[cfg(target_os = "linux")]
 fn is_user_enabled_subwindow_half_height() -> bool {
     if let Ok(home) = std::env::var("HOME") {
         let store_path = std::path::PathBuf::from(home)
@@ -537,7 +537,6 @@ fn is_user_enabled_subwindow_half_height() -> bool {
 }
 
 // 隣接カラムをスキャンして、条件を満たすターゲットウィンドウの ID を返す
-#[cfg(target_os = "linux")]
 fn find_niri_stack_target_id() -> Option<u64> {
     let output = std::process::Command::new("niri")
         .args(["msg", "--json", "windows"])
@@ -618,7 +617,6 @@ fn find_niri_stack_target_id() -> Option<u64> {
 }
 
 // スタック実行ヘルパー
-#[cfg(target_os = "linux")]
 async fn try_niri_stack_window(target_id: Option<u64>) {
     // そもそも設定で「ハーフサイズ」が有効になっていなければ何もせず終了
     if !is_user_enabled_subwindow_half_height() {
@@ -828,7 +826,7 @@ async fn read_local_file_content(path: String) -> Result<String, String> {
 }
 
 // Linux用: システム上の Chrome / Chromium の絶対パスを優先順位で探す
-#[cfg(target_os = "linux")]
+#[allow(dead_code)]
 fn find_linux_chrome_path() -> Option<String> {
     let candidates = [
         "/usr/bin/chromium",             // Debian / Ubuntu / Arch (ARM64 & x86_64)
@@ -846,7 +844,6 @@ fn find_linux_chrome_path() -> Option<String> {
     None
 }
 
-// Linux/macOS用: npx の絶対パスと、node が存在する PATH を完全自動検出する
 // Linux/macOS用: npx の絶対パスと、node が存在する PATH を完全自動検出する
 fn resolve_npx_and_path() -> (String, String) {
     let home = std::env::var("HOME").unwrap_or_default();
@@ -2741,6 +2738,7 @@ async fn open_ai_chat(app: AppHandle) {
     .min_inner_size(400.0, 480.0)
     .resizable(true)
     .decorations(false)
+    .shadow(false)
     .transparent(true)
     .visible(false)
     .devtools(false);
@@ -2754,19 +2752,20 @@ async fn open_ai_chat(app: AppHandle) {
         color: None,
     });
 
-    let target_id = if is_niri_compositor() && is_user_enabled_subwindow_half_height() {
-        find_niri_stack_target_id()
-    } else {
-        None
-    };
-
     #[cfg(debug_assertions)]
-    let window = builder.devtools(true).build().unwrap();
+    let _window = builder.devtools(true).build().unwrap();
     #[cfg(not(debug_assertions))]
-    let window = builder.build().unwrap();
+    let _window = builder.build().unwrap();
+}
 
-    window.show().unwrap();
-    try_niri_stack_window(target_id).await;
+// フェードイン完了後にフロントエンドから呼ばれ、OSの影を復活させるコマンド
+#[tauri::command]
+async fn enable_window_shadow(window: tauri::WebviewWindow) -> Result<(), String> {
+    #[cfg(any(windows, target_os = "macos"))]
+    {
+        let _ = window.set_shadow(true); // 影をオンにする
+    }
+    Ok(())
 }
 
 #[tauri::command]
@@ -2880,6 +2879,7 @@ async fn open_preview_window(app: AppHandle) {
     .resizable(true)
     .decorations(false)
     .visible(false)
+    .shadow(false)
     .devtools(false);
     #[cfg(target_os = "macos")]
     let builder = builder.title_bar_style(tauri::TitleBarStyle::Transparent);
@@ -3170,6 +3170,7 @@ pub fn run() {
             is_niri_compositor,
             apply_niri_size_preset,
             trigger_niri_stack,
+            enable_window_shadow,
         ])
         .on_window_event(|window, event| match event {
             // 1. メインウィンドウの終了確認

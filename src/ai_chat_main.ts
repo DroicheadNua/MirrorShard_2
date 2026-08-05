@@ -488,6 +488,13 @@ async function init() {
       }
     }
   });
+  await invoke("enable_window_shadow");
+  await getCurrentWindow().show();
+  // Niriスタックウィンドウのトリガー (Linuxのみ)
+  const osType = type();
+  if (osType === "linux") {
+    await invoke("trigger_niri_stack");
+  }
 }
 
 // プロフィール読み込み関数
