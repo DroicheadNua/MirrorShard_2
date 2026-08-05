@@ -2742,11 +2742,11 @@ async fn open_ai_chat(app: AppHandle) {
 
 // フロントエンドからの表示準備完了を検知するハンドシェイク用コマンド
 #[tauri::command]
-fn ping_window_ready(label: String) -> Result<(), String> {
+fn ping_window_ready(_label: String) -> Result<(), String> {
     #[cfg(debug_assertions)]
     println!(
         "[IPC Handshake] Sub-window '{}' is fully rendered and ready to show.",
-        label
+        _label
     );
     Ok(())
 }
