@@ -451,13 +451,12 @@ body.dark-mode #message-input::placeholder {
 }
 
 .message-sender {
-    font-size: 0.8em;
+    font-size: calc(var(--user-font-size, 14px) - 1px);
     color: var(--editor-text-color, #333);
     margin-bottom: 4px;
 }
 
 body.dark-mode .message-sender {
-    font-size: 0.8em;
     color: #0f0;
     margin-bottom: 4px;
 }
@@ -476,6 +475,7 @@ body.dark-mode .message-sender {
     min-height: 4em;
     min-width: 15em;
     display: block;
+    font-size: calc(var(--user-font-size, 14px) + 1px);
 }
 
 body.dark-mode .message-bubble {
