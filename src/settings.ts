@@ -281,6 +281,9 @@ async function setupSettings() {
     const aiContextLimitInput = document.querySelector(
       "#ai-context-limit",
     ) as HTMLInputElement;
+    const aiFontSizeInput = document.querySelector(
+      "#ai-font-size",
+    ) as HTMLInputElement;
     const userNameInput = document.querySelector(
       "#user-name",
     ) as HTMLInputElement;
@@ -1009,6 +1012,9 @@ async function setupSettings() {
     aiContextLimitInput.value = (
       (await store.get<number>("aiContextLimit")) || 2000
     ).toString();
+    aiFontSizeInput.value = (
+      (await store.get<number>("aiFontSize")) || 14
+    ).toString();
     aiThinkingOverlayCheck.checked =
       (await store.get<boolean>("showAiThinkingOverlay")) ?? true;
     userNameInput.value = (await store.get<string>("aiChatUserName")) || "User";
@@ -1500,6 +1506,7 @@ async function setupSettings() {
         const newFaMaxTokens = parseInt(faMaxTokensInput.value, 10) || 30;
         const newAiContextLimit =
           parseInt(aiContextLimitInput.value, 10) || 2000;
+        const newAiFontSize = parseInt(aiFontSizeInput.value, 10) || 14;
         const newLocalModel = localLlmModelInput.value.trim();
         const newAiThinkingOverlay = aiThinkingOverlayCheck.checked;
         const newDisableGpuCompositing = checkDisableGpuCompositing?.checked;
@@ -1586,6 +1593,7 @@ async function setupSettings() {
         await store.set("aiMaxTokens", newAiMaxTokens);
         await store.set("faMaxTokens", newFaMaxTokens);
         await store.set("aiContextLimit", newAiContextLimit);
+        await store.set("aiFontSize", newAiFontSize);
         await store.set("showAiThinkingOverlay", newAiThinkingOverlay);
         // User Profile
         await store.set("aiChatUserName", userNameInput.value || "User");
@@ -1679,6 +1687,7 @@ async function setupSettings() {
           sdCfgScale: newSdCfg,
           faMaxTokens: newFaMaxTokens,
           aiContextLimit: newAiContextLimit,
+          aiFontSize: newAiFontSize,
           aiChatUserName: userNameInput.value || "User",
           aiChatUserIconPath: pendingUserIcon,
           aiChatAiName: aiNameInput.value || "AI",

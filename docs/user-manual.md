@@ -1,4 +1,4 @@
-# MirrorShard 2 v1.12.0 User Manual
+# MirrorShard 2 v1.13.0 User Manual
 
 ## Keyboard Shortcuts
 
@@ -907,9 +907,25 @@ In addition, you can create, save, and delete your own custom themes.
 
 ---
 
+### ■Linux
+
+* **Disable GPU Compositing**: Force-disables WebKitGTK GPU compositing. Use this if you experience rendering glitches or window crashes. *Note: Disabling GPU compositing will temporarily hide Spotlight Mode, Typing Sound Effects, and Live Markdown Preview.*
+
+* **Main Editor Initial Size**: Specifies the initial window size preset for the main editor. *Only active when using the Niri window manager.*
+
+* **Open Sub-windows at Half-Height**: Launches sub-windows at compact proportions (40% W × 60% H) and automatically stacks them vertically into 2-row columns. *Only active when using the Niri window manager.*
+
+---
+
+### ■About
+
+* Displays current MirrorShard version information and allows you to manually check for software updates from GitHub.
+
+---
+
 ## Limitations on Linux
 
-Some features are currently unavailable in the Linux version.
+Currently, on the Linux version, some features may be restricted depending on your runtime environment (such as NVIDIA GPUs or Virtual Machines). 
 
 For details, please refer to:
 **linux-support.md**

@@ -530,6 +530,14 @@ async function applyAppearanceSettings() {
     root.removeProperty("--user-font-family");
   }
 
+  // フォントサイズ (aiFontSize)
+  const fontSize = await store.get<number>("aiFontSize");
+  if (fontSize) {
+    root.setProperty("--user-font-size", `${fontSize}px`);
+  } else {
+    root.removeProperty("--user-font-size");
+  }
+
   // 3. チャットバルーンの背景色 (chatBubbleBg)
   const bubbleBg = await store.get<string>("customEditorBg");
   if (bubbleBg) {
@@ -662,6 +670,11 @@ function setupSettingsListener() {
       } else {
         root.removeProperty("--user-font-family");
       }
+    }
+    if (p.aiFontSize !== undefined) {
+      if (p.aiFontSize)
+        root.setProperty("--user-font-size", `${p.aiFontSize}px`);
+      else root.removeProperty("--user-font-size");
     }
     if (p.customEditorBg !== undefined) {
       if (p.customEditorBg)

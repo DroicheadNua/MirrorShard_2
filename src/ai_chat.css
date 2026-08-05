@@ -72,7 +72,7 @@ body.dark-mode #ai-wrapper {
     width: 24px;
     height: 24px;
     cursor: pointer;
-    font-size: 12px;
+    font-size: calc(var(--user-font-size, 14px) - 2px);
     text-align: center;
     -webkit-app-region: no-drag;
     z-index: 150;
@@ -115,7 +115,7 @@ body.dark-mode #ai-wrapper {
 .custom-select-trigger {
     width: 100%;
     padding: 2px 5px;
-    font-size: 11px;
+    font-size: calc(var(--user-font-size, 14px) - 3px);
     color: var(--ui-text-color, #eee);
     background: transparent;
     border: 1px solid var(--ui-text-color, #888);
@@ -138,7 +138,7 @@ body.code-mode .custom-select-trigger {
 /* 矢印アイコン（CSSで描画） */
 .custom-select-trigger::after {
     content: "▼";
-    font-size: 8px;
+    font-size: calc(var(--user-font-size, 14px) - 6px);
     position: absolute;
     right: 8px;
     top: 50%;
@@ -182,7 +182,7 @@ body.code-mode .custom-options {
 
 .custom-option {
     padding: 5px 10px;
-    font-size: 11px;
+    font-size: calc(var(--user-font-size, 14px) - 3px);
     color: var(--ui-text-color, #eee);
     cursor: pointer;
     transition: background 0.2s;
@@ -264,7 +264,7 @@ body.dark-mode #chat-form {
     border-radius: 8px;
     padding: 8px;
     font-family: inherit;
-    font-size: 14px;
+    font-size: var(--user-font-size, 14px);
     max-height: 240px;
     box-sizing: border-box;
     background-color: var(--editor-bg-color, ivory);

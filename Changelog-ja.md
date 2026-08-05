@@ -9,6 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [unreleased]  
 
 ### Added (新機能)  
+-　AIチャットウィンドウの文字サイズを変更可能に（設定画面のAIタブで設定）  
 - Linux: 設定画面に「Linux」タブを追加。  
 - Linux: Niri環境向けに「サブウィンドウをハーフサイズ（2段組）で開く」オプションを追加（幅40%×高さ60%で起動し、自動的に2段組スタック化されます）。  
 - Linux: Niri等のタイリングWM向けに、メインエディタの初期ウィンドウサイズプリセット機能を追加。  

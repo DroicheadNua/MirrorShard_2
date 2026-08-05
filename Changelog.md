@@ -10,6 +10,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [unreleased]
 
 ### Added
+- You can now change the font size in the AI chat window (configure this in the AI tab of the Settings screen)
 - Linux: Added a dedicated "Linux" tab to the Settings window.
 - Linux: Added an "Open Sub-windows at Half-Height" option for Niri tiling WM (automatically stacks sub-windows vertically at 40% W × 60% H).
 - Linux: Added main editor initial window size presets specifically tuned for Niri / tiling window managers.

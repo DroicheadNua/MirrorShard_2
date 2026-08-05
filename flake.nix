@@ -60,7 +60,7 @@
         # 「完全に自律したラッパーバイナリ」を出力
         packages.default = pkgs.stdenv.mkDerivation {
           pname = "mirrorshard2";
-          version = "1.12.0"; # バージョンに合わせて変更
+          version = "1.13.0"; # バージョンに合わせて変更
 
           # プロジェクト全体ではなくリリースバイナリが存在するディレクトリだけをソースにする
           # これによりnode_modules等の不要なコピーを完全にスキップ
