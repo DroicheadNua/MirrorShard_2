@@ -50,6 +50,7 @@ const apiTrigger = document.getElementById("api-selector-trigger");
 const apiOptions = document.getElementById("api-selector-options");
 const searchTrigger = document.getElementById("search-selector-trigger");
 const searchOptions = document.getElementById("search-selector-options");
+const wrapper = document.getElementById("ai-wrapper");
 
 const TRANSPARENT_ICON =
   "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII=";
@@ -67,7 +68,8 @@ let aiIconSrc = "";
 let isChatDirty = false;
 let agentAbortController: AbortController | null = null;
 let imageGenAbortController: AbortController | null = null;
-const osType = await type();
+const osType = type();
+let isSimpleFullscreen = false;
 
 const aiChat = new AiChat(onAiUpdate);
 
@@ -948,13 +950,13 @@ function setupEventListeners() {
     // F11 : 最大化トグル(Win/Linux)
     if (!isMac && e.key === "F11") {
       e.preventDefault();
-      await getCurrentWindow().toggleMaximize();
+      await AIToggleFullscreen();
       return;
     }
     // 最大化トグル(Mac)
     if (isMac && isCtrl && isCmd && key === "f") {
       e.preventDefault();
-      await getCurrentWindow().toggleMaximize();
+      await AIToggleFullscreen();
       return;
     }
 
@@ -1013,7 +1015,7 @@ function setupEventListeners() {
     ?.addEventListener("click", () => getCurrentWindow().close());
   document
     .getElementById("ai-fullscreen-btn")
-    ?.addEventListener("click", () => getCurrentWindow().toggleMaximize());
+    ?.addEventListener("click", () => AIToggleFullscreen());
 
   document
     .getElementById("ai-clear-log-btn")
@@ -1029,6 +1031,26 @@ function setupEventListeners() {
     ?.addEventListener("click", loadLog);
 
   messageInput.addEventListener("input", resizeTextarea);
+}
+
+// フルスクリーン処理を他ウィンドウと統一
+// （旧実装は await getCurrentWindow().toggleMaximize(); ）
+
+async function AIToggleFullscreen() {
+  isSimpleFullscreen = !isSimpleFullscreen;
+  await invoke("set_simple_fullscreen", { enable: isSimpleFullscreen });
+  if (osType !== "macos" && wrapper) {
+    wrapper.style.borderRadius = isSimpleFullscreen ? "0px" : "6px";
+  }
+  if (!isSimpleFullscreen && osType === "linux") {
+    setTimeout(async () => {
+      try {
+        await invoke("trigger_niri_stack");
+      } catch (e) {
+        console.error("再スタックに失敗しました:", e);
+      }
+    }, 150);
+  }
 }
 
 // --- ロジック ---

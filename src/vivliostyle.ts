@@ -704,6 +704,15 @@ p:blank::before {
     if (osType !== "macos" && this.wrapper) {
       this.wrapper.style.borderRadius = this.isSimpleFullscreen ? "0px" : "6px";
     }
+    if (!this.isSimpleFullscreen && osType === "linux") {
+      setTimeout(async () => {
+        try {
+          await invoke("trigger_niri_stack");
+        } catch (e) {
+          console.error("再スタックに失敗しました:", e);
+        }
+      }, 150);
+    }
   }
 }
 

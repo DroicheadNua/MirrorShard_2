@@ -513,6 +513,15 @@ async function initPreview() {
     if (osType !== "macos" && wrapper) {
       wrapper.style.borderRadius = isSimpleFullscreen ? "0px" : "6px";
     }
+    if (!isSimpleFullscreen && osType === "linux") {
+      setTimeout(async () => {
+        try {
+          await invoke("trigger_niri_stack");
+        } catch (e) {
+          console.error("再スタックに失敗しました:", e);
+        }
+      }, 150);
+    }
   }
 
   // --- 閉じる ---
