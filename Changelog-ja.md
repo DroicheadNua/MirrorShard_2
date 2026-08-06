@@ -9,7 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [unreleased]  
 
 ### Added (新機能)  
--　AIチャットウィンドウの文字サイズを変更可能に（設定画面のAIタブで設定）  
+- AIチャットウィンドウの文字サイズを変更可能に（設定画面のAIタブで設定）  
 - Linux: 設定画面に「Linux」タブを追加。  
 - Linux: Niri環境向けに「サブウィンドウをハーフサイズ（2段組）で開く」オプションを追加（幅40%×高さ60%で起動し、自動的に2段組スタック化されます）。  
 - Linux: Niri等のタイリングWM向けに、メインエディタの初期ウィンドウサイズプリセット機能を追加。  
@@ -17,7 +17,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Changed (変更点)  
 - Linux: Wayland環境下で `GTK_IM_MODULE=wayland` を自動適用し、直接インライン日本語入力（Fcitx5 / IBus）に対応。  
 - Linux: Intel/AMDグラボおよびSmithay系コンポジター（Niri, COSMIC, DriftWM）でGPUコンポジットを自動有効化（手動で無効化するトグルも追加）。  
-- Linux: GPUコンポジット有効時、スポットライトモード・タイプ音・マークダウン/HTMLプレビューの機能制限を解除。  
+- Linux: GPUコンポジット有効時、タイプ音・マークダウン/HTMLプレビューの機能制限を解除。  
 - Linux: Native Rust オーディオエンジン（`rodio`）による軽量BGMストリーミング再生に対応し、メモリ消費量を削減。  
 - Linux: Niri環境において、内蔵ターミナルを自動的にフローティング小窓として開くように変更。  
 

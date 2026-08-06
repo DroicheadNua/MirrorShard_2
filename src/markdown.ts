@@ -37,6 +37,7 @@ let currentMode = "markdown"; // 'markdown' | 'html'
 let useHardBreaks = false;
 let isPinned = false;
 let zoomLevel = 100;
+let isFirstLoad = true;
 
 async function renderContent() {
     if (!contentDiv) return;
@@ -218,12 +219,13 @@ async function init() {
         }, 200);
 
         // 6. ウィンドウ表示 (描画完了を見越して待つ)
-        await invoke("ping_window_ready", { label: "markdown" });
-        setTimeout(async () => {
-            const win = getCurrentWindow();
-            if (!(await win.isVisible())) {
-                await win.show();
-                await win.setFocus();
+        if (isFirstLoad) {
+            await invoke("ping_window_ready", { label: "markdown" });
+            setTimeout(async () => {
+                const win = getCurrentWindow();
+                if (!(await win.isVisible())) {
+                    await win.show();
+                    await win.setFocus();
             }
         }, 100);
 
@@ -231,6 +233,8 @@ async function init() {
         if (osType === "linux") {
           await invoke("trigger_niri_stack");
         }
+          isFirstLoad = false;
+      }
     });
 
     // ダークモード同期

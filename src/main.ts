@@ -351,6 +351,7 @@ class App {
 
   // --- 降雪エフェクトの切り替え ---
   private async toggleSnowEffect() {
+    if (this.currentOs === "linux") return;
     this.isSnowing = !this.isSnowing;
 
     if (this.isSnowing) {
@@ -2290,21 +2291,20 @@ ${instructionFiller}
     }
 
     // Linux の場合は Rust 側にフル機能許可フラグを問い合わせる
-    if (this.currentOs === "linux") {
-      this.isFullFeatureAvailable = await invoke<boolean>("is_full_feature_supported");
-    }
+        if (this.currentOs === "linux") {
+          this.isFullFeatureAvailable = await invoke<boolean>("is_full_feature_supported");
 
-    // Linuxのときは一部機能を使用不可に
-    if (
-      !this.isFullFeatureAvailable &&
-      this.markdownBtn &&
-      this.typesoundBtn &&
-      this.spotlightBtn
-    ) {
-      this.markdownBtn.style.display = "none";
-      this.typesoundBtn.style.display = "none";
-      this.spotlightBtn.style.display = "none";
-    }
+          // スポットライトボタンはLinuxでは無条件で非表示
+          if (this.spotlightBtn) {
+            this.spotlightBtn.style.display = "none";
+          }
+
+          // マークダウンとタイプ音は、GPUコンポジットOFF時のみ非表示
+          if (!this.isFullFeatureAvailable) {
+            if (this.markdownBtn) this.markdownBtn.style.display = "none";
+            if (this.typesoundBtn) this.typesoundBtn.style.display = "none";
+          }
+        }
 
     // テーマとフォントの定義
     this.defineThemesAndFonts();
@@ -4614,7 +4614,7 @@ ${instructionFiller}
 
   // トグル関数
   private toggleSpotlightMode() {
-    if (!this.isFullFeatureAvailable) return;
+    if (this.currentOs === "linux") return;
     if (this.isCodeMode) return;
     if (this.isSpotlightMode) {
       this.isSpotlightMode = false;

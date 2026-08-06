@@ -18,14 +18,20 @@ MirrorShard automatically optimizes its rendering pipeline depending on your sys
   If you encounter rendering issues, you can force-disable GPU compositing by running `MIRRORSHARD_DISABLE_COMPOSITING=1 mirrorshard2` in your terminal.
 
 ### Restricted Features (When GPU Compositing is Disabled)
-When GPU compositing is disabled, the following features will be hidden/unavailable:
-* Live Markdown / HTML Preview
-* Typing Sound Effects
-* Spotlight Mode
+
+In the Linux version, the following features are disabled in all environments to ensure stability:
+・Spotlight Mode
+・Snowfall Effect
+
+Additionally, if GPU compositing is disabled, the following features will also be unavailable:
+・Markdown/HTML Preview
+・Keyboard Sound Playback
 
 ### 🎨 Rendering & Linux-Specific Quirks
 
-When GPU compositing is disabled, the following minor quirks may occur:
+* **Color Picker Malfunction**: Due to limitations in the browser engine on Linux systems, the color selection dialog may not display properly when you click the color picker in the settings screen (such as the “Appearance” tab). In that case, please enter the color code (e.g., `#3b3b3b` or `rgba(0,0,0,0.5)`) directly into the adjacent text field to apply it.
+
+Additionally, issues such as the following may occur when GPU compositing is disabled.
 
 * **Ghosting on Semi-Transparent Backgrounds**: If window background transparency is enabled, character ghosting may appear during editing. Scrolling will force a re-render and clear it (this does not occur if the background is opaque).
 * **Copy Limitation in Sub-Windows**: Due to multi-window IPC constraints on Linux, copying text inside sub-windows (such as the Settings modal) may be restricted (pasting remains functional).

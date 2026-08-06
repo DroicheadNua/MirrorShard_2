@@ -23,6 +23,8 @@ interface PreviewPayload {
   lineHeight: number;
 }
 
+let isFirstLoad = true;
+
 // 現在のテキストを保持する変数（印刷用）
 let currentRawText = "";
 let isSimpleFullscreen = false;
@@ -173,15 +175,18 @@ async function initPreview() {
         }
       }, 200);
       // 5. 描画完了後にウィンドウを表示
-      setTimeout(async () => {
-        await invoke("ping_window_ready", { label: "Preview" });
-        await getCurrentWindow().show();
-        await getCurrentWindow().setFocus();
-      }, 100);
+      if (isFirstLoad) {
+        setTimeout(async () => {
+          await invoke("ping_window_ready", { label: "Preview" });
+          await getCurrentWindow().show();
+          await getCurrentWindow().setFocus();
+        }, 100);
 
       // Niriスタックウィンドウのトリガー (Linuxのみ)
-      if (osType === "linux") {
-        await invoke("trigger_niri_stack");
+        if (osType === "linux") {
+          await invoke("trigger_niri_stack");
+        }
+        isFirstLoad = false;
       }
     }
 
