@@ -427,6 +427,32 @@ fn is_niri_compositor() -> bool {
     }
 }
 
+// Niri専用のターミナルフロート化コマンド
+#[tauri::command]
+async fn setup_niri_floating_terminal() -> Result<(), String> {
+    #[cfg(target_os = "linux")]
+    {
+        if is_niri_compositor() {
+            tokio::time::sleep(std::time::Duration::from_millis(50)).await;
+
+            // 1. フローティング状態にする
+            let _ = std::process::Command::new("niri")
+                .args(["msg", "action", "toggle-window-floating"])
+                .status();
+
+            // 2. 初期サイズ（幅35% × 高さ45%）にセット
+            let _ = std::process::Command::new("niri")
+                .args(["msg", "action", "set-window-width", "30%"])
+                .status();
+
+            let _ = std::process::Command::new("niri")
+                .args(["msg", "action", "set-window-height", "40%"])
+                .spawn();
+        }
+    }
+    Ok(())
+}
+
 // .settings.dat から disableGpuCompositing の設定値を直接読み取るヘルパー
 #[allow(dead_code)]
 fn is_user_disabled_gpu_compositing() -> bool {
@@ -483,7 +509,12 @@ fn is_full_feature_supported() -> bool {
 
 // スタック（上下2段組）の対象となる6つのサブウィンドウかを判定する
 // 6つのサブウィンドウだけを厳密に判定する（メインエディタの誤認識を防止）
-fn is_eligible_stack_target(title: &str) -> bool {
+fn is_eligible_stack_target(title: &str, app_id: &str) -> bool {
+    // 他のアプリをはじくガード
+    if !app_id.to_lowercase().contains("mirrorshard") {
+        return false;
+    }
+
     let t = title.to_lowercase();
 
     // メインエディタ（ファイル名や mirrorshard-ver02）を確実に排除
@@ -565,6 +596,8 @@ fn find_niri_stack_target_id() -> Option<u64> {
             active_title, curr_col
         );
 
+        let active_id = active.get("id").and_then(|i| i.as_u64());
+
         let check_column = |col_idx: u64| -> Option<u64> {
             let col_wins: Vec<_> = win_list
                 .iter()
@@ -572,19 +605,24 @@ fn find_niri_stack_target_id() -> Option<u64> {
                     let is_same_ws = w.get("workspace_id").and_then(|i| i.as_u64())
                         == active.get("workspace_id").and_then(|i| i.as_u64());
                     let is_same_col = get_niri_column_idx(w) == Some(col_idx);
-                    is_same_ws && is_same_col
+                    let is_not_self = w.get("id").and_then(|i| i.as_u64()) != active_id;
+
+                    is_same_ws && is_same_col && is_not_self
                 })
                 .collect();
 
             if col_wins.len() == 1 {
                 let w = col_wins[0];
                 let title = w.get("title").and_then(|t| t.as_str()).unwrap_or("");
+                // app_id も抽出する
+                let app_id = w.get("app_id").and_then(|a| a.as_str()).unwrap_or("");
                 let is_floating = w
                     .get("is_floating")
                     .and_then(|f| f.as_bool())
                     .unwrap_or(false);
 
-                if !is_floating && is_eligible_stack_target(title) {
+                // title と app_id の両方を引き渡す
+                if !is_floating && is_eligible_stack_target(title, app_id) {
                     println!(
                         "🎯 [Niri Scan] 条件に一致するターゲット窓を発見: '{}' (ID: {})",
                         title,
@@ -1857,8 +1895,6 @@ async fn open_terminal_window(app: tauri::AppHandle, id: Option<String>) -> Resu
     // ユニークなIDをURLに渡す
     let url = format!("terminal.html?id={}", session_id);
 
-    let is_niri = is_niri_compositor();
-
     let builder =
         tauri::WebviewWindowBuilder::new(&app, &label, tauri::WebviewUrl::App(url.into()))
             .title(match session_id.as_str() {
@@ -1869,7 +1905,7 @@ async fn open_terminal_window(app: tauri::AppHandle, id: Option<String>) -> Resu
             })
             .inner_size(640.0, 480.0) // デフォルトサイズ
             .min_inner_size(640.0, 480.0)
-            .resizable(!is_niri) // Niri環境では resizable(false) にして自動フロート小窓化
+            .resizable(true)
             .decorations(false)
             .transparent(true)
             .visible(false);
@@ -3141,6 +3177,7 @@ pub fn run() {
             apply_niri_size_preset,
             trigger_niri_stack,
             ping_window_ready,
+            setup_niri_floating_terminal,
         ])
         .on_window_event(|window, event| match event {
             // 1. メインウィンドウの終了確認

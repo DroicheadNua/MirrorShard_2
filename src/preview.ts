@@ -463,6 +463,14 @@ async function initPreview() {
       invoke("open_vivliostyle");
     }
 
+    if (
+      (isCtrlOrCmd && key === "`") ||
+      (isCtrlOrCmd && key === "@")
+    ) {
+      e.preventDefault();
+      invoke("open_terminal_window");
+    }
+
   });
 
   // --- 右クリックメニューの無効化 ---

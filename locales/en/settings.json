@@ -198,7 +198,8 @@
     "defaultIcon": "(Default)",
     "obscuraPathLabel": "Obscura Path",
     "tavilyApiKeyLabel": "Tavily API Key",
-    "enableTavily": "Enable Tavily"
+    "enableTavily": "Enable Tavily",
+    "fontSizeLabel": "Chat Font Size"
   },
   "alerts": {
     "settingsSaveFailed": "Failed to save settings: {{err}}",

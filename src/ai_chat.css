@@ -115,7 +115,7 @@ body.dark-mode #ai-wrapper {
 .custom-select-trigger {
     width: 100%;
     padding: 2px 5px;
-    font-size: calc(var(--user-font-size, 14px) - 3px);
+    font-size: 11px;
     color: var(--ui-text-color, #eee);
     background: transparent;
     border: 1px solid var(--ui-text-color, #888);
@@ -138,7 +138,7 @@ body.code-mode .custom-select-trigger {
 /* 矢印アイコン（CSSで描画） */
 .custom-select-trigger::after {
     content: "▼";
-    font-size: calc(var(--user-font-size, 14px) - 6px);
+    font-size: 8px;
     position: absolute;
     right: 8px;
     top: 50%;
@@ -182,7 +182,7 @@ body.code-mode .custom-options {
 
 .custom-option {
     padding: 5px 10px;
-    font-size: calc(var(--user-font-size, 14px) - 3px);
+    font-size: 11px;
     color: var(--ui-text-color, #eee);
     cursor: pointer;
     transition: background 0.2s;
@@ -332,7 +332,6 @@ body.dark-mode #send-btn {
         linear-gradient(to bottom, #4caf50, #45a049)
     );
     color: var(--editor-text-color, white);
-    font-weight: bold;
     cursor: pointer;
     box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
     transition: all 0.2s ease;

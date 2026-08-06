@@ -383,6 +383,7 @@
 
                     await invoke("ping_window_ready", { label: "Export" });
                     await getCurrentWindow().show();
+                    await getCurrentWindow().setFocus();
                     const osType = type();
                     if (osType === "linux") {
                       await invoke("trigger_niri_stack");

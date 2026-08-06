@@ -6,6 +6,7 @@ import { Store } from '@tauri-apps/plugin-store';
 import { getCurrentWindow } from '@tauri-apps/api/window';
 import { Menu, MenuItem, PredefinedMenuItem } from '@tauri-apps/api/menu';
 import { readText, writeText } from '@tauri-apps/plugin-clipboard-manager';
+import { type } from "@tauri-apps/plugin-os";
 
 import '@xterm/xterm/css/xterm.css';
 
@@ -239,8 +240,16 @@ async function init() {
 
     // 表示
     const win = getCurrentWindow();
+  await invoke("ping_window_ready", { label: "terminal" });
     await win.show();
     term.focus();
+
+    // Niri環境の時だけフロート化＆リサイズをキック
+    const osType = type();
+    if (osType === "linux") {
+      await invoke("setup_niri_floating_terminal");
+    }
+
     // フォントのロードを待ち、その後に fit を実行する
     // (これをしないと、文字幅の計算がズレてレイアウトが崩れる)
     await document.fonts.ready;

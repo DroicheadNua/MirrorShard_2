@@ -490,6 +490,7 @@ async function init() {
   });
   await invoke("ping_window_ready", { label: "AI Chat" });
   await getCurrentWindow().show();
+  await getCurrentWindow().setFocus();
   // Niriスタックウィンドウのトリガー (Linuxのみ)
   if (osType === "linux") {
     await invoke("trigger_niri_stack");
@@ -976,6 +977,14 @@ function setupEventListeners() {
     if (isCtrlOrCmd && key === "b" && isShift) {
       e.preventDefault();
       invoke("open_vivliostyle");
+    }
+
+    if (
+      (isCtrlOrCmd && key === "`") ||
+      (isCtrlOrCmd && key === "@")
+    ) {
+      e.preventDefault();
+      invoke("open_terminal_window");
     }
 
     if (isCtrlOrCmd && key === "f" && !isShift) {

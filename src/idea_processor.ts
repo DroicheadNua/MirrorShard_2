@@ -2280,6 +2280,14 @@ function setupKeyboardEvents() {
       invoke("open_vivliostyle");
     }
 
+    if (
+      (isCtrl && key === "`") ||
+      (isCtrl && key === "@")
+    ) {
+      e.preventDefault();
+      invoke("open_terminal_window");
+    }
+
     // Shift + Enter : 画面中央にノード作成
     if (isShift && e.key === "Enter") {
       e.preventDefault();
@@ -5930,6 +5938,7 @@ document.addEventListener("DOMContentLoaded", async () => {
   // 4. ウィンドウ表示とシャドウ無効解除 ＆ Niriスタック
   await invoke("ping_window_ready", { label: "Idea Processor" });
   await getCurrentWindow().show();
+  await getCurrentWindow().setFocus();
 
   if (osType === "linux") {
     await invoke("trigger_niri_stack");

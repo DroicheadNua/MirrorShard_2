@@ -24,7 +24,7 @@ const openBrowserBtn = document.getElementById('btn-open-browser');
 const pinBtn = document.getElementById('btn-pin');
 const devToolsBtn = document.getElementById('btn-devtools');
 const modeSelect = document.getElementById('preview-mode-select') as HTMLSelectElement;
-const osType = await type();
+const osType = type();
 if (osType === 'macos') document.body.classList.add('is-mac');
 const contentDiv = document.getElementById('markdown-content');
 const wrapper = document.getElementById('md-wrapper');
@@ -218,6 +218,7 @@ async function init() {
         }, 200);
 
         // 6. ウィンドウ表示 (描画完了を見越して待つ)
+        await invoke("ping_window_ready", { label: "markdown" });
         setTimeout(async () => {
             const win = getCurrentWindow();
             if (!(await win.isVisible())) {
@@ -227,7 +228,6 @@ async function init() {
         }, 100);
 
         // Niriスタックウィンドウのトリガー (Linuxのみ)
-        const osType = await type();
         if (osType === "linux") {
           await invoke("trigger_niri_stack");
         }
@@ -452,6 +452,14 @@ async function init() {
         if (isCtrlOrCmd && key === "b" && isShift) {
           e.preventDefault();
           invoke("open_vivliostyle");
+        }
+
+        if (
+          (isCtrlOrCmd && key === "`") ||
+          (isCtrlOrCmd && key === "@")
+        ) {
+          e.preventDefault();
+          invoke("open_terminal_window");
         }
 
     });

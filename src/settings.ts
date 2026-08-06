@@ -1619,7 +1619,7 @@ async function setupSettings() {
           await store.set("disableGpuCompositing", newDisableGpuCompositing);
         if (newEditorSizePreset !== undefined) {
           await store.set("mainEditorSizePreset", newEditorSizePreset);
-          // Niri環境なら「適用」を押した瞬間に即座にリアルタイムリサイズを実行！
+          // Niri環境なら「適用」を押した瞬間に即座にリアルタイムリサイズを実行
           try {
             await invoke("apply_niri_size_preset", { preset: newEditorSizePreset });
         } catch (e) {
@@ -1764,6 +1764,14 @@ async function setupSettings() {
         invoke("open_vivliostyle");
       }
 
+      if (
+        (isCtrlOrCmd && key === "`") ||
+        (isCtrlOrCmd && key === "@")
+      ) {
+        e.preventDefault();
+        invoke("open_terminal_window");
+      }
+
       if (isCtrlOrCmd && key === "r") {
         e.preventDefault();
       }
@@ -1836,6 +1844,7 @@ async function setupSettings() {
     await setupAboutTab();
     await invoke("ping_window_ready", { label: "Settings" });
     await getCurrentWindow().show();
+    await getCurrentWindow().setFocus();
     if (osType === "linux") {
       await invoke("trigger_niri_stack");
     }

@@ -218,6 +218,14 @@ class VivliostyleManager {
       invoke("open_vivliostyle");
     }
 
+    if (
+      (isCtrlOrCmd && key === "`") ||
+      (isCtrlOrCmd && key === "@")
+    ) {
+      e.preventDefault();
+      invoke("open_terminal_window");
+    }
+
     if (isCtrlOrCmd && key === "h") {
       e.preventDefault();
       appWindow.minimize();
@@ -721,6 +729,7 @@ window.addEventListener("DOMContentLoaded", async () => {
   await manager.init();
   await invoke("ping_window_ready", { label: "Vivliostyle" });
   await getCurrentWindow().show();
+  await getCurrentWindow().setFocus();
   // Niriスタックウィンドウのトリガー (Linuxのみ)
   if (osType === "linux") {
     await invoke("trigger_niri_stack");
