@@ -2736,7 +2736,7 @@ async fn open_shortcut(app: AppHandle) {
     let _window = builder.build().unwrap();
     #[cfg(target_os = "macos")]
     {
-        let _ = window.eval("document.body.classList.add('is-mac');");
+        let _ = _window.eval("document.body.classList.add('is-mac');");
     }
 }
 

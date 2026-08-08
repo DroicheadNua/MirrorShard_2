@@ -40,6 +40,7 @@ Additionally, issues such as the following may occur when GPU compositing is dis
 * **Window Dragging Workaround**: If dragging the titlebar does not move the window on your compositor, use standard Linux shortcuts: `Alt + Left-Click Drag` or `Super + Left-Click Drag`.
 * **Text Selection via Dragging**: In some virtualized or Wayland environments, mouse drag selection may fail. Use `Click start point ➔ Hold Shift + Click end point` to select text cleanly.
 * **Scroll Direction Inversion**: In rare cases, dragging the scrollbar thumb may invert direction.
+* **Context Menu (Right-Click) Unavailability**: In certain Linux environments (especially under X11 or virtual machines), the right-click context menu may fail to render inside the editor. Please use standard keyboard shortcuts (Ctrl+C / Ctrl+V) for copy and paste operations.
 
 ---
 
