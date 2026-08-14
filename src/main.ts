@@ -1531,7 +1531,7 @@ ${instructionFiller}
     signal?: AbortSignal,
   ): Promise<string> {
     const model =
-      (await this.store.get<string>("geminiModel")) || "gemini-3.1-flash-lite";
+      (await this.store.get<string>("geminiModel")) || "gemini-3.5-flash-lite";
 
     // 数値として確実に取得する (Storeから文字列で返ってくる場合の対策)
     // オーバーライドがあればそれを使い、なければ設定値を使う

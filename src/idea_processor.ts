@@ -4180,7 +4180,7 @@ async function triggerFreeAssociation() {
     if (ipAiApi === "gemini") {
       const apiKey = await store.get<string>("geminiApiKey");
       const model =
-        (await store.get<string>("geminiModel")) || "gemini-3.1-flash-lite";
+        (await store.get<string>("geminiModel")) || "gemini-3.5-flash-lite";
       console.log(`Loaded:${model}`);
       if (!apiKey) throw new Error(t("ideaProcessor.ai.geminiAPIError"));
 

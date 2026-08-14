@@ -964,7 +964,7 @@ async function setupSettings() {
       (await store.get<string>("mistralAgentID")) || "";
     if (geminiModelInput) {
       geminiModelInput.value =
-        (await store.get<string>("geminiModel")) || "gemini-3.1-flash-lite";
+        (await store.get<string>("geminiModel")) || "gemini-3.5-flash-lite";
     }
     groqModelInput.value =
       (await store.get<string>("groqModel")) || "llama-3.3-70b-versatile";

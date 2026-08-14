@@ -54,7 +54,7 @@ export class AiChat {
     if (this.currentSettings.apiType === "gemini") {
       const apiKey = this.currentSettings.geminiApiKey;
       const modelName =
-        this.currentSettings.geminiModel || "gemini-3.1-flash-lite";
+        this.currentSettings.geminiModel || "gemini-3.5-flash-lite";
       if (apiKey) {
         this.genAI = new GoogleGenerativeAI(apiKey);
         this.model = this.genAI.getGenerativeModel({
