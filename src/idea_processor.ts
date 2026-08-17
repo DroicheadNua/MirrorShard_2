@@ -4223,7 +4223,7 @@ async function triggerFreeAssociation() {
         url = "https://api.groq.com/openai/v1/chat/completions";
         apiKey = (await store.get<string>("groqApiKey")) || "";
         model =
-          (await store.get<string>("groqModel")) || "llama-3.3-70b-versatile";
+          (await store.get<string>("groqModel")) || "openai/gpt-oss-20b";
       } else if (ipAiApi === "cerebras") {
         url = "https://api.cerebras.ai/v1/chat/completions";
         apiKey = (await store.get<string>("cerebrasApiKey")) || "";
@@ -4538,7 +4538,7 @@ async function triggerTemplateCompletion() {
         url = "https://api.groq.com/openai/v1/chat/completions";
         apiKey = (await store.get<string>("groqApiKey")) || "";
         model =
-          (await store.get<string>("groqModel")) || "llama-3.3-70b-versatile";
+          (await store.get<string>("groqModel")) || "openai/gpt-oss-20b";
       } else if (ipAiApi === "cerebras") {
         url = "https://api.cerebras.ai/v1/chat/completions";
         apiKey = (await store.get<string>("cerebrasApiKey")) || "";
@@ -4913,7 +4913,7 @@ async function triggerNodeAlchemy() {
         url = "https://api.groq.com/openai/v1/chat/completions";
         apiKey = (await store.get<string>("groqApiKey")) || "";
         model =
-          (await store.get<string>("groqModel")) || "llama-3.3-70b-versatile";
+          (await store.get<string>("groqModel")) || "openai/gpt-oss-20b";
       } else if (ipAiApi === "cerebras") {
         url = "https://api.cerebras.ai/v1/chat/completions";
         apiKey = (await store.get<string>("cerebrasApiKey")) || "";
@@ -5256,7 +5256,7 @@ async function triggerIpMissingLink() {
         url = "https://api.groq.com/openai/v1/chat/completions";
         apiKey = (await store.get<string>("groqApiKey")) || "";
         model =
-          (await store.get<string>("groqModel")) || "llama-3.3-70b-versatile";
+          (await store.get<string>("groqModel")) || "openai/gpt-oss-20b";
       } else if (ipAiApi === "cerebras") {
         url = "https://api.cerebras.ai/v1/chat/completions";
         apiKey = (await store.get<string>("cerebrasApiKey")) || "";

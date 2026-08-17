@@ -967,7 +967,7 @@ async function setupSettings() {
         (await store.get<string>("geminiModel")) || "gemini-3.5-flash-lite";
     }
     groqModelInput.value =
-      (await store.get<string>("groqModel")) || "llama-3.3-70b-versatile";
+      (await store.get<string>("groqModel")) || "openai/gpt-oss-20b";
     cerebrasModelInput.value =
       (await store.get<string>("cerebrasModel")) || "gemma-4-31b";
     openRouterModelInput.value =

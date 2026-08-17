@@ -97,7 +97,7 @@ export class AiChat {
       if (apiType === "groq") {
         url = "https://api.groq.com/openai/v1/chat/completions";
         apiKey = this.currentSettings.groqApiKey || "";
-        model = this.currentSettings.groqModel || "llama-3.3-70b-versatile";
+        model = this.currentSettings.groqModel || "openai/gpt-oss-20b";
       } else if (apiType === "cerebras") {
         url = "https://api.cerebras.ai/v1/chat/completions";
         apiKey = this.currentSettings.cerebrasApiKey || "";

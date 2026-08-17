@@ -938,7 +938,7 @@ class App {
           apiKey = (await this.store.get<string>("groqApiKey")) || "";
           model =
             (await this.store.get<string>("groqModel")) ||
-            "llama-3.3-70b-versatile";
+            "openai/gpt-oss-20b";
         } else if (this.mainAiApi === "cerebras") {
           url = "https://api.cerebras.ai/v1/chat/completions";
           apiKey = (await this.store.get<string>("cerebrasApiKey")) || "";
@@ -1124,7 +1124,7 @@ ${instructionFiller}
           apiKey = (await this.store.get<string>("groqApiKey")) || "";
           model =
             (await this.store.get<string>("groqModel")) ||
-            "llama-3.3-70b-versatile";
+            "openai/gpt-oss-20b";
         } else if (this.mainAiApi === "cerebras") {
           url = "https://api.cerebras.ai/v1/chat/completions";
           apiKey = (await this.store.get<string>("cerebrasApiKey")) || "";
@@ -1437,7 +1437,7 @@ ${instructionFiller}
           apiKey = (await this.store.get<string>("groqApiKey")) || "";
           model =
             (await this.store.get<string>("groqModel")) ||
-            "llama-3.3-70b-versatile";
+            "openai/gpt-oss-20b";
         } else if (this.mainAiApi === "cerebras") {
           url = "https://api.cerebras.ai/v1/chat/completions";
           apiKey = (await this.store.get<string>("cerebrasApiKey")) || "";
@@ -1814,7 +1814,7 @@ ${instructionFiller}
             apiKey = (await this.store.get<string>("groqApiKey")) || "";
             model =
               (await this.store.get<string>("groqModel")) ||
-              "llama-3.3-70b-versatile";
+              "openai/gpt-oss-20b";
           } else if (this.mainAiApi === "cerebras") {
             url = "https://api.cerebras.ai/v1/chat/completions";
             apiKey = (await this.store.get<string>("cerebrasApiKey")) || "";

@@ -1762,7 +1762,7 @@ async function runWebAgentViaRust() {
       baseUrl = "https://api.groq.com/openai/v1";
       apiKey = (await store?.get<string>("groqApiKey")) || "";
       model =
-        (await store?.get<string>("groqModel")) || "llama-3.3-70b-versatile";
+        (await store?.get<string>("groqModel")) || "openai/gpt-oss-20b";
     } else if (apiType === "cerebras") {
       baseUrl = "https://api.cerebras.ai/v1";
       apiKey = (await store?.get<string>("cerebrasApiKey")) || "";
