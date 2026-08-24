@@ -7,6 +7,7 @@ import { open, ask } from "@tauri-apps/plugin-dialog";
 import { type } from "@tauri-apps/plugin-os";
 import { invoke } from "@tauri-apps/api/core";
 import { getVersion } from "@tauri-apps/api/app";
+import { openUrl } from "@tauri-apps/plugin-opener";
 import Picker from "vanilla-picker";
 // CSSのインポート
 import "./settings.css";
@@ -1828,7 +1829,7 @@ async function setupSettings() {
 
               document.getElementById("link-download")?.addEventListener("click", (e) => {
                 e.preventDefault();
-                open(data.html_url);
+                openUrl(data.html_url);
               });
             }
           } else {
