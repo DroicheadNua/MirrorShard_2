@@ -1,6 +1,7 @@
 // src-lib.rs
 
 #[cfg(target_os = "linux")]
+// wayland環境での描画不具合を修正するための処理をインポート
 mod wayland_nvidia;
 
 // --- use文 (ファイルの先頭に追加) ---
@@ -296,6 +297,7 @@ fn is_virtual_machine() -> bool {
 }
 
 #[allow(dead_code)]
+// Smithay系コンポジタだけを別扱いする処理
 fn is_compatible_compositor_for_nvidia() -> bool {
     let desktop = std::env::var("XDG_CURRENT_DESKTOP")
         .map(|v| v.to_lowercase())
@@ -305,6 +307,18 @@ fn is_compatible_compositor_for_nvidia() -> bool {
         || desktop.contains("niri")
         || desktop.contains("cosmic")
         || desktop.contains("drift")
+}
+
+// 共通判定: Nvidia + Wayland環境かどうか
+// (ワークアラウンド適用条件と、GPUコンポジットのON/OFF判定の両方から呼ぶ)
+#[allow(dead_code)]
+fn needs_nvidia_wayland_workaround() -> bool {
+    let is_wayland = std::env::var("WAYLAND_DISPLAY").is_ok()
+        || std::env::var("XDG_SESSION_TYPE")
+            .map(|v| v == "wayland")
+            .unwrap_or(false);
+
+    is_nvidia_gpu() && is_wayland
 }
 
 // Niri の IPC コマンドを叩いてカラム幅と高さを指定する
@@ -482,19 +496,30 @@ fn is_user_disabled_gpu_compositing() -> bool {
 // 共通判定: GPUコンポジットをオフにすべきか
 #[allow(dead_code)]
 fn should_disable_gpu_compositing() -> bool {
-    false // TEMP: Error 71 ワークアラウンド検証中、常にGPUコンポジットON
-    // let forced_by_env = std::env::var("MIRRORSHARD_DISABLE_COMPOSITING").is_ok();
-    // let forced_by_settings = is_user_disabled_gpu_compositing(); // 👈 設定画面のチェック
+    let forced_by_env = std::env::var("MIRRORSHARD_DISABLE_COMPOSITING").is_ok();
+    let forced_by_settings = is_user_disabled_gpu_compositing(); // 👈 設定画面のチェック
 
-    // if forced_by_env || forced_by_settings {
-    //     true // 手動指定時
-    // } else if is_virtual_machine() {
-    //     true // 仮想環境(VM)の時
-    // } else if is_nvidia_gpu() {
-    //     !is_compatible_compositor_for_nvidia() // NVIDIA実機: 対応コンポジター以外はOFF
-    // } else {
-    //     false // Intel / AMD 実機: 無条件でオン
-    // }
+    if forced_by_env || forced_by_settings {
+        true // 手動指定時
+    } else if is_virtual_machine() {
+        true // 仮想環境(VM)の時
+    } else if is_nvidia_gpu() {
+        !is_compatible_compositor_for_nvidia()
+    } else {
+        false // Intel / AMD 実機: 無条件でオン
+    }
+}
+
+#[allow(dead_code)]
+fn apply_wayland_nvidia_workaround(_window: &tauri::WebviewWindow) {
+    #[cfg(target_os = "linux")]
+    {
+        if needs_nvidia_wayland_workaround() && !is_compatible_compositor_for_nvidia() {
+            if let Ok(gtk_window) = _window.gtk_window() {
+                wayland_nvidia::force_paint_gl_context(&gtk_window);
+            }
+        }
+    }
 }
 
 // --- フロントエンドからの呼び出しコマンド ---
@@ -1923,9 +1948,14 @@ async fn open_terminal_window(app: tauri::AppHandle, id: Option<String>) -> Resu
     });
 
     #[cfg(debug_assertions)]
-    let _ = builder.devtools(true).build().map_err(|e| e.to_string())?;
+    let window = builder.devtools(true).build().map_err(|e| e.to_string())?;
     #[cfg(not(debug_assertions))]
-    let _ = builder.build().map_err(|e| e.to_string())?;
+    let window = builder.build().map_err(|e| e.to_string())?;
+
+    #[cfg(target_os = "linux")]
+    apply_wayland_nvidia_workaround(&window);
+    #[cfg(not(target_os = "linux"))]
+    let _ = &window;
 
     Ok(())
 }
@@ -2197,9 +2227,14 @@ async fn open_vivliostyle(app: AppHandle) {
     });
 
     #[cfg(debug_assertions)]
-    let _window = builder.devtools(true).build().unwrap();
+    let window = builder.devtools(true).build().unwrap();
     #[cfg(not(debug_assertions))]
-    let _window = builder.build().unwrap();
+    let window = builder.build().unwrap();
+
+    #[cfg(target_os = "linux")]
+    apply_wayland_nvidia_workaround(&window);
+    #[cfg(not(target_os = "linux"))]
+    let _ = &window;
 }
 
 #[tauri::command]
@@ -2233,9 +2268,16 @@ async fn open_markdown_preview(app: AppHandle) {
     });
 
     #[cfg(debug_assertions)]
-    let _ = builder.devtools(true).build();
+    let window = builder.devtools(true).build();
     #[cfg(not(debug_assertions))]
-    let _ = builder.build();
+    let window = builder.build();
+
+    if let Ok(window) = &window {
+        #[cfg(target_os = "linux")]
+        apply_wayland_nvidia_workaround(window);
+        #[cfg(not(target_os = "linux"))]
+        let _ = window;
+    }
 }
 
 // --- DOCX内のXMLを書き換えてルビを適用する関数 ---
@@ -2740,12 +2782,18 @@ async fn open_shortcut(app: AppHandle) {
     });
 
     #[cfg(debug_assertions)]
-    let _window = builder.devtools(true).build().unwrap();
+    let window = builder.devtools(true).build().unwrap();
     #[cfg(not(debug_assertions))]
-    let _window = builder.build().unwrap();
+    let window = builder.build().unwrap();
+
+    #[cfg(target_os = "linux")]
+    apply_wayland_nvidia_workaround(&window);
+    #[cfg(not(target_os = "linux"))]
+    let _ = &window;
+
     #[cfg(target_os = "macos")]
     {
-        let _ = _window.eval("document.body.classList.add('is-mac');");
+        let _ = window.eval("document.body.classList.add('is-mac');");
     }
 }
 
@@ -2780,9 +2828,14 @@ async fn open_ai_chat(app: AppHandle) {
     });
 
     #[cfg(debug_assertions)]
-    let _window = builder.devtools(true).build().unwrap();
+    let window = builder.devtools(true).build().unwrap();
     #[cfg(not(debug_assertions))]
-    let _window = builder.build().unwrap();
+    let window = builder.build().unwrap();
+
+    #[cfg(target_os = "linux")]
+    apply_wayland_nvidia_workaround(&window);
+    #[cfg(not(target_os = "linux"))]
+    let _ = &window;
 }
 
 // フロントエンドからの表示準備完了を検知するハンドシェイク用コマンド
@@ -2832,9 +2885,14 @@ async fn open_settings_window(app: AppHandle) {
     });
 
     #[cfg(debug_assertions)]
-    let _window = builder.devtools(true).build().unwrap();
+    let window = builder.devtools(true).build().unwrap();
     #[cfg(not(debug_assertions))]
-    let _window = builder.build().unwrap();
+    let window = builder.build().unwrap();
+
+    #[cfg(target_os = "linux")]
+    apply_wayland_nvidia_workaround(&window);
+    #[cfg(not(target_os = "linux"))]
+    let _ = &window;
 }
 
 #[tauri::command]
@@ -2870,9 +2928,14 @@ async fn open_export_window(app: AppHandle) {
     });
 
     #[cfg(debug_assertions)]
-    let _window = builder.devtools(true).build().unwrap();
+    let window = builder.devtools(true).build().unwrap();
     #[cfg(not(debug_assertions))]
-    let _window = builder.build().unwrap();
+    let window = builder.build().unwrap();
+
+    #[cfg(target_os = "linux")]
+    apply_wayland_nvidia_workaround(&window);
+    #[cfg(not(target_os = "linux"))]
+    let _ = &window;
 }
 
 #[tauri::command]
@@ -2907,9 +2970,14 @@ async fn open_preview_window(app: AppHandle) {
     });
 
     #[cfg(debug_assertions)]
-    let _window = builder.devtools(true).build().unwrap();
+    let window = builder.devtools(true).build().unwrap();
     #[cfg(not(debug_assertions))]
-    let _window = builder.build().unwrap();
+    let window = builder.build().unwrap();
+
+    #[cfg(target_os = "linux")]
+    apply_wayland_nvidia_workaround(&window);
+    #[cfg(not(target_os = "linux"))]
+    let _ = &window;
 }
 
 // --- フロントエンドからの問い合わせに応えるコマンド ---

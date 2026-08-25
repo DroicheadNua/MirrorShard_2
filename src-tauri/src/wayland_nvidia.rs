@@ -17,18 +17,3 @@ fn create_gl_context(window: &gtk::ApplicationWindow) {
         eprintln!("MirrorShard: GL context creation failed: {error}");
     }
 }
-
-/// 生成した WebviewWindow に対して、Nvidia+Wayland環境でのError 71対策を適用する。
-/// 対象外の環境では何もしない。ウィンドウ生成箇所すべてから呼ぶこと。
-#[cfg(target_os = "linux")]
-fn apply_wayland_nvidia_workaround(window: &tauri::WebviewWindow) {
-    if !is_nvidia_gpu() || !is_wayland_session() {
-        return;
-    }
-    if let Ok(gtk_window) = window.gtk_window() {
-        wayland_nvidia::force_paint_gl_context(&gtk_window);
-    }
-}
-
-#[cfg(not(target_os = "linux"))]
-fn apply_wayland_nvidia_workaround(_window: &tauri::WebviewWindow) {}

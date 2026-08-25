@@ -2950,6 +2950,7 @@ dependencies = [
  "encoding_rs",
  "epub-builder",
  "font-kit",
+ "gtk",
  "opener",
  "portable-pty",
  "regex",
