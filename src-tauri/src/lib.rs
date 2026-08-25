@@ -1,5 +1,8 @@
 // src-lib.rs
 
+#[cfg(target_os = "linux")]
+mod wayland_nvidia;
+
 // --- use文 (ファイルの先頭に追加) ---
 use encoding_rs::{SHIFT_JIS, UTF_8};
 use epub_builder::{EpubBuilder, EpubContent, ReferenceType, ZipLibrary};
@@ -479,18 +482,19 @@ fn is_user_disabled_gpu_compositing() -> bool {
 // 共通判定: GPUコンポジットをオフにすべきか
 #[allow(dead_code)]
 fn should_disable_gpu_compositing() -> bool {
-    let forced_by_env = std::env::var("MIRRORSHARD_DISABLE_COMPOSITING").is_ok();
-    let forced_by_settings = is_user_disabled_gpu_compositing(); // 👈 設定画面のチェック
+    false // TEMP: Error 71 ワークアラウンド検証中、常にGPUコンポジットON
+    // let forced_by_env = std::env::var("MIRRORSHARD_DISABLE_COMPOSITING").is_ok();
+    // let forced_by_settings = is_user_disabled_gpu_compositing(); // 👈 設定画面のチェック
 
-    if forced_by_env || forced_by_settings {
-        true // 手動指定時
-    } else if is_virtual_machine() {
-        true // 仮想環境(VM)の時
-    } else if is_nvidia_gpu() {
-        !is_compatible_compositor_for_nvidia() // NVIDIA実機: 対応コンポジター以外はOFF
-    } else {
-        false // Intel / AMD 実機: 無条件でオン
-    }
+    // if forced_by_env || forced_by_settings {
+    //     true // 手動指定時
+    // } else if is_virtual_machine() {
+    //     true // 仮想環境(VM)の時
+    // } else if is_nvidia_gpu() {
+    //     !is_compatible_compositor_for_nvidia() // NVIDIA実機: 対応コンポジター以外はOFF
+    // } else {
+    //     false // Intel / AMD 実機: 無条件でオン
+    // }
 }
 
 // --- フロントエンドからの呼び出しコマンド ---
@@ -2149,9 +2153,14 @@ async fn open_idea_processor(app: AppHandle) {
     });
 
     #[cfg(debug_assertions)]
-    let _window = builder.devtools(true).build().unwrap();
+    let window = builder.devtools(true).build().unwrap();
     #[cfg(not(debug_assertions))]
-    let _window = builder.build().unwrap();
+    let window = builder.build().unwrap();
+
+    #[cfg(target_os = "linux")]
+    apply_wayland_nvidia_workaround(&window);
+    #[cfg(not(target_os = "linux"))]
+    let _ = &window;
 }
 
 #[tauri::command]
@@ -3092,6 +3101,15 @@ pub fn run() {
                 // プレビューウィンドウと同じ設定を適用
                 let _ = window.set_title_bar_style(tauri::TitleBarStyle::Transparent);
             }
+
+            // Wayland/Nvidia の Error 71 対策（検証用: 常に適用）
+            #[cfg(target_os = "linux")]
+            if let Some(window) = app.get_webview_window("main") {
+                if let Ok(gtk_window) = window.gtk_window() {
+                    wayland_nvidia::force_paint_gl_context(&gtk_window);
+                }
+            }
+
             Ok(())
         })
         .plugin(tauri_plugin_single_instance::init(|app, argv, _cwd| {
