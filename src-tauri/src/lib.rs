@@ -296,18 +296,18 @@ fn is_virtual_machine() -> bool {
     false
 }
 
-#[allow(dead_code)]
+// #[allow(dead_code)]
 // Smithay系コンポジタだけを別扱いする処理
-fn is_compatible_compositor_for_nvidia() -> bool {
-    let desktop = std::env::var("XDG_CURRENT_DESKTOP")
-        .map(|v| v.to_lowercase())
-        .unwrap_or_default();
+// fn is_compatible_compositor_for_nvidia() -> bool {
+//     let desktop = std::env::var("XDG_CURRENT_DESKTOP")
+//         .map(|v| v.to_lowercase())
+//         .unwrap_or_default();
 
-    std::env::var("NIRI_SOCKET").is_ok()
-        || desktop.contains("niri")
-        || desktop.contains("cosmic")
-        || desktop.contains("drift")
-}
+//     std::env::var("NIRI_SOCKET").is_ok()
+//         || desktop.contains("niri")
+//         || desktop.contains("cosmic")
+//         || desktop.contains("drift")
+// }
 
 // 共通判定: Nvidia + Wayland環境かどうか
 // (ワークアラウンド適用条件と、GPUコンポジットのON/OFF判定の両方から呼ぶ)
@@ -470,9 +470,9 @@ async fn setup_niri_floating_terminal() -> Result<(), String> {
     Ok(())
 }
 
-// .settings.dat から disableGpuCompositing の設定値を直接読み取るヘルパー
+// .settings.dat から enableGpuCompositing の設定値を直接読み取るヘルパー
 #[allow(dead_code)]
-fn is_user_disabled_gpu_compositing() -> bool {
+fn is_user_enabled_gpu_compositing() -> bool {
     if let Ok(home) = std::env::var("HOME") {
         let store_path = std::path::PathBuf::from(home)
             .join(".local/share/com.DroicheadNua.mirrorshard2/.settings.dat");
@@ -482,7 +482,7 @@ fn is_user_disabled_gpu_compositing() -> bool {
                 if let Ok(json_str) = String::from_utf8(content) {
                     if let Ok(data) = serde_json::from_str::<serde_json::Value>(&json_str) {
                         return data
-                            .get("disableGpuCompositing")
+                            .get("enableGpuCompositing")
                             .and_then(|v| v.as_bool())
                             .unwrap_or(false);
                     }
@@ -496,17 +496,26 @@ fn is_user_disabled_gpu_compositing() -> bool {
 // 共通判定: GPUコンポジットをオフにすべきか
 #[allow(dead_code)]
 fn should_disable_gpu_compositing() -> bool {
-    let forced_by_env = std::env::var("MIRRORSHARD_DISABLE_COMPOSITING").is_ok();
-    let forced_by_settings = is_user_disabled_gpu_compositing(); // 👈 設定画面のチェック
+    let forced_by_env = std::env::var("MIRRORSHARD_ENABLE_COMPOSITING").is_ok();
+    let forced_by_settings = is_user_enabled_gpu_compositing();
 
+    // 仮想環境は常にオフ(ユーザーの意思に関わらず)
+    if is_virtual_machine() {
+        return true;
+    }
+
+    // Nvidia + X11(= needs_nvidia_wayland_workaround が false) は対策手段がないので常にオフ
+    if is_nvidia_gpu() && !needs_nvidia_wayland_workaround() {
+        return true;
+    }
+
+    // ここまでの強制オフ条件に該当しなければ、ユーザーの選択を尊重
     if forced_by_env || forced_by_settings {
-        true // 手動指定時
-    } else if is_virtual_machine() {
-        true // 仮想環境(VM)の時
+        false
     } else if is_nvidia_gpu() {
-        !is_compatible_compositor_for_nvidia()
+        true // Nvidia + Wayland はデフォルトオフ、ただしユーザーが選べば有効化可
     } else {
-        false // Intel / AMD 実機: 無条件でオン
+        false // Intel / AMD は無条件でオン
     }
 }
 
@@ -514,7 +523,7 @@ fn should_disable_gpu_compositing() -> bool {
 fn apply_wayland_nvidia_workaround(_window: &tauri::WebviewWindow) {
     #[cfg(target_os = "linux")]
     {
-        if needs_nvidia_wayland_workaround() && !is_compatible_compositor_for_nvidia() {
+        if needs_nvidia_wayland_workaround() {
             if let Ok(gtk_window) = _window.gtk_window() {
                 wayland_nvidia::force_paint_gl_context(&gtk_window);
             }

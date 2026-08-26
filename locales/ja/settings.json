@@ -216,8 +216,8 @@
     "downloadLink": "ダウンロードページを開く"
   },
   "linux": {
-    "disableGpuCompositing": "GPUコンポジットを強制的に無効化する",
-    "gpuDesc": "※画面が透明化・フリーズする場合はチェックを入れて再起動してください。",
+    "enableGpuCompositing": "Wayland + Nvidia 環境でGPUコンポジットを有効化",
+    "gpuDesc": "※環境によって不安定になることがあります",
     "editorSize": "メインエディタの初期サイズ (Niri/タイリング用)",
     "sizeDefault": "デフォルト (OS管理)",
     "size90x40": "Middle (高90% × 幅40%)",

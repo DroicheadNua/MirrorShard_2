@@ -216,8 +216,8 @@
     "downloadLink": "Open Download Page"
   },
   "linux": {
-    "disableGpuCompositing": "Disable GPU Compositing",
-    "gpuDesc": "*If you experience transparency issues or screen freezes, check this and restart.",
+    "enableGpuCompositing": "Enable GPU Compositing (Wayland + Nvidia only)",
+    "gpuDesc": "Note: GPU compositing may cause instability.",
     "editorSize": "Main Editor Size (Niri/tiling)",
     "sizeDefault": "Default (OS management)",
     "size90x40": "Middle (90% height × 40% width)",

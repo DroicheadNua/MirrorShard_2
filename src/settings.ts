@@ -360,8 +360,8 @@ async function setupSettings() {
     }
 
     // Linux固有の設定
-    const checkDisableGpuCompositing = document.querySelector(
-      "#disable-gpu-compositing",
+    const checkEnableGpuCompositing = document.querySelector(
+      "#enable-gpu-compositing",
     ) as HTMLInputElement;
     const editorSizeSelect = document.querySelector(
       "#main-editor-size-preset",
@@ -1097,8 +1097,8 @@ async function setupSettings() {
       }
     }
 
-    if (checkDisableGpuCompositing) {
-      checkDisableGpuCompositing.checked = (await store.get<boolean>("disableGpuCompositing")) ?? false;
+    if (checkEnableGpuCompositing) {
+      checkEnableGpuCompositing.checked = (await store.get<boolean>("enableGpuCompositing")) ?? false;
     }
     if (editorSizeSelect) {
       editorSizeSelect.value = (await store.get<string>("mainEditorSizePreset")) ?? "default";
@@ -1510,7 +1510,7 @@ async function setupSettings() {
         const newAiFontSize = parseInt(aiFontSizeInput.value, 10) || 14;
         const newLocalModel = localLlmModelInput.value.trim();
         const newAiThinkingOverlay = aiThinkingOverlayCheck.checked;
-        const newDisableGpuCompositing = checkDisableGpuCompositing?.checked;
+        const newEnableGpuCompositing = checkEnableGpuCompositing?.checked;
         const newEditorSizePreset = editorSizeSelect?.value;
         const newSubWindowHalfHeight = checkSubWindowHalfHeight?.checked;
 
@@ -1616,8 +1616,8 @@ async function setupSettings() {
         if (pendingBgmPath) await store.set("userBgmPath", pendingBgmPath);
         else await store.delete("userBgmPath");
 
-        if (newDisableGpuCompositing !== undefined)
-          await store.set("disableGpuCompositing", newDisableGpuCompositing);
+        if (newEnableGpuCompositing !== undefined)
+          await store.set("enableGpuCompositing", newEnableGpuCompositing);
         if (newEditorSizePreset !== undefined) {
           await store.set("mainEditorSizePreset", newEditorSizePreset);
           // Niri環境なら「適用」を押した瞬間に即座にリアルタイムリサイズを実行

@@ -6,16 +6,18 @@ In earlier versions, several features were restricted due to WebKitGTK and Tauri
 
 ---
 
-## ⚡️ GPU Compositing & Performance
+## ⚡️ GPU Compositing and Performance
+On Linux, rendering performance is automatically optimized based on your system configuration (GPU driver, session type).
 
-MirrorShard automatically optimizes its rendering pipeline depending on your system configuration (GPU drivers and desktop compositors).
+* **Automatic GPU compositing (fast rendering)**
+  On Intel / AMD graphics (Mesa drivers), GPU-accelerated compositing is enabled automatically. This significantly reduces CPU load and keeps translucent windows and effects flicker-free.
 
-* **Automatic GPU Compositing (High Performance)**  
-  For Intel / AMD GPUs (Mesa drivers) or Smithay-based compositors (Niri / COSMIC / DriftWM), GPU compositing is enabled automatically. This significantly reduces CPU usage and delivers smooth, flicker-free rendering with transparent windows and visual effects.
-* **Automatic Safety Fallback**  
-  For NVIDIA GPUs (under non-Smithay compositors) or Virtual Machines (UTM / VirtualBox / QEMU), GPU compositing is automatically disabled (`WEBKIT_DISABLE_COMPOSITING_MODE=1`) to prevent Wayland protocol crashes (`Error 71`) and rendering artifacts.
-* **Manual Override**  
-  If you encounter rendering issues, you can force-disable GPU compositing by running `MIRRORSHARD_DISABLE_COMPOSITING=1 mirrorshard2` in your terminal.
+* **Safety-first automatic fallback**
+  On NVIDIA graphics cards or in virtual machines (UTM / VirtualBox / QEMU), compositing mode is automatically disabled (`WEBKIT_DISABLE_COMPOSITING_MODE=1`) to prevent rendering instability.
+
+* **Manual override (Wayland + NVIDIA only)**
+  If you're running NVIDIA on Wayland, you can manually enable GPU compositing from the Settings screen by checking "Enable GPU Compositing (Wayland + Nvidia only)". This may cause instability on some systems — if you run into issues, uncheck it and restart.
+  You can also enable it from the terminal with `MIRRORSHARD_ENABLE_COMPOSITING=1 mirrorshard2` (this has no effect on X11 or in virtual machines).
 
 ### Restricted Features (When GPU Compositing is Disabled)
 

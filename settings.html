@@ -1734,12 +1734,12 @@
                 <!-- ===== タブ4: Linux専用設定 ===== -->
                 <div id="tab-linux" class="tab-content">
                     <div class="setting-item">
-                        <label for="disable-gpu-compositing" class="inline">
-                            <input type="checkbox" id="disable-gpu-compositing" />
-                            <span data-i18n="settings.linux.disableGpuCompositing">GPUコンポジットを強制的に無効化する</span>
+                        <label for="enable-gpu-compositing" class="inline">
+                            <input type="checkbox" id="enable-gpu-compositing" />
+                            <span data-i18n="settings.linux.enableGpuCompositing">GPUコンポジットを強制的に有効化する</span>
                         </label>
                     </div>
-                    <small class="setting-desc" data-i18n="settings.linux.gpuDesc">※画面が透明化・フリーズする場合はチェックを入れて再起動してください。</small>
+                    <small class="setting-desc" data-i18n="settings.linux.gpuDesc">※Nvidia環境では不安定になることがあります</small>
                     <div class="setting-item">
                         <label for="main-editor-size-preset" data-i18n="settings.linux.editorSize">メインエディタの初期サイズ (Niri/タイリング用)</label>
                         <select id="main-editor-size-preset">

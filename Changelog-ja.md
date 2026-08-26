@@ -13,6 +13,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed (変更点)  
 - GeminiとGroqのプリセットを変更  
+- Linux: Nvidia GPU使用時にGPUコンポジットを一律で無効化する設定に変更（安定性向上のため）。ただしWaylandの実機環境に限り、設定画面から強制的に有効化することが可能（※環境によっては不安定になるので注意）  
 
 ### Fixed (修正点)   
 - アップデート通知からリリースページを開けない問題を修正  
