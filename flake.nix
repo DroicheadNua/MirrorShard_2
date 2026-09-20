@@ -59,52 +59,41 @@
         # NixOSに必要なGTK/GSettings/GIO/GStreamerのすべての依存パスを埋め込んだ
         # 「完全に自律したラッパーバイナリ」を出力
         packages.default = pkgs.stdenv.mkDerivation {
-          pname = "mirrorshard2";
-          version = "1.13.0"; # バージョンに合わせて変更
+                  pname = "mirrorshard2";
+                  version = "1.13.0";
 
-          # プロジェクト全体ではなくリリースバイナリが存在するディレクトリだけをソースにする
-          # これによりnode_modules等の不要なコピーを完全にスキップ
-          # deps や incremental などの巨大なビルド中間ゴミを除外
-          src = pkgs.lib.cleanSourceWith {
-            src = ./src-tauri/target/release;
-            filter = path: type:
-              let name = baseNameOf (toString path);
-              in !(name == "deps" || name == "build" || name == "incremental" || name == ".fingerprint");
-          };
+                  # リポジトリのルート全体をソースにする
+                  src = ./.;
 
-          buildInputs = runtimeDeps;
-          nativeBuildInputs = [ pkgs.makeWrapper ];
+                  buildInputs = runtimeDeps;
+                  nativeBuildInputs = [ pkgs.makeWrapper ];
 
-          dontBuild = true;
+                  dontBuild = true;
 
-          # ソースのルートが「release」ディレクトリになったため、直接そこからコピー
-          installPhase = ''
-                      # 1. 本物のバイナリとリソースを、名前を変えずに $out/lib/mirrorshard2/ 以下に退避させる
-                      mkdir -p $out/lib/mirrorshard2
-                      mkdir -p $out/bin
+                  # 参照パスを src-tauri/target/release からに修正する
+                  installPhase = ''
+                    mkdir -p $out/lib/mirrorshard2
+                    mkdir -p $out/bin
 
-                      if [ -f mirrorshard2 ]; then
-                        # ドットを付けず、正規の名前「mirrorshard2」のままコピー
-                        cp mirrorshard2 $out/lib/mirrorshard2/mirrorshard2
+                    # ルートからの相対パスでバイナリを探す
+                    if [ -f src-tauri/target/release/mirrorshard2 ]; then
+                      cp src-tauri/target/release/mirrorshard2 $out/lib/mirrorshard2/mirrorshard2
 
-                        # そのすぐ隣（同階層）に resources フォルダを配置
-                        if [ -d resources ]; then
-                          cp -r resources $out/lib/mirrorshard2/
-                        fi
-                      else
-                        echo "Error: Run 'pnpm tauri build' first!"
-                        exit 1
+                      if [ -d src-tauri/target/release/resources ]; then
+                        cp -r src-tauri/target/release/resources $out/lib/mirrorshard2/
                       fi
+                    else
+                      echo "Error: Run 'pnpm tauri build' first!"
+                      exit 1
+                    fi
 
-                      # 2. $out/bin/mirrorshard2 をラッパースクリプトとし、
-                      #    上記で退避させた本物のバイナリ（$out/lib/mirrorshard2/mirrorshard2）を環境変数付きで呼び出す
-                      makeWrapper $out/lib/mirrorshard2/mirrorshard2 $out/bin/mirrorshard2 \
-                        --prefix LD_LIBRARY_PATH : "${pkgs.lib.makeLibraryPath runtimeDeps}" \
-                        --prefix GIO_EXTRA_MODULES : "${pkgs.glib-networking}/lib/gio/modules" \
-                        --prefix GST_PLUGIN_SYSTEM_PATH_1_0 : "${pkgs.gst_all_1.gstreamer.out}/lib/gstreamer-1.0:${pkgs.gst_all_1.gst-plugins-base}/lib/gstreamer-1.0:${pkgs.gst_all_1.gst-plugins-good}/lib/gstreamer-1.0:${pkgs.gst_all_1.gst-plugins-bad}/lib/gstreamer-1.0" \
-                        --prefix XDG_DATA_DIRS : "${pkgs.gsettings-desktop-schemas}/share/gsettings-schemas/${pkgs.gsettings-desktop-schemas.name}:${pkgs.gtk3}/share/gsettings-schemas/${pkgs.gtk3.name}"
-                    '';
-        };
+                    makeWrapper $out/lib/mirrorshard2/mirrorshard2 $out/bin/mirrorshard2 \
+                      --prefix LD_LIBRARY_PATH : "${pkgs.lib.makeLibraryPath runtimeDeps}" \
+                      --prefix GIO_EXTRA_MODULES : "${pkgs.glib-networking}/lib/gio/modules" \
+                      --prefix GST_PLUGIN_SYSTEM_PATH_1_0 : "${pkgs.gst_all_1.gstreamer.out}/lib/gstreamer-1.0:${pkgs.gst_all_1.gst-plugins-base}/lib/gstreamer-1.0:${pkgs.gst_all_1.gst-plugins-good}/lib/gstreamer-1.0:${pkgs.gst_all_1.gst-plugins-bad}/lib/gstreamer-1.0" \
+                      --prefix XDG_DATA_DIRS : "${pkgs.gsettings-desktop-schemas}/share/gsettings-schemas/${pkgs.gsettings-desktop-schemas.name}:${pkgs.gtk3}/share/gsettings-schemas/${pkgs.gtk3.name}"
+                  '';
+                };
       }
     );
 }

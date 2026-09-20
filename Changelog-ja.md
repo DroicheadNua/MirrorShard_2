@@ -17,6 +17,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed (修正点)   
 - アップデート通知からリリースページを開けない問題を修正  
+- flake.nixがtarget/releaseを参照してしまっていた問題を修正  
 
 
 ## [1.13.0] - 2026-8-9  
