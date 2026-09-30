@@ -35,6 +35,7 @@ Additionally:
   * Mistral
   * Cerebras
   * OpenRouter
+  * Agnes AI
 
 * Local AI:
 
@@ -273,7 +274,7 @@ You can simply say:
 
 ⚠️ Limitations:
 
-* Not supported: Cohere, Cerebras
+* Not supported: Cohere, Cerebras, Agnes AI
 * Mistral Large unstable
 * Local models may struggle
 

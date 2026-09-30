@@ -279,6 +279,7 @@ class App {
     | "openRouter"
     | "cohere"
     | "mistral"
+    | "agnes"
     | "local" = "gemini";
   private showAiThinkingOverlay = true;
   private isAiProcessing = false; // AI動作中フラグ
@@ -638,6 +639,9 @@ class App {
       if (await this.store.get<boolean>("enableMistral")) {
         optionsContainer.innerHTML += `<div class="custom-option" data-value="mistral">Mistral</div>`;
       }
+      if (await this.store.get<boolean>("enableAgnes")) {
+        optionsContainer.innerHTML += `<div class="custom-option" data-value="agnes">Agnes AI</div>`;
+      }
 
       // 常に表示
       optionsContainer.innerHTML += `<div class="custom-option" data-value="local">Local AI</div>`;
@@ -955,6 +959,12 @@ class App {
           model =
             (await this.store.get<string>("mistralModel")) ||
             "mistral-small-latest";
+        } else if (this.mainAiApi === "agnes") {
+          url = "https://apihub.agnes-ai.com/v1/chat/completions";
+          apiKey = (await this.store.get<string>("agnesApiKey")) || "";
+          model =
+            (await this.store.get<string>("agnesModel")) ||
+            "agnes-3.0-flash";
         } else if (this.mainAiApi === "local") {
           url =
             (await this.store.get<string>("localLlmUrl")) ||
@@ -1142,6 +1152,12 @@ ${instructionFiller}
           model =
             (await this.store.get<string>("mistralModel")) ||
             "mistral-small-latest";
+        } else if (this.mainAiApi === "agnes") {
+          url = "https://apihub.agnes-ai.com/v1/chat/completions";
+          apiKey = (await this.store.get<string>("agnesApiKey")) || "";
+          model =
+            (await this.store.get<string>("agnesModel")) ||
+            "agnes-3.0-flash";
         } else if (this.mainAiApi === "local") {
           url =
             (await this.store.get<string>("localLlmUrl")) ||
@@ -1455,6 +1471,12 @@ ${instructionFiller}
           model =
             (await this.store.get<string>("mistralModel")) ||
             "mistral-small-latest";
+        } else if (this.mainAiApi === "agnes") {
+          url = "https://apihub.agnes-ai.com/v1/chat/completions";
+          apiKey = (await this.store.get<string>("agnesApiKey")) || "";
+          model =
+            (await this.store.get<string>("agnesModel")) ||
+            "agnes-3.0-flash";
         } else if (this.mainAiApi === "local") {
           url =
             (await this.store.get<string>("localLlmUrl")) ||
@@ -1531,7 +1553,7 @@ ${instructionFiller}
     signal?: AbortSignal,
   ): Promise<string> {
     const model =
-      (await this.store.get<string>("geminiModel")) || "gemini-3.5-flash-lite";
+      (await this.store.get<string>("geminiModel")) || "gemini-flash-latest";
 
     // 数値として確実に取得する (Storeから文字列で返ってくる場合の対策)
     // オーバーライドがあればそれを使い、なければ設定値を使う
@@ -1832,6 +1854,12 @@ ${instructionFiller}
             model =
               (await this.store.get<string>("mistralModel")) ||
               "mistral-small-latest";
+          } else if (this.mainAiApi === "agnes") {
+            url = "https://apihub.agnes-ai.com/v1/chat/completions";
+            apiKey = (await this.store.get<string>("agnesApiKey")) || "";
+            model =
+              (await this.store.get<string>("agnesModel")) ||
+              "agnes-3.0-flash";
           } else if (this.mainAiApi === "local") {
             url =
               (await this.store.get<string>("localLlmUrl")) ||

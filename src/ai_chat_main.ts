@@ -202,6 +202,9 @@ async function renderAiSelector() {
   if (await store.get<boolean>("enableMistral")) {
     apiOptions.innerHTML += `<div class="custom-option" data-value="mistral">Mistral</div>`;
   }
+  if (await store.get<boolean>("enableAgnes")) {
+    apiOptions.innerHTML += `<div class="custom-option" data-value="agnes">Agnes AI</div>`;
+  }
 
   apiOptions.innerHTML += `<div class="custom-option" data-value="local">Local AI</div>`;
 
@@ -217,6 +220,7 @@ async function renderAiSelector() {
         | "openrouter"
         | "cohere"
         | "mistral"
+        | "agnes"
         | "local";
       const newText = item.textContent;
 
@@ -344,6 +348,8 @@ async function init() {
     const mistralKey = await store.get<string>("mistralApiKey");
     const mistralAgent = await store.get<string>("mistralAgentID");
     const mistralModel = await store.get<string>("mistralModel");
+    const agnesKey = await store.get<string>("agnesApiKey");
+    const agnesModel = await store.get<string>("agnesModel");
     const enableAgents = await store.get<boolean>("enableMistralAgents");
     const localUrl = await store.get<string>("localLlmUrl");
     const sysPrompt = await store.get<string>("aiSystemPrompt");
@@ -373,6 +379,7 @@ async function init() {
         | "openrouter"
         | "cohere"
         | "mistral"
+        | "agnes"
         | "local",
       geminiApiKey: apiKey || undefined,
       geminiModel: model || undefined,
@@ -387,6 +394,8 @@ async function init() {
       mistralApiKey: mistralKey || undefined,
       mistralAgentID: mistralAgent || undefined,
       mistralModel: mistralModel || undefined,
+      agnesApiKey: agnesKey || undefined,
+      agnesModel: agnesModel || undefined,
       localUrl: localUrl || undefined,
       systemPrompt: sysPrompt || undefined,
       maxTokens: maxTokens,
@@ -406,6 +415,8 @@ async function init() {
         apiTrigger.textContent = "Cohere";
       } else if (savedApiType === "mistral") {
         apiTrigger.textContent = "Mistral";
+      } else if (savedApiType === "agnes") {
+        apiTrigger.textContent = "Agnes AI";
       } else {
         apiTrigger.textContent = "Local LLM";
       }
@@ -653,6 +664,8 @@ function setupSettingsListener() {
     aiSettings.mistralApiKey = p.mistralApiKey ?? aiSettings.mistralApiKey;
     aiSettings.mistralAgentID = p.mistralAgentID ?? aiSettings.mistralAgentID;
     aiSettings.mistralModel = p.mistralModel ?? aiSettings.mistralModel;
+    aiSettings.agnesApiKey = p.agnesApiKey ?? aiSettings.agnesApiKey;
+    aiSettings.agnesModel = p.agnesModel ?? aiSettings.agnesModel;
     aiSettings.localUrl = p.localLlmUrl ?? aiSettings.localUrl;
     aiSettings.localModel = p.localLlmModel ?? aiSettings.localModel;
     aiSettings.systemPrompt = p.aiSystemPrompt ?? aiSettings.systemPrompt;
@@ -726,7 +739,11 @@ function setupSettingsListener() {
       await applyGlowEffect();
     }
     // もし設定画面でプロバイダの有効/無効が切り替えられたら、メニューを再構築する
-    if (p.enableCohere !== undefined || p.enableMistral !== undefined) {
+    if (
+      p.enableCohere !== undefined ||
+      p.enableMistral !== undefined ||
+      p.enableAgnes !== undefined
+    ) {
       await renderAiSelector();
     }
 
@@ -741,6 +758,7 @@ function setupSettingsListener() {
           openrouter: "OpenRouter",
           cohere: "Cohere",
           mistral: "Mistral",
+          agnes: "Agnes AI",
           local: "Local AI",
         };
         apiTrigger.textContent = textMap[p.selectedApiType] || "Unknown API";
@@ -1777,9 +1795,13 @@ async function runWebAgentViaRust() {
       apiKey = (await store?.get<string>("mistralApiKey")) || "";
       model =
         (await store?.get<string>("mistralModel")) || "mistral-small-latest";
+    } else if (apiType === "agnes") {
+      baseUrl = "https://apihub.agnes-ai.com/v1";
+      apiKey = (await store?.get<string>("agnesApiKey")) || "";
+      model = (await store?.get<string>("agnesModel")) || "agnes-3.0-flash";
     } else if (apiType === "gemini") {
       apiKey = (await store?.get<string>("geminiApiKey")) || "";
-      model = (await store?.get<string>("geminiModel")) || "gemini-1.5-pro";
+      model = (await store?.get<string>("geminiModel")) || "gemini-flash-latest";
     } else if (apiType === "cohere") {
       apiKey = (await store?.get<string>("cohereApiKey")) || "";
       model =

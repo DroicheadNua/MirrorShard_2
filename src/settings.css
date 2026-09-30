@@ -238,6 +238,7 @@ body {
 #openrouter-model-preset,
 #cohere-model-preset,
 #mistral-model-preset,
+#agnes-model-preset,
 #local-llm-url-preset {
     width: 180px;
 }

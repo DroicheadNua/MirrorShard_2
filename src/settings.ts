@@ -215,6 +215,9 @@ async function setupSettings() {
     const mistralAgentIDInput = document.querySelector(
       "#mistral-agent-id",
     ) as HTMLInputElement;
+    const agnesApiKeyInput = document.querySelector(
+      "#agnes-api-key",
+    ) as HTMLInputElement;
     const geminiModelInput = document.querySelector(
       "#gemini-model",
     ) as HTMLInputElement | null;
@@ -232,6 +235,9 @@ async function setupSettings() {
     ) as HTMLInputElement;
     const mistralModelInput = document.querySelector(
       "#mistral-model",
+    ) as HTMLInputElement;
+    const agnesModelInput = document.querySelector(
+      "#agnes-model",
     ) as HTMLInputElement;
     const enableGroq = document.querySelector(
       "#enable-groq",
@@ -253,6 +259,9 @@ async function setupSettings() {
     ) as HTMLInputElement;
     const enableMistralAgents = document.querySelector(
       "#enable-mistral-agents",
+    ) as HTMLInputElement;
+    const enableAgnes = document.querySelector(
+      "#enable-agnes",
     ) as HTMLInputElement;
     const enableStTerminal = document.querySelector(
       "#enable-st-terminal",
@@ -312,6 +321,9 @@ async function setupSettings() {
     ) as HTMLSelectElement;
     const mistralModelPresetSelect = document.querySelector(
       "#mistral-model-preset",
+    ) as HTMLSelectElement;
+    const agnesModelPresetSelect = document.querySelector(
+      "#agnes-model-preset",
     ) as HTMLSelectElement;
     const localLlmModelInput = document.querySelector(
       "#local-llm-model",
@@ -963,9 +975,11 @@ async function setupSettings() {
     mistralApiKeyInput.value = (await store.get<string>("mistralApiKey")) || "";
     mistralAgentIDInput.value =
       (await store.get<string>("mistralAgentID")) || "";
+    agnesApiKeyInput.value =
+      (await store.get<string>("agnesApiKey")) || "";
     if (geminiModelInput) {
       geminiModelInput.value =
-        (await store.get<string>("geminiModel")) || "gemini-3.5-flash-lite";
+        (await store.get<string>("geminiModel")) || "gemini-flash-latest";
     }
     groqModelInput.value =
       (await store.get<string>("groqModel")) || "openai/gpt-oss-20b";
@@ -975,6 +989,8 @@ async function setupSettings() {
       (await store.get<string>("openRouterModel")) || "nvidia/nemotron-3-nano-omni-30b-a3b-reasoning:free";
     cohereModelInput.value = (await store.get<string>("cohereModel")) || "";
     mistralModelInput.value = (await store.get<string>("mistralModel")) || "";
+    agnesModelInput.value =
+      (await store.get<string>("agnesModel")) || "agnes-3.0-flash";
     enableGroq.checked = (await store.get<boolean>("enableGroq")) ?? false;
     enableCerebras.checked =
       (await store.get<boolean>("enableCerebras")) ?? false;
@@ -987,6 +1003,8 @@ async function setupSettings() {
       (await store.get<boolean>("enableMistral")) ?? false;
     enableMistralAgents.checked =
       (await store.get<boolean>("enableMistralAgents")) ?? false;
+    enableAgnes.checked =
+      (await store.get<boolean>("enableAgnes")) ?? false;
     enableStTerminal.checked =
       (await store.get<boolean>("enableStTerminal")) ?? false;
     localLlmUrlInput.value =
@@ -1086,6 +1104,17 @@ async function setupSettings() {
         mistralModelPresetSelect.value = mistralModelInput.value;
       } else {
         mistralModelPresetSelect.value = "";
+      }
+    }
+    if (agnesModelPresetSelect) {
+      const options = Array.from(agnesModelPresetSelect.options).map(
+        (o) => o.value,
+      );
+
+      if (options.includes(agnesModelInput.value)) {
+        agnesModelPresetSelect.value = agnesModelInput.value;
+      } else {
+        agnesModelPresetSelect.value = "";
       }
     }
     if (urlPresetSelect) {
@@ -1480,6 +1509,7 @@ async function setupSettings() {
         const newCohereApiKey = cohereApiKeyInput.value.trim();
         const newMistralApiKey = mistralApiKeyInput.value.trim();
         const newMistralAgentID = mistralAgentIDInput.value.trim();
+        const newAgnesApiKey = agnesApiKeyInput.value.trim();
         const newGeminiModel = geminiModelInput
           ? geminiModelInput.value.trim()
           : "";
@@ -1488,6 +1518,7 @@ async function setupSettings() {
         const newOpenRouterModel = openRouterModelInput.value.trim();
         const newCohereModel = cohereModelInput.value.trim();
         const newMistralModel = mistralModelInput.value.trim();
+        const newAgnesModel = agnesModelInput.value.trim();
         const newEnableGroq = enableGroq.checked;
         const newEnableCerebras = enableCerebras.checked;
         const newEnableOpenRouter = enableOpenRouter.checked;
@@ -1496,6 +1527,7 @@ async function setupSettings() {
         const newEnableAutoTcy = enableAutoTcy.checked;
         const newEnableMistral = enableMistral.checked;
         const newEnableMistralAgents = enableMistralAgents.checked;
+        const newEnableAgnes = enableAgnes.checked;
         const newEnableStTerminal = enableStTerminal.checked;
         const newLocalUrl = localLlmUrlInput.value.trim();
         const newSystemPrompt = aiSystemPromptInput.value;
@@ -1567,11 +1599,14 @@ async function setupSettings() {
           await store.set("mistralApiKey", newMistralApiKey);
         if (newMistralAgentID)
           await store.set("mistralAgentID", newMistralAgentID);
+        if (newAgnesApiKey)
+          await store.set("agnesApiKey", newAgnesApiKey);
         await store.set("groqModel", newGroqModel);
         await store.set("cerebrasModel", newCerebrasModel);
         await store.set("openRouterModel", newOpenRouterModel);
         await store.set("cohereModel", newCohereModel);
         await store.set("mistralModel", newMistralModel);
+        await store.set("agnesModel", newAgnesModel);
         await store.set("enableGroq", newEnableGroq);
         await store.set("enableCerebras", newEnableCerebras);
         await store.set("enableOpenRouter", newEnableOpenRouter);
@@ -1580,6 +1615,7 @@ async function setupSettings() {
         await store.set("enableAutoTcy", newEnableAutoTcy);
         await store.set("enableMistral", newEnableMistral);
         await store.set("enableMistralAgents", newEnableMistralAgents);
+        await store.set("enableAgnes", newEnableAgnes);
         await store.set("enableStTerminal", newEnableStTerminal);
         await store.set("localLlmUrl", newLocalUrl);
         await store.set("aiSystemPrompt", newSystemPrompt);
@@ -1663,12 +1699,14 @@ async function setupSettings() {
           cohereApiKey: newCohereApiKey,
           mistralApiKey: newMistralApiKey,
           mistralAgentID: newMistralAgentID,
+          agnesApiKey: newAgnesApiKey,
           geminiModel: newGeminiModel,
           groqModel: newGroqModel,
           cerebrasModel: newCerebrasModel,
           openRouterModel: newOpenRouterModel,
           cohereModel: newCohereModel,
           mistralModel: newMistralModel,
+          agnesModel: newAgnesModel,
           enableGroq: newEnableGroq,
           enableCerebras: newEnableCerebras,
           enableOpenRouter: newEnableOpenRouter,
@@ -1677,6 +1715,7 @@ async function setupSettings() {
           enableAutoTcy: newEnableAutoTcy,
           enableMistral: newEnableMistral,
           enableMistralAgents: newEnableMistralAgents,
+          enableAgnes: newEnableAgnes,
           enableStTerminal: newEnableStTerminal,
           localLlmUrl: newLocalUrl,
           aiSystemPrompt: newSystemPrompt,

@@ -4180,7 +4180,7 @@ async function triggerFreeAssociation() {
     if (ipAiApi === "gemini") {
       const apiKey = await store.get<string>("geminiApiKey");
       const model =
-        (await store.get<string>("geminiModel")) || "gemini-3.5-flash-lite";
+        (await store.get<string>("geminiModel")) || "gemini-flash-latest";
       console.log(`Loaded:${model}`);
       if (!apiKey) throw new Error(t("ideaProcessor.ai.geminiAPIError"));
 
@@ -4239,6 +4239,10 @@ async function triggerFreeAssociation() {
         apiKey = (await store.get<string>("mistralApiKey")) || "";
         model =
           (await store.get<string>("mistralModel")) || "mistral-small-latest";
+      } else if (ipAiApi === "agnes") {
+        url = "https://apihub.agnes-ai.com/v1/chat/completions";
+        apiKey = (await store.get<string>("agnesApiKey")) || "";
+        model = (await store.get<string>("agnesModel")) || "agnes-3.0-flash";
       } else if (ipAiApi === "local") {
         url =
           (await store.get<string>("localLlmUrl")) ||
@@ -4497,7 +4501,7 @@ async function triggerTemplateCompletion() {
     if (ipAiApi === "gemini") {
       const apiKey = await store.get<string>("geminiApiKey");
       const model =
-        (await store.get<string>("geminiModel")) || "gemini-1.5-flash";
+        (await store.get<string>("geminiModel")) || "gemini-flash-latest";
       if (!apiKey) throw new Error(t("ideaProcessor.ai.geminiAPIError"));
 
       const response = await fetch(
@@ -4554,6 +4558,10 @@ async function triggerTemplateCompletion() {
         apiKey = (await store.get<string>("mistralApiKey")) || "";
         model =
           (await store.get<string>("mistralModel")) || "mistral-small-latest";
+      } else if (ipAiApi === "agnes") {
+        url = "https://apihub.agnes-ai.com/v1/chat/completions";
+        apiKey = (await store.get<string>("agnesApiKey")) || "";
+        model = (await store.get<string>("agnesModel")) || "agnes-3.0-flash";
       } else if (ipAiApi === "local") {
         url =
           (await store.get<string>("localLlmUrl")) ||
@@ -4629,6 +4637,9 @@ async function initAiSelector() {
   }
   if (await store.get<boolean>("enableMistral")) {
     optionsContainer.innerHTML += `<div class="custom-option" data-value="mistral">Mistral</div>`;
+  }
+  if (await store.get<boolean>("enableAgnes")) {
+    optionsContainer.innerHTML += `<div class="custom-option" data-value="agnes">Agnes AI</div>`;
   }
 
   // 常に表示
@@ -4873,7 +4884,7 @@ async function triggerNodeAlchemy() {
     if (ipAiApi === "gemini") {
       const apiKey = await store.get<string>("geminiApiKey");
       const model =
-        (await store.get<string>("geminiModel")) || "gemini-3.1-flash-lite";
+        (await store.get<string>("geminiModel")) || "gemini-flash-latest";
       if (!apiKey) throw new Error(t("ideaProcessor.ai.geminiAPIError"));
       const response = await fetch(
         `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`,
@@ -4929,6 +4940,10 @@ async function triggerNodeAlchemy() {
         apiKey = (await store.get<string>("mistralApiKey")) || "";
         model =
           (await store.get<string>("mistralModel")) || "mistral-small-latest";
+      } else if (ipAiApi === "agnes") {
+        url = "https://apihub.agnes-ai.com/v1/chat/completions";
+        apiKey = (await store.get<string>("agnesApiKey")) || "";
+        model = (await store.get<string>("agnesModel")) || "agnes-3.0-flash";
       } else if (ipAiApi === "local") {
         url =
           (await store.get<string>("localLlmUrl")) ||
@@ -5216,7 +5231,7 @@ async function triggerIpMissingLink() {
     if (ipAiApi === "gemini") {
       const apiKey = await store.get<string>("geminiApiKey");
       const model =
-        (await store.get<string>("geminiModel")) || "gemini-3.1-flash-lite";
+        (await store.get<string>("geminiModel")) || "gemini-flash-latest";
       if (!apiKey) throw new Error(t("ideaProcessor.ai.geminiAPIError"));
       const response = await fetch(
         `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`,
@@ -5272,6 +5287,10 @@ async function triggerIpMissingLink() {
         apiKey = (await store.get<string>("mistralApiKey")) || "";
         model =
           (await store.get<string>("mistralModel")) || "mistral-small-latest";
+      } else if (ipAiApi === "agnes") {
+        url = "https://apihub.agnes-ai.com/v1/chat/completions";
+        apiKey = (await store.get<string>("agnesApiKey")) || "";
+        model = (await store.get<string>("agnesModel")) || "agnes-3.0-flash";
       } else if (ipAiApi === "local") {
         url =
           (await store.get<string>("localLlmUrl")) ||

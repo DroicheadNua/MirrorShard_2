@@ -19,7 +19,7 @@ Obscura（Rust製のヘッドレスブラウザ）をインストールしてい
 
 # 使用できるAI
 
-・Google Gemini・Groq・Cohere・Mistral・Cerebras・OpenRouterの5種類のクラウドAI（要APIキー）  
+・Google Gemini・Groq・Cohere・Mistral・Cerebras・OpenRouter・Agnes AIの6種類のクラウドAI（要APIキー）  
 ・ローカルAI（LM Studio、OllamaなどのローカルAI実行環境が必要）  
 
 # 目次  
@@ -351,7 +351,7 @@ Tavilyを使用して検索する場合は、APIキーの取得が必要にな�
 
 #### 検索機能の注意事項
 
-1. CerebrasとCohereはエージェント機能がうまく働かないので、検索機能の使用はできません。
+1. CerebrasとCohere、およびAgnes AIはエージェント機能がうまく働かないので、現状では検索機能の使用はできません。
 2. Mistral Largeもエラーを返すことが多く、使用は非推奨です。Gemini等他AIをご利用ください。
 3. ローカルAIを使用する場合、性能の低いモデルではうまく動作しない場合があります。  
 軽量モデルでもGemma 4 E4Bなどは正常に動作するため、Gemma系が比較的相性が良いかと思われます。

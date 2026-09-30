@@ -10,7 +10,7 @@ use epub_builder::{EpubBuilder, EpubContent, ReferenceType, ZipLibrary};
 use font_kit::source::SystemSource;
 use portable_pty::{native_pty_system, CommandBuilder, MasterPty, PtySize};
 use regex::Regex;
-use rig::client::{CompletionClient, ProviderClient};
+use rig::client::{AgentClientExt, CompletionClient, ProviderClient};
 use rig::completion::Prompt;
 use rodio::source::Source;
 use rodio::{Decoder, DeviceSinkBuilder, MixerDeviceSink, Player};
@@ -112,24 +112,28 @@ impl rig::tool::Tool for WebSearchTool {
     type Args = WebSearchArgs;
     type Output = String;
 
-    async fn definition(&self, _prompt: String) -> rig::completion::ToolDefinition {
-        rig::completion::ToolDefinition {
-            name: Self::NAME.to_string(),
-            description: "A tool to search the web or fetch content from a URL. The agent must use this tool for research and then provide the final answer in the user's original language.".to_string(),
-            parameters: serde_json::json!({
-                "type": "object",
-                "properties": {
-                    "query": {
-                        "type": "string",
-                        "description": "The search keyword or URL. Use only one string."
-                    }
-                },
-                "required": ["query"]
-            }),
-        }
+    fn description(&self) -> String {
+        "A tool to search the web or fetch content from a URL. The agent must use this tool for research and then provide the final answer in the user's original language.".to_string()
     }
 
-    async fn call(&self, args: Self::Args) -> Result<Self::Output, Self::Error> {
+    fn parameters(&self) -> serde_json::Value {
+        serde_json::json!({
+            "type": "object",
+            "properties": {
+                "query": {
+                    "type": "string",
+                    "description": "The search keyword or URL. Use only one string."
+                }
+            },
+            "required": ["query"]
+        })
+    }
+
+    async fn call(
+        &self,
+        _context: &mut rig::tool::ToolContext,
+        args: Self::Args,
+    ) -> Result<Self::Output, Self::Error> {
         let query = args.query.clone();
         let is_url = query.starts_with("http");
 
@@ -163,30 +167,28 @@ impl rig::tool::Tool for WebSearchTool {
                                     title, content
                                 ));
                             }
+
                             if !output.is_empty() {
                                 println!("Rig Tool: Executing -> Tavily Search API");
-                                // 既存の文字数制限(4000文字)に合わせて返す
                                 return Ok(output.chars().take(4000).collect());
                             }
                         }
                     }
                 }
             }
-            // ※ TavilyのAPI呼び出しが失敗した（無料枠切れ、通信エラー等）場合は
-            // そのままエラーを出さずに下のObscura(DuckDuckGo)ルートへフォールバック
+
+            // Tavily失敗時は下のObscura(DuckDuckGo)へフォールバック
         }
 
-        // --- 2. 従来の Obscura 処理（URL直接指定、DDG選択時、またはTavily失敗時） ---
+        // --- 2. 従来の Obscura 処理 ---
         let mut target_url = if is_url {
             query
         } else {
-            // URLエンコードする
             let encoded = urlencoding::encode(&query);
             format!("https://html.duckduckgo.com/html/?q={}", encoded)
         };
 
         // 特定のドメインに対するハック（Reddit対策）
-        // www.reddit.com を old.reddit.com に置換することで重いJSを回避
         if target_url.contains("www.reddit.com") {
             target_url = target_url.replace("www.reddit.com", "old.reddit.com");
         }
@@ -197,7 +199,6 @@ impl rig::tool::Tool for WebSearchTool {
         let mut cmd = {
             use std::os::windows::process::CommandExt;
             let mut c = std::process::Command::new(&self.obscura_path);
-            // ここにフラグを追加することで、Obscura の窓が一切出なくなる
             c.creation_flags(0x08000000);
             c
         };
@@ -224,7 +225,7 @@ impl rig::tool::Tool for WebSearchTool {
             Ok(text.chars().take(4000).collect())
         } else {
             let err_raw = String::from_utf8_lossy(&output.stderr).to_string();
-            Ok(format!("Error during fetching: {}", err_raw)) // AIにエラーを伝えてリトライさせる
+            Ok(format!("Error during fetching: {}", err_raw))
         }
     }
 }
@@ -1451,12 +1452,12 @@ async fn run_web_agent(
         "gemini" => {
             std::env::set_var("GEMINI_API_KEY", &api_key);
             let client = rig::providers::gemini::Client::from_env().map_err(|e| e.to_string())?;
-            let mut agent = client
+            let agent = client
                 .agent(&model)
                 .preamble(&system_prompt)
                 .tool(web_search_tool)
+                .default_max_turns(10)
                 .build();
-            agent.default_max_turns = Some(10);
             agent
                 .prompt(&prompt)
                 .await
@@ -1465,12 +1466,19 @@ async fn run_web_agent(
         "groq" => {
             std::env::set_var("GROQ_API_KEY", &actual_key);
             let client = rig::providers::groq::Client::from_env().map_err(|e| e.to_string())?;
-            let mut agent = client
+
+            let agent = client
                 .agent(&model)
                 .preamble(&system_prompt)
                 .tool(web_search_tool)
+                .max_tokens(1000)
+                .default_max_turns(10)
+                .additional_params(serde_json::json!({
+                    "include_reasoning": false,
+                    "reasoning_effort": "low"
+                }))
                 .build();
-            agent.default_max_turns = Some(10);
+
             agent
                 .prompt(&prompt)
                 .await
@@ -1479,16 +1487,19 @@ async fn run_web_agent(
         "mistral" => {
             std::env::set_var("MISTRAL_API_KEY", &actual_key);
             let client = rig::providers::mistral::Client::from_env().map_err(|e| e.to_string())?;
-            let mut agent = client
+            let agent = client
                 .agent(&model)
                 .preamble(&system_prompt)
                 .tool(web_search_tool)
+                .default_max_turns(10)
                 .build();
-            agent.default_max_turns = Some(10);
             agent
                 .prompt(&prompt)
                 .await
                 .map_err(|e| format!("Mistral Error: {}", e))?
+        }
+        "agnes" => {
+            return Err("Web Agent is not supported for Agnes in this version.".to_string());
         }
         "cohere" => {
             return Err("Web Agent is not supported for Cohere in this version.".to_string());
@@ -1507,12 +1518,12 @@ async fn run_web_agent(
 
             // Local は確実に /chat/completions を叩かせるための処理
             let model_instance = client.completion_model(&model);
-            let mut agent = rig::agent::AgentBuilder::new(model_instance)
+            let agent = rig::agent::AgentBuilder::new(model_instance)
                 .preamble(&system_prompt)
                 .tool(web_search_tool)
+                .default_max_turns(10)
                 .build();
 
-            agent.default_max_turns = Some(10);
             agent
                 .prompt(&prompt)
                 .await

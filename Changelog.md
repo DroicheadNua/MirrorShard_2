@@ -7,6 +7,26 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [unreleased]
+
+### Added
+
+* Added Agnes AI as a new AI provider. (Agent features are currently not supported.)
+
+### Changed
+
+* Updated the Gemini, Groq, and Mistral model presets.
+* Changed the default Gemini model to `gemini-flash-latest`.
+* Linux: GPU compositing is now disabled by default when using an NVIDIA GPU for improved stability. On physical Wayland systems, it can be forcibly re-enabled from the Settings screen. (Note: this may be unstable depending on the environment.)
+* Updated the Rig crate to 0.42.0.
+* Stopped distributing RPM packages and ARM64 DEB packages to reduce maintenance costs. Users on these platforms will need to build MirrorShard 2 from source.
+
+### Fixed
+
+* Fixed an issue where the release page could not be opened from the update notification.
+* Fixed an issue where `flake.nix` incorrectly referenced `target/release`.
+
+
 ## [1.13.0] - 2026-08-09
 
 ### Added

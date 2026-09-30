@@ -14,6 +14,7 @@ export interface ChatSettings {
     | "openrouter"
     | "cohere"
     | "mistral"
+    | "agnes"
     | "local";
   geminiApiKey?: string;
   geminiModel?: string;
@@ -28,6 +29,8 @@ export interface ChatSettings {
   mistralApiKey?: string;
   mistralAgentID?: string;
   mistralModel?: string;
+  agnesApiKey?: string;
+  agnesModel?: string;
   localUrl?: string;
   localModel?: string;
   systemPrompt?: string;
@@ -54,7 +57,7 @@ export class AiChat {
     if (this.currentSettings.apiType === "gemini") {
       const apiKey = this.currentSettings.geminiApiKey;
       const modelName =
-        this.currentSettings.geminiModel || "gemini-3.5-flash-lite";
+        this.currentSettings.geminiModel || "gemini-flash-latest";
       if (apiKey) {
         this.genAI = new GoogleGenerativeAI(apiKey);
         this.model = this.genAI.getGenerativeModel({
@@ -88,7 +91,7 @@ export class AiChat {
     } else if (apiType === "cohere") {
       await this.sendToCohereV2Stream(history);
     } else {
-      // Groq, Mistral, Local
+      // Groq, Cerebras, OpenRouter, Mistral, Agnes, Local
       let url = "";
       let apiKey = "";
       let model = "";
@@ -121,6 +124,10 @@ export class AiChat {
         if (isAgentActive) {
           targetAgentId = this.currentSettings.mistralAgentID;
         }
+      } else if (apiType === "agnes") {
+        url = "https://apihub.agnes-ai.com/v1/chat/completions";
+        apiKey = this.currentSettings.agnesApiKey || "";
+        model = this.currentSettings.agnesModel || "agnes-3.0-flash";
       } else if (apiType === "local") {
         url =
           this.currentSettings.localUrl ||

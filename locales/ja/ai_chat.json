@@ -63,6 +63,7 @@
     "groq": "Groq",
     "cohere": "Cohere",
     "mistral": "Mistral",
+    "agnes": "Agnes AI",
     "local": "Local LLM",
     "geminiFull": "Gemini (Cloud)",
     "localFull": "Local AI"

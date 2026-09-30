@@ -610,20 +610,20 @@
                                     ).value = this.value
                                 "
                             >
+                                <option value="gemini-flash-latest">
+                                    Gemini Flash (Latest)
+                                </option>
                                 <option value="gemini-3.5-flash-lite">
                                     Gemini 3.5 Flash-Lite
                                 </option>
-                                <option value="gemini-3.5-flash">
-                                    Gemini 3.5 Flash
+                                <option value="gemini-3.8-flash">
+                                    Gemini 3.8 Flash
+                                </option>
+                                <option value="gemini-3.7-flash">
+                                    Gemini 3.7 Flash
                                 </option>
                                 <option value="gemini-3.6-flash">
                                     Gemini 3.6 Flash
-                                </option>
-                                <option value="gemini-2.5-flash">
-                                    Gemini 2.5 Flash
-                                </option>
-                                <option value="gemini-2.5-pro">
-                                    Gemini 2.5 Pro
                                 </option>
                                 <option
                                     value=""
@@ -696,8 +696,8 @@
                                 <option value="openai/gpt-oss-120b">
                                     GPT OSS 120B
                                 </option>
-                                <option value="qwen/qwen3.6-27b">
-                                    Qwen 3.6 27B
+                                <option value="qwen/qwen3.8-27b">
+                                    Qwen 3.8 27B
                                 </option>
                                 <option
                                     value=""
@@ -1016,11 +1016,11 @@
                                     ).value = this.value
                                 "
                             >
+                                <option value="ministral-14b-2512">
+                                    Mistral 14B
+                                </option>
                                 <option value="mistral-small-latest">
                                     Mistral Small 4
-                                </option>
-                                <option value="mistral-large-latest">
-                                    Mistral Large 3
                                 </option>
                                 <option
                                     value=""
@@ -1036,6 +1036,77 @@
                         </div>
                     </div>
 
+                    <hr
+                        style="
+                            margin: 10px 0;
+                            border: 0;
+                            border-top: 1px solid var(--ui-text-color);
+                            opacity: 0.3;
+                        "
+                    />
+
+                    <!-- Agnes AI -->
+                    <div class="ai-setting-group">
+                        <h4 data-i18n="settings.ai.agnes">Agnes AI</h4>
+
+                        <div class="setting-item">
+                            <label
+                                for="agnes-api-key"
+                                data-i18n="settings.ai.agnesKeyLabel"
+                            >Agnes API Key</label>
+                            <input
+                                type="text"
+                                style="-webkit-text-security: disc;"
+                                autocomplete="off"
+                                id="agnes-api-key"
+                                data-i18n-placeholder="settings.ai.agnesKeyPlaceholder"
+                                placeholder="..."
+                            />
+                        </div>
+
+                        <div class="setting-item">
+                            <label for="enable-agnes" class="inline">
+                                <input type="checkbox" id="enable-agnes" />
+                                <span data-i18n="settings.ai.enableAgnes">
+                                    Agnes AI を有効にする
+                                </span>
+                            </label>
+                        </div>
+
+                        <div class="setting-item">
+                            <label
+                                for="agnes-model"
+                                data-i18n="settings.ai.agnesModelLabel"
+                            >Agnes Model</label>
+                            <input
+                                type="text"
+                                id="agnes-model"
+                                data-i18n-placeholder="settings.ai.modelPlaceholder"
+                                placeholder="<モデル名を入力>"
+                            />
+                            <select
+                                id="agnes-model-preset"
+                                onchange="
+                                    document.getElementById(
+                                        'agnes-model',
+                                    ).value = this.value
+                                "
+                            >
+                                <option value="agnes-3.0-flash">
+                                    Agnes 3.0 Flash
+                                </option>
+                                <option value="agnes-2.5-flash">
+                                    Agnes 2.5 Flash
+                                </option>
+                                <option
+                                    value=""
+                                    data-i18n="settings.ai.manualEntry"
+                                >
+                                    手動入力
+                                </option>
+                            </select>
+                        </div>
+                    </div>
                     <hr
                         style="
                             margin: 10px 0;
