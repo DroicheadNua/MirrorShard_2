@@ -6,7 +6,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 
-## [unreleased]
+## [1.14.0] - 2026-10-4 
 
 ### Added (新機能)  
 - AIプロバイダにAgnes AIを追加(ただし、現状ではエージェント機能には非対応)  
@@ -20,7 +20,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed (修正点)   
 - アップデート通知からリリースページを開けない問題を修正  
-- flake.nixがtarget/releaseを参照してしまっていた問題を修正  
+- flake.nixをリリースページのtarballを参照する形に修正  
 
 
 ## [1.13.0] - 2026-8-9  

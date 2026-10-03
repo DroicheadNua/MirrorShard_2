@@ -36,10 +36,11 @@
           pkg-config
         ];
 
+        version = "1.14.0";
+
       in
       {
         # 'nix develop' を実行した際に入り込む開発シェル
-        # (従来の nix-shell と同じ開発用の正しい環境変数が自動セットアップされる)
         devShells.default = pkgs.mkShell {
           buildInputs = runtimeDeps ++ buildDeps;
 
@@ -49,51 +50,45 @@
             export PKG_CONFIG_PATH="${pkgs.openssl.dev}/lib/pkgconfig:${pkgs.glib.dev}/lib/pkgconfig:${pkgs.gtk3.dev}/lib/pkgconfig:${pkgs.libsoup_3.dev}/lib/pkgconfig:${pkgs.webkitgtk_4_1.dev}/lib/pkgconfig:${pkgs.libappindicator-gtk3.dev}/lib/pkgconfig"
             export LD_LIBRARY_PATH="${pkgs.lib.makeLibraryPath runtimeDeps}"
             export XDG_DATA_DIRS="${pkgs.gsettings-desktop-schemas}/share/gsettings-schemas/${pkgs.gsettings-desktop-schemas.name}:${pkgs.gtk3}/share/gsettings-schemas/${pkgs.gtk3.name}:$XDG_DATA_DIRS"
-
             echo "❄️ MirrorShard 2 Nix Flake Developer Shell Activated! ❄️"
           '';
         };
 
-        # 'nix build' で出力される実行パッケージの定義
-        # すでに手動で「pnpm tauri build」されたバイナリをマウントし
-        # NixOSに必要なGTK/GSettings/GIO/GStreamerのすべての依存パスを埋め込んだ
-        # 「完全に自律したラッパーバイナリ」を出力
-        packages.default = pkgs.stdenv.mkDerivation {
-                  pname = "mirrorshard2";
-                  version = "1.13.0";
+        # x86_64 Linux向けの配布バイナリ
+        packages = pkgs.lib.optionalAttrs (system == "x86_64-linux") {
+          default = pkgs.stdenv.mkDerivation {
+            pname = "mirrorshard2";
+            inherit version;
 
-                  # リポジトリのルート全体をソースにする
-                  src = ./.;
+            src = pkgs.fetchurl {
+              url = "https://github.com/DroicheadNua/MirrorShard_2/releases/download/v${version}/mirrorshard2-${version}-x86_64-linux.tar.gz";
+              hash = "sha256-gYIeGt2Ffa5RGIHxO+IfdssYKHCDq7AVxPYsQjhvsdY=";
+            };
 
-                  buildInputs = runtimeDeps;
-                  nativeBuildInputs = [ pkgs.makeWrapper ];
+            nativeBuildInputs = [
+              pkgs.makeWrapper
+            ];
 
-                  dontBuild = true;
+            dontBuild = true;
 
-                  # 参照パスを src-tauri/target/release からに修正する
-                  installPhase = ''
-                    mkdir -p $out/lib/mirrorshard2
-                    mkdir -p $out/bin
+            installPhase = ''
+              mkdir -p $out/lib/mirrorshard2
+              mkdir -p $out/bin
 
-                    # ルートからの相対パスでバイナリを探す
-                    if [ -f src-tauri/target/release/mirrorshard2 ]; then
-                      cp src-tauri/target/release/mirrorshard2 $out/lib/mirrorshard2/mirrorshard2
+              cp mirrorshard2 $out/lib/mirrorshard2/mirrorshard2
 
-                      if [ -d src-tauri/target/release/resources ]; then
-                        cp -r src-tauri/target/release/resources $out/lib/mirrorshard2/
-                      fi
-                    else
-                      echo "Error: Run 'pnpm tauri build' first!"
-                      exit 1
-                    fi
+              if [ -d resources ]; then
+                cp -r resources $out/lib/mirrorshard2/
+              fi
 
-                    makeWrapper $out/lib/mirrorshard2/mirrorshard2 $out/bin/mirrorshard2 \
-                      --prefix LD_LIBRARY_PATH : "${pkgs.lib.makeLibraryPath runtimeDeps}" \
-                      --prefix GIO_EXTRA_MODULES : "${pkgs.glib-networking}/lib/gio/modules" \
-                      --prefix GST_PLUGIN_SYSTEM_PATH_1_0 : "${pkgs.gst_all_1.gstreamer.out}/lib/gstreamer-1.0:${pkgs.gst_all_1.gst-plugins-base}/lib/gstreamer-1.0:${pkgs.gst_all_1.gst-plugins-good}/lib/gstreamer-1.0:${pkgs.gst_all_1.gst-plugins-bad}/lib/gstreamer-1.0" \
-                      --prefix XDG_DATA_DIRS : "${pkgs.gsettings-desktop-schemas}/share/gsettings-schemas/${pkgs.gsettings-desktop-schemas.name}:${pkgs.gtk3}/share/gsettings-schemas/${pkgs.gtk3.name}"
-                  '';
-                };
+              makeWrapper $out/lib/mirrorshard2/mirrorshard2 $out/bin/mirrorshard2 \
+                --prefix LD_LIBRARY_PATH : "${pkgs.lib.makeLibraryPath runtimeDeps}" \
+                --prefix GIO_EXTRA_MODULES : "${pkgs.glib-networking}/lib/gio/modules" \
+                --prefix GST_PLUGIN_SYSTEM_PATH_1_0 : "${pkgs.gst_all_1.gstreamer.out}/lib/gstreamer-1.0:${pkgs.gst_all_1.gst-plugins-base}/lib/gstreamer-1.0:${pkgs.gst_all_1.gst-plugins-good}/lib/gstreamer-1.0:${pkgs.gst_all_1.gst-plugins-bad}/lib/gstreamer-1.0" \
+                --prefix XDG_DATA_DIRS : "${pkgs.gsettings-desktop-schemas}/share/gsettings-schemas/${pkgs.gsettings-desktop-schemas.name}:${pkgs.gtk3}/share/gsettings-schemas/${pkgs.gtk3.name}"
+            '';
+          };
+        };
       }
     );
 }

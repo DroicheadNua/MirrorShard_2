@@ -7,7 +7,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
-## [unreleased]
+## [1.14.0] - 2026-10-04
 
 ### Added
 
@@ -24,7 +24,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Fixed
 
 * Fixed an issue where the release page could not be opened from the update notification.
-* Fixed an issue where `flake.nix` incorrectly referenced `target/release`.
+* Fixed an issue where flake.nix incorrectly referenced the local target/release directory instead of the release tarball.
 
 
 ## [1.13.0] - 2026-08-09
