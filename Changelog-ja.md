@@ -5,6 +5,15 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.14.1] - 2026-10-5
+
+### Changed (変更点)  
+* WebKitのGPUコンポジティングを無効にするための環境変数オーバーライドとして、`MIRRORSHARD_DISABLE_COMPOSITING`を追加しました。  
+
+### Fixed (修正点)  
+* Wayland/NVIDIA 専用の GL ワークアラウンドが、すべての Linux システムに誤って適用されていた問題を修正しました。  
+* 同梱の Nix ランタイムライブラリが、MirrorShard 2 から起動されたホストアプリケーションの動作に干渉する可能性があった問題を修正しました。  
+
 
 ## [1.14.0] - 2026-10-4 
 

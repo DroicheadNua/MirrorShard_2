@@ -310,6 +310,14 @@ fn is_virtual_machine() -> bool {
 //         || desktop.contains("drift")
 // }
 
+// Nix環境から起動されたMirrorShardが niri を叩くときだけ LD_LIBRARY_PATH を除去
+#[allow(dead_code)]
+fn niri_command() -> Command {
+    let mut cmd = Command::new("niri");
+    cmd.env_remove("LD_LIBRARY_PATH");
+    cmd
+}
+
 // 共通判定: Nvidia + Wayland環境かどうか
 // (ワークアラウンド適用条件と、GPUコンポジットのON/OFF判定の両方から呼ぶ)
 #[allow(dead_code)]
@@ -334,9 +342,7 @@ async fn apply_niri_size_preset(preset: String) -> Result<(), String> {
         }
 
         // 1. Niri IPC から全ウィンドウの情報を JSON で取得
-        let output = std::process::Command::new("niri")
-            .args(["msg", "--json", "windows"])
-            .output();
+        let output = niri_command().args(["msg", "--json", "windows"]).output();
 
         if let Ok(out) = output {
             if let Ok(json_str) = String::from_utf8(out.stdout) {
@@ -360,7 +366,7 @@ async fn apply_niri_size_preset(preset: String) -> Result<(), String> {
                                 let want_floating = preset == "45x35";
 
                                 // ターゲット指定してフォーカス
-                                let _ = std::process::Command::new("niri")
+                                let _ = niri_command()
                                     .args([
                                         "msg",
                                         "action",
@@ -372,42 +378,42 @@ async fn apply_niri_size_preset(preset: String) -> Result<(), String> {
 
                                 // 状態が食い違っている時だけ toggle する（フロート解除、またはフロート化）
                                 if is_currently_floating != want_floating {
-                                    let _ = std::process::Command::new("niri")
+                                    let _ = niri_command()
                                         .args(["msg", "action", "toggle-window-floating"])
                                         .status();
                                 }
 
                                 // 各プリセットのサイズ変更
                                 if want_floating {
-                                    let _ = std::process::Command::new("niri")
+                                    let _ = niri_command()
                                         .args(["msg", "action", "set-window-width", "35%"])
                                         .status();
-                                    let _ = std::process::Command::new("niri")
+                                    let _ = niri_command()
                                         .args(["msg", "action", "set-window-height", "45%"])
                                         .status();
                                 } else {
                                     match preset.as_str() {
                                         "80x35" => {
-                                            let _ = std::process::Command::new("niri")
+                                            let _ = niri_command()
                                                 .args(["msg", "action", "set-column-width", "35%"])
                                                 .status();
-                                            let _ = std::process::Command::new("niri")
+                                            let _ = niri_command()
                                                 .args(["msg", "action", "set-window-height", "80%"])
                                                 .status();
                                         }
                                         "90x40" => {
-                                            let _ = std::process::Command::new("niri")
+                                            let _ = niri_command()
                                                 .args(["msg", "action", "set-column-width", "40%"])
                                                 .status();
-                                            let _ = std::process::Command::new("niri")
+                                            let _ = niri_command()
                                                 .args(["msg", "action", "set-window-height", "90%"])
                                                 .status();
                                         }
                                         "100x50" => {
-                                            let _ = std::process::Command::new("niri")
+                                            let _ = niri_command()
                                                 .args(["msg", "action", "set-column-width", "50%"])
                                                 .status();
-                                            let _ = std::process::Command::new("niri")
+                                            let _ = niri_command()
                                                 .args([
                                                     "msg",
                                                     "action",
@@ -454,16 +460,16 @@ async fn setup_niri_floating_terminal() -> Result<(), String> {
             tokio::time::sleep(std::time::Duration::from_millis(50)).await;
 
             // 1. フローティング状態にする
-            let _ = std::process::Command::new("niri")
+            let _ = niri_command()
                 .args(["msg", "action", "toggle-window-floating"])
                 .status();
 
             // 2. 初期サイズ（幅35% × 高さ45%）にセット
-            let _ = std::process::Command::new("niri")
+            let _ = niri_command()
                 .args(["msg", "action", "set-window-width", "30%"])
                 .status();
 
-            let _ = std::process::Command::new("niri")
+            let _ = niri_command()
                 .args(["msg", "action", "set-window-height", "40%"])
                 .spawn();
         }
@@ -498,10 +504,11 @@ fn is_user_enabled_gpu_compositing() -> bool {
 #[allow(dead_code)]
 fn should_disable_gpu_compositing() -> bool {
     let forced_by_env = std::env::var("MIRRORSHARD_ENABLE_COMPOSITING").is_ok();
+    let disable_by_env = std::env::var("MIRRORSHARD_DISABLE_COMPOSITING").is_ok();
     let forced_by_settings = is_user_enabled_gpu_compositing();
 
-    // 仮想環境は常にオフ(ユーザーの意思に関わらず)
-    if is_virtual_machine() {
+    // 仮想環境と環境変数による強制オフは最優先
+    if is_virtual_machine() || disable_by_env {
         return true;
     }
 
@@ -609,7 +616,7 @@ fn is_user_enabled_subwindow_half_height() -> bool {
 // 隣接カラムをスキャンして、条件を満たすターゲットウィンドウの ID を返す
 #[allow(dead_code)]
 fn find_niri_stack_target_id() -> Option<u64> {
-    let output = std::process::Command::new("niri")
+    let output = niri_command()
         .args(["msg", "--json", "windows"])
         .output()
         .ok()?;
@@ -709,9 +716,7 @@ async fn try_niri_stack_window(target_id: Option<u64>) {
         Some(_target_id) => {
             tokio::time::sleep(Duration::from_millis(150)).await;
 
-            let output = std::process::Command::new("niri")
-                .args(["msg", "--json", "windows"])
-                .output();
+            let output = niri_command().args(["msg", "--json", "windows"]).output();
 
             if let Ok(out) = output {
                 if let Ok(json_str) = String::from_utf8(out.stdout) {
@@ -749,7 +754,7 @@ async fn try_niri_stack_window(target_id: Option<u64>) {
                                 if current_count == 1 {
                                     if let (Some(nc), Some(tc)) = (new_col, target_col) {
                                         if nc > tc {
-                                            let _ = std::process::Command::new("niri")
+                                            let _ = niri_command()
                                                 .args([
                                                     "msg",
                                                     "action",
@@ -757,7 +762,7 @@ async fn try_niri_stack_window(target_id: Option<u64>) {
                                                 ])
                                                 .status();
                                         } else if nc < tc {
-                                            let _ = std::process::Command::new("niri")
+                                            let _ = niri_command()
                                                 .args([
                                                     "msg",
                                                     "action",
@@ -767,10 +772,10 @@ async fn try_niri_stack_window(target_id: Option<u64>) {
                                         }
 
                                         // 吸い込み後に幅40% × 高さ50% に調整
-                                        let _ = std::process::Command::new("niri")
+                                        let _ = niri_command()
                                             .args(["msg", "action", "set-column-width", "40%"])
                                             .status();
-                                        let _ = std::process::Command::new("niri")
+                                        let _ = niri_command()
                                             .args(["msg", "action", "set-window-height", "50%"])
                                             .spawn();
                                     }
@@ -789,11 +794,11 @@ async fn try_niri_stack_window(target_id: Option<u64>) {
             tokio::time::sleep(Duration::from_millis(150)).await;
 
             // 単独で開いたサブウィンドウのカラム幅を 40%、高さを 60% に直接指定
-            let _ = std::process::Command::new("niri")
+            let _ = niri_command()
                 .args(["msg", "action", "set-column-width", "40%"])
                 .status();
 
-            let _ = std::process::Command::new("niri")
+            let _ = niri_command()
                 .args(["msg", "action", "set-window-height", "60%"])
                 .spawn();
         }
@@ -3191,12 +3196,13 @@ pub fn run() {
             }
 
             // Wayland/Nvidia の Error 71 対策（検証用: 常に適用）
-            #[cfg(target_os = "linux")]
-            if let Some(window) = app.get_webview_window("main") {
-                if let Ok(gtk_window) = window.gtk_window() {
-                    wayland_nvidia::force_paint_gl_context(&gtk_window);
-                }
-            }
+            // ※テストコードなのでコメントアウト
+            // #[cfg(target_os = "linux")]
+            // if let Some(window) = app.get_webview_window("main") {
+            //     if let Ok(gtk_window) = window.gtk_window() {
+            //         wayland_nvidia::force_paint_gl_context(&gtk_window);
+            //     }
+            // }
 
             Ok(())
         })

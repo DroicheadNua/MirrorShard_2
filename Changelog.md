@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [1.14.1] - 2026-10-05
+
+### Changed
+* Added `MIRRORSHARD_DISABLE_COMPOSITING` as an environment-variable override to disable WebKit GPU compositing.
+
+### Fixed
+* Fixed an issue where a Wayland/NVIDIA-specific GL workaround was incorrectly applied on all Linux systems.
+* Fixed an issue where the bundled Nix runtime libraries could interfere with host applications launched from MirrorShard 2.
+
+
 ## [1.14.0] - 2026-10-04
 
 ### Added

@@ -13,6 +13,12 @@
 
         # 実行に必要なライブラリ群
         runtimeDeps = with pkgs; [
+          glibc
+          gdk-pixbuf
+          cairo
+          glib
+          fontconfig
+          stdenv.cc.cc.lib
           alsa-lib
           gtk3
           libsoup_3
@@ -36,9 +42,12 @@
           pkg-config
         ];
 
-        version = "1.14.0";
+        version = "1.14.1";
 
-      in
+        # プロジェクト直下にmirrorshard2-local-x86_64-linux.tar.gzという名前でTarballがある場合のみそちらを参照してビルド
+        localTarball = ./mirrorshard2-local-x86_64-linux.tar.gz;
+
+        in
       {
         # 'nix develop' を実行した際に入り込む開発シェル
         devShells.default = pkgs.mkShell {
@@ -56,17 +65,24 @@
 
         # x86_64 Linux向けの配布バイナリ
         packages = pkgs.lib.optionalAttrs (system == "x86_64-linux") {
-          default = pkgs.stdenv.mkDerivation {
+            default = pkgs.stdenv.mkDerivation {
             pname = "mirrorshard2";
             inherit version;
 
-            src = pkgs.fetchurl {
-              url = "https://github.com/DroicheadNua/MirrorShard_2/releases/download/v${version}/mirrorshard2-${version}-x86_64-linux.tar.gz";
-              hash = "sha256-gYIeGt2Ffa5RGIHxO+IfdssYKHCDq7AVxPYsQjhvsdY=";
-            };
+            src =
+                if builtins.pathExists localTarball then
+                localTarball
+                else
+                pkgs.fetchurl {
+                    url = "https://github.com/DroicheadNua/MirrorShard_2/releases/download/v${version}/mirrorshard2-${version}-x86_64-linux.tar.gz";
+                    hash = "sha256-gPwPqCFP72atojlxKuAweHxZNufsWgijxyXx5bVt9H8=";
+                };
+
+            sourceRoot = ".";
 
             nativeBuildInputs = [
               pkgs.makeWrapper
+              pkgs.patchelf
             ];
 
             dontBuild = true;
@@ -80,6 +96,11 @@
               if [ -d resources ]; then
                 cp -r resources $out/lib/mirrorshard2/
               fi
+
+              patchelf \
+                --set-interpreter "${pkgs.glibc}/lib/ld-linux-x86-64.so.2" \
+                --set-rpath "${pkgs.lib.makeLibraryPath runtimeDeps}" \
+                $out/lib/mirrorshard2/mirrorshard2
 
               makeWrapper $out/lib/mirrorshard2/mirrorshard2 $out/bin/mirrorshard2 \
                 --prefix LD_LIBRARY_PATH : "${pkgs.lib.makeLibraryPath runtimeDeps}" \
