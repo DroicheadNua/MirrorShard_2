@@ -19,6 +19,35 @@ On Linux, rendering performance is automatically optimized based on your system 
   If you're running NVIDIA on Wayland, you can manually enable GPU compositing from the Settings screen by checking "Enable GPU Compositing (Wayland + Nvidia only)". This may cause instability on some systems — if you run into issues, uncheck it and restart.
   You can also enable it from the terminal with `MIRRORSHARD_ENABLE_COMPOSITING=1 mirrorshard2` (this has no effect on X11 or in virtual machines).
 
+### Disabling GPU Compositing Manually
+
+MirrorShard 2 automatically determines whether WebKit GPU compositing should be enabled based on the Linux environment.
+
+If you experience rendering or stability issues and want to disable GPU compositing manually, set the following environment variable when launching MirrorShard 2:
+
+```bash
+MIRRORSHARD_DISABLE_COMPOSITING=1
+```
+
+For example:
+
+```bash
+MIRRORSHARD_DISABLE_COMPOSITING=1 mirrorshard2
+```
+
+This setting is independent of the window transparency setting.
+
+
+## 🪟 Window Transparency
+
+On Linux, window transparency may cause rendering issues on some environments.
+
+Therefore, starting with v1.14.1, **window transparency is disabled by default on Linux**. The frameless window design remains unchanged.
+
+If you want to use transparent windows, enable **"Enable window transparency"** in the "Linux" tab of the Settings window and restart the application.
+
+This setting is independent of the GPU compositing setting.
+
 ### Restricted Features (When GPU Compositing is Disabled)
 
 In the Linux version, the following features are disabled in all environments to ensure stability:
@@ -75,7 +104,12 @@ Additionally, issues such as the following may occur when GPU compositing is dis
 
 ## Distribution Formats
 
-Pre-built binaries are provided for `.deb` (x86_64), `.rpm` (x86_64), and `.deb` (ARM64 for Raspberry Pi). For other distributions, please build from source using the steps below.
+Pre-built binaries are provided for:
+
+* Debian / Ubuntu (.deb, x86_64)
+* Generic Linux (.tar.gz, x86_64)
+
+Users on other Linux distributions can use the generic Linux tarball or build MirrorShard 2 from source.
 
 ## Building from Source
 
@@ -111,7 +145,6 @@ Detailed instructions for building, running, and troubleshooting MirrorShard 2 o
 You can enter a fully configured virtual development environment containing all dependencies (Node.js, pnpm, Rust, WebKitGTK, GStreamer, glib-networking, GTK/GSettings schemas) using `flake.nix` without modifying your system configuration:
 
 ```bash
-git add flake.nix
 nix develop
 ```
 
