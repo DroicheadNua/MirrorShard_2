@@ -57,7 +57,6 @@
             export GIO_EXTRA_MODULES="${pkgs.glib-networking}/lib/gio/modules"
             export GST_PLUGIN_SYSTEM_PATH_1_0="${pkgs.gst_all_1.gstreamer.out}/lib/gstreamer-1.0:${pkgs.gst_all_1.gst-plugins-base}/lib/gstreamer-1.0:${pkgs.gst_all_1.gst-plugins-good}/lib/gstreamer-1.0:${pkgs.gst_all_1.gst-plugins-bad}/lib/gstreamer-1.0"
             export PKG_CONFIG_PATH="${pkgs.openssl.dev}/lib/pkgconfig:${pkgs.glib.dev}/lib/pkgconfig:${pkgs.gtk3.dev}/lib/pkgconfig:${pkgs.libsoup_3.dev}/lib/pkgconfig:${pkgs.webkitgtk_4_1.dev}/lib/pkgconfig:${pkgs.libappindicator-gtk3.dev}/lib/pkgconfig"
-            export LD_LIBRARY_PATH="${pkgs.lib.makeLibraryPath runtimeDeps}"
             export XDG_DATA_DIRS="${pkgs.gsettings-desktop-schemas}/share/gsettings-schemas/${pkgs.gsettings-desktop-schemas.name}:${pkgs.gtk3}/share/gsettings-schemas/${pkgs.gtk3.name}:$XDG_DATA_DIRS"
             echo "❄️ MirrorShard 2 Nix Flake Developer Shell Activated! ❄️"
           '';
@@ -75,7 +74,7 @@
                 else
                 pkgs.fetchurl {
                     url = "https://github.com/DroicheadNua/MirrorShard_2/releases/download/v${version}/mirrorshard2-${version}-x86_64-linux.tar.gz";
-                    hash = "sha256-gPwPqCFP72atojlxKuAweHxZNufsWgijxyXx5bVt9H8=";
+                    hash = "sha256-VA7l/Elsj0s1FUUpgrYsDGs8v62Gt+SNf32k3BLbVAM=";
                 };
 
             sourceRoot = ".";

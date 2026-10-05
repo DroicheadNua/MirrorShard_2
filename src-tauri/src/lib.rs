@@ -318,6 +318,41 @@ fn niri_command() -> Command {
     cmd
 }
 
+// サブウィンドウ生成時の.transparentの値を設定する処理
+#[allow(dead_code)]
+fn is_user_enabled_transparency() -> bool {
+    if let Ok(home) = std::env::var("HOME") {
+        let store_path = std::path::PathBuf::from(home)
+            .join(".local/share/com.DroicheadNua.mirrorshard2/.settings.dat");
+
+        if let Ok(content) = std::fs::read(&store_path) {
+            if let Ok(json_str) = String::from_utf8(content) {
+                if let Ok(data) = serde_json::from_str::<serde_json::Value>(&json_str) {
+                    return data
+                        .get("enableTransparentWindows")
+                        .and_then(|v| v.as_bool())
+                        .unwrap_or(false);
+                }
+            }
+        }
+    }
+
+    false
+}
+
+#[allow(dead_code)]
+fn should_use_transparent_windows() -> bool {
+    #[cfg(target_os = "linux")]
+    {
+        is_user_enabled_transparency()
+    }
+
+    #[cfg(not(target_os = "linux"))]
+    {
+        true
+    }
+}
+
 // 共通判定: Nvidia + Wayland環境かどうか
 // (ワークアラウンド適用条件と、GPUコンポジットのON/OFF判定の両方から呼ぶ)
 #[allow(dead_code)]
@@ -1961,7 +1996,7 @@ async fn open_terminal_window(app: tauri::AppHandle, id: Option<String>) -> Resu
             .min_inner_size(640.0, 480.0)
             .resizable(true)
             .decorations(false)
-            .transparent(true)
+            .transparent(should_use_transparent_windows())
             .visible(false);
 
     #[cfg(any(windows, target_os = "macos"))]
@@ -2194,7 +2229,7 @@ async fn open_idea_processor(app: AppHandle) {
     .min_inner_size(640.0, 480.0)
     .resizable(true)
     .decorations(false)
-    .transparent(true)
+    .transparent(should_use_transparent_windows())
     .visible(false)
     .devtools(true);
     #[cfg(target_os = "macos")]
@@ -2238,7 +2273,7 @@ async fn open_vivliostyle(app: AppHandle) {
     .min_inner_size(640.0, 480.0)
     .resizable(true)
     .decorations(false)
-    .transparent(true)
+    .transparent(should_use_transparent_windows())
     .visible(false)
     .devtools(true);
     #[cfg(target_os = "macos")]
@@ -2279,7 +2314,7 @@ async fn open_markdown_preview(app: AppHandle) {
     .min_inner_size(640.0, 480.0)
     .resizable(true)
     .decorations(false)
-    .transparent(true)
+    .transparent(should_use_transparent_windows())
     .visible(false)
     .devtools(true);
     #[cfg(target_os = "macos")]
@@ -2793,7 +2828,7 @@ async fn open_shortcut(app: AppHandle) {
     .inner_size(640.0, 480.0)
     .resizable(false)
     .decorations(false)
-    .transparent(true)
+    .transparent(should_use_transparent_windows())
     .visible(false)
     .devtools(false);
     #[cfg(target_os = "macos")]
@@ -2839,7 +2874,7 @@ async fn open_ai_chat(app: AppHandle) {
     .min_inner_size(400.0, 480.0)
     .resizable(true)
     .decorations(false)
-    .transparent(true)
+    .transparent(should_use_transparent_windows())
     .visible(false)
     .devtools(false);
     #[cfg(target_os = "macos")]
@@ -2889,7 +2924,7 @@ async fn open_settings_window(app: AppHandle) {
         tauri::WebviewUrl::App("settings.html".into()), // taiconf.jsonで定義したURLと同じ
     )
     .title("設定")
-    .transparent(true)
+    .transparent(should_use_transparent_windows())
     .inner_size(640.0, 820.0)
     .min_inner_size(400.0, 400.0)
     .resizable(true)
@@ -2936,7 +2971,7 @@ async fn open_export_window(app: AppHandle) {
     .inner_size(800.0, 900.0)
     .resizable(false)
     .decorations(false)
-    .transparent(true)
+    .transparent(should_use_transparent_windows())
     .visible(false)
     .devtools(false);
     #[cfg(target_os = "macos")]
@@ -2977,7 +3012,7 @@ async fn open_preview_window(app: AppHandle) {
         tauri::WebviewUrl::App("preview.html".into()),
     )
     .title("プレビュー")
-    .transparent(true)
+    .transparent(should_use_transparent_windows())
     .inner_size(600.0, 480.0)
     .min_inner_size(600.0, 480.0)
     .resizable(true)
@@ -3140,7 +3175,7 @@ pub fn run() {
     // Linux環境での起動時判定
     #[cfg(target_os = "linux")]
     {
-        // 1. Wayland環境であれば GTK_IM_MODULE=wayland を強制セット（インライン変換の有効化）
+        // 1. Wayland環境であれば GTK_IM_MODULE=wayland を強制セット
         let is_wayland = std::env::var("WAYLAND_DISPLAY").is_ok()
             || std::env::var("XDG_SESSION_TYPE")
                 .map(|v| v == "wayland")
@@ -3157,6 +3192,25 @@ pub fn run() {
             std::env::set_var("WEBKIT_DISABLE_COMPOSITING_MODE", "1");
         } else {
             println!("Linux: Enabling WebKit GPU compositing mode.");
+        }
+    }
+
+    // Tauri設定を生成
+    let mut context = tauri::generate_context!();
+
+    // Linuxでは、保存された設定に応じてメインウィンドウの透明化を変更
+    #[cfg(target_os = "linux")]
+    {
+        let transparent = should_use_transparent_windows();
+
+        if let Some(window) = context
+            .config_mut()
+            .app
+            .windows
+            .iter_mut()
+            .find(|window| window.label == "main")
+        {
+            window.transparent = transparent;
         }
     }
 
@@ -3378,7 +3432,7 @@ pub fn run() {
             }
             _ => {}
         })
-        .build(tauri::generate_context!())
+        .build(context)
         .expect("error while building tauri application")
         .run(|app_handle, event| match event {
             tauri::RunEvent::Exit => {

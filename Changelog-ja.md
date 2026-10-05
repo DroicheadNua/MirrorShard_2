@@ -8,11 +8,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [1.14.1] - 2026-10-5
 
 ### Changed (変更点)  
-* WebKitのGPUコンポジティングを無効にするための環境変数オーバーライドとして、`MIRRORSHARD_DISABLE_COMPOSITING`を追加しました。  
+- Linux: ウィンドウの透明効果をデフォルトで無効にしました。透明効果はLinux設定から有効にできます。変更を反映するにはアプリの再起動が必要です。  
+- WebKitのGPUコンポジティングを無効にするための環境変数オーバーライドとして、`MIRRORSHARD_DISABLE_COMPOSITING`を追加しました。  
 
 ### Fixed (修正点)  
-* Wayland/NVIDIA 専用の GL ワークアラウンドが、すべての Linux システムに誤って適用されていた問題を修正しました。  
-* 同梱の Nix ランタイムライブラリが、MirrorShard 2 から起動されたホストアプリケーションの動作に干渉する可能性があった問題を修正しました。  
+- Wayland/NVIDIA 専用の GL ワークアラウンドが、すべての Linux システムに誤って適用されていた問題を修正しました。  
+- 同梱の Nix ランタイムライブラリが、MirrorShard 2 から起動されたホストアプリケーションの動作に干渉する可能性があった問題を修正しました。  
 
 
 ## [1.14.0] - 2026-10-4 

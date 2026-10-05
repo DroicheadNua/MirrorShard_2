@@ -10,11 +10,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [1.14.1] - 2026-10-05
 
 ### Changed
+
+* Linux: Window transparency is now disabled by default. It can be enabled from the Linux settings. Restart the application to apply the change.
 * Added `MIRRORSHARD_DISABLE_COMPOSITING` as an environment-variable override to disable WebKit GPU compositing.
 
 ### Fixed
+
 * Fixed an issue where a Wayland/NVIDIA-specific GL workaround was incorrectly applied on all Linux systems.
 * Fixed an issue where the bundled Nix runtime libraries could interfere with host applications launched from MirrorShard 2.
+
 
 
 ## [1.14.0] - 2026-10-04

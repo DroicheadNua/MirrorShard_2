@@ -381,6 +381,9 @@ async function setupSettings() {
     const checkSubWindowHalfHeight = document.querySelector(
       "#sub-window-half-height",
     ) as HTMLInputElement;
+    const checkEnableTransparentWindows = document.querySelector(
+      "#enable-transparent-windows",
+    ) as HTMLInputElement;
 
 
     // --- 4. 一時保存用変数 & 初期値の読み込み ---
@@ -1135,6 +1138,9 @@ async function setupSettings() {
     if (checkSubWindowHalfHeight) {
       checkSubWindowHalfHeight.checked = (await store.get<boolean>("subWindowHalfHeight")) ?? false;
     }
+    if (checkEnableTransparentWindows) {
+      checkEnableTransparentWindows.checked = (await store.get<boolean>("enableTransparentWindows")) ?? false;
+    }
 
     // --- 5. イベントリスナー (ファイル選択) ---
 
@@ -1545,6 +1551,7 @@ async function setupSettings() {
         const newEnableGpuCompositing = checkEnableGpuCompositing?.checked;
         const newEditorSizePreset = editorSizeSelect?.value;
         const newSubWindowHalfHeight = checkSubWindowHalfHeight?.checked;
+        const newEnableTransparentWindows = checkEnableTransparentWindows?.checked;
 
         // Storeに保存
         await store.set("editorMaxWidth", numValue.toString());
@@ -1665,6 +1672,8 @@ async function setupSettings() {
         }
         if (newSubWindowHalfHeight !== undefined)
           await store.set("subWindowHalfHeight", newSubWindowHalfHeight);
+        if (newEnableTransparentWindows !== undefined)
+          await store.set("enableTransparentWindows", newEnableTransparentWindows);
 
 
         await store.save();
