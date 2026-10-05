@@ -3196,9 +3196,12 @@ pub fn run() {
     }
 
     // Tauri設定を生成
-    let mut context = tauri::generate_context!();
+    let context = tauri::generate_context!();
 
-    // Linuxでは、保存された設定に応じてメインウィンドウの透明化を変更
+    //　Linuxの場合は設定に応じてウィンドウの透明化を設定
+    #[cfg(target_os = "linux")]
+    let mut context = context;
+
     #[cfg(target_os = "linux")]
     {
         let transparent = should_use_transparent_windows();
