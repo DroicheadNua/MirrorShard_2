@@ -8,6 +8,8 @@ import { save } from '@tauri-apps/plugin-dialog';
 import { writeTextFile } from '@tauri-apps/plugin-fs';
 import { Store } from '@tauri-apps/plugin-store';
 import { initI18n, applyTranslationsToDOM, t, translateRustError } from './i18n';
+import DOMPurify from 'dompurify';
+import { dirname, isAbsolute, join } from '@tauri-apps/api/path';
 
 interface MarkdownPayload {
     text: string;
@@ -82,6 +84,11 @@ async function renderContent() {
         rawHtml = rawHtml.replace(/src=\{`?\$\{import\.meta\.env\.BASE_URL\}(.*?)`?\}/g, 'src="$1"');
     }
 
+    // すべてのモードでHTMLをサニタイズする
+    rawHtml = DOMPurify.sanitize(rawHtml, {
+        WHOLE_DOCUMENT: currentMode !== 'markdown',
+    });
+
     // DOMパースを行う条件を拡張
     // 「画像処理が必要」 または 「HTMLモード（スタイル救出が必要）」 の場合
     const needsDomParsing = (currentFilePath && currentFilePath !== "Untitled" && rawHtml.includes('<img')) || currentMode !== 'markdown';
@@ -91,50 +98,50 @@ async function renderContent() {
         const parser = new DOMParser();
         const doc = parser.parseFromString(rawHtml, 'text/html');
 
-        // B. 画像パスの解決 (ファイルパスがあり、かつ画像がある場合のみ)
+        // B. 画像パスの解決
         if (currentFilePath && currentFilePath !== "Untitled") {
-            const separator = currentFilePath.includes('\\') ? '\\' : '/';
-            const baseDir = currentFilePath.substring(0, currentFilePath.lastIndexOf(separator));
-
+            const baseDir = await dirname(currentFilePath);
             const images = doc.querySelectorAll('img');
-            images.forEach(img => {
+
+            for (const img of images) {
                 let src = img.getAttribute('src');
-                if (!src) return;
-                if (src.startsWith('http') || src.startsWith('data:') || src.startsWith('asset://')) return;
+                if (!src) continue;
 
-                try {
-                    // パス解決ロジック
-                    let absolutePath = src;
-                    const separator = currentFilePath.includes('\\') ? '\\' : '/';
+                if (/^(https?:|data:|asset:|blob:|file:)/i.test(src)) continue;
+                if (src.startsWith('//')) continue;
 
-                    // パターンA: スラッシュで始まるパス ( /img/hero.jpg )
-                    // フレームワークの「public」フォルダ運用と推測する
-                    if (src.startsWith('/')) {
-                        // パスの中に /src/ (または \src\) があるか探す
+              try {
+                    // URLエンコードされたパスをデコード
+                    const decodedSrc = decodeURIComponent(src);
+
+                    // デコード後にURL形式になったものも処理しない
+                    if (/^(https?:|data:|asset:|blob:|file:)/i.test(decodedSrc)) continue;
+                    if (decodedSrc.startsWith('//')) continue;
+
+                    let absolutePath = decodedSrc;
+
+                    if (decodedSrc.startsWith('/')) {
+                        // 既存のAstro publicパス処理
+                        const separator = currentFilePath.includes('\\') ? '\\' : '/';
                         const srcMatch = currentFilePath.lastIndexOf(`${separator}src${separator}`);
 
                         if (srcMatch !== -1) {
-                            // .../Project/src/pages/index.astro -> .../Project
                             const projectRoot = currentFilePath.substring(0, srcMatch);
-                            // -> .../Project/public/img/hero.jpg
-                            // (注: Windowsの場合 src内の / を \ に直す必要がある)
-                            const normalizedSrc = src.replace(/\//g, separator);
-                            absolutePath = `${projectRoot}${separator}public${normalizedSrc}`;
-                        } else {
-                            // srcフォルダ外ならドライブ直下とみなす（既存挙動）
-                            absolutePath = src;
+                            const normalizedSrc = decodedSrc.replace(/^[/\\]+/, '');
+                            absolutePath = await join(projectRoot, 'public', normalizedSrc);
                         }
+                    } else if (!(await isAbsolute(decodedSrc))) {
+                        // 相対パスの場合だけ、Markdownファイルのディレクトリを基準にする
+                        absolutePath = await join(baseDir, decodedSrc);
                     }
-                    // パターンB: 相対パス ( ./img/hero.jpg )
-                    else {
-                        const cleanSrc = src.replace(/^\.?\//, '');
-                        absolutePath = `${baseDir}${separator}${cleanSrc}`;
-                    }
-                    img.src = convertFileSrc(absolutePath);
+
+                    const assetUrl = convertFileSrc(absolutePath);
+
+                    img.src = assetUrl;
                 } catch (e) {
                     console.error("Image path conversion failed:", e);
                 }
-            });
+          }
         }
 
         // C. スタイルの救出とHTML生成
@@ -185,17 +192,11 @@ async function init() {
     await listen<MarkdownPayload>('markdown-update', async (event) => {
         const { text, isDarkMode, filePath, mdHardBreaks } = event.payload;
         if (!contentDiv || !wrapper) return;
+        const previousFilePath = currentFilePath;
+
         currentText = text;
 
-        // Hard Breaks 設定の更新
-        if (mdHardBreaks !== undefined) {
-            useHardBreaks = mdHardBreaks;
-            // 設定が変わったら即座に再描画
-            await renderContent();
-        }
-
         // 1. 直前のファイルのスクロール位置を保存
-        // (初回起動時など currentFilePath が空の場合はスキップ)
         if (currentFilePath) {
             scrollHistory.set(currentFilePath, contentDiv.scrollTop);
         }
@@ -203,22 +204,40 @@ async function init() {
         // 2. 現在のファイルパスを更新
         currentFilePath = filePath;
 
-        // 3. ダークモード適用
+        // 3. 新しいファイルなら拡張子から初期モードを決定
+        if (currentFilePath !== previousFilePath && filePath && filePath !== 'Untitled') {
+            if (/\.(md|markdown|txt)$/i.test(filePath)) {
+                currentMode = 'markdown';
+            } else if (/\.(html?|astro)$/i.test(filePath)) {
+                currentMode = 'html';
+            }
+
+            if (modeSelect) {
+                modeSelect.value = currentMode;
+            }
+        }
+
+        // 4. Hard Breaks 設定を更新
+        if (mdHardBreaks !== undefined) {
+            useHardBreaks = mdHardBreaks;
+        }
+
+        // 5. ダークモード適用
         if (isDarkMode) {
             document.body.classList.add('dark-mode');
         } else {
             document.body.classList.remove('dark-mode');
         }
-        // 4. 描画実行
+        // 6. 描画実行
         await renderContent();
 
-        // 5. スクロール復元 (少し待つ)
+        // 7. スクロール復元 (少し待つ)
         setTimeout(() => {
             const savedScroll = scrollHistory.get(filePath) || 0;
             contentDiv.scrollTop = savedScroll;
         }, 200);
 
-        // 6. ウィンドウ表示 (描画完了を見越して待つ)
+        // 8. ウィンドウ表示 (描画完了を見越して待つ)
         if (isFirstLoad) {
             await invoke("ping_window_ready", { label: "markdown" });
             setTimeout(async () => {

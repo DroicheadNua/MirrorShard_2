@@ -5,6 +5,15 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+[unreleased]
+
+### Fixed (修正点)  
+
+- MarkdownおよびHTMLプレビューモードでレンダリングされるHTMLにDOMPurifyによるサニタイズを適用、イベントハンドラや危険なURLを通じたXSS攻撃を軽減　　
+- プレビューモードの選択機能を更新し、ファイルを開く際にファイル拡張子を優先するように変更  
+- Tauriの`dirname()`および`join()` APIを使用、Markdownプレビュー画像のパス処理を改善  
+- テスト済みのXSSペイロードがMarkdown・HTMLいずれのプレビューモードでも実行されなくなったことを確認  
+
 
 ## [1.14.1] - 2026-10-5
 
@@ -15,6 +24,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Fixed (修正点)  
 - Wayland/NVIDIA 専用の GL ワークアラウンドが、すべての Linux システムに誤って適用されていた問題を修正しました。  
 - 同梱の Nix ランタイムライブラリが、MirrorShard 2 から起動されたホストアプリケーションの動作に干渉する可能性があった問題を修正しました。  
+
 
 
 ## [1.14.0] - 2026-10-4 
@@ -32,6 +42,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Fixed (修正点)   
 - アップデート通知からリリースページを開けない問題を修正  
 - flake.nixをリリースページのtarballを参照する形に修正  
+
 
 
 ## [1.13.0] - 2026-8-9  
@@ -52,9 +63,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Fixed (修正点)   
 - 巨大テキスト選択時にエクスポートウィンドウを開くとフリーズする問題があったため、送信文字数を冒頭5万字に制限する保護ダイアログを追加  
 - サブウィンドウ生成時のフリッカーを抑制  
- 
-
-### Other
 
 
 
@@ -70,9 +78,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Fixed (修正点)   
 - OpenRouterのプリセット表示の不具合を修正  
 - 縦書きプレビューのEPUB・HTML出力の不具合を修正  
- 
 
-### Other
 
 
 ## [1.11.0] - 2026-7-19  

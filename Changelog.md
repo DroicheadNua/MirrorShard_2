@@ -7,6 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+[unreleased]
+
+### Fixed
+
+- Applied DOMPurify sanitization to HTML rendered in both Markdown and HTML preview modes to mitigate XSS attacks through event handlers and dangerous URLs.
+- Updated preview mode selection to prioritize file extensions when opening files, preventing files such as `.md` and `.txt` from unintentionally opening in HTML mode due to the previously saved mode.
+- Improved Markdown preview image path handling using Tauri's `dirname()` and `join()` APIs, including support for URL-encoded filenames containing Japanese characters in relative paths.
+- Verified that tested XSS payloads no longer execute in either preview mode.
+
+
+
 ## [1.14.1] - 2026-10-05
 
 ### Changed

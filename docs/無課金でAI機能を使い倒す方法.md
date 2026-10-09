@@ -4,11 +4,11 @@ MirrorShardには多種多様なAI機能が実装されていますが、これ�
 
 ――ですが、MirrorShardのAI機能は、あえて無課金での運用にこだわって設計しています。
 
-MirrorShardが対応しているAPIキーはGoogle・Groq・Mistral・Cohere・Cerebras・OpenRouterの6社のものですが、これらはすべて無課金で取得し、無料で使用することができるものばかりです（※ChatGPTやClaudeに対応していないのはそのため）。
+MirrorShardが対応しているAPIキーはGoogle・Groq・Mistral・Cohere・Cerebras・OpenRouter・Agnes AIの7社のものですが、これらはすべて無課金で取得し、無料で使用することができるものばかりです（※ChatGPTやClaudeに対応していないのはそのため）。  
+　※追記：現在ではCerebrasは有料化しています。  
 
-もちろん、課金プランに比べればできることの幅は狭くなりますが、実際に使っていただければ、無料枠だけでもかなりのことができるのがわかるかと思います。
+もちろん、課金プランに比べればできることの幅は狭くなりますが、アイデアプロセッサのAI機能などは機能の性質上トークン消費量がそれほど多くないため、無料枠だけでもかなりのことができます。
 
-特にGeminiやMistralは無料枠が非常に大きく、MirrorShardの機能の範囲なら、使っていて不足を感じることはあまりないと思います。
 
 # 具体的な手順（クラウドAI）
 
@@ -18,7 +18,7 @@ MirrorShardが対応しているAPIキーはGoogle・Groq・Mistral・Cohere・C
 
 仮に有料モデルに接続してしまったとしても、エラーメッセージが返ってくるだけです。
 
-2. 作成したアカウントで各AI（Google・Groq・Mistral・Cohere・Cerebras・OpenRouter）に登録し、APIキーを取得します。
+2. 作成したアカウントで各AI（Google・Groq・Mistral・Cohere・Agnes AI・OpenRouter）に登録し、APIキーを取得します。
 
 これらのAIはすべてGoogleアカウントで登録することができ、無課金でもAPIキーを取得することができます。詳細な手順や各社の特徴については、ai-guide-ja.mdの「AIの導入方法」をご覧ください。
 
@@ -34,7 +34,7 @@ MirrorShardが対応しているAPIキーはGoogle・Groq・Mistral・Cohere・C
 
 ## ローカルAIの使い方
 
-ローカルAIを使用するには、LM Studio・Ollama・KoboldCPPといったソフトが必要になります。
+ローカルAIを使用するには、LM Studio・Ollama・KoboldCPPなどのソフトが必要になります。
 
 上記のいずれかをインストールすれば、MirrorShardでのローカルAIの使用が可能になります。詳しくはai-guide-ja.mdの「AIの導入方法」-「ローカルAIを使用する場合」をご覧ください。
 
@@ -46,7 +46,7 @@ MirrorShardが対応しているAPIキーはGoogle・Groq・Mistral・Cohere・C
 
 MistralのAgents機能を使用することによって、AIチャット画面やメインエディタで画像生成機能を使用することができます。詳細についてはai-guide-ja.mdをご覧ください。
 
-ただ、Mistralは文書生成の無料枠は大きいのですが、画像生成の無料枠は月に4～5枚程度しかありません。お試しで使う分にはいいのですが、本格的な利用には課金が必要になります。
+ただMistralの場合、本格的な利用には課金が必要になります。
 
 ## Stable Diffusion
 
