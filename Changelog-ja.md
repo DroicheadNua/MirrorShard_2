@@ -7,8 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 [unreleased]
 
-### Fixed (修正点)  
+### Changed (変更点)  
+- Geminiのプリセットを変更  
 
+### Fixed (修正点)  
 - MarkdownおよびHTMLプレビューモードでレンダリングされるHTMLにDOMPurifyによるサニタイズを適用、イベントハンドラや危険なURLを通じたXSS攻撃を軽減　　
 - プレビューモードの選択機能を更新し、ファイルを開く際にファイル拡張子を優先するように変更  
 - Tauriの`dirname()`および`join()` APIを使用、Markdownプレビュー画像のパス処理を改善  
