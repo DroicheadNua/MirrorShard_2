@@ -1207,7 +1207,7 @@ async fn open_sd_server(
             }
         }
 
-        cmd.args(["--listen-port", "8888", "-m", &model_path]);
+        cmd.args(["--listen-port", "8801", "-m", &model_path]);
 
         // 空でなければ引数に追加（初期プロンプトとしてUIにセット）
         if !prompt.is_empty() {
@@ -1251,7 +1251,7 @@ async fn open_sd_server(
     {
         // Linux: ポート監視して標準ブラウザで開く
         std::thread::spawn(move || {
-            let addr = "127.0.0.1:8888";
+            let addr = "127.0.0.1:8801";
             for _ in 0..150 {
                 // モデルロードを考慮して長めに
                 if std::net::TcpStream::connect_timeout(
@@ -1263,7 +1263,7 @@ async fn open_sd_server(
                     use tauri_plugin_opener::OpenerExt;
                     let _ = _app_handle
                         .opener()
-                        .open_url("http://127.0.0.1:8888", Option::<String>::None);
+                        .open_url("http://127.0.0.1:8801", Option::<String>::None);
                     return;
                 }
                 std::thread::sleep(std::time::Duration::from_millis(200));
@@ -1290,7 +1290,7 @@ async fn open_sd_server(
 
         // ポート監視してURL切り替え
         std::thread::spawn(move || {
-            let addr = "127.0.0.1:8888";
+            let addr = "127.0.0.1:8801";
             for _ in 0..150 {
                 if std::net::TcpStream::connect_timeout(
                     &addr.parse().unwrap(),
@@ -1298,7 +1298,7 @@ async fn open_sd_server(
                 )
                 .is_ok()
                 {
-                    let _ = window.eval("window.location.href = 'http://127.0.0.1:8888'");
+                    let _ = window.eval("window.location.href = 'http://127.0.0.1:8801'");
                     let _ = window.set_title("Stable Diffusion C++ Server");
                     return;
                 }

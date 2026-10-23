@@ -163,6 +163,7 @@
     "enableAgnes": "Agnes AI を有効にする",
     "modelPlaceholder": "<モデル名を入力>",
     "localLlm": "ローカルLLM",
+    "localKeyLabel": "ローカルLLM APIキー",
     "localLlmUrlLabel": "Endpoint URL",
     "localLlmUrlPlaceholder": "http://127.0.0.1:1234/v1/chat/completions",
     "localLlmModelLabel": "モデル名 (Ollamaの場合必須)",

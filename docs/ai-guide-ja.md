@@ -114,8 +114,8 @@ https://mistral.ai/
 　・画面右側のパネルから「Context」タブを選び、システムプロンプトを記入すると、より望む出力結果が得やすくなります。  
 
 ２. MirrorShardの設定:  
-　・初期設定のままローカルホストで運用する場合には、そのまま（Endpoint URL: http://127.0.0.1:1234/v1/chat/completions のまま）で設定完了です。
-　・LANでアクセスする場合にはLM Studio側の設定（Server Settings）で「ローカルネットワークで提供」をオンにし、MirrorShard側の設定ウィンドウで「AI設定」タブを選択しで、「EndpointURL」のIPアドレスをご自身の環境に合わせて書き換えます。  
+　・初期設定のままローカルホストで運用する場合には、Endpoint URLのプルダウンから「LM Studio」を選択するか、 http://127.0.0.1:1234/v1/chat/completions と入力します。
+　・LANでアクセスする場合にはLM Studio側の設定（Server Settings）で「ローカルネットワークで提供」をオンにし、MirrorShard側の設定ウィンドウで「AI設定」タブを選択して、「EndpointURL」のIPアドレスをご自身の環境に合わせて書き換えます。  
 
 ### Ollamaの場合  
 
@@ -129,13 +129,14 @@ Ollamaはコマンドラインベースですが、軽量で動作が安定し�
 
     MirrorShardの設定:  
     ・設定ウィンドウの「AI設定」タブを開きます。  
-    ・Endpoint URL: http://127.0.0.1:11434/v1/chat/completions と入力します。（ポート番号がLM Studioとは異なります）  
+    ・Endpoint URLのプルダウンから「Ollama」を選択するか、 http://127.0.0.1:11434/v1/chat/completions と入力します。（ポート番号がLM Studioとは異なります）  
     ・Model Name: ターミナルでプルしたモデル名を入力します（例: gemma2 や llama3:latest）。※ここが間違っていると動きません。  
     ・「適用」を押して保存します。  
 
 これでOllamaとの対話が可能になります。  
 
 ※その他、koboldcppなどのローカルAI実行環境でも動作します。  
+　なお、Unsloth desktopの場合はアクセストークンが必要になりますのでご注意ください。  
 
 # 2. AIの選択と切り替え  
 

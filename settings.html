@@ -1116,6 +1116,21 @@
                     <!-- Local LLM -->
                     <div class="ai-setting-group">
                         <h4 data-i18n="settings.ai.localLlm">Local LLM</h4>
+
+                        <div class="setting-item">
+                            <label
+                                for="local-api-key"
+                                data-i18n="settings.ai.localKeyLabel"
+                            >Local LLM API Key</label>
+                            <input
+                                type="text"
+                                style="-webkit-text-security: disc;"
+                                autocomplete="off"
+                                id="local-api-key"
+                                placeholder="..."
+                            />
+                        </div>
+
                         <div class="setting-item">
                             <label
                                 for="local-llm-url"
@@ -1150,6 +1165,11 @@
                                     value="http://localhost:5001/v1/chat/completions"
                                 >
                                     koboldcpp (Default)
+                                </option>
+                                <option
+                                    value="http://127.0.0.1:8888/v1/chat/completions"
+                                >
+                                    Unsloth Desktop (Default)
                                 </option>
                                 <option
                                     value=""

@@ -53,6 +53,7 @@ import { getCurrentWindow } from "@tauri-apps/api/window";
 import { message, save } from "@tauri-apps/plugin-dialog";
 import { listen, emit } from "@tauri-apps/api/event";
 import { type } from "@tauri-apps/plugin-os";
+import { fetch as tauriFetch } from "@tauri-apps/plugin-http";
 
 // --- 型定義 ---
 interface Heading {
@@ -969,7 +970,7 @@ class App {
           url =
             (await this.store.get<string>("localLlmUrl")) ||
             "http://127.0.0.1:1234/v1/chat/completions";
-          apiKey = "local"; // ローカルはキー不要なことが多いがダミーとして
+          apiKey = (await this.store.get<string>("localApiKey"))?.trim() || "";
           model =
             (await this.store.get<string>("localLlmModel")) || "local-model";
         }
@@ -1162,7 +1163,7 @@ ${instructionFiller}
           url =
             (await this.store.get<string>("localLlmUrl")) ||
             "http://127.0.0.1:1234/v1/chat/completions";
-          apiKey = "local";
+          apiKey = (await this.store.get<string>("localApiKey"))?.trim() || "";
           model =
             (await this.store.get<string>("localLlmModel")) || "local-model";
         }
@@ -1312,11 +1313,22 @@ ${instructionFiller}
       };
     }
 
-    const response = await fetch(targetUrl, {
+    const apiKey =
+      (await this.store.get<string>("localApiKey"))?.trim() || "";
+
+    const headers: Record<string, string> = {
+      "Content-Type": "application/json",
+    };
+
+    if (apiKey) {
+      headers["Authorization"] = `Bearer ${apiKey}`;
+    }
+
+    const response = await tauriFetch(targetUrl, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers,
       body: JSON.stringify(body),
-      signal: signal,
+      signal,
     });
     if (!response.ok) throw new Error(`Status ${response.status}`);
     const data = await response.json();
@@ -1481,7 +1493,7 @@ ${instructionFiller}
           url =
             (await this.store.get<string>("localLlmUrl")) ||
             "http://127.0.0.1:1234/v1/chat/completions";
-          apiKey = "local";
+          apiKey = (await this.store.get<string>("localApiKey"))?.trim() || "";
           model =
             (await this.store.get<string>("localLlmModel")) || "local-model";
         }
@@ -1636,24 +1648,33 @@ ${instructionFiller}
       maxTokens = Number(await this.store.get<number>("aiMaxTokens")) || 2000;
     }
     try {
-      const response = await fetch(url, {
+      const headers: Record<string, string> = {
+        "Content-Type": "application/json",
+      };
+
+      if (apiKey) {
+        headers.Authorization = `Bearer ${apiKey}`;
+      }
+      const requestOptions = {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${apiKey}`,
-        },
+        headers,
         body: JSON.stringify({
           model: modelName,
           messages: [
             { role: "system", content: systemPrompt },
             { role: "user", content: prompt },
           ],
-          stream: false, // メインエディタは一括取得
+          stream: false,
           max_tokens: maxTokens,
           temperature: 0.7,
         }),
-        signal: signal,
-      });
+        signal,
+      };
+
+      const response =
+        this.mainAiApi === "local"
+          ? await tauriFetch(url, requestOptions)
+          : await fetch(url, requestOptions);
 
       if (!response.ok) {
         const errText = await response.text();
@@ -1864,7 +1885,7 @@ ${instructionFiller}
             url =
               (await this.store.get<string>("localLlmUrl")) ||
               "http://127.0.0.1:1234/v1/chat/completions";
-            apiKey = "local";
+            apiKey = (await this.store.get<string>("localApiKey"))?.trim() || "";
             model =
               (await this.store.get<string>("localLlmModel")) || "local-model";
           }
@@ -2009,7 +2030,7 @@ ${instructionFiller}
         tauriFetch("http://127.0.0.1:7860/sdapi/v1/interrupt", {
           method: "POST",
         }).catch(() => {});
-        tauriFetch("http://127.0.0.1:8888/sdapi/v1/interrupt", {
+        tauriFetch("http://127.0.0.1:8801/sdapi/v1/interrupt", {
           method: "POST",
         }).catch(() => {});
       } else {
@@ -2113,8 +2134,8 @@ ${instructionFiller}
 
     let response;
     try {
-      // sd-server の API エンドポイント (ポート8888)
-      response = await tauriFetch("http://127.0.0.1:8888/sdapi/v1/txt2img", {
+      // sd-server の API エンドポイント (ポート8801)
+      response = await tauriFetch("http://127.0.0.1:8801/sdapi/v1/txt2img", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -2133,7 +2154,7 @@ ${instructionFiller}
       });
     } catch (e) {
       throw new Error(
-        `Failed to connect to sd-server (Port 8888). Please make sure the server is running.\nDetails: ${e}`,
+        `Failed to connect to sd-server (Port 8801). Please make sure the server is running.\nDetails: ${e}`,
       );
     }
 

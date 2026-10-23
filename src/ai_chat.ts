@@ -5,6 +5,7 @@ import {
   ChatSession,
 } from "@google/generative-ai";
 import { t } from "./i18n";
+import { fetch as tauriFetch } from "@tauri-apps/plugin-http";
 
 export interface ChatSettings {
   apiType:
@@ -32,6 +33,7 @@ export interface ChatSettings {
   agnesApiKey?: string;
   agnesModel?: string;
   localUrl?: string;
+  localApiKey?: string;
   localModel?: string;
   systemPrompt?: string;
   maxTokens?: number;
@@ -132,7 +134,7 @@ export class AiChat {
         url =
           this.currentSettings.localUrl ||
           "http://127.0.0.1:1234/v1/chat/completions";
-        apiKey = "local";
+        apiKey = this.currentSettings.localApiKey?.trim() || "";
         model = this.currentSettings.localModel || "local-model";
       }
 
@@ -294,7 +296,15 @@ export class AiChat {
     const headers: Record<string, string> = {
       "Content-Type": "application/json",
     };
-    if (apiKey !== "local") {
+    if (apiKey) {
+      headers["Authorization"] = `Bearer ${apiKey}`;
+    }
+
+    // 一時的な接続テスト専用：Unsloth Desktop
+    if (
+      url.startsWith("http://127.0.0.1:8888/") ||
+      url.startsWith("http://localhost:8888/")
+    ) {
       headers["Authorization"] = `Bearer ${apiKey}`;
     }
 
@@ -315,11 +325,16 @@ export class AiChat {
     }
 
     try {
-      const response = await fetch(url, {
-        method: "POST",
-        headers: headers,
-        body: JSON.stringify(requestBody),
-      });
+      const requestOptions = {
+          method: "POST",
+          headers,
+          body: JSON.stringify(requestBody),
+      };
+
+      const response =
+          apiType === "local"
+              ? await tauriFetch(url, requestOptions)
+              : await fetch(url, requestOptions);
 
       if (!response.ok) {
         const errText = await response.text();

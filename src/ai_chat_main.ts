@@ -11,6 +11,7 @@ import { convertFileSrc, invoke } from "@tauri-apps/api/core";
 import { type } from "@tauri-apps/plugin-os";
 import { Menu, MenuItem, PredefinedMenuItem } from "@tauri-apps/api/menu";
 import { fetch as tauriFetch } from "@tauri-apps/plugin-http";
+import DOMPurify from "dompurify";
 
 // --- 型定義 ---
 interface ChatMessage {
@@ -130,7 +131,8 @@ function formatAiMessage(text: string): string {
     },
   );
 
-  return marked.parse(processedText) as string;
+  const html = marked.parse(processedText) as string;
+  return DOMPurify.sanitize(html);
 }
 
 function onAiUpdate(text: string, isFinal: boolean) {
@@ -351,6 +353,7 @@ async function init() {
     const agnesKey = await store.get<string>("agnesApiKey");
     const agnesModel = await store.get<string>("agnesModel");
     const enableAgents = await store.get<boolean>("enableMistralAgents");
+    const localKey = await store.get<string>("localApiKey");
     const localUrl = await store.get<string>("localLlmUrl");
     const sysPrompt = await store.get<string>("aiSystemPrompt");
     const maxTokens = (await store.get<number>("aiMaxTokens")) || 2000;
@@ -397,6 +400,7 @@ async function init() {
       agnesApiKey: agnesKey || undefined,
       agnesModel: agnesModel || undefined,
       localUrl: localUrl || undefined,
+      localApiKey: localKey || undefined,
       systemPrompt: sysPrompt || undefined,
       maxTokens: maxTokens,
       enableMistralAgents: enableAgents || false,
@@ -667,6 +671,7 @@ function setupSettingsListener() {
     aiSettings.agnesApiKey = p.agnesApiKey ?? aiSettings.agnesApiKey;
     aiSettings.agnesModel = p.agnesModel ?? aiSettings.agnesModel;
     aiSettings.localUrl = p.localLlmUrl ?? aiSettings.localUrl;
+    aiSettings.localApiKey = p.localApiKey ?? aiSettings.localApiKey;
     aiSettings.localModel = p.localLlmModel ?? aiSettings.localModel;
     aiSettings.systemPrompt = p.aiSystemPrompt ?? aiSettings.systemPrompt;
     aiSettings.maxTokens = p.aiMaxTokens ?? aiSettings.maxTokens;
@@ -1592,7 +1597,7 @@ async function generateImageFromChat(
       const { fetch: tauriFetch } = await import("@tauri-apps/plugin-http");
 
       const response = await tauriFetch(
-        "http://127.0.0.1:8888/sdapi/v1/txt2img",
+        "http://127.0.0.1:8801/sdapi/v1/txt2img",
         {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -1812,7 +1817,7 @@ async function runWebAgentViaRust() {
         "http://127.0.0.1:1234/v1/chat/completions";
       // Rigは内部で "/chat/completions" を自動付与するため、ここで削っておく
       baseUrl = rawLocalUrl.replace(/\/chat\/completions\/?$/, "");
-      apiKey = "local";
+      apiKey = aiSettings.localApiKey?.trim() || "";
       model = (await store?.get<string>("localLlmModel")) || "local-model";
     }
 

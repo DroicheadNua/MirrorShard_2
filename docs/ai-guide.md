@@ -149,6 +149,10 @@ ollama pull gemma2
 http://127.0.0.1:11434/v1/chat/completions
 ```
 
+It also supports local AI inference servers such as KoboldCpp and LM Studio.
+
+**Unsloth Desktop:** When connecting from MirrorShard, an access token is required. Create a token in Unsloth Desktop and enter it in the *Local LLM API Key* field in MirrorShard's settings. Keyless inference may not work from MirrorShard.
+
 ---
 
 # 2. Switching AI

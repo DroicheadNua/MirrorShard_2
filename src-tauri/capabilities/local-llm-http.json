@@ -1,0 +1,19 @@
+{
+  "identifier": "local-llm-http",
+  "description": "HTTP access for local language model servers",
+  "platforms": ["macOS", "windows", "linux"],
+  "windows": ["main", "ai_chat"],
+  "permissions": [
+    {
+      "identifier": "http:default",
+      "allow": [
+        { "url": "http://127.0.0.1:1234/*" },
+        { "url": "http://127.0.0.1:5001/*" },
+        { "url": "http://127.0.0.1:8801/*" },
+        { "url": "http://127.0.0.1:8888/*" },
+        { "url": "http://127.0.0.1:11434/*" },
+        { "url": "http://localhost:11434/*" }
+      ]
+    }
+  ]
+}

@@ -218,6 +218,9 @@ async function setupSettings() {
     const agnesApiKeyInput = document.querySelector(
       "#agnes-api-key",
     ) as HTMLInputElement;
+    const localApiKeyInput = document.querySelector(
+      "#local-api-key",
+    ) as HTMLInputElement;
     const geminiModelInput = document.querySelector(
       "#gemini-model",
     ) as HTMLInputElement | null;
@@ -980,6 +983,8 @@ async function setupSettings() {
       (await store.get<string>("mistralAgentID")) || "";
     agnesApiKeyInput.value =
       (await store.get<string>("agnesApiKey")) || "";
+    localApiKeyInput.value =
+      (await store.get<string>("localApiKey")) || "";
     if (geminiModelInput) {
       geminiModelInput.value =
         (await store.get<string>("geminiModel")) || "gemini-flash-latest";
@@ -1516,6 +1521,7 @@ async function setupSettings() {
         const newMistralApiKey = mistralApiKeyInput.value.trim();
         const newMistralAgentID = mistralAgentIDInput.value.trim();
         const newAgnesApiKey = agnesApiKeyInput.value.trim();
+        const newLocalApiKey = localApiKeyInput.value.trim();
         const newGeminiModel = geminiModelInput
           ? geminiModelInput.value.trim()
           : "";
@@ -1608,6 +1614,7 @@ async function setupSettings() {
           await store.set("mistralAgentID", newMistralAgentID);
         if (newAgnesApiKey)
           await store.set("agnesApiKey", newAgnesApiKey);
+        await store.set("localApiKey", newLocalApiKey);
         await store.set("groqModel", newGroqModel);
         await store.set("cerebrasModel", newCerebrasModel);
         await store.set("openRouterModel", newOpenRouterModel);
@@ -1709,6 +1716,7 @@ async function setupSettings() {
           mistralApiKey: newMistralApiKey,
           mistralAgentID: newMistralAgentID,
           agnesApiKey: newAgnesApiKey,
+          localApiKey: newLocalApiKey,
           geminiModel: newGeminiModel,
           groqModel: newGroqModel,
           cerebrasModel: newCerebrasModel,
