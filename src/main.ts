@@ -2450,7 +2450,6 @@ ${instructionFiller}
     }
 
     await listen("settings-changed", async (event: any) => {
-      console.log("Received settings-changed payload:", event.payload);
       const s = event.payload;
 
       // 言語変更があればi18nを再初期化
