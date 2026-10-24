@@ -13,6 +13,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Added support for Unsloth Desktop, including local LLM API key configuration and a preset.
 
+### Changed
+
+- Change Gemini Presets
+- Update Tauri dependencies
+
 ### Fixed
 
 - Applied DOMPurify sanitization to HTML rendered in both Markdown and HTML preview modes to mitigate XSS attacks through event handlers and dangerous URLs.
