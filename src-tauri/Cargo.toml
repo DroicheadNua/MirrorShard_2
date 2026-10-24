@@ -15,10 +15,10 @@ name = "mirrorshard_ver02_lib"
 crate-type = ["staticlib", "cdylib", "rlib"]
 
 [build-dependencies]
-tauri-build = { version = "2.5.2", features = [] }
+tauri-build = { version = "2.7.4", features = [] }
 
 [dependencies]
-tauri = { version = "2.10.3", features = ["devtools", "protocol-asset", "macos-private-api"] }
+tauri = { version = "2.12.5", features = ["devtools", "protocol-asset", "macos-private-api"] }
 rig = "0.42.0"
 tokio = { version = "1.52.1", features = ["full"] }
 serde = { version = "1.0.228", features = ["derive"] }

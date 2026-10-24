@@ -2005,6 +2005,7 @@ async fn open_terminal_window(app: tauri::AppHandle, id: Option<String>) -> Resu
         state: None,
         radius: Some(24.0),
         color: None,
+        interactive: false,
     });
 
     #[cfg(debug_assertions)]
@@ -2240,6 +2241,7 @@ async fn open_idea_processor(app: AppHandle) {
         state: None,
         radius: Some(24.0),
         color: None,
+        interactive: false,
     });
 
     #[cfg(debug_assertions)]
@@ -2284,6 +2286,7 @@ async fn open_vivliostyle(app: AppHandle) {
         state: None,
         radius: Some(24.0),
         color: None,
+        interactive: false,
     });
 
     #[cfg(debug_assertions)]
@@ -2325,6 +2328,7 @@ async fn open_markdown_preview(app: AppHandle) {
         state: None,
         radius: Some(24.0),
         color: None,
+        interactive: false,
     });
 
     #[cfg(debug_assertions)]
@@ -2839,6 +2843,7 @@ async fn open_shortcut(app: AppHandle) {
         state: None,
         radius: Some(24.0),
         color: None,
+        interactive: false,
     });
 
     #[cfg(debug_assertions)]
@@ -2885,6 +2890,7 @@ async fn open_ai_chat(app: AppHandle) {
         state: None,
         radius: Some(24.0),
         color: None,
+        interactive: false,
     });
 
     #[cfg(debug_assertions)]
@@ -2942,6 +2948,7 @@ async fn open_settings_window(app: AppHandle) {
         state: None,
         radius: Some(24.0),
         color: None,
+        interactive: false,
     });
 
     #[cfg(debug_assertions)]
@@ -2985,6 +2992,7 @@ async fn open_export_window(app: AppHandle) {
         state: None,
         radius: Some(24.0),
         color: None,
+        interactive: false,
     });
 
     #[cfg(debug_assertions)]
@@ -3027,6 +3035,7 @@ async fn open_preview_window(app: AppHandle) {
         state: None,
         radius: Some(24.0),
         color: None,
+        interactive: false,
     });
 
     #[cfg(debug_assertions)]
