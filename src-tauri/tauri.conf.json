@@ -36,7 +36,7 @@
           "default-src": "'self' customprotocol: asset:",
           "script-src": "'self'",
           "style-src": "'self' 'unsafe-inline'",
-          "connect-src": "'self' ipc: http://ipc.localhost http://asset.localhost https://generativelanguage.googleapis.com https://api.cohere.com https://api.groq.com https://api.cerebras.ai https://openrouter.ai https://api.mistral.ai https://apihub.agnes-ai.com http://127.0.0.1:* http://localhost:*",
+          "connect-src": "'self' ipc: asset: http://ipc.localhost http://asset.localhost https://generativelanguage.googleapis.com https://api.cohere.com https://api.groq.com https://api.cerebras.ai https://openrouter.ai https://api.mistral.ai https://apihub.agnes-ai.com http://127.0.0.1:* http://localhost:*",
           "img-src": "'self' customprotocol: asset: http://asset.localhost blob: data: http: https:",
           "font-src": "'self' customprotocol: asset: http://asset.localhost data:",
           "media-src": "'self' customprotocol: asset: http://asset.localhost blob: data:",
