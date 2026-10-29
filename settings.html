@@ -602,14 +602,7 @@
                                 data-i18n-placeholder="settings.ai.modelPlaceholder"
                                 placeholder="<モデル名を入力>"
                             />
-                            <select
-                                id="gemini-model-preset"
-                                onchange="
-                                    document.getElementById(
-                                        'gemini-model',
-                                    ).value = this.value
-                                "
-                            >
+                            <select id="gemini-model-preset">
                                 <option value="gemini-flash-latest">
                                     Gemini Flash (Latest)
                                 </option>
@@ -679,14 +672,7 @@
                                 data-i18n-placeholder="settings.ai.modelPlaceholder"
                                 placeholder="<モデル名を入力>"
                             />
-                            <select
-                                id="groq-model-preset"
-                                onchange="
-                                    document.getElementById(
-                                        'groq-model',
-                                    ).value = this.value
-                                "
-                            >
+                            <select id="groq-model-preset">
                                 <option value="openai/gpt-oss-20b">
                                     GPT OSS 20B
                                 </option>
@@ -753,14 +739,7 @@
                                 data-i18n-placeholder="settings.ai.modelPlaceholder"
                                 placeholder="<モデル名を入力>"
                             />
-                            <select
-                                id="cerebras-model-preset"
-                                onchange="
-                                    document.getElementById(
-                                        'cerebras-model',
-                                    ).value = this.value
-                                "
-                            >
+                            <select id="cerebras-model-preset">
                                 <option value="gpt-oss-120b">
                                     GPT OSS 120B
                                 </option>
@@ -827,14 +806,7 @@
                                 data-i18n-placeholder="settings.ai.modelPlaceholder"
                                 placeholder="<モデル名を入力>"
                             />
-                            <select
-                                id="openrouter-model-preset"
-                                onchange="
-                                    document.getElementById(
-                                        'openrouter-model',
-                                    ).value = this.value
-                                "
-                            >
+                            <select id="openrouter-model-preset">
                                 <option
                                     value="nvidia/nemotron-3-ultra-550b-a55b:free"
                                 >
@@ -903,14 +875,7 @@
                                 data-i18n-placeholder="settings.ai.modelPlaceholder"
                                 placeholder="<モデル名を入力>"
                             />
-                            <select
-                                id="cohere-model-preset"
-                                onchange="
-                                    document.getElementById(
-                                        'cohere-model',
-                                    ).value = this.value
-                                "
-                            >
+                            <select id="cohere-model-preset">
                                 <option value="command-a-03-2025">
                                     Command A
                                 </option>
@@ -1005,14 +970,7 @@
                                 data-i18n-placeholder="settings.ai.modelPlaceholder"
                                 placeholder="<モデル名を入力>"
                             />
-                            <select
-                                id="mistral-model-preset"
-                                onchange="
-                                    document.getElementById(
-                                        'mistral-model',
-                                    ).value = this.value
-                                "
-                            >
+                            <select id="mistral-model-preset">
                                 <option value="ministral-14b-2512">
                                     Ministral 14B
                                 </option>
@@ -1081,14 +1039,7 @@
                                 data-i18n-placeholder="settings.ai.modelPlaceholder"
                                 placeholder="<モデル名を入力>"
                             />
-                            <select
-                                id="agnes-model-preset"
-                                onchange="
-                                    document.getElementById(
-                                        'agnes-model',
-                                    ).value = this.value
-                                "
-                            >
+                            <select id="agnes-model-preset">
                                 <option value="agnes-3.0-flash">
                                     Agnes 3.0 Flash
                                 </option>
@@ -1143,14 +1094,7 @@
                                 data-i18n-placeholder="settings.ai.localLlmUrlPlaceholder"
                                 placeholder="http://127.0.0.1:1234/v1/chat/completions"
                             />
-                            <select
-                                id="local-llm-url-preset"
-                                onchange="
-                                    document.getElementById(
-                                        'local-llm-url',
-                                    ).value = this.value
-                                "
-                            >
+                            <select id="local-llm-url-preset">
                                 <option
                                     value="http://127.0.0.1:1234/v1/chat/completions"
                                 >

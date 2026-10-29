@@ -1147,6 +1147,29 @@ async function setupSettings() {
       checkEnableTransparentWindows.checked = (await store.get<boolean>("enableTransparentWindows")) ?? false;
     }
 
+    // プリセット選択時に対応する入力欄へ値を反映
+    const bindPresetToInput = (
+      select: HTMLSelectElement | null,
+      input: HTMLInputElement | null,
+    ) => {
+      if (!select || !input) return;
+
+      select.addEventListener("change", () => {
+        input.value = select.value;
+      });
+    };
+
+    bindPresetToInput(modelPresetSelect, geminiModelInput);
+    bindPresetToInput(groqModelPresetSelect, groqModelInput);
+    bindPresetToInput(cerebrasModelPresetSelect, cerebrasModelInput);
+    bindPresetToInput(openRouterModelPresetSelect, openRouterModelInput);
+    bindPresetToInput(cohereModelPresetSelect, cohereModelInput);
+    bindPresetToInput(mistralModelPresetSelect, mistralModelInput);
+    bindPresetToInput(agnesModelPresetSelect, agnesModelInput);
+
+    // ローカルLLMの接続先プリセットも同様に処理
+    bindPresetToInput(urlPresetSelect, localLlmUrlInput);
+
     // --- 5. イベントリスナー (ファイル選択) ---
 
     document
@@ -1435,7 +1458,7 @@ async function setupSettings() {
       if (blurVal) blurVal.textContent = `${blurRange.value}px`;
     });
 
-    // --- 5. フォントセレクト ---
+    // --- 6. フォントセレクト ---
 
     // 現在の設定値を読み込み
     const currentFont =
@@ -1463,7 +1486,7 @@ async function setupSettings() {
       })
       .catch((err) => console.error("Font loading failed:", err));
 
-    // --- 6. 適用ボタン (保存・通知・閉じる) ---
+    // --- 7. 適用ボタン (保存・通知・閉じる) ---
     applyBtn.addEventListener("click", async () => {
       try {
         const rawValue = parseInt(widthInput.value, 10);
@@ -1776,7 +1799,7 @@ async function setupSettings() {
       }
     });
 
-    // --- 7. 閉じるボタン & ショートカット ---
+    // --- 8. 閉じるボタン & ショートカット ---
     const hideWindow = async () => {
       await getCurrentWindow().close();
     };

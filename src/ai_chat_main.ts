@@ -1135,23 +1135,31 @@ function addMessageToLog(role: string, content: string, index: number) {
   const currentIcon = role === "user" ? userIconSrc : aiIconSrc;
 
   row.innerHTML = `
-        <div class="avatar-container">
-            <img class="message-icon" src="${currentIcon}">
-            <div class="message-actions">
-                ${
-                  role === "user"
-                    ? `<button class="action-btn btn-edit" onclick="window.editMsg(${index})" title="${t("aiChat.action.edit")}"></button>
-                       <button class="action-btn btn-delete" onclick="window.deleteMsg(${index})" title="${t("aiChat.action.delete")}"></button>`
-                    : `<button class="action-btn btn-regenerate" onclick="window.regenMsg(${index})" title="${t("aiChat.action.regenerate")}"></button>
-                       <button class="action-btn btn-copy" onclick="window.copyMsg(${index})" title="${t("aiChat.action.copy")}"></button>`
-                }
-            </div>
-        </div>
-        <div class="message-content">
-            <div class="message-sender">${currentName}</div>
-            <div class="message-bubble">${htmlContent}</div>
-        </div>
-    `;
+    <div class="avatar-container">
+      <img class="message-icon" src="${currentIcon}">
+      <div class="message-actions">
+        ${
+          role === "user"
+            ? `<button class="action-btn btn-edit"
+                 data-action="edit"
+                 title="${t("aiChat.action.edit")}"></button>
+               <button class="action-btn btn-delete"
+                 data-action="delete"
+                 title="${t("aiChat.action.delete")}"></button>`
+            : `<button class="action-btn btn-regenerate"
+                 data-action="regenerate"
+                 title="${t("aiChat.action.regenerate")}"></button>
+               <button class="action-btn btn-copy"
+                 data-action="copy"
+                 title="${t("aiChat.action.copy")}"></button>`
+        }
+      </div>
+    </div>
+    <div class="message-content">
+      <div class="message-sender">${currentName}</div>
+      <div class="message-bubble">${htmlContent}</div>
+    </div>
+  `;
 
   const existing = document.querySelector(`[data-message-id='${index}']`);
   if (existing) {
@@ -1992,5 +2000,43 @@ async function runWebAgentViaRust() {
   await writeText(content);
   showNotification(t("aiChat.notification.copied"));
 };
+
+// メッセージ操作ボタンのイベント委譲
+chatLog.addEventListener("click", (event: MouseEvent) => {
+  const target = event.target;
+
+  if (!(target instanceof Element)) return;
+
+  const button = target.closest<HTMLButtonElement>(
+    ".message-actions button[data-action]",
+  );
+
+  if (!button || !chatLog.contains(button)) return;
+
+  const row = button.closest<HTMLElement>(".message-row");
+  if (!row) return;
+
+  const index = Number(row.dataset.messageId);
+
+  if (!Number.isInteger(index) || index < 0) return;
+
+  switch (button.dataset.action) {
+    case "edit":
+      void (window as any).editMsg(index);
+      break;
+
+    case "delete":
+      void (window as any).deleteMsg(index);
+      break;
+
+    case "regenerate":
+      void (window as any).regenMsg(index);
+      break;
+
+    case "copy":
+      void (window as any).copyMsg(index);
+      break;
+  }
+});
 
 init();
